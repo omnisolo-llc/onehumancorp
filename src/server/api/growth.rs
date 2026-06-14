@@ -173,6 +173,44 @@ pub struct WaitlistResponse {
     pub referral_link: String,
 }
 
+
+#[derive(Debug, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: usize,
+}
+
+async fn handle_zero_click_builder_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, StatusCode> {
+    let db = std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres });
+    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, state.hub.clone());
+
+    match agent.process_intake(&req.prompt).await {
+        Ok(intake_data) => {
+            let slug = intake_data.business_name.to_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "-").trim_matches('-').to_string();
+            let url = format!("https://{}.ohc.store", if slug.is_empty() { "store".to_string() } else { slug });
+
+            Ok(Json(ZeroClickGenerateResponse {
+                name: intake_data.business_name,
+                url,
+                products_count: intake_data.initial_products.len(),
+            }))
+        },
+        Err(e) => {
+            tracing::error!("Failed to generate zero click store: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 async fn handle_waitlist(
     Json(req): Json<WaitlistRequest>,
 ) -> Result<Json<WaitlistResponse>, StatusCode> {
@@ -311,6 +349,7 @@ where
     Router::new()
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
+        .route("/zero-click-builder/generate", post(handle_zero_click_builder_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -2257,6 +2296,22 @@ mod tests {
         assert_eq!(json.success, true);
         assert_eq!(json.position, 42);
         assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
+    }
+
+    #[tokio::test]
+    async fn test_zero_click_generate() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = super::ZeroClickGenerateRequest { prompt: "Business Name: Maya's Cakes".to_string() };
+        let res = super::handle_zero_click_builder_generate(Extension(state.clone()), Json(req)).await.unwrap();
+
+        let data = res.0;
+        assert_eq!(data.name, "Maya's Cakes");
+        assert!(data.products_count > 0);
+        assert_eq!(data.url, "https://maya-s-cakes.ohc.store");
     }
 
     #[tokio::test]
