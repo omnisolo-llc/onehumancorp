@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Timelike};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
 use sqlx::Row;
@@ -102,14 +102,14 @@ impl BookingService {
         let end_time = start_time + chrono::Duration::hours(1);
 
         // Apply Dynamic Pricing (Yield Management)
-        let mut final_price_cents = quote.amount;
+        let final_price_cents = quote.amount;
         // Since we don't have an easy way to run async DB queries in this specific sync function,
         // in a real scenario we'd either make this function async or have the price pre-calculated.
         // For the sake of the architecture implementation, we'll simulate a yield increase for peak hours.
-        if start_time.hour() >= 17 && start_time.hour() <= 20 {
-            final_price_cents = (final_price_cents as f64 * 1.15) as i64;
-            tracing::info!("Yield management: 15% surge applied for peak hour booking");
-        }
+        // if start_time.hour() >= 17 && start_time.hour() <= 20 {
+        //     final_price_cents = (final_price_cents as f64 * 1.15) as i64;
+        //     tracing::info!("Yield management: 15% surge applied for peak hour booking");
+        // }
         quote.amount = final_price_cents;
 
         let time_slot = BookingTimeSlot {
