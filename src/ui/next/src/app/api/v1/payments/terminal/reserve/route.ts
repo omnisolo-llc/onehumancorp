@@ -22,8 +22,15 @@ export async function POST(req: Request) {
       headers: headersFor(req, true),
       body: JSON.stringify(body),
     });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
+
+    const text = await res.text();
+    try {
+      const json = JSON.parse(text);
+      return NextResponse.json(json, { status: res.status });
+    } catch (e) {
+      return NextResponse.json({ success: false, error_message: text }, { status: res.status });
+    }
+  } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }
