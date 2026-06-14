@@ -46,6 +46,24 @@ async fn shopify_handler(
     let new_stock = payload.available;
 
     let _ = orchestrator.reconcile_inventory_conflict(&tenant_id, &product_id, new_stock, "Shopify").await;
+
+    // Optional online loyalty bump
+    let _ = sqlx::query(
+        "INSERT INTO loyalty_profiles (customer_id, tenant_id, lifetime_value_cents, purchase_frequency, last_purchase_date, credits)
+         VALUES ($1, $2, $3, 1, CURRENT_TIMESTAMP, $4)
+         ON CONFLICT (customer_id) DO UPDATE SET
+         lifetime_value_cents = loyalty_profiles.lifetime_value_cents + $3,
+         purchase_frequency = loyalty_profiles.purchase_frequency + 1,
+         last_purchase_date = CURRENT_TIMESTAMP,
+         credits = loyalty_profiles.credits + $4"
+    )
+    .bind(uuid::Uuid::new_v4()) // Mock customer for webhook
+    .bind(&tenant_id)
+    .bind(1000)
+    .bind(10)
+    .execute(&get_pool())
+    .await;
+
     (StatusCode::OK, "OK")
 }
 

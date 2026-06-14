@@ -352,6 +352,37 @@ pub async fn sync_offline_transactions_handler(
     .execute(&pool)
     .await;
 
+                        if let Some(cust_id) = &customer_id {
+                            // Update or insert loyalty profile and reward ledger
+                            let points = (req_data.amount_cents.unwrap_or(0) / 100) as i32; // e.g. 1 point per $1
+                            let _ = sqlx::query(
+                                "INSERT INTO loyalty_profiles (customer_id, tenant_id, lifetime_value_cents, purchase_frequency, last_purchase_date, credits)
+                                 VALUES ($1, $2, $3, 1, CURRENT_TIMESTAMP, $4)
+                                 ON CONFLICT (customer_id) DO UPDATE SET
+                                 lifetime_value_cents = loyalty_profiles.lifetime_value_cents + $3,
+                                 purchase_frequency = loyalty_profiles.purchase_frequency + 1,
+                                 last_purchase_date = CURRENT_TIMESTAMP,
+                                 credits = loyalty_profiles.credits + $4"
+                            )
+                            .bind(uuid::Uuid::parse_str(cust_id).unwrap_or_default())
+                            .bind(&tenant_id)
+                            .bind(req_data.amount_cents.unwrap_or(0) as i64)
+                            .bind(points)
+                            .execute(&pool)
+                            .await;
+
+                            let _ = sqlx::query(
+                                "INSERT INTO reward_ledger (id, tenant_id, customer_id, action_type, credits_change, reason)
+                                 VALUES ($1, $2, $3, 'EARNED', $4, 'In-store POS Order')"
+                            )
+                            .bind(uuid::Uuid::new_v4())
+                            .bind(&tenant_id)
+                            .bind(uuid::Uuid::parse_str(cust_id).unwrap_or_default())
+                            .bind(points)
+                            .execute(&pool)
+                            .await;
+                        }
+
     for tx in &req_data.transactions {
 
         let pool_clone = pool.clone();
