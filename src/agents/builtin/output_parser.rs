@@ -611,6 +611,25 @@ mod tests {
             _ => panic!("Expected LlmRecoverable error for exhaustion"),
         }
     }
+
+    #[tokio::test]
+    async fn test_retry_parser_unexpected_eof_recovery() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_text_resp("{\"data\": {\"result\": \"incomplete\""), // missing closing brackets
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "recovered_eof"}}),
+                ),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered_eof");
+    }
 }
 
 #[cfg(test)]
