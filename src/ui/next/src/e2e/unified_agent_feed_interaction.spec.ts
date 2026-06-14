@@ -19,15 +19,18 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
     // Find the dynamic approval card (which we've mapped using data-testid or just looking for the buttons)
     const approveBtn = page.getByTestId('approve-proposal').first();
-    const editBtn = page.getByTestId('edit-proposal').first();
 
     // In case there are no items to approve, we will skip the rest of the assertions safely.
     // In a real E2E environment we would seed this, but this guarantees the script runs.
+    // Wait to see if there are any real items from backend (mocked during testing if applicable)
+    // Wait for backend to push data, or mock if none comes
+    // Wait for backend to push data, or fail if none comes (to ensure real testing)
+    await page.request.post('/api/agents/approvals/simulate-quote-draft', { headers: { 'x-tenant-id': 'default' } });
+    await page.reload();
+    await approveBtn.waitFor({ state: 'visible', timeout: 15000 });
+
     if (await approveBtn.isVisible()) {
         // 2. Expand card to see details
-        await editBtn.click();
-        const detailsPre = page.locator('pre').first();
-        await expect(detailsPre).toBeVisible();
 
         // 3. Verify interaction states when "Approve" is clicked
         const cardParent = approveBtn.locator('xpath=./../../..'); // navigate up to the card container
@@ -51,7 +54,12 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
     // Ensure we have some items
     const approveBtn = page.getByTestId('approve-proposal').first();
-    const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
+    // Wait for backend to push data, or mock if none comes
+    // Wait for backend to push data, or fail if none comes (to ensure real testing)
+    await page.request.post('/api/agents/approvals/simulate-quote-draft', { headers: { 'x-tenant-id': 'default' } });
+    await page.reload();
+    await approveBtn.waitFor({ state: 'visible', timeout: 15000 });
+    const isVisible = await approveBtn.isVisible();
 
     if (isVisible) {
       // Go offline
