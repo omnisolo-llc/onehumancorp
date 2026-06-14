@@ -174,6 +174,34 @@ impl PosService for MyPosService {
         let req = request.into_inner();
         let tenant_id = auth_tenant;
 
+        let mut lock_id_out = None;
+
+        if let Some(product_id) = &req.product_id {
+            let quantity = req.quantity.unwrap_or(1);
+            let service = crate::services::inventory::InventoryService::new(
+                self.redis_client.clone()
+            );
+            match service.reserve_inventory(&tenant_id, product_id, quantity, 300).await {
+                Ok(result) => {
+                    if !result.success {
+                        return Ok(Response::new(StartTerminalSessionResponse {
+                            session_id: "".to_string(),
+                            success: false,
+                            error_message: result.error_message,
+                            lock_id: None,
+                        }));
+                    }
+                    lock_id_out = Some(result.lock_id);
+                },
+                Err(e) => return Ok(Response::new(StartTerminalSessionResponse {
+                    session_id: "".to_string(),
+                    success: false,
+                    error_message: e,
+                    lock_id: None,
+                }))
+            }
+        }
+
         let session_id = uuid::Uuid::new_v4().to_string();
         let pool = crate::db::get_pool();
 
@@ -195,14 +223,26 @@ impl PosService for MyPosService {
                     session_id: returned_id,
                     success: true,
                     error_message: "".to_string(),
+                    lock_id: lock_id_out,
                 }))
             }
             Err(e) => {
                 tracing::error!("Failed to start terminal session: {}", e);
+
+                // Release the lock if session creation fails
+                if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req.product_id) {
+                    let quantity = req.quantity.unwrap_or(1);
+                    let service = crate::services::inventory::InventoryService::new(
+                        self.redis_client.clone()
+                    );
+                    let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
+                }
+
                 Ok(Response::new(StartTerminalSessionResponse {
                     session_id: "".to_string(),
                     success: false,
                     error_message: e.to_string(),
+                    lock_id: None,
                 }))
             }
         }
