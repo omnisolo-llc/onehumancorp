@@ -235,7 +235,6 @@ impl DailyBriefingWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[tokio::test]
     async fn test_daily_briefing_generation() {

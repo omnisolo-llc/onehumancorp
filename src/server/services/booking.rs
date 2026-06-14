@@ -99,6 +99,8 @@ impl BookingService {
         // Dummy booking time slot - e.g., tomorrow at 10 AM
         let now = Utc::now();
         let start_time = now + chrono::Duration::days(1);
+        use chrono::Timelike;
+        let start_time = start_time.with_hour(10).unwrap().with_minute(0).unwrap().with_second(0).unwrap().with_nanosecond(0).unwrap();
         let end_time = start_time + chrono::Duration::hours(1);
 
         // Apply Dynamic Pricing (Yield Management)

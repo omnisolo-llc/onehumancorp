@@ -25,13 +25,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage | default 80 }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -61,13 +61,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage | default 80 }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
@@ -97,13 +97,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage | default 80 }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
@@ -133,11 +133,11 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage | default 80 }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage | default 80 }}
 {{- end }}
