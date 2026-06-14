@@ -78,7 +78,7 @@ pub struct AgentServiceImpl {
     cfg: AgentConfig,
     auth: AuthMode,
     memory: Option<Arc<VectorRepository>>,
-    pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
+    pub anthropic_memory: Option<Arc<crate::memory::anthropic_tier::Anthropic3TierMemoryStore>>,
     pub redis_memory: Option<Arc<crate::memory_store::RedisMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
@@ -175,7 +175,7 @@ impl AgentServiceImpl {
         if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR")
                 .unwrap_or_else(|_| ".agent-memory".to_string());
-            if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
+            if let Ok(store) = crate::memory::anthropic_tier::Anthropic3TierMemoryStore::new(&base_dir) {
                 self.anthropic_memory = Some(Arc::new(store));
             } else {
                 tracing::warn!("Failed to initialize Anthropic3TierMemoryStore");
@@ -1646,7 +1646,7 @@ mod memory_tests {
     async fn test_dispatch_to_sub_agent_injects_anthropic_memory() {
         let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
         let base_dir = std::path::PathBuf::from(".test-agent-memory-subagent");
-        let store = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir).unwrap();
+        let store = crate::memory::anthropic_tier::Anthropic3TierMemoryStore::new(&base_dir).unwrap();
         service.anthropic_memory = Some(Arc::new(store));
 
         assert!(
