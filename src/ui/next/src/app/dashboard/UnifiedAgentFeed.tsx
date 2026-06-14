@@ -1096,7 +1096,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       if (p?.original_payload?.proposed_content?.includes("System is paused")) {
                           return p.original_payload.proposed_content;
                       }
-                      return p?.original_payload?.description || 'Action completed';
+                      if (p?.proposed_action?.proposed_content?.includes("System is paused")) {
+                          return p.proposed_action.proposed_content;
+                      }
+                      if (typeof p?.proposed_action === 'string' && p.proposed_action.includes("System is paused")) {
+                          return p.proposed_action;
+                      }
+                      if (p?.payload?.proposed_content?.includes("System is paused")) {
+                          return p.payload.proposed_content;
+                      }
+                      if (typeof p?.payload === 'string' && p.payload.includes("System is paused")) {
+                          try {
+                            const inner = JSON.parse(p.payload);
+                            if (inner?.proposed_content?.includes("System is paused")) {
+                                return inner.proposed_content;
+                            }
+                          } catch(e) {}
+                      }
+                      if (p?.proposed_content?.includes("System is paused")) {
+                          return p.proposed_content;
+                      }
+                      return p?.original_payload?.description || p?.context_payload?.description || 'Action completed';
                     } catch (e) {
                       return 'Action completed';
                     }
