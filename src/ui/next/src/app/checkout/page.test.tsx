@@ -98,6 +98,7 @@ beforeEach(() => {
     render(<CheckoutPage />);
 
     expect(screen.getByText('Secure Checkout')).toBeDefined();
+    expect(screen.getByText('Pay with Mercado Pago')).toBeDefined();
     expect(screen.getByText('Service Deposit')).toBeDefined();
     expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
     expect(screen.getAllByText('$45.00')[0]).toBeDefined();
@@ -137,6 +138,37 @@ beforeEach(() => {
       expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();
       expect(screen.getByText('Total with Delivery')).toBeDefined();
       expect(screen.getByText('$55.50')).toBeDefined();
+    });
+  });
+
+  it('handles Mercado Pago checkout flow correctly', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/checkout/mercadopago') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ init_point: 'https://checkout.mercadopago.com/test' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(<CheckoutPage />);
+
+    expect(screen.getByText('Secure Checkout')).toBeDefined();
+    const payMercadoPagoButton = screen.getByText('Pay with Mercado Pago');
+    expect(payMercadoPagoButton).toBeDefined();
+
+    fireEvent.click(payMercadoPagoButton);
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
+            method: 'POST'
+        }));
+        expect(assign).toHaveBeenCalledWith('https://checkout.mercadopago.com/test');
     });
   });
 
