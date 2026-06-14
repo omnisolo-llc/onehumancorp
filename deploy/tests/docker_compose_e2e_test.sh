@@ -96,6 +96,16 @@ if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
   exit 1
 fi
 
+if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+  sudo jq 'del(.features."containerd-snapshotter")' /etc/docker/daemon.json > /tmp/daemon.json && sudo mv /tmp/daemon.json /etc/docker/daemon.json || true
+  sudo systemctl restart docker || true
+fi
+
+if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+  sudo jq 'del(.features."containerd-snapshotter")' /etc/docker/daemon.json > /tmp/daemon.json && sudo mv /tmp/daemon.json /etc/docker/daemon.json || true
+  sudo systemctl restart docker || true
+fi
+
 log "Repo root: ${REPO_ROOT}"
 log "Compose file: ${COMPOSE_FILE}"
 log "Loading server image: ${SERVER_LOADER}"

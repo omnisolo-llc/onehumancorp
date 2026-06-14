@@ -25,6 +25,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
     ports:
       - "5432:5432"
     deploy:
@@ -34,7 +40,7 @@ services:
           memory: 256M
 
   valkey:
-    image: redis:7
+    image: public.ecr.aws/docker/library/redis:7
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
