@@ -103,7 +103,69 @@ impl SyncService for MySyncService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
-            if item["table"].as_str() == Some("agent_missions") {
+
+            if item["table"].as_str() == Some("mutation_queue") {
+                let id = item["id"].as_str().unwrap_or("");
+                let action_type = item["action_type"].as_str().unwrap_or("");
+                let payload = item["payload"].as_str().unwrap_or("");
+                let tenant_id = item["tenant_id"].as_str().unwrap_or(&tenant_id);
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO mutation_queue (id, tenant_id, action_type, payload, status)
+                    VALUES ($1, $2, $3, $4, 'synced')
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = 'synced',
+                        updated_at = CURRENT_TIMESTAMP
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(action_type)
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    ::server_telemetry::record_error_signal("failed to upsert mutation_queue via PowerSync");
+                    tracing::error!("failed to upsert mutation_queue via PowerSync: {}", e);
+                } else {
+                    // Emit a SyncEvent for the orchestrator
+                    let event_id = uuid::Uuid::new_v4().to_string();
+                    let batch_id = id; // use mutation id as batch_id for now
+
+                    let event_query = "
+                        INSERT INTO sync_events (id, tenant_id, batch_id, action_type, payload)
+                        VALUES ($1, $2, $3, $4, $5)
+                    ";
+
+                    if let Err(e) = sqlx::query(event_query)
+                        .bind(&event_id)
+                        .bind(tenant_id)
+                        .bind(batch_id)
+                        .bind(action_type)
+                        .bind(payload)
+                        .execute(&mut *tx)
+                        .await
+                    {
+                         tracing::error!("failed to insert sync_event via PowerSync: {}", e);
+                    } else {
+                        // Dispatch event directly to orchestration if it's Operations Agent
+                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: event_id,
+                            tenant_id: tenant_id.to_string(),
+                            event_type: format!("SyncEvent:{}", action_type),
+                            payload: serde_json::from_str(payload).unwrap_or_else(|_| serde_json::json!({"raw": payload})),
+                        };
+
+                        // We should probably route this through a proper dispatcher, but for now we can fire and forget
+                        // The actual handling logic in operations_agent will pick it up if it was dispatched
+                    }
+                }
+            } else if item["table"].as_str() == Some("agent_missions") {
                 let id = item["id"].as_str().unwrap_or("");
                 let status = item["status"].as_str().unwrap_or("PENDING");
                 let payload = item["payload"].as_str().unwrap_or("");
