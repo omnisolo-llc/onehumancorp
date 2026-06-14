@@ -16,8 +16,8 @@
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -30,8 +30,8 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
@@ -143,8 +143,8 @@
         }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -152,8 +152,8 @@
         .glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
@@ -1540,6 +1540,7 @@
                  finishBtn.disabled = true;
                  goToStep('step-loading');
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
+                   localStorage.setItem('has_onboarded', 'true');
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
@@ -1560,6 +1561,7 @@
                  }).then(response => {
                      if (response.ok) {
                          localStorage.setItem('onboardingState', JSON.stringify(state));
+                         localStorage.setItem('has_onboarded', 'true');
                          window.location.href = "success.html";
                      } else {
                          throw new Error('Failed to start onboarding');
@@ -1595,8 +1597,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(2.1);
-            -webkit-backdrop-filter: blur(20px) saturate(2.1);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -1759,8 +1761,8 @@ document.addEventListener('DOMContentLoaded', () => {
             max-height: calc(100vh - 120px);
             max-width: calc(100vw - 40px);
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(2.1);
-            -webkit-backdrop-filter: blur(30px) saturate(2.1);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
