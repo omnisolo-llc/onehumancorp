@@ -140,6 +140,21 @@ if (typeof window !== 'undefined') {
   })
 }
 
+// ResizeObserver mock
+class ResizeObserver {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+}
+
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'ResizeObserver', {
+    writable: true,
+    configurable: true,
+    value: ResizeObserver,
+  })
+}
+
 // Add fetch mock if needed
 const originalFetch2 = global.fetch;
 global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
