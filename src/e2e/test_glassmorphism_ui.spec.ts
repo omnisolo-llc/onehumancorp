@@ -4,7 +4,7 @@ test.describe('Glassmorphism UI Audit', () => {
   test('Verify setup page uses 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
-    const container = page.locator('.glassmorphism').first();
+    const container = page.locator('.container').first();
     await expect(container).toBeVisible({ timeout: 10000 });
     const borderRadius = await container.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
