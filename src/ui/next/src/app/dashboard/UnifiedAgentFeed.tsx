@@ -499,7 +499,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 {item.action_type && (
                   <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
                     <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{item.action_payload}</div>
                   </div>
                 )}
 
@@ -537,7 +537,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 {item.action_type && (
                   <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
                     <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap break-words">{item.action_payload}</div>
                   </div>
                 )}
 
@@ -698,7 +698,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1195,7 +1195,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
+            <div className="flex flex-col gap-3 w-full max-w-full">
             {activities.map((activity) => (
               <div
                 key={activity.id}
