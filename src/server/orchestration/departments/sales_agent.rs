@@ -93,11 +93,11 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
         let raw = match &self.backend {
             SalesIntentBackend::Minimax { api_key } => {
                 crate::minimax::MinimaxClient::new(api_key.clone())
-                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .reason(&prompt)
                     .await
             }
             SalesIntentBackend::Local => crate::minimax::LocalLLMClient::new()
-                .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                .reason(&prompt)
                 .await,
         }?;
 
@@ -319,10 +319,10 @@ impl Department for SalesAgent {
                 {
                     Ok("minimax") => {
                         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                        crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await.unwrap_or_default()
                     }
                     _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                        crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
                     }
                 };
 

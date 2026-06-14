@@ -64,7 +64,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                  .push_bind(job.job_type.clone())
                  .push_bind(job.payload.clone())
                  .push_bind("PENDING")
-                 .push_bind(next_retry_at.to_rfc3339())
+                 .push_bind(next_retry_at)
                  .push_bind(job.tenant_id.clone());
             });
 
@@ -103,7 +103,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         .bind(&job.parent_task_id)
         .bind(&job.job_type)
         .bind(&job.payload)
-        .bind(next_retry_at.to_rfc3339())
+        .bind(next_retry_at)
         .bind(&job.tenant_id)
         .execute(&*self.pool)
         .await
@@ -244,7 +244,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
-                    .bind(new_next_retry_at.to_rfc3339())
+                    .bind(new_next_retry_at)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await

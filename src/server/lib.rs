@@ -388,6 +388,7 @@ pub mod msgbus;
 pub mod pipeline;
 pub use ::server_oidc as oidc;
 pub mod sip;
+pub mod seeder;
 pub mod queue;
 pub mod domain;
 pub use ::server_pricing as pricing;

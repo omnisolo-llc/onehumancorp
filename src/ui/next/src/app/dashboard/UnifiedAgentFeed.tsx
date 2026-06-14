@@ -259,95 +259,74 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }, [initialData]);
 
   useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimeout: NodeJS.Timeout;
+    if (typeof EventSource === 'undefined') return;
+    const events = new EventSource('/api/agents/events');
+    events.onmessage = (event) => {
+      try {
+        const item = JSON.parse(event.data);
+        if (!item?.id || !item?.description) return;
 
-    const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.error) {
-             console.error("Agent feed WS error:", data.error);
-             return;
-          }
-
-          // Depending on your message structure from agent-feed:
-          // The redis pub/sub payload is currently just the AgentFeedItem JSON.
-          const item = data;
-
-          if (!item?.id) return;
-
-          // If it's PENDING_APPROVAL add to the feed
-          if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
-            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-
-            // Also map and remove from activities if it somehow got back to pending (unlikely)
-            setActivities((current) => current.filter((existing) => existing.id !== item.id));
-
-          } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
-            // It's an activity event (Approved, Rejected, etc.)
-            setActivities((current) => {
-              const mappedActivity = {
-                id: item.id,
-                tenant_id: item.tenant_id || "default",
-                event_type: item.lifecycle_state,
-                department: item.event_source || "system",
-                payload: typeof item.proposed_action === 'object' ? JSON.stringify({ original_payload: item.proposed_action }) : item.proposed_action,
-                created_at: new Date().toISOString()
-              };
-              return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-            });
-            // Also remove from approvals
-            setItems((current) => current.filter((existing) => existing.id !== item.id));
-          } else {
-             // Fallback for legacy SSE structure matching
-             if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-                setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-              } else if (item.status) {
-                setActivities((current) => {
-                  const mappedActivity = {
-                    id: item.id,
-                    tenant_id: item.tenant_id || "default",
-                    event_type: item.status,
-                    department: item.department,
-                    payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-                    created_at: new Date().toISOString()
-                  };
-                  return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-                });
-                setItems((current) => current.filter((existing) => existing.id !== item.id));
-              }
-          }
-        } catch (err) {
-          console.error('Failed to parse websocket feed event:', err);
+        // If it's a DRAFT or PENDING, add to proposals
+        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        } else {
+          // It's an activity event (Approved, Rejected, etc.)
+          setActivities((current) => {
+            const mappedActivity = {
+              id: item.id,
+              tenant_id: item.tenant_id || "default",
+              event_type: item.status,
+              department: item.department,
+              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
+              created_at: new Date().toISOString()
+            };
+            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
+          });
+          // Also remove from approvals if it was there
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
-      };
-
-      ws.onclose = () => {
-        // Attempt to reconnect
-        reconnectTimeout = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = (err) => {
-        console.error("Websocket error:", err);
-      };
-    };
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectTimeout);
-      if (ws) {
-        ws.onclose = null; // Prevent reconnection on unmount
-        ws.close();
+      } catch (err) {
+        console.error('Failed to parse agent feed event:', err);
       }
     };
+    events.onerror = () => events.close();
+    return () => events.close();
   }, []);
 
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return;
+    const events = new EventSource('/api/agents/events');
+    events.onmessage = (event) => {
+      try {
+        const item = JSON.parse(event.data);
+        if (!item?.id || !item?.description) return;
+
+        // If it's a DRAFT or PENDING, add to proposals
+        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        } else {
+          // It's an activity event (Approved, Rejected, etc.)
+          setActivities((current) => {
+            const mappedActivity = {
+              id: item.id,
+              tenant_id: item.tenant_id || "default",
+              event_type: item.status,
+              department: item.department,
+              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
+              created_at: new Date().toISOString()
+            };
+            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
+          });
+          // Also remove from approvals if it was there
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
+        }
+      } catch (err) {
+        console.error('Failed to parse agent feed event:', err);
+      }
+    };
+    events.onerror = () => events.close();
+    return () => events.close();
+  }, []);
 
   const handleTriageDecision = async (id: string, approved: boolean) => {
     try {

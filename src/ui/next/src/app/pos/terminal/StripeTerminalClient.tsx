@@ -219,6 +219,8 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const commitData = await commitRes.json();
           if (commitData.success) {
             setStatus('Payment successful!');
+            const event = new CustomEvent('pos_inventory_deducted', { detail: { productId, quantity: 1 } });
+            window.dispatchEvent(event);
           } else {
             setStatus('Payment successful, but inventory commit failed: ' + commitData.error_message);
           }

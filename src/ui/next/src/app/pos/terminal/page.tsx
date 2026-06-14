@@ -84,15 +84,27 @@ export default function TerminalPage() {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
+    const handleInventoryDeducted = (e: any) => {
+      const { productId, quantity } = e.detail;
+      setInventory(prev => prev.map(p => {
+        if (p.id === productId) {
+          return { ...p, stock: Math.max(0, (p.stock || 0) - quantity) };
+        }
+        return p;
+      }));
+    };
+
     // Set initial state safely
     setIsOffline(!navigator.onLine);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('pos_inventory_deducted', handleInventoryDeducted);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('pos_inventory_deducted', handleInventoryDeducted);
     };
   }, []);
 

@@ -107,7 +107,7 @@ impl InventoryService {
                                 .await;
                         }
                     } else {
-                        let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+                        let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
                             .bind(product_id)
                             .bind(tenant_id)
                             .fetch_optional(&mut *tx)
@@ -339,7 +339,7 @@ impl InventoryService {
                     .await;
             }
         } else {
-            let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
                 .bind(product_id)
                 .bind(tenant_id)
                 .fetch_optional(&mut *tx)

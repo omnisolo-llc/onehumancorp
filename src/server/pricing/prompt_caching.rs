@@ -153,11 +153,6 @@ impl PromptCache {
             }
         }
 
-        // Clean up trailing whitespace and punctuation before appending ellipsis
-        while truncated.ends_with(char::is_whitespace) || truncated.ends_with(|c: char| c.is_ascii_punctuation()) {
-            truncated.pop();
-        }
-
         truncated.push_str("...");
         truncated
     }
@@ -283,26 +278,5 @@ mod tests {
         // Zero truncation
         let res4 = PromptCache::truncate_context(text, 0);
         assert_eq!(res4, "");
-    }
-
-    #[test]
-    fn test_truncate_context_trailing_punctuation() {
-        let text = "This is a sentence, with a comma that we want to truncate.";
-        // "This is a sentence, with a " = 27 chars. 27/4 = 6 tokens. Let's say 7 tokens = 28 chars.
-        // max_chars = 28 -> "This is a sentence, with a c" -> last_space = 26
-        // truncated -> "This is a sentence, with a"
-        let res = PromptCache::truncate_context(text, 7);
-        // "This is a sentence, with a..." instead of "This is a sentence, with a ..."
-        assert_eq!(res, "This is a sentence, with a...");
-
-        let text2 = "Sentence,  more";
-        // max_tokens = 2 -> 8 chars -> "Sentence" -> no space -> stays "Sentence" -> no punctuation to trim
-        let res2 = PromptCache::truncate_context(text2, 2);
-        assert_eq!(res2, "Sentence...");
-
-        let text3 = "Sentence ,  more";
-        // max_tokens = 2 -> 8 chars -> "Sentence"
-        let res3 = PromptCache::truncate_context(text3, 2);
-        assert_eq!(res3, "Sentence...");
     }
 }

@@ -131,7 +131,7 @@ export default function CostDashboardPage() {
       return (
           <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8" data-testid="cost-dashboard-loading">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
-                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/2 md:w-1/4"></div>
+                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
                   <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
                   <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
               </div>

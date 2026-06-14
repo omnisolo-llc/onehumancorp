@@ -130,15 +130,9 @@ impl HybridSyncDaemon {
 
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
-
-        let is_standalone = crate::is_standalone_runtime();
-        let query_str = if is_standalone {
-            "SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100"
-        } else {
-            "SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes') LIMIT 100"
-        };
-
-        let rows = sqlx::query(query_str)
+        // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
+        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100"
+            )
             .bind(false)
             .fetch_all(&self.sqlite_pool)
             .await?;
