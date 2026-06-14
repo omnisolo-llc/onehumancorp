@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 
 test.describe('Affiliate Badge Builder', () => {
-  test('should generate affiliate badge HTML based on inputs', async ({ adminPage: page }) => {
+  test('should generate affiliate badge HTML based on inputs', async ({ page }) => {
     // Navigate to the Dashboard, which contains the Growth section
     await page.goto('/ui/dashboard.html');
 
