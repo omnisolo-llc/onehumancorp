@@ -45,7 +45,7 @@ test.describe('Agentic Quoting Engine (Mobile First)', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // 2. Owner navigates to the quote draft page (simulating clicking "Edit" from dashboard)
-    await page.goto(`/ui/quote.html?id=${quoteId}&mode=owner`);
+    await page.goto(`/api/ui/quote.html?id=${quoteId}&mode=owner`);
 
     // Verify it loads with correct amounts
     await expect(page.locator('#quote-total')).toHaveText('$150.00');
@@ -75,7 +75,7 @@ test.describe('Agentic Quoting Engine (Mobile First)', () => {
     await page.waitForURL('**/dashboard**');
 
     // 5. Customer navigates to quote page
-    await page.goto(`/ui/quote.html?id=${quoteId}&mode=customer`);
+    await page.goto(`/api/ui/quote.html?id=${quoteId}&mode=customer`);
 
     // Verify it loads in action required state
     await expect(page.locator('#quote-status')).toHaveText('Action Required');
