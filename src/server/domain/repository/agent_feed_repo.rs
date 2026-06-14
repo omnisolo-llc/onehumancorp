@@ -129,7 +129,7 @@ impl AgentFeedRepository {
             WHERE tenant_id = $2 AND id = $3
             "#
         )
-        .bind(sqlx::types::Json(payload))
+        .bind(sqlx::types::Json(payload.clone()))
         .bind(tenant_id)
         .bind(id)
         .execute(&self.pool)
