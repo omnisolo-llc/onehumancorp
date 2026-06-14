@@ -24,7 +24,7 @@ describe('/api/help/search GET', () => {
     expect(data).toEqual(mockArticles);
   });
 
-  it('returns fallback search on backend error', async () => {
+  it('returns empty array on backend error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
@@ -33,7 +33,6 @@ describe('/api/help/search GET', () => {
     const response = await GET(request);
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.length).toBe(1);
-    expect(data[0].id).toEqual("add-products");
+    expect(data.length).toBe(0);
   });
 });

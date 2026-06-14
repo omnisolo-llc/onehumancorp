@@ -24,7 +24,7 @@ describe('/api/videos GET', () => {
     expect(data).toEqual(mockVideos);
   });
 
-  it('returns fallback videos on backend error', async () => {
+  it('returns empty array on backend error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
@@ -34,15 +34,15 @@ describe('/api/videos GET', () => {
     const response = await GET(request);
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.length).toBe(10);
+    expect(data.length).toBe(0);
   });
 
-  it('handles fetch exceptions gracefully with fallback videos', async () => {
+  it('handles fetch exceptions gracefully with empty array', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
     const request = new NextRequest('http://localhost:3000/api/videos');
     const response = await GET(request);
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.length).toBe(10);
+    expect(data.length).toBe(0);
   });
 });
