@@ -225,8 +225,8 @@
         <button class="btn btn-secondary" id="copyLinkBtn">Copy Store Link</button>
         <div class="social-buttons">
             <a href="#" id="shareX" class="social-btn twitter" target="_blank">Share on X</a>
-            <a href="#" id="shareWA" class="social-btn whatsapp" target="_blank">WhatsApp</a>
-            <a href="#" id="shareFB" class="social-btn facebook" target="_blank">Facebook</a>
+            <a href="#" id="shareWA" class="social-btn whatsapp" target="_blank">Share to WhatsApp</a>
+            <a href="#" id="shareFB" class="social-btn facebook" target="_blank">Share on Facebook</a>
         </div>
     </div>
 
@@ -276,7 +276,7 @@
                 previewCard.classList.remove('dark');
             }
 
-            const shareText = `Check out ${storeNameInput.value || 'my store'} on OHC! ${taglineInput.value || ''}\n\n${baseStoreLink}`;
+            const shareText = `Check out ${storeNameInput.value || 'my store'} on OHC! ${taglineInput.value || ''}\n\n${baseStoreLink}\n\n⚡ Powered by OHC`;
             document.getElementById('shareX').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
             document.getElementById('shareWA').href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
             document.getElementById('shareFB').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(baseStoreLink)}&quote=${encodeURIComponent(shareText)}`;
