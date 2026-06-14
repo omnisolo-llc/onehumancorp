@@ -7,7 +7,18 @@ use uuid::Uuid;
 
 use tokio::time::timeout;
 
-const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
+fn ai_agent_timeout() -> Duration {
+    crate::config::get().ai_agent_timeout_ms.map(Duration::from_millis).unwrap_or(Duration::from_secs(60))
+}
+
+fn ai_retry_backoff(attempts: u32) -> Duration {
+    if let Some(ms) = crate::config::get().ai_retry_backoff_ms {
+        return Duration::from_millis(ms);
+    }
+    Duration::from_secs(2u64.pow(attempts))
+}
+
+
 const MAX_RETRIES: u32 = 3;
 
 pub struct ProactiveAnalysisWorker {
@@ -122,14 +133,14 @@ impl ProactiveAnalysisWorker {
                                 Err("AI call failed".to_string())
                             };
 
-                            match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                            match timeout(ai_agent_timeout(), ai_op).await {
                                 Ok(Ok(content)) => {
                                     ai_response = content;
                                     break;
                                 },
                                 _ => {
                                     attempts += 1;
-                                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                    tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                 }
                             }
                         }
