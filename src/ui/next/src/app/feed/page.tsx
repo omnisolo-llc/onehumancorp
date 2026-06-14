@@ -28,7 +28,8 @@ export default function FeedPage() {
           throw new Error('Failed to fetch feed');
         }
         const data = await res.json();
-        setItems(data.items || []);
+        // Only show pending items on this feed view
+        setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -37,6 +38,53 @@ export default function FeedPage() {
     }
 
     fetchFeed();
+
+    let ws: WebSocket;
+    let reconnectTimeout: NodeJS.Timeout;
+
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const item = JSON.parse(event.data);
+          if (item.error) {
+             console.error("Agent feed WS error:", item.error);
+             return;
+          }
+
+          if (!item?.id) return;
+
+          if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
+            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
+            setItems((current) => current.filter((existing) => existing.id !== item.id));
+          } else if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          } else if (item.status) {
+             setItems((current) => current.filter((existing) => existing.id !== item.id));
+          }
+        } catch (err) {
+          console.error('Failed to parse websocket feed event:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      clearTimeout(reconnectTimeout);
+      if (ws) {
+        ws.onclose = null; // Prevent reconnection on unmount
+        ws.close();
+      }
+    };
   }, []);
 
   const handleAction = async (id: string, state: string) => {
