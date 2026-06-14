@@ -789,15 +789,16 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let cache_key = format!("onboarding_state_{}", org_id);
+        let cache_key = format!("agent_onboarding_state_{}_{}", org_id, auth_info.agent_id);
         let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
         if let Some(cached) = cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
             .bind(&org_id)
+            .bind(&auth_info.agent_id)
             .fetch_optional(&self.db.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -888,7 +889,7 @@ impl DashboardService for MyDashboardService {
         match update_res {
             Ok(Ok(_)) => {
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             },
             Ok(Err(e)) => {
@@ -896,13 +897,13 @@ impl DashboardService for MyDashboardService {
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
         }
