@@ -20,7 +20,7 @@ test.describe('Help Chat Flow', () => {
     await expect(page.getByText("Hi! I'm your AI Help Agent")).toBeVisible();
 
     // Type a message
-    const input = page.getByPlaceholder('Ask me anything...');
+    const input = page.getByPlaceholder('Ask anything...');
     await input.fill('What is Operations?');
 
     // Submit

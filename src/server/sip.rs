@@ -133,8 +133,15 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(threshold_time)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                let dead_letter_threshold = Utc::now() - chrono::Duration::days(7);
+                sqlx::query("DELETE FROM department_dead_letters WHERE created_at < $1 AND tenant_id = $2")
+                    .bind(dead_letter_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -197,7 +204,13 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id")
+                let is_standalone = crate::is_standalone_runtime();
+                let query_str = if is_standalone {
+                    "UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id"
+                } else {
+                    "UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id"
+                };
+                sqlx::query(query_str)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -693,6 +706,21 @@ mod tests {
             .await
             .unwrap();
 
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
             // Insert initial record
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
                 .bind("test_mission_id")
@@ -1035,28 +1063,12 @@ mod tests {
             let res = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await;
             assert!(res.is_ok());
 
-            // Verify stagnant mission was marked FAILED
-            let row_stagnant = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stagnant_in_progress_mission'")
+            // Verify stagnant missions were deleted
+            let count_stagnant: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-            use sqlx::Row;
-            let status_stagnant: String = row_stagnant.get("status");
-            assert_eq!(status_stagnant, "FAILED");
-
-            let row_pending = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stagnant_pending_mission'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            let status_pending: String = row_pending.get("status");
-            assert_eq!(status_pending, "FAILED");
-
-            let row_bursting = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stagnant_bursting_mission'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            let status_bursting: String = row_bursting.get("status");
-            assert_eq!(status_bursting, "FAILED");
+            assert_eq!(count_stagnant, 0);
 
             // Verify recent mission is still IN_PROGRESS
             let row_recent = sqlx::query("SELECT status FROM agent_missions WHERE id = 'recent_in_progress_mission'")
@@ -1075,7 +1087,7 @@ mod tests {
 
             // Clean up
             let mut tx_clean = pool.begin().await.unwrap();
-            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'recent_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('recent_in_progress_mission')")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();
@@ -1112,6 +1124,21 @@ mod tests {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     tenant_id TEXT,
                     mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )"
             )
             .execute(&pool)

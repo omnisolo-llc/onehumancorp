@@ -11,7 +11,7 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
-    updateMode: {{ if and .Values.backend.autoscaling .Values.backend.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: {{ if .Values.backend.autoscaling }}{{ if .Values.backend.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}{{ else }}"Auto"{{ end }}
   resourcePolicy:
     containerPolicies:
       - containerName: backend
@@ -32,7 +32,7 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
   updatePolicy:
-    updateMode: {{ if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling .Values.ohcCore.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: {{ if .Values.ohcCore.autoscaling }}{{ if .Values.ohcCore.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}{{ else }}"Auto"{{ end }}
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
@@ -53,7 +53,7 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
-    updateMode: {{ if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling .Values.chatwoot.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: {{ if .Values.chatwoot.autoscaling }}{{ if .Values.chatwoot.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}{{ else }}"Auto"{{ end }}
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
@@ -74,7 +74,7 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
-    updateMode: {{ if and .Values.powersync.enabled .Values.powersync.autoscaling .Values.powersync.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: {{ if .Values.powersync.autoscaling }}{{ if .Values.powersync.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}{{ else }}"Auto"{{ end }}
   resourcePolicy:
     containerPolicies:
       - containerName: powersync

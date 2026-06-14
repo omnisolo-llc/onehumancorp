@@ -45,7 +45,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
             if let Some(daily) = trends.get_mut(&date_str) {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
-                    "ohc_mission_cost_cents" => daily.llm_cost += val,
+                    "ohc_llm_cost_total_cents" => daily.llm_cost += val,
                     "ohc_storage_rw_cost" => daily.storage_cost += val,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
@@ -79,7 +79,7 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
         WHERE (labels_json::jsonb)->>'tenant_id' = $1
-          AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents', 'ohc_email_send_cost', 'ohc_outbound_api_cost', 'ohc_api_call_cost')
+          AND metric_name IN ('ohc_llm_cost_total_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents', 'ohc_email_send_cost', 'ohc_outbound_api_cost', 'ohc_api_call_cost')
           AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
         ORDER BY DATE(timestamp) ASC
@@ -135,7 +135,7 @@ mod tests {
         let rows = vec![
             TelemetryRow {
                 date: Some(today),
-                metric_name: "ohc_mission_cost_cents".to_string(),
+                metric_name: "ohc_llm_cost_total_cents".to_string(),
                 total: Some(500.0),
             },
             TelemetryRow {
@@ -201,7 +201,7 @@ mod tests {
         let rows = vec![
             TelemetryRow {
                 date: None,
-                metric_name: "ohc_mission_cost_cents".to_string(),
+                metric_name: "ohc_llm_cost_total_cents".to_string(),
                 total: Some(500.0),
             },
         ];
@@ -228,7 +228,7 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
         WHERE (labels_json::jsonb)->>'tenant_id' = $1
-          AND metric_name = 'ohc_mission_cost_cents'
+          AND metric_name = 'ohc_llm_cost_total_cents'
           AND timestamp >= CURRENT_DATE - INTERVAL '30 days'
         GROUP BY (labels_json::jsonb)->>'agent_id'
         ORDER BY total DESC

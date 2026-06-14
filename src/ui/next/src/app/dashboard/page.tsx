@@ -9,7 +9,6 @@ import { MorningBriefingCard } from "./MorningBriefingCard";
 
 
 import { useEffect, useMemo, useState } from "react";
-import { TriageFeed } from "./TriageFeed";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -17,6 +16,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
+import { WrappedWidget } from "./WrappedWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -154,7 +154,7 @@ function InviteAndEarnWidget() {
             id="dashboard-invite-btn"
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="w-full min-h-[44px] min-w-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             {loading ? 'Generating...' : 'Get My Invite Link'}
           </button>
@@ -203,26 +203,6 @@ export default function Dashboard() {
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
   const [ledgerLoading, setLedgerLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchLedgerBalance() {
-      try {
-        const res = await fetch("/api/ledger/accounts");
-        if (res.ok) {
-          const data = await res.json();
-          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
-          if (mainAccount) {
-            setLedgerBalance(mainAccount.balance);
-            setLedgerCurrency(mainAccount.currency);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch ledger balance", err);
-      } finally {
-        setLedgerLoading(false);
-      }
-    }
-    fetchLedgerBalance();
-  }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -319,23 +299,34 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes, ledgerRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
           fetch(`/api/agents/approvals?tenant_id=${tenant}`),
           fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }),
+          fetch("/api/ledger/accounts").catch(() => null),
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
+        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
           agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
+          ledgerRes && ledgerRes.ok ? ledgerRes.json().catch(() => null) : Promise.resolve(null),
         ]);
+
+        if (ledgerData && ledgerData.accounts) {
+          const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
+          if (mainAccount) {
+            setLedgerBalance(mainAccount.balance);
+            setLedgerCurrency(mainAccount.currency);
+          }
+        }
+        setLedgerLoading(false);
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
@@ -443,7 +434,6 @@ export default function Dashboard() {
 
       <DashboardViralInviteWidget />
 
-      <TriageFeed tenantId={tenantId()} />
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
@@ -468,6 +458,7 @@ export default function Dashboard() {
             }
             setIsWalkthroughOpen(true);
           }}
+          id="dashboard-walkthrough-btn"
           className="app-button min-h-[44px]"
         >
           Start Tour
@@ -502,12 +493,22 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <SuccessMilestoneAlert />
-      <SuccessMilestoneWidget />
-      <ViralLoopPerformanceWidget />
-      <div className="mb-6">
-        <div className="mb-4"><CartRecoveryWidget /></div>
-        <AffiliateMarketingWidget />
+      <div className="flex flex-col md:flex-col">
+        <div className="order-first md:order-last mb-6">
+          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+        </div>
+
+        <div className="order-last md:order-first">
+          <WrappedWidget />
+          <SuccessMilestoneAlert />
+          <SuccessMilestoneWidget />
+          <ViralLoopPerformanceWidget />
+          <div className="mb-6">
+            <div className="mb-4"><CartRecoveryWidget /></div>
+            <AffiliateMarketingWidget />
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -672,8 +673,6 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
-
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -784,8 +783,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
-                    <Link href="/inbox" className="app-button flex-1 min-h-[44px] py-2 text-center bg-gray-100">Edit</Link>
+                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
+                    <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
                   </div>
                 </div>
               ))}
@@ -889,7 +888,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/dashboard/campaigns" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/feed" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
                 <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>

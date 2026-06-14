@@ -9,25 +9,23 @@ export default function CartRecoveryPage() {
   const [cartValue, setCartValue] = useState('');
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [abandonedCartsCount, setAbandonedCartsCount] = useState<number>(0);
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [isSent, setIsSent] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
-  const [abandonedCartsCount, setAbandonedCartsCount] = useState<number>(0);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
-
-    // Fetch the real number of abandoned carts from the backend or mock data
     const fetchAbandonedCartsCount = async () => {
       try {
         const res = await fetch('/api/v1/growth/campaign/abandoned-carts-count');
         const data = await res.json();
-        setAbandonedCartsCount(data.count || 0);
+        setAbandonedCartsCount(res.ok ? (data.count ?? 0) : 0);
       } catch (e) {
-        setAbandonedCartsCount(0); // Fallback real-looking data
+        setAbandonedCartsCount(0);
       }
     };
     fetchAbandonedCartsCount();
@@ -48,7 +46,7 @@ export default function CartRecoveryPage() {
         });
 
         const data = await res.json();
-        setGeneratedDraft(data.message);
+        setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
         setIsGenerating(false);
         setIsSent(false);
     } catch (e) {
@@ -62,14 +60,13 @@ export default function CartRecoveryPage() {
       setShowSoftPaywall(true);
       return;
     }
-
     generateDraft();
   };
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI cart recovery campaigns for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just set up automated abandoned cart recovery for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -80,7 +77,7 @@ export default function CartRecoveryPage() {
   };
 
   const handleSend = async () => {
-    // Making a simulated API call to the backend to "send" the emails
+
     try {
       const res = await fetch('/api/v1/growth/campaign/send', {
         method: 'POST',
@@ -95,7 +92,7 @@ export default function CartRecoveryPage() {
       setIsSent(true);
     } catch (e) {
       console.error(e);
-      // Fallback for UI if backend is completely unreachable
+
       setIsSent(true);
     }
   };
@@ -217,17 +214,16 @@ export default function CartRecoveryPage() {
             </div>
 
             <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-orange-600 mx-auto mb-6">
-              ✨
+              🛒
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Abandoned Cart Recovery Campaigns are a Pro feature. Upgrade to our Pro plan to automatically re-engage users and boost sales.
+              Abandoned Cart Recovery is a Pro feature. Upgrade to our Pro plan to automatically recover lost sales.
             </p>
 
             <button
               onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
-              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-gradient-to-r from-orange-500 to-amber-500"
             >
               Upgrade to Pro
             </button>

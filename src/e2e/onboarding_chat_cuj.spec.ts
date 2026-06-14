@@ -6,7 +6,10 @@ test.describe('Conversational Setup CUJ', () => {
 
   test.beforeEach(async ({ page }) => {
     // Intercept standard setup.html load to serve from filesystem for tests
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    let tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    if (!fs.existsSync(tauriUiDir)) {
+        tauriUiDir = path.join(process.env.RUNFILES_DIR || process.cwd(), '_main/src/ui/tauri/src/ui');
+    }
     await page.route('**/setup.html', async route => {
       const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: content });
@@ -28,70 +31,18 @@ test.describe('Conversational Setup CUJ', () => {
 
   test('Persona: Maya (Home Baker) completes the Zero-Click Conversational Onboarding', async ({ page }) => {
 
-    // Mock the backend chat responses to simulate conversational flow
-    let chatMessageCount = 0;
-    await page.route('**/api/onboarding/chat', async route => {
-      chatMessageCount++;
-      if (chatMessageCount === 1) {
-        // First user message
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            is_complete: false,
-            reply: "Great! Could you provide an example photo or a little more detail about what you sell?",
-            intake_data: null
-          })
-        });
-      } else {
-        // Second user message -> finish the flow
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            is_complete: true,
-            reply: "Give me a minute... I'm building your business.",
-            intake_data: {
-              business_name: "Maya's Vegan Cakes",
-              business_type: "Bakery",
-              categories: ["food", "cakes"],
-              initial_products: [
-                { name: "Custom Vegan Cake", price: "45.00" }
-              ],
-              location: "Austin, TX",
-              target_audience: "Vegans and cake lovers"
-            }
-          })
-        });
+    // We are testing against the real backend per the "Real Owner/Operator E2E Standard"
+    // No mocking of network requests is allowed.
+
+    // We will verify the start onboarding API was called.
+    let onboardingStarted = false;
+    page.on('request', request => {
+      if (request.url().includes('/api/onboarding/start') && request.method() === 'POST') {
+        onboardingStarted = true;
       }
     });
 
-    // Mock the final start endpoint that actually provisions the tenant
-    let onboardingStarted = false;
-    await page.route('**/api/onboarding/start', async route => {
-      onboardingStarted = true;
-      const postData = JSON.parse(route.request().postData() || '{}');
-
-      // Verify payload was correctly formed from the intake_data
-      expect(postData.company_name).toBe("Maya's Vegan Cakes");
-      expect(postData.first_product_name).toBe("Custom Vegan Cake");
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          organization_id: 'tenant-maya-123'
-        })
-      });
-    });
-
-    // Mock the success page redirection target
-    await page.route('**/success.html', async route => {
-      await route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Success</h1>' });
-    });
-
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://localhost:18789/setup.html');
 
     // Verify Initial Screen
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
@@ -121,6 +72,8 @@ test.describe('Conversational Setup CUJ', () => {
 
     // 5. Send second message (simulating uploading a photo or additional details)
     await chatInput.fill('Here is a picture of my cakes.');
+    const chatImageUrl = page.locator('#chat-image-url');
+    await chatImageUrl.fill('https://example.com/cake.jpg');
     await chatSendBtn.click();
 
     // 6. Verify bot finishes the conversation

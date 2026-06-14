@@ -31,7 +31,7 @@ const CardTitle = ({ children, className }: any) => <h3 className={`font-semibol
 const CardContent = ({ children, className }: any) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
 const CardFooter = ({ children, className }: any) => <div className={`flex items-center p-6 pt-0 ${className}`}>{children}</div>;
 const Button = ({ children, variant, size, className, disabled, onClick }: any) => {
-  const baseStyle = "inline-flex items-center min-h-[44px] justify-center rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50";
+  const baseStyle = "inline-flex items-center min-h-[44px] min-w-[44px] justify-center rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50";
   const sizeStyle = size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 py-2";
   let vStyle = "bg-gray-900 text-gray-50 hover:bg-gray-900/90";
   if (variant === "outline") vStyle = "border border-gray-200 bg-white hover:bg-gray-100 hover:text-gray-900";
@@ -57,7 +57,7 @@ export function ReviewFeedCard({ review, response, onApprove, onDismiss }: Revie
   };
 
   return (
-    <Card className="mb-4 shadow-md border-orange-200 bg-orange-50/30">
+    <Card className="glassmorphism mb-4 shadow-md border-orange-200 bg-orange-50/30">
       <CardHeader>
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
           <span className="flex items-center gap-2">

@@ -22,15 +22,15 @@ describe('/api/help/[articleId] GET', () => {
     expect(data).toEqual(mockArticle);
   });
 
-  it('returns fallback article on backend error', async () => {
+  it('returns backend error if backend fails', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
     });
     const request = new NextRequest('http://localhost:3000/api/help/add-products');
     const response = await GET(request, { params: Promise.resolve({ articleId: 'add-products' }) });
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(404);
     const data = await response.json();
-    expect(data.id).toEqual("add-products");
+    expect(data.error).toBe("Article not found");
   });
 });

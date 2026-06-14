@@ -52,8 +52,13 @@ impl Department for OperationsAgent {
         let action_description = match event.event_type.as_str() {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
-                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                format!("Draft a restock order for product {} due to low stock", product_id)
+                let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+                if !msg.is_empty() {
+                    msg.to_string()
+                } else {
+                    let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    format!("Draft a restock order for product {} due to low stock", product_id)
+                }
             },
             "InventoryConflictEvent" => {
                 // If it's the specific test/simulation message from offline_sync, we forward it exactly.

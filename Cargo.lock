@@ -5558,6 +5558,7 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
+ "libsqlite3-sys",
  "ohc_builtin_agent",
  "once_cell",
  "opentelemetry",
@@ -5712,6 +5713,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "server_pricing",
  "sha2",
  "sqlx",
  "tokio",
@@ -5751,6 +5753,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server_ohc",
+ "server_pricing",
  "sqlx",
  "temp-env",
  "tempfile",
@@ -8367,6 +8370,7 @@ dependencies = [
  "server_oidc",
  "sha2",
  "sqlx",
+ "temp-env",
  "tokio",
  "tonic",
  "tracing",
@@ -9011,6 +9015,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -10472,6 +10477,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
 dependencies = [
+ "futures",
  "parking_lot",
 ]
 

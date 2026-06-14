@@ -10,6 +10,14 @@ pub enum PlanTier {
 }
 
 impl PlanTier {
+    pub fn name(&self) -> &'static str {
+        match self {
+            PlanTier::Free => "Free",
+            PlanTier::Starter => "Starter",
+            PlanTier::Pro => "Pro",
+            PlanTier::Business => "Business",
+        }
+    }
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
@@ -224,11 +232,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -244,11 +248,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -284,11 +284,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -331,11 +327,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -389,12 +381,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit_mb
                     )),
                 });
@@ -484,7 +471,7 @@ mod tests {
                 let tenant_id = "test-tenant-no-mutation";
 
                 // Clear any existing products
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let product_key = format!("tenant:{}:products", tenant_id);
                 let _ : () = conn.del(&product_key).await.unwrap_or(());
 
@@ -521,7 +508,7 @@ mod tests {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-no-mutation";
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
@@ -539,7 +526,7 @@ mod tests {
                 let tenant_id = "test-tenant-storage-quota";
 
                 // Clear any existing storage used
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
@@ -570,7 +557,7 @@ mod tests {
                 let tenant_id = "test-tenant-agent-quota";
 
                 // Clear any existing agents
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let agent_key = format!("tenant:{}:agents", tenant_id);
                 let _ : () = conn.del(&agent_key).await.unwrap_or(());
 
@@ -599,7 +586,7 @@ mod tests {
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
                 let _ : () = conn.del(&tenant_key).await.unwrap_or(());
 
@@ -626,7 +613,7 @@ mod tests {
                 let tenant_id = "test-tenant-agent-action";
                 let agent_id = "agent-limit";
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
                 let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
@@ -651,7 +638,7 @@ mod tests {
                 let tenant_id = "test-tenant-soft-limits";
                 let agent_id = "agent-1";
 
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);

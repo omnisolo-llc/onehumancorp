@@ -7,7 +7,18 @@ use sqlx::Row;
 use serde_json::json;
 use tokio::time::timeout;
 
-const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
+fn ai_agent_timeout() -> Duration {
+    crate::config::get().ai_agent_timeout_ms.map(Duration::from_millis).unwrap_or(Duration::from_secs(60))
+}
+
+fn ai_retry_backoff(attempts: u32) -> Duration {
+    if let Some(ms) = crate::config::get().ai_retry_backoff_ms {
+        return Duration::from_millis(ms);
+    }
+    Duration::from_secs(2u64.pow(attempts))
+}
+
+
 const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_RETRIES: u32 = 3;
 
@@ -58,7 +69,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -81,7 +92,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload, event_type FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -125,6 +136,57 @@ impl OperationsWorker {
         if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
 
+            if event_type == "SyncEvent:JobCompleted" {
+                let transaction_id = payload.get("payload").and_then(|v| v.get("transaction_id")).and_then(|v| v.as_str()).unwrap_or("unknown");
+                let product_id = payload.get("payload").and_then(|v| v.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                let title = format!("Offline Job Synced: Transaction {}", transaction_id);
+                let description = format!("Transaction {} for product {} was just synced from an offline device. Shall I draft the invoice/receipt for this offline job?", transaction_id, product_id);
+
+                let drafted_msg = format!("Your receipt for transaction {} regarding product {} is attached.", transaction_id, product_id);
+
+                let task_id = Uuid::new_v4().to_string();
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(&db.pool)
+                        .await;
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    }
+                }
+
+                let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&id)
+                    .execute(&db.pool)
+                    .await;
+
+                return Ok(true);
+            }
+
             if event_type == "InventoryConflictEvent" {
                 let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
@@ -154,7 +216,7 @@ impl OperationsWorker {
                         Err("AI call failed".to_string())
                     };
 
-                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                    match timeout(ai_agent_timeout(), ai_op).await {
                         Ok(Ok(content)) => {
                             if !content.is_empty() {
                                 drafted_msg = content;
@@ -163,7 +225,7 @@ impl OperationsWorker {
                         },
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }
@@ -388,7 +450,7 @@ impl OperationsWorker {
                                             Err("AI call failed".to_string())
                                         };
 
-                                        match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                        match timeout(ai_agent_timeout(), ai_op).await {
                                             Ok(Ok(content)) => {
                                                 drafted_msg = content;
                                                 break;
@@ -424,7 +486,7 @@ impl OperationsWorker {
                                                         }
                                                     }
                                                 }
-                                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                             }
                                         }
                                     }
@@ -508,13 +570,15 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else if order_count == 10 { "🎉 Milestone: 10th Order!" } else { "🎉 Milestone: 100th Order!" };
+                        let milestone_type = if order_count == 1 { "first_sale" } else if order_count == 10 { "10th_order" } else { "100_orders" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
+                        } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
+                        } else {
+                            "You've successfully fulfilled 100 orders on OHC!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -570,13 +634,15 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else if order_count == 10 { "🎉 Milestone: 10th Order!" } else { "🎉 Milestone: 100th Order!" };
+                        let milestone_type = if order_count == 1 { "first_sale" } else if order_count == 10 { "10th_order" } else { "100_orders" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
+                        } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
+                        } else {
+                            "You've successfully fulfilled 100 orders on OHC!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -786,7 +852,7 @@ impl CustomerSuccessWorker {
                         Err("AI call failed".to_string())
                     };
 
-                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                    match timeout(ai_agent_timeout(), ai_op).await {
                         Ok(Ok(content)) => {
                             drafted_msg = content;
                             break;
@@ -806,7 +872,7 @@ impl CustomerSuccessWorker {
                                 .execute(&db.pool)
                                 .await;
                             }
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }
@@ -823,7 +889,7 @@ impl CustomerSuccessWorker {
 
                     let mut attempts = 0;
                     while attempts < MAX_RETRIES {
-                        match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
+                        match timeout(ai_agent_timeout(), minimax.reason(&prompt)).await {
                             Ok(Ok(res)) => {
                                 if res.trim() == "CONFIDENT" {
                                     confidence = "CONFIDENT".to_string();
@@ -835,7 +901,7 @@ impl CustomerSuccessWorker {
                                 if attempts == MAX_RETRIES {
                                     final_status = "PAUSED";
                                 }
-                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                             }
                         }
                     }
@@ -1001,7 +1067,7 @@ let db_for_products = self.db.clone();
                                         Err("AI call failed".to_string())
                                     };
 
-                                    match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    match tokio::time::timeout(ai_agent_timeout(), ai_op).await {
                                         Ok(Ok(content)) => {
                                             drafted_msg = content;
                                             break;
@@ -1040,7 +1106,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                         }
                                     }
                                 }
@@ -1149,7 +1215,7 @@ let db_for_products = self.db.clone();
                                         Err("AI call failed".to_string())
                                     };
 
-                                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    match timeout(ai_agent_timeout(), ai_op).await {
                                         Ok(Ok(v)) => {
                                             resolved_payload = v;
                                             break;
@@ -1184,7 +1250,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                         }
                                     }
                                 }
@@ -1372,7 +1438,7 @@ impl AdvisorWorker {
                             Err("Hub call failed".to_string())
                         };
 
-                        match tokio::time::timeout(AI_AGENT_TIMEOUT, hub_op).await {
+                        match tokio::time::timeout(ai_agent_timeout(), hub_op).await {
                             Ok(Ok(_)) => {
                                 break;
                             },
@@ -1406,7 +1472,7 @@ impl AdvisorWorker {
                                         }
                                     }
                                 }
-                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                             }
                         }
                     }
@@ -1444,6 +1510,8 @@ mod tests {
                 tenant_id TEXT,
                 name TEXT,
                 inventory_count INT,
+                locked_quantity INT DEFAULT 0,
+                available_quantity INT DEFAULT 0,
                 supplier_name TEXT,
                 supplier_contact TEXT
             );
@@ -1704,4 +1772,61 @@ mod tests {
              assert_eq!(count, 1);
          }
      }
+
+
+    #[tokio::test]
+    async fn test_operations_worker_100_orders_milestone() {
+        let db = match crate::db::DB::new().await {
+            Ok(db) => db,
+            Err(_) => return, // Skip test if database is not available
+        };
+        let pool = db.pool.clone();
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+        let db = Arc::new(db);
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload JSONB, status TEXT DEFAULT 'PENDING', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS business_milestones (id TEXT PRIMARY KEY, tenant_id TEXT, milestone_type TEXT, reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, milestone_type));").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+
+        // Insert 99 orders
+        for i in 0..99 {
+             let _ = sqlx::query("INSERT INTO orders (id, tenant_id) VALUES ($1, 'tenant-100-orders')")
+                 .bind(format!("order-{}", i))
+                 .execute(&pool)
+                 .await;
+        }
+
+        let payload = json!({
+            "tenant_id": "tenant-100-orders",
+            "order_id": "order-100",
+            "items": [],
+            "total": 100
+        });
+
+        let task_id = "task-cs-100-orders";
+        sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload) VALUES ($1, 'tenant-100-orders', 'operations', 'OrderReceived', $2)")
+            .bind(task_id)
+            .bind(&payload)
+            .execute(&pool).await.unwrap();
+
+        // Insert the 100th order that triggers the milestone check
+        let _ = sqlx::query("INSERT INTO orders (id, tenant_id) VALUES ('order-100', 'tenant-100-orders')")
+            .execute(&pool)
+            .await;
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let _hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+
+        let _worker = OperationsWorker::new(db.clone());
+        OperationsWorker::poll(&db.clone()).await.unwrap();
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM business_milestones WHERE tenant_id = 'tenant-100-orders' AND milestone_type = '100_orders'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
+
+        let count_shared_task: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = 'tenant-100-orders' AND title = '🎉 Milestone: 100th Order!'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_shared_task, 1);
+    }
 }

@@ -228,7 +228,7 @@ impl TeammateMesh for SleepingMockMesh {
 mod chaos_tests {
     #[tokio::test]
     async fn test_timeout_storm() {
-        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout_val(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
 
         let mut successful_sends = 0;
         let mut timeouts = 0;
@@ -360,7 +360,7 @@ mod chaos_tests {
         // This attempts to acquire lock (takes 1.9s) and then query DB.
         // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
         // We use temp_env to safely mock the environment variable without concurrent race conditions
-        temp_env::with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"), || async {
+        temp_env::async_with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"), || async {
             let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
             let elapsed = start.elapsed();
 
@@ -701,6 +701,14 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_pubsub_message_loss() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+        temp_env::async_with_vars(
+            vec![
+                ("OHC_MESH_INITIAL_BACKOFF_MS", Some("10")),
+                ("OHC_MESH_MAX_BACKOFF_MS", Some("50")),
+            ],
+            || async {
+
         let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -735,6 +743,8 @@ mod chaos_tests {
         assert!(successful_sends > 0, "System should successfully send at least some messages under chaos");
         // Because of CentrifugeNode's retries, successful_sends should be roughly 87.5% of 20 (approx 17)
         assert!(successful_sends >= 10, "Retry logic should recover a significant portion of dropped messages");
+
+        }).await;
     }
 
     #[tokio::test]
@@ -774,7 +784,13 @@ mod chaos_tests {
         use crate::workers::OperationsWorker;
 
         // Intentionally bad OHC_HUB_URL to simulate API failure
-        temp_env::with_var("OHC_HUB_URL", Some("http://127.0.0.1:1"), || async {
+        temp_env::async_with_vars(
+            vec![
+                ("OHC_HUB_URL", Some("http://127.0.0.1:1")),
+                ("OHC_AI_AGENT_TIMEOUT_MS", Some("50")),
+                ("OHC_AI_RETRY_BACKOFF_MS", Some("10")),
+            ],
+            || async {
             let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
                 .connect("sqlite::memory:")
                 .await

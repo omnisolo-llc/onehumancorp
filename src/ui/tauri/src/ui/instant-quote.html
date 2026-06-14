@@ -299,6 +299,18 @@
             <div class="form-group" style="margin-top: 24px;">
                 <label for="notes">Additional Notes</label>
                 <textarea id="notes" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); padding: 12px; font-family: inherit; font-size: 15px; resize: vertical; min-height: 80px;" placeholder="Any special requests?"></textarea>
+
+            <div style="margin-top: 16px;">
+                <label style="display: block; font-weight: 500; margin-bottom: 8px;">Attach Photos (Optional)</label>
+                <div style="border: 2px dashed #ccc; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer;" onclick="document.getElementById('image-upload-input').click()">
+                    <span id="image-upload-btn" style="color: var(--primary); font-weight: 500;">Tap to upload photos</span>
+                    <input type="file" id="image-upload-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                </div>
+                <div id="image-preview" style="margin-top: 12px; display: none;">
+                    <img id="image-preview-img" src="" style="max-width: 100%; border-radius: 8px;">
+                </div>
+            </div>
+
             </div>
         </div>
     </div>
@@ -318,6 +330,10 @@
         <button class="primary-btn" id="submit-btn" onclick="submitQuote()">Request Final Quote</button>
     </div>
 
+    <footer style="text-align: center; margin: 24px 0 100px 0;">
+        <a id="powered-by-link" href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" target="_blank" style="text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 600;">⚡ Powered by OHC</a>
+    </footer>
+
     <script>
         // Store rules fetched from edge/backend
         let pricingRules = [];
@@ -331,6 +347,12 @@
                 // In a real app, tenantId would be injected via subdomain or token
                 // We use default for local testing
                 const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'e2e-tenant';
+
+                // Update powered-by-link
+                const poweredByLink = document.getElementById('powered-by-link');
+                if (poweredByLink) {
+                    poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+                }
 
                 // For demonstration, we'll mock the fetch if it fails (offline mode)
                 // or if we're running without backend.
@@ -464,7 +486,7 @@
             });
 
             try {
-                const res = await fetch(`/api/v1/quoting/quotes`, {
+                const res = await fetch(`/api/v1/quotes`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

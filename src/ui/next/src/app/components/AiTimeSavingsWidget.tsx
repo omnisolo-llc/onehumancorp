@@ -110,7 +110,7 @@ export default function AiTimeSavingsWidget() {
            <button
             onClick={handleShareAndClaim}
             disabled={isClaiming}
-            className={`w-full md:w-auto px-6 py-3 min-h-[44px] rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2
+            className={`w-full md:w-auto px-6 py-3 min-h-[44px] min-w-[44px] rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2
               ${isClaiming ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#1DA1F2] hover:bg-[#1a91da] text-white hover:shadow-lg hover:-translate-y-0.5'}`}
           >
             {isClaiming ? (

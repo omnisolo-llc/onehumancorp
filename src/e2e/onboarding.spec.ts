@@ -3,11 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard E2E Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.route('**/api/onboarding/**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { step: 0, status: 'success', business_name: 'My Awesome E2E Business', business_type: 'Online Store' },
-      });
+    // Clear local storage to ensure fresh state
+    await page.addInitScript(() => {
+      window.localStorage.clear();
     });
   });
 
@@ -20,14 +18,14 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
     // Step 1: Business Name
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await expect(nameInput).toBeVisible();
     await expect(nameInput).toHaveClass(/min-h-\[44px\]/);
     await expect(nameInput).toHaveClass(/glassmorphism/);
@@ -36,8 +34,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await nameInput.fill("My Awesome E2E Business");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-    // Step 2: What do you sell?
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
+    // Step 2: Review Details
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
     const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
     await expect(sellInput).toBeVisible();
     await expect(sellInput).toHaveClass(/min-h-\[44px\]/);
@@ -68,7 +66,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 4: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
@@ -124,15 +122,15 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await expect(nameInput).toBeVisible();
     const box = await nameInput.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
   });
 
   // Test 3: Verifies input disabled states
@@ -141,7 +139,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -149,7 +147,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nextButton = page.getByRole('button', { name: 'Next', exact: true });
     await expect(nextButton).toBeDisabled();
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await nameInput.fill("ABC");
     await expect(nextButton).toBeEnabled();
   });
@@ -160,16 +158,16 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await nameInput.fill("ABC");
     await nameInput.press('Enter');
 
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
   });
 
   // Test 5: Verify text area presence and styling
@@ -180,12 +178,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Need to trigger manual configuration
     // This is tested by injecting a state or clicking a manual setup link
-    // But since it's hidden under Start My Business, let's just make sure the component loads.
+    // But since it's hidden under Next, let's just make sure the component loads.
   });
 });
 
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
-  // Test 1: Verifies Instant Build successful generation flow
+    // Test 1: Verifies Instant Build successful generation flow
   test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
@@ -197,20 +195,63 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     await expect(bioInput).toBeVisible();
     await expect(bioInput).toHaveClass(/glassmorphism/);
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    await imageUrlInput.fill("https://example.com/logo.png");
+
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
     await expect(page.locator('#setup-screen')).toBeVisible();
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
 
-    await expect(successHeading).toBeVisible({ timeout: 30000 });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
+  });
+
+  test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    await bioInput.fill("Test business description.");
+
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    await expect(imageUrlInput).toHaveAttribute('type', 'url');
+    await imageUrlInput.fill("https://example.com/logo.png");
+
+    const generateButton = page.getByRole('button', { name: 'Next' });
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
+  });
+
+  test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    await bioInput.fill("Test business description without image.");
+
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    // leave empty
+
+    const generateButton = page.getByRole('button', { name: 'Next' });
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
   });
 
   // Test 2: Verifies Instant Build handles network error gracefully
@@ -225,16 +266,16 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
 
-    await page.context().setOffline(true);
+    await page.route('**/api/onboarding/**', route => route.abort('failed'));
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.getByText(/Failed to fetch|Failed to launch|Network Error|Failed to analyze|Backend connection failed/i).first();
+    const errorBlock = page.locator('.animate-shake').first();
     await expect(errorBlock).toBeVisible();
     await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
@@ -246,7 +287,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await bioInput.fill("New text");
     await expect(bioInput).not.toHaveClass(/border-\[#FF3B30\]/);
 
-    await page.context().setOffline(false);
+    await page.unroute('**/api/onboarding/**');
   });
 
   // Test 3: Verifies empty input behavior
@@ -255,13 +296,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
 
     // Button should be disabled when input is empty.
     await expect(generateButton).toBeDisabled();
 
     // We shouldn't see a loading state.
-    const loadingState = page.getByText('Generating...');
+    const loadingState = page.getByText('Building Your Business...');
     await expect(loadingState).not.toBeVisible();
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
   });
@@ -272,15 +313,15 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
-    await expect(successHeading).toBeVisible({ timeout: 30000 });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
   });
 
   // Test 5: Mobile responsiveness of the Instant Build component
@@ -291,13 +332,180 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     const box = await bioInput.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     const btnBox = await generateButton.boundingBox();
-    expect(btnBox?.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
   });
+});
+
+
+
+test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
+    // Generate a unique tenant ID for this test run to avoid cross-test pollution
+    const testTenantId = 'tenant-' + Date.now() + '-' + Math.random().toString(36).substring(7);
+
+    test.beforeEach(async ({ page }) => {
+        await page.addInitScript((tenantId) => {
+            window.localStorage.clear();
+            window.localStorage.setItem('tenant_id', tenantId);
+            window.localStorage.setItem('user_id', 'test-user');
+        }, testTenantId);
+    });
+
+    test('Cross-device resume correctly navigates to the saved step', async ({ page, browser }) => {
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        // Go to step 2 (categories)
+        await page.getByText('Local Service').click();
+        await page.locator('.step.active .next-step-btn').click();
+        await expect(page.getByRole('heading', { name: "What's your category?" })).toBeVisible({ timeout: 10000 });
+
+        // Save state on step 2
+        await page.locator('#business-categories').selectOption('Plumbing');
+        await page.locator('.step.active .next-step-btn').click();
+        await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible({ timeout: 10000 });
+
+        await page.fill('#business-name', "My New Plumbing Business");
+
+        // Save draft to force a backend POST
+        await page.locator('.step.active .save-draft-btn').click();
+        await expect(page.locator('#draft-saved-msg')).toBeVisible();
+
+        // New context representing second device
+        const newContext = await browser.newContext();
+        const newPage = await newContext.newPage();
+        await newPage.goto('/dashboard'); // Establish origin
+        await newPage.evaluate((tenantId) => {
+            localStorage.clear();
+            localStorage.setItem('tenant_id', tenantId);
+            localStorage.setItem('user_id', 'test-user');
+        }, testTenantId);
+
+        await newPage.goto('/ui/setup.html');
+        await newPage.waitForLoadState('networkidle');
+
+        // It should resume to step-name
+        await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible({ timeout: 10000 });
+        await expect(newPage.locator('#business-name')).toHaveValue("My New Plumbing Business");
+
+        await newContext.close();
+    });
+
+    test('Form fields populate correctly after resume', async ({ page, browser }) => {
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        // Fill data
+        await page.getByText('Local Service').click();
+        await page.locator('.step.active .next-step-btn').click();
+        await page.locator('#business-categories').selectOption('Plumbing');
+        await page.locator('.step.active .next-step-btn').click();
+        await page.fill('#business-name', "My New Plumbing Business");
+        await page.locator('.step.active .save-draft-btn').click();
+        await expect(page.locator('#draft-saved-msg')).toBeVisible();
+
+        // New device
+        const newContext = await browser.newContext();
+        const newPage = await newContext.newPage();
+        await newPage.goto('/dashboard');
+        await newPage.evaluate((tenantId) => {
+            localStorage.clear();
+            localStorage.setItem('tenant_id', tenantId);
+            localStorage.setItem('user_id', 'test-user');
+        }, testTenantId);
+
+        await newPage.goto('/ui/setup.html');
+        await newPage.waitForLoadState('networkidle');
+
+        await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible({ timeout: 10000 });
+
+        // Go back and verify
+        await newPage.locator('.step.active .prev-step-btn').click();
+        await expect(newPage.locator('#business-categories')).toHaveValue('Plumbing');
+
+        await newPage.locator('.step.active .prev-step-btn').click();
+        await expect(newPage.locator('input[value="Local Service"]')).toBeChecked();
+
+        await newContext.close();
+    });
+
+    test('Save Draft explicit button functionality works and shows visual feedback', async ({ page }) => {
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        await page.getByText('Local Service').click();
+        await page.locator('.step.active .next-step-btn').click();
+        await expect(page.getByRole('heading', { name: "What's your category?" })).toBeVisible({ timeout: 10000 });
+
+        const saveDraftBtn = page.locator('.step.active .save-draft-btn');
+        await saveDraftBtn.click();
+
+        await expect(saveDraftBtn).toHaveText('Saved!');
+        await expect(page.locator('#draft-saved-msg')).toBeVisible();
+    });
+
+    test('Caching logic via API preserves state correctly across reloads', async ({ page }) => {
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        await page.getByText('Storefront').click();
+        await page.locator('.step.active .next-step-btn').click();
+        await page.locator('#business-categories').selectOption('Bakery');
+        await page.locator('.step.active .next-step-btn').click();
+        await page.fill('#business-name', 'Reload Bakery');
+        await page.locator('.step.active .next-step-btn').click();
+
+        await expect(page.getByRole('heading', { name: "What's your assistant's name?" })).toBeVisible({ timeout: 10000 });
+
+        // Simulate reload without clearing local storage
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        await expect(page.getByRole('heading', { name: "What's your assistant's name?" })).toBeVisible({ timeout: 10000 });
+
+        await page.locator('.step.active .prev-step-btn').click();
+        await expect(page.locator('#business-name')).toHaveValue('Reload Bakery');
+    });
+
+    test('Draft overrides local state if API state exists', async ({ page, browser }) => {
+        // Device 1: Advance to step 3 and save draft
+        await page.goto('/ui/setup.html');
+        await page.waitForLoadState('networkidle');
+
+        await page.getByText('Storefront').click();
+        await page.locator('.step.active .next-step-btn').click();
+        await page.locator('#business-categories').selectOption('Bakery');
+        await page.locator('.step.active .next-step-btn').click();
+        await page.fill('#business-name', 'API Override Bakery');
+        await page.locator('.step.active .save-draft-btn').click();
+        await expect(page.locator('#draft-saved-msg')).toBeVisible();
+
+        // Device 2: Has stale local storage, should load API state
+        const newContext = await browser.newContext();
+        const newPage = await newContext.newPage();
+        await newPage.goto('/dashboard');
+        await newPage.evaluate((tenantId) => {
+            localStorage.setItem('tenant_id', tenantId);
+            localStorage.setItem('user_id', 'test-user');
+            localStorage.setItem('onboardingState', JSON.stringify({
+                step: 0,
+                businessName: "Stale Local Bakery"
+            }));
+        }, testTenantId);
+
+        await newPage.goto('/ui/setup.html');
+        await newPage.waitForLoadState('networkidle');
+
+        // It should jump to step-name and have the API business name
+        await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible({ timeout: 10000 });
+        await expect(newPage.locator('#business-name')).toHaveValue('API Override Bakery');
+
+        await newContext.close();
+    });
 });

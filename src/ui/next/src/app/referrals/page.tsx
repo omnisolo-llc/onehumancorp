@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { PoweredByOHC } from '../components/PoweredByOHC';
+
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
@@ -162,7 +164,7 @@ export default function ReferralsPage() {
           </div>
         </div>
 
-        <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
+        <div className="ohc-growth-card glass-card p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
             <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Cloud Bridge Invite</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -263,11 +265,7 @@ export default function ReferralsPage() {
         </div>
       </main>
 
-      <footer className="mt-8 text-center pb-8">
-        <a href="/onboarding" className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
-          ⚡ Powered by OHC
-        </a>
-      </footer>
+      <PoweredByOHC tenantId="my-store" />
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

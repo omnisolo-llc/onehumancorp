@@ -8,7 +8,7 @@ type Props = {
   departmentName: string;
   approvals: ApprovalRequest[];
   onBack: () => void;
-  onApprove: (id: string) => void;
+  onApprove: (id: string, editedPayload?: any) => void;
   onReject: (id: string) => void;
 };
 
@@ -24,6 +24,7 @@ export default function ApprovalInbox({
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
+  const [editedQuote, setEditedQuote] = useState<{ suggested_price: string, scope: string } | null>(null);
 
   const handleToggle = async () => {
     const newValue = !reviewAll;
@@ -628,6 +629,12 @@ export default function ApprovalInbox({
                       onClick={() => {
                         if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")) {
                           setSelectedReview(req);
+                          if (payload.feature_type === "quote_draft") {
+                            setEditedQuote({
+                              suggested_price: String(payload.suggested_price || ''),
+                              scope: payload.scope || ''
+                            });
+                          }
                         } else {
                           onReject(req.id);
                         }
@@ -639,7 +646,17 @@ export default function ApprovalInbox({
                         : "Reject / Edit"}
                     </button>
                     <button
-                      onClick={() => onApprove(req.id)}
+                      onClick={() => {
+                        if (req.payload?.feature_type === "quote_draft" && editedQuote) {
+                           onApprove(req.id, {
+                             ...req.payload,
+                             suggested_price: parseFloat(editedQuote.suggested_price) || 0,
+                             scope: editedQuote.scope
+                           });
+                        } else {
+                           onApprove(req.id);
+                        }
+                      }}
                       className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
@@ -682,21 +699,47 @@ export default function ApprovalInbox({
                 </div>
               </div>
 
-              <div className="mb-6">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
-                  Draft
-                </p>
-                <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                  {extractPayload(selectedReview.description).payload
-                    ?.generated_response || extractPayload(selectedReview.description).payload?.draft_reply || extractPayload(selectedReview.description).payload?.reply || "N/A"}
+              {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? (
+                <div className="mb-6 space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Suggested Price ($)</label>
+                    <input
+                      type="number"
+                      value={editedQuote?.suggested_price || ''}
+                      onChange={(e) => setEditedQuote(prev => prev ? { ...prev, suggested_price: e.target.value } : null)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 bg-white"
+                      data-testid="edit-quote-price"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Scope of Work</label>
+                    <textarea
+                      value={editedQuote?.scope || ''}
+                      onChange={(e) => setEditedQuote(prev => prev ? { ...prev, scope: e.target.value } : null)}
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 bg-white resize-none"
+                      data-testid="edit-quote-scope"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mb-6">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+                    Draft
+                  </p>
+                  <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                    {extractPayload(selectedReview.description).payload
+                      ?.generated_response || extractPayload(selectedReview.description).payload?.draft_reply || extractPayload(selectedReview.description).payload?.reply || "N/A"}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button
                   onClick={() => {
                     onReject(selectedReview.id);
                     setSelectedReview(null);
+                    setEditedQuote(null);
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
@@ -705,19 +748,30 @@ export default function ApprovalInbox({
                 <button
                   onClick={() => {
                     setSelectedReview(null);
+                    setEditedQuote(null);
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
-                  Edit
+                  Cancel
                 </button>
                 <button
                   onClick={() => {
-                    onApprove(selectedReview.id);
+                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote) {
+                      onApprove(selectedReview.id, {
+                         ...extractPayload(selectedReview.description).payload,
+                         suggested_price: parseFloat(editedQuote.suggested_price) || 0,
+                         scope: editedQuote.scope
+                      });
+                    } else {
+                      onApprove(selectedReview.id);
+                    }
                     setSelectedReview(null);
+                    setEditedQuote(null);
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                  data-testid="modal-approve-btn"
                 >
-                  Send Draft
+                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
                 </button>
               </div>
             </div>

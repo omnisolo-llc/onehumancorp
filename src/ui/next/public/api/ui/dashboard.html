@@ -674,6 +674,10 @@
           <div class="action-buttons" style="display: flex; gap: 10px;">
             <button class="btn-secondary" id="copy-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600;" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; background-color: #25D366; color: white; border: none;">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-twitter-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; background-color: #000000; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+              Share on X (Twitter)
+            </button>
           </div>
         </div>
       </div>
@@ -1008,6 +1012,13 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
+
+      const shareTwitterBtn = document.getElementById('share-twitter-btn');
+      shareTwitterBtn.addEventListener('click', () => {
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link: ${link}\n\n⚡ Powered by OHC`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
       });
 
 
@@ -1486,7 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
 <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>

@@ -51,19 +51,14 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
 
   return (
     <div
-      className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-white"
-      style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9))',
-        backdropFilter: 'blur(30px) saturate(210%)',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
-      }}
+      className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-black dark:text-white bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10"
     >
       {/* Decorative pulse element */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
 
       <div className="relative z-10">
         <h2 className="text-xl font-bold font-outfit mb-2">Neighborhood Pulse</h2>
-        <p className="text-sm text-indigo-100 mb-6 font-inter">
+        <p className="text-sm text-gray-800 dark:text-gray-200 mb-6 font-inter">
           There are {neighbors.length} OHC businesses in your area. Form a "Main Street Collective" to share customers?
         </p>
 
@@ -71,20 +66,15 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
           {neighbors.map(neighbor => (
             <div
               key={neighbor.id}
-              className="flex items-center justify-between p-4 rounded-xl"
-              style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(30px) saturate(210%)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
+              className="flex items-center justify-between p-4 rounded-xl bg-white/40 dark:bg-black/20 border border-white/30 dark:border-white/5"
             >
               <div>
                 <h3 className="font-semibold">{neighbor.name}</h3>
-                <p className="text-xs text-indigo-100">Complementary Vibe Match</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Complementary Vibe Match</p>
               </div>
               <button
                 onClick={() => handleInvite(neighbor.id)}
-                className="px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+                className="px-4 py-2 bg-[#0066FF] text-white rounded-lg text-sm font-semibold hover:bg-[#0052CC] transition-colors shadow-sm"
               >
                 Invite Partner
               </button>

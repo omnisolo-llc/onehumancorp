@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
+import { SubscriptionUpsellWidget } from "../components/SubscriptionUpsellWidget";
+
 
 function CheckoutContent() {
   const router = useRouter();
@@ -88,6 +91,7 @@ function CheckoutContent() {
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
+  const isSuccess = searchParams.get("success") === "true";
 
 
   const handlePayment = async (isSub = false) => {
@@ -109,6 +113,12 @@ function CheckoutContent() {
           quantity: tier ? undefined : quantity
         }),
       });
+      if (response.status === 409) {
+        setCheckoutStatus("Item just sold out.");
+        setIsProcessing(false);
+        return;
+      }
+
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
         throw new Error(data.message || data.error || "Failed to create checkout session");
@@ -123,6 +133,24 @@ function CheckoutContent() {
     }
   };
 
+  const handleMercadoPago = async () => {
+    setIsMercadoPagoProcessing(true);
+    setCheckoutStatus("Preparing Mercado Pago Checkout...");
+    try {
+      const response = await fetch("/api/checkout/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity }),
+      });
+      const data = await response.json();
+      if (data.init_point) window.location.assign(data.init_point);
+      else setCheckoutStatus("Mercado Pago checkout failed.");
+    } catch {
+      setCheckoutStatus("Mercado Pago unavailable.");
+    }
+    setIsMercadoPagoProcessing(false);
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F8F9FA] text-gray-900 overflow-x-hidden">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
@@ -131,7 +159,7 @@ function CheckoutContent() {
           defaultText="Review your order or plan details before securely completing your purchase."
         >
           <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-            {tier ? "Plan Upgrade" : "Secure Checkout"}
+            {isSuccess ? "Order Successful" : (tier ? "Plan Upgrade" : "Secure Checkout")}
           </h1>
         </WithTooltip>
       </header>
@@ -140,7 +168,29 @@ function CheckoutContent() {
         id="checkout-screen"
         className="p-4 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col justify-center"
       >
-        {tier ? (
+        {isSuccess ? (
+          <div className="flex flex-col gap-6">
+            <div className="p-8 flex flex-col justify-center items-center bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Thank you for your order!</h2>
+              <p className="text-gray-600 mb-6">Your payment was successful and your order is being processed.</p>
+
+              <button
+                onClick={() => router.push('/')}
+                className="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Return to Store
+              </button>
+            </div>
+
+            <PostPurchaseShareWidget tenantId={tenant || "default-store"} orderId={searchParams.get("orderId") || "success"} />
+            <div className="flex justify-center">
+              <PoweredByOHC tenantId={tenant} />
+            </div>
+          </div>
+        ) : tier ? (
             <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px]">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">OHC {tier} Plan</h3>
@@ -236,24 +286,7 @@ function CheckoutContent() {
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
 
-          <div className="flex items-center mb-4">
-            <label htmlFor="subscribe" className="flex items-center cursor-pointer group">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  id="subscribe"
-                  className="sr-only"
-                  checked={isSubscription}
-                  onChange={(e) => setIsSubscription(e.target.checked)}
-                />
-                <div className={`block w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${isSubscription ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-300'}`}></div>
-                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-                Subscribe & Save 10%
-              </div>
-            </label>
-          </div>
+          <SubscriptionUpsellWidget isSubscription={isSubscription} setIsSubscription={setIsSubscription} />
 
           <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
             <div className="flex justify-between items-center">
@@ -292,6 +325,16 @@ function CheckoutContent() {
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               {isProcessing ? "Processing..." : "Pay"}
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={handleMercadoPago}
+              disabled={isMercadoPagoProcessing || isProcessing}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#008ACB] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              {isMercadoPagoProcessing ? "Processing..." : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 

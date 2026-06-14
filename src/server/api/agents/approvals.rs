@@ -8,12 +8,16 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use crate::utils::cache::HybridCache;
+use std::sync::OnceLock;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
+pub static APPROVALS_CACHE: OnceLock<HybridCache<ApprovalsResponse>> = OnceLock::new();
 
-#[derive(Serialize)]
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ApprovalsResponse {
     pub pending_approvals: Vec<ApprovalRequest>,
     pub next_cursor: Option<String>,
@@ -28,6 +32,7 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct DecisionRequest {
     pub approved: bool,
+    pub edited_payload: Option<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -165,6 +170,7 @@ async fn simulate_smart_pricing(
     }
 }
 
+
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Query(query): Query<PaginationQuery>,
@@ -176,8 +182,33 @@ async fn list_approvals(
     };
 
     let limit = query.limit.unwrap_or(20);
+    let cache_key = format!("approvals:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit);
+    let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
-    // Fetch from DB using cursor pagination
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(cached)).into_response();
+        }
+
+        let tenant_id_bg = tenant_id.clone();
+        let cursor_bg = query.cursor.clone();
+        let orchestrator_bg = orchestrator.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            let approvals = orchestrator_bg.get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let next_cursor = if approvals.len() == limit {
+                approvals.last().map(|a| a.id.clone())
+            } else {
+                None
+            };
+            if let Some(c) = APPROVALS_CACHE.get() {
+                c.set(&cache_key_bg, ApprovalsResponse { pending_approvals: approvals, next_cursor }, std::time::Duration::from_secs(10)).await;
+            }
+        });
+
+        return (StatusCode::OK, Json(cached)).into_response();
+    }
+
     let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
 
     let next_cursor = if approvals.len() == limit {
@@ -186,10 +217,13 @@ async fn list_approvals(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
+    let response = ApprovalsResponse {
         pending_approvals: approvals,
         next_cursor,
-    })).into_response()
+    };
+    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(10)).await;
+
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 
@@ -204,6 +238,32 @@ async fn list_activity_feed(
     };
 
     let limit = query.limit.unwrap_or(20);
+    let cache_key = format!("activity_feed:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit);
+    let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(cached)).into_response();
+        }
+
+        let tenant_id_bg = tenant_id.clone();
+        let cursor_bg = query.cursor.clone();
+        let orchestrator_bg = orchestrator.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            let activities = orchestrator_bg.get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let next_cursor = if activities.len() == limit {
+                activities.last().map(|a| a.id.clone())
+            } else {
+                None
+            };
+            if let Some(c) = APPROVALS_CACHE.get() {
+                c.set(&cache_key_bg, ApprovalsResponse { pending_approvals: activities, next_cursor }, std::time::Duration::from_secs(10)).await;
+            }
+        });
+
+        return (StatusCode::OK, Json(cached)).into_response();
+    }
 
     let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
 
@@ -213,10 +273,13 @@ async fn list_activity_feed(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
+    let response = ApprovalsResponse {
         pending_approvals: activities,
         next_cursor,
-    })).into_response()
+    };
+    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(10)).await;
+
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 async fn decide_approval(
@@ -230,7 +293,7 @@ async fn decide_approval(
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved).await {
+    match orchestrator.decide_approval(&id, &tenant_id, payload.approved, payload.edited_payload).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
     }
@@ -253,5 +316,30 @@ async fn list_ledger_entries(
     match orchestrator.get_ledger_entries(&tenant_id, limit as i64).await {
         Ok(entries) => (StatusCode::OK, Json(serde_json::json!({ "entries": entries }))).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_approvals_cache_initialization() {
+        let tenant_id = "test_tenant";
+        let cache_key = format!("approvals:{}:none:20", tenant_id);
+        let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
+
+        let initial_val = cache.get(&cache_key).await;
+        assert!(initial_val.is_none(), "Cache should be empty initially");
+
+        let dummy_resp = ApprovalsResponse {
+            pending_approvals: vec![],
+            next_cursor: None,
+        };
+
+        cache.set(&cache_key, dummy_resp.clone(), std::time::Duration::from_secs(60)).await;
+
+        let cached_val = cache.get(&cache_key).await;
+        assert!(cached_val.is_some(), "Cache should hit after set");
     }
 }

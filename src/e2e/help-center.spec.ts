@@ -11,10 +11,10 @@ test.describe('Help Center', () => {
     // Check if HelpChat component is accessible
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
-    await chatButton.click();
+    await chatButton.click({ force: true });
     await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
 
-    const input = page.locator('input[placeholder="Ask me anything..."]');
+    const input = page.locator('input[placeholder="Ask anything..."]');
     await input.fill('How do I accept credit cards?');
     await page.locator('button[aria-label="Send message"]').click();
 

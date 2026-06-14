@@ -1,0 +1,7 @@
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+
+filegroup(
+    name = "hello-world",
+    srcs = ["hello_world_agent.yaml"],
+    visibility = ["//visibility:public"],
+)

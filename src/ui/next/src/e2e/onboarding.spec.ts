@@ -27,7 +27,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -39,6 +39,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -60,7 +62,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Homeowners');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Plumbing and general repairs"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -72,6 +74,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -93,7 +97,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
     // Removed product assertion since fallback logic doesn't generate products
@@ -106,6 +110,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -127,7 +133,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -139,6 +145,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -149,11 +157,19 @@ test.describe('OnboardingWizard CUJ', () => {
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+
+    // Check for glassmorphism
+    await expect(page.locator('#setup-screen')).toHaveClass(/glassmorphism/);
+
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
     await page.getByRole('button', { name: 'Save Draft' }).click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
+
+    // Ensure localStorage is populated via zustand persist
+    const lsStore = await page.evaluate(() => window.localStorage.getItem('onboarding-storage-v3'));
+    expect(lsStore).toContain('My Restored Business');
 
     // 2. Clear local storage to simulate device switch
     await page.evaluate(() => window.localStorage.clear());
@@ -182,7 +198,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -254,7 +270,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Step 4: Empty Target Audience
     await expect(page.getByText("Who is your target audience?")).toBeVisible();
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
@@ -271,10 +287,12 @@ test.describe('OnboardingWizard CUJ', () => {
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
   });
 });
 
@@ -290,7 +308,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Intercept the API route to fail
     await context.route('/api/onboarding/intake', route => route.abort('failed'));
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Should display a real error message, not mock data
     await expect(page.getByText(/Failed to launch. Please try again./i)).toBeVisible();
@@ -314,7 +332,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Mock the backend responding with a 500 error
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
 
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
 
     await context.unroute('/api/onboarding/intake');
@@ -334,7 +352,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // Normal intake response
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [], categories: [] } }));
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText('Review Details')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
 

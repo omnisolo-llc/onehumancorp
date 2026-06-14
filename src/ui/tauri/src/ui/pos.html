@@ -343,7 +343,7 @@
         .ohc-walkthrough-bubble {
             position: absolute;
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px) saturate(210%);
+            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
             padding: 20px;
@@ -598,7 +598,6 @@
               console.warn("Terminal token API returned an error status");
           } else {
               const tokenData = await tokenRes.json();
-              console.log("Terminal connection token fetched successfully");
           }
 
           // Request Payment Intent
@@ -621,7 +620,6 @@
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  console.log("Initializing Terminal SDK with intent:", data.client_secret);
                   // Mock or real call for Terminal SDK would go here to set up the reader
               }
           } else {
@@ -877,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
 <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
@@ -959,8 +957,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -994,13 +992,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
 
@@ -1107,13 +1106,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1149,14 +1149,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1173,14 +1173,13 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.className = 'ohc-walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -1189,8 +1188,8 @@ function initWalkthrough() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1245,8 +1244,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1488,6 +1487,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
+    btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1631,12 +1631,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1672,14 +1673,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1692,12 +1693,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.className = 'ohc-walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.className = 'ohc-walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -1705,8 +1706,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -1758,8 +1759,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';

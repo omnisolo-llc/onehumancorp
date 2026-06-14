@@ -1,9 +1,9 @@
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 use std::collections::HashMap;
 use tokio::sync::OnceCell;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use ohc_builtin_agent::memory_store::VectorRepository;
+
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct EpisodicMemory {
@@ -17,17 +17,16 @@ pub struct AgentMemoryService {
     redis_client: Option<redis::Client>,
     redis_conn: OnceCell<redis::aio::MultiplexedConnection>,
     fallback_cache: RwLock<HashMap<String, EpisodicMemory>>,
-    #[allow(dead_code)]
-    vector_repo: Option<Arc<VectorRepository>>,
+
 }
 
 impl AgentMemoryService {
-    pub fn new(redis_client: Option<redis::Client>, vector_repo: Option<Arc<VectorRepository>>) -> Self {
+    pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self {
             redis_client,
             redis_conn: OnceCell::new(),
             fallback_cache: RwLock::new(HashMap::new()),
-            vector_repo,
+
         }
     }
 
@@ -113,7 +112,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_and_retrieve_fallback() {
-        let service = AgentMemoryService::new(None, None);
+        let service = AgentMemoryService::new(None);
 
         let tenant_id = "tenant_a";
         let session_id = "session_123";
@@ -129,7 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tenant_isolation() {
-        let service = AgentMemoryService::new(None, None);
+        let service = AgentMemoryService::new(None);
 
         let tenant_a = "tenant_a";
         let tenant_b = "tenant_b";
@@ -146,7 +145,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_malicious_key_manipulation() {
-        let service = AgentMemoryService::new(None, None);
+        let service = AgentMemoryService::new(None);
 
         let tenant_a = "tenant_a";
         let tenant_b = "tenant_b";

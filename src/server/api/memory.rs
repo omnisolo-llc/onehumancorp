@@ -91,3 +91,165 @@ async fn override_memory(
 
     Ok(Json(serde_json::json!({"success": true})))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    async fn setup_test_repo() -> Arc<VectorRepository> {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        Arc::new(VectorRepository::new_sqlite(pool))
+    }
+
+    #[tokio::test]
+    async fn test_list_memories() {
+        let repo = setup_test_repo().await;
+
+        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "test_mem_1".to_string(),
+            tenant_id: "test_tenant".to_string(),
+            agent_id: "test_agent".to_string(),
+            content: "Test memory content".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            organization_id: Some("test_tenant".to_string()),
+            user_id: Some("user_1".to_string()),
+            role: "owner".to_string(),
+        };
+
+        let result = list_memories(State(repo.clone()), axum::extract::Extension(auth_info)).await;
+
+        assert!(result.is_ok());
+        let memories = result.unwrap().0;
+        assert_eq!(memories.len(), 1);
+        assert_eq!(memories[0].id, "test_mem_1");
+        assert_eq!(memories[0].content, "Test memory content");
+    }
+
+    #[tokio::test]
+    async fn test_override_memory() {
+        let repo = setup_test_repo().await;
+
+        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "test_mem_override".to_string(),
+            tenant_id: "test_tenant".to_string(),
+            agent_id: "test_agent".to_string(),
+            content: "Old content".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            organization_id: Some("test_tenant".to_string()),
+            user_id: Some("user_1".to_string()),
+            role: "owner".to_string(),
+        };
+
+        let override_req = OverrideRequest {
+            override_value: true,
+            content: Some("New content".to_string()),
+        };
+
+        let result = override_memory(
+            State(repo.clone()),
+            Path("test_mem_override".to_string()),
+            axum::extract::Extension(auth_info.clone()),
+            Json(override_req),
+        ).await;
+
+        assert!(result.is_ok());
+
+        // Verify the record was actually updated
+        let updated_record = repo.get_by_id("test_mem_override").await.unwrap().unwrap();
+        assert_eq!(updated_record.owner_override, true);
+        assert_eq!(updated_record.content, "New content");
+    }
+
+    #[tokio::test]
+    async fn test_override_memory_forbidden() {
+        let repo = setup_test_repo().await;
+
+        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            id: "test_mem_forbidden".to_string(),
+            tenant_id: "tenant_A".to_string(),
+            agent_id: "test_agent".to_string(),
+            content: "Top secret".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 80,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record).await.unwrap();
+
+        // Try to access with tenant_B
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            organization_id: Some("tenant_B".to_string()),
+            user_id: Some("user_1".to_string()),
+            role: "owner".to_string(),
+        };
+
+        let override_req = OverrideRequest {
+            override_value: true,
+            content: None,
+        };
+
+        let result = override_memory(
+            State(repo.clone()),
+            Path("test_mem_forbidden".to_string()),
+            axum::extract::Extension(auth_info),
+            Json(override_req),
+        ).await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.0, axum::http::StatusCode::FORBIDDEN);
+    }
+}

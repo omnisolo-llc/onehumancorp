@@ -187,7 +187,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -203,7 +203,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -214,7 +214,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -230,7 +230,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -284,7 +284,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -633,6 +633,46 @@ impl AppServer {
                 meta: None,
             };
             serde_json::to_string(&resp).unwrap()
+        } else if req.method == "run_actor_model" {
+            let initial_message = req
+                .params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let mut cfg = AgentRunConfig::default();
+            cfg.enable_actor_model_message_passing = true;
+            let mut total_cost = 0.0;
+            let mut on_event = |e: AgentEvent| {
+                if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                    total_cost = total_cost_usd;
+                }
+            };
+            match self.runner.core.agent.run(&cfg, &initial_message, &mut on_event).await {
+                Ok(result) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: Some(serde_json::json!({ "output": result })),
+                        error: None,
+                        meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
+                    };
+                    serde_json::to_string(&resp).unwrap_or_default()
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e.to_string(),
+                        }),
+                        meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
+                    };
+                    serde_json::to_string(&resp).unwrap_or_default()
+                }
+            }
         } else if req.method == "run_ralph_loop" {
             let task = req
                 .params

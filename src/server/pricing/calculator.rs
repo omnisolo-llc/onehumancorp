@@ -50,6 +50,9 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-8b-8192" => ModelPricing { input_cost: 0.05, output_cost: 0.08, cached_cost: 0.0 },
         "llama-3.1-70b-versatile" | "llama3-70b-8192" => ModelPricing { input_cost: 0.15, output_cost: 0.20, cached_cost: 0.0 },
         "llama-3.1-405b-reasoning" => ModelPricing { input_cost: 2.70, output_cost: 2.70, cached_cost: 0.0 },
+        // xAI — Grok family
+        "grok-3" | "grok-2" => ModelPricing { input_cost: 2.00, output_cost: 10.00, cached_cost: 0.0 },
+        "grok-3-mini" | "grok-2-mini" => ModelPricing { input_cost: 0.20, output_cost: 1.00, cached_cost: 0.0 },
         // Google — Gemini 1.5 family
         "gemini-1.5-pro" => ModelPricing { input_cost: 3.50, output_cost: 10.50, cached_cost: 0.0 },
         "gemini-1.5-flash" => ModelPricing { input_cost: 0.35, output_cost: 1.05, cached_cost: 0.0 },
@@ -198,7 +201,7 @@ pub fn calculate_projected_monthly_cost_cents(current_cost: f64, days_elapsed: u
 }
 
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
-    if days_elapsed == 0 {
+    if days_elapsed == 0 || current_cost < 0.0 {
         return 0.0;
     }
     let projected = (current_cost / days_elapsed as f64) * total_days as f64;
@@ -382,6 +385,7 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(-10.0, 5, 30), 0.0);
     }
 
     #[test]

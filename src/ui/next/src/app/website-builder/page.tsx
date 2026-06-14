@@ -6,6 +6,7 @@ import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function WebsiteBuilderPage() {
   const router = useRouter();
@@ -357,9 +358,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <a href="/onboarding?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Powered by OHC
-                    </a>
+                    <PoweredByOHC tenantId="ohc" />
                   </div>
                 </>
               )}
@@ -719,7 +718,7 @@ export default function WebsiteBuilderPage() {
                         }
                       }}
                     >
-                      Generate Storefront
+                      Next
                     </button>
                   </div>
                 </>

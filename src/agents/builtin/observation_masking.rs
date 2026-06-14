@@ -28,17 +28,46 @@ impl JetBrainsObservationMasker {
     ) -> bool {
         let mut modified = false;
 
-        // Prevent extremely deep recursion that could blow up the stack
-        if depth > 10 {
-            *val = Value::String("[Masked: depth limit exceeded]".to_string());
-            return true;
+        // More elegant token-budget/byte-budget slicing method.
+        // We allow deeper recursion (up to 100) but reduce the available size limit and element limit proportionally.
+        // Prevent stack overflow with a high hard limit.
+        if depth > 100 {
+            match val {
+                Value::Array(arr) => {
+                    let len = arr.len();
+                    *val = Value::String(format!("[Masked array: {} elements truncated due to depth limit]", len));
+                    return true;
+                }
+                Value::Object(obj) => {
+                    let len = obj.len();
+                    *val = Value::String(format!("[Masked object: {} keys truncated due to depth limit]", len));
+                    return true;
+                }
+                _ => {
+                    *val = Value::String("[Masked: depth limit exceeded]".to_string());
+                    return true;
+                }
+            }
+        }
+
+        // Budget reduction at each depth level to ensure total output stays small
+        // We decay the size limit by 20% at each level, but ensure it doesn't drop below a minimum threshold
+        // The element limit decays more gracefully.
+        let mut current_size_limit = size_limit;
+        for _ in 0..depth {
+            current_size_limit = std::cmp::max(10, (current_size_limit * 8) / 10);
+        }
+
+        let mut current_element_limit = element_limit;
+        for _ in 0..depth {
+            current_element_limit = std::cmp::max(1, (current_element_limit * 9) / 10);
         }
 
         match val {
             Value::String(s) => {
                 let bytes = s.len();
-                if bytes > size_limit {
-                    let preview_chars = std::cmp::max(10, size_limit / 4);
+                if bytes > current_size_limit {
+                    let preview_chars = std::cmp::max(10, current_size_limit / 4);
                     let char_count = s.chars().count();
                     if char_count > preview_chars * 2 {
                         let start_preview: String = s.chars().take(preview_chars).collect();
@@ -57,26 +86,23 @@ impl JetBrainsObservationMasker {
             Value::Array(arr) => {
                 let original_len = arr.len();
 
-                // Adaptive element limit based on depth - deeper structures get truncated more aggressively
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
-
-                if original_len > current_limit {
+                if original_len > current_element_limit {
                     // Try to keep a mix of the beginning and end of the array
-                    if current_limit >= 2 {
-                        let half = current_limit / 2;
-                        let mut new_arr = Vec::with_capacity(current_limit + 1);
+                    if current_element_limit >= 2 {
+                        let half = current_element_limit / 2;
+                        let mut new_arr = Vec::with_capacity(current_element_limit + 1);
                         new_arr.extend_from_slice(&arr[..half]);
                         new_arr.push(Value::String(format!(
                             "[... Masked array: {} elements truncated ...]",
-                            original_len - current_limit
+                            original_len - current_element_limit
                         )));
-                        new_arr.extend_from_slice(&arr[original_len - (current_limit - half)..]);
+                        new_arr.extend_from_slice(&arr[original_len - (current_element_limit - half)..]);
                         *arr = new_arr;
                     } else {
-                        arr.truncate(current_limit);
+                        arr.truncate(current_element_limit);
                         arr.push(Value::String(format!(
                             "[Masked array: {} elements truncated]",
-                            original_len - current_limit
+                            original_len - current_element_limit
                         )));
                     }
                     modified = true;
@@ -93,12 +119,9 @@ impl JetBrainsObservationMasker {
                 let mut truncated = false;
                 let mut removed_count = 0;
 
-                // Adaptive element limit based on depth
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
-
-                if original_len > current_limit {
+                if original_len > current_element_limit {
                     let keys_to_remove: Vec<String> =
-                        obj.keys().skip(current_limit).cloned().collect();
+                        obj.keys().skip(current_element_limit).cloned().collect();
                     removed_count = keys_to_remove.len();
                     for k in keys_to_remove {
                         obj.remove(&k);
@@ -498,6 +521,44 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-        assert!(masked_content.contains("[Masked: depth limit exceeded]") || masked_content.contains("[Observation Masked"));
+        assert!(masked_content.contains("[Masked object: 1 keys truncated due to depth limit]") || masked_content.contains("[Observation Masked"));
+    }
+
+    #[test]
+    fn test_mask_advanced_nesting() {
+        let mut deep_array = Value::Array(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        for _ in 0..15 {
+            deep_array = Value::Array(vec![deep_array]);
+        }
+        let json_str = serde_json::to_string(&deep_array).unwrap();
+
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_7".to_string(),
+                    content: json_str,
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let masker = JetBrainsObservationMasker::new(0, 10, 20);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        assert!(masked_content.contains("[Masked array: 1 elements truncated due to depth limit]") || masked_content.contains("[Observation Masked"));
     }
 }
