@@ -93,24 +93,57 @@ impl Department for CustomerSuccessAgent {
             let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
-                if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
+                if (source == "whatsapp" || source == "instagram" || source == "sms") && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                    let mut sent = false;
+
+                    // First try Twilio for whatsapp/sms
+                    if source == "whatsapp" || source == "sms" {
+                        let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as(
+                            "SELECT api_token, api_secret, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1"
+                        )
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
-                    match row {
-                        Ok((api_token,)) => {
-                            use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
-                            let client = RealMetaClient::new(api_token);
-                            if let Err(e) = client.send_message(&source, &sender_id, &text).await {
-                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+
+                        if let Ok((sid, token, from_phone)) = twilio_row {
+                            use crate::integrations::twilio::client::{RealTwilioClient, TwilioClientWrapper};
+                            let client = RealTwilioClient::new(sid, token);
+                            let result = if source == "whatsapp" {
+                                let to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                                let from = if from_phone.starts_with("whatsapp:") { from_phone.clone() } else { format!("whatsapp:{}", from_phone) };
+                                client.send_whatsapp(&to, &from, &text).await
                             } else {
-                                tracing::info!("Successfully sent {} message via Meta integration", source);
+                                client.send_sms(&sender_id, &from_phone, &text).await
+                            };
+                            if let Err(e) = result {
+                                tracing::error!("Failed to send {} message via Twilio: {}", source, e);
+                            } else {
+                                tracing::info!("Successfully sent {} message via Twilio", source);
+                                sent = true;
                             }
                         }
-                        Err(e) => {
-                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
+                    }
+
+                    // Fallback to Meta for whatsapp/instagram
+                    if !sent && (source == "whatsapp" || source == "instagram") {
+                        let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                            .bind(&tenant_id_for_meta)
+                            .fetch_one(&pool)
+                            .await;
+                        match row {
+                            Ok((api_token,)) => {
+                                use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
+                                let client = RealMetaClient::new(api_token);
+                                if let Err(e) = client.send_message(&source, &sender_id, &text).await {
+                                    tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                                } else {
+                                    tracing::info!("Successfully sent {} message via Meta integration", source);
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
+                            }
                         }
                     }
                 }
