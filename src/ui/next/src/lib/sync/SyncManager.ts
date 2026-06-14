@@ -1,6 +1,7 @@
+import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+
 export class SyncManager {
   private static instance: SyncManager;
-  private queueKey = 'ohc_offline_queue';
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
@@ -18,12 +19,18 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public enqueue(mutation: any) {
+  public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
 
-    const queue = this.getQueue();
-    queue.push(mutation);
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    // ensure mutation has an id and timestamp for the offline queue store
+    const action = {
+      id: mutation.id || `mutation-${Date.now()}-${Math.random()}`,
+      type: mutation.type || 'unknown',
+      payload: mutation,
+      timestamp: Date.now()
+    };
+
+    await enqueueAction(action);
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -31,14 +38,16 @@ export class SyncManager {
     }
   }
 
-  public getQueueLength(): number {
-    return this.getQueue().length;
+  public async getQueueLength(): Promise<number> {
+    const queue = await this.getQueue();
+    return queue.length;
   }
 
-  private getQueue(): any[] {
+  private async getQueue(): Promise<any[]> {
     if (typeof window === 'undefined') return [];
     try {
-      return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
+      const actions = await getActions();
+      return actions.map(a => a.payload);
     } catch {
       return [];
     }
@@ -54,12 +63,13 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = this.getQueue();
-    if (queue.length === 0) return;
+    let actions = await getActions();
+    if (actions.length === 0) return;
 
     this.syncInProgress = true;
 
     try {
+      const queue = actions.map(a => a.payload);
       // Separate POS transactions from general offline sync
       const posTransactions = queue.filter(m => m.type === 'tap_to_pay').map(m => {
         return {
@@ -72,7 +82,7 @@ export class SyncManager {
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'approve_agent_feed').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
@@ -102,7 +112,8 @@ export class SyncManager {
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
-      let allOk = true;
+      let posOk = true;
+      let genOk = true;
 
       // Sync POS transactions
       if (posTransactions.length > 0) {
@@ -119,7 +130,7 @@ export class SyncManager {
           })
         });
         if (!resPos.ok) {
-          allOk = false;
+          posOk = false;
           throw new Error(`POS Sync failed with status ${resPos.status}`);
         }
       }
@@ -135,14 +146,22 @@ export class SyncManager {
           body: JSON.stringify({ mutations: generalMutations })
         });
         if (!resGen.ok) {
-          allOk = false;
+          genOk = false;
           throw new Error(`General Sync failed with status ${resGen.status}`);
         }
       }
 
-      if (allOk) {
-        localStorage.setItem(this.queueKey, '[]');
-        this.notifyListeners();
+      // Remove synced actions from DB
+      for (const action of actions) {
+        if (action.type === 'tap_to_pay' && posOk) {
+          await removeAction(action.id);
+        } else if (action.type !== 'tap_to_pay' && action.type !== 'approve_agent_feed' && genOk) {
+          await removeAction(action.id);
+        }
+      }
+
+      this.notifyListeners();
+      if (posOk && genOk) {
         this.retryDelayMs = 1000; // Reset delay on success
       }
     } catch (e) {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { cacheJobs, getCachedJobs } from '../../utils/offlineQueue';
 
 type Appointment = {
   id: string;
@@ -31,19 +32,32 @@ export default function FieldOpsJobsPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Load cached schedule first
+    getCachedJobs().then(cached => {
+      if (cached && cached.length > 0) {
+        setJobs(cached);
+        setLoading(false);
+      }
+    });
+
     // Fetch initial schedule
-    fetch('/api/v1/field-ops/appointments')
-      .then(res => res.json())
-      .then(data => {
-        if (data.appointments) {
-          setJobs(data.appointments);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load appointments", err);
-        setLoading(false);
-      });
+    if (navigator.onLine) {
+      fetch('/api/v1/field-ops/appointments')
+        .then(res => res.json())
+        .then(data => {
+          if (data.appointments) {
+            setJobs(data.appointments);
+            cacheJobs(data.appointments);
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load appointments", err);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -53,8 +67,8 @@ export default function FieldOpsJobsPage() {
 
   const handleStatusChange = (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
-    setJobs(currentJobs =>
-      currentJobs.map(j => {
+    setJobs(currentJobs => {
+      const updatedJobs = currentJobs.map(j => {
         if (j.id === jobId) {
           const updated = { ...j, status: newStatus };
           if (newStatus === 'In-Progress') updated.actual_start_time = now;
@@ -62,11 +76,13 @@ export default function FieldOpsJobsPage() {
           return updated;
         }
         return j;
-      })
-    );
+      });
+      cacheJobs(updatedJobs); // Cache updated state
+      return updatedJobs;
+    });
 
-    // Call optimize route endpoint after state change to simulate Operations Agent logic
-    const updatedJobs = jobs.map(j => {
+    // We can't access the latest state directly in the function without doing it again.
+    const updatedJobsForApi = jobs.map(j => {
       if (j.id === jobId) {
         const updated = { ...j, status: newStatus };
         if (newStatus === 'In-Progress') updated.actual_start_time = now;
@@ -76,12 +92,12 @@ export default function FieldOpsJobsPage() {
       return j;
     });
 
-    if (newStatus === 'Completed') {
+    if (newStatus === 'Completed' && !isOffline) {
        fetch('/api/v1/field-ops/optimize-route', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({
-           appointments: updatedJobs,
+           appointments: updatedJobsForApi,
            currentLocationLat: 0,
            currentLocationLng: 0
          })
@@ -90,6 +106,7 @@ export default function FieldOpsJobsPage() {
        .then(data => {
          if (data.success) {
            setJobs(data.optimizedRoute);
+           cacheJobs(data.optimizedRoute);
            if (data.agentSuggestion) {
              setAgentSuggestion(data.agentSuggestion);
            }
@@ -100,7 +117,11 @@ export default function FieldOpsJobsPage() {
   };
 
   const handleNotesChange = (jobId: string, notes: string) => {
-    setJobs(jobs.map(j => j.id === jobId ? { ...j, notes } : j));
+    setJobs(currentJobs => {
+      const newJobs = currentJobs.map(j => j.id === jobId ? { ...j, notes } : j);
+      cacheJobs(newJobs);
+      return newJobs;
+    });
   };
 
   const handleComplete = (jobId: string) => {
@@ -109,7 +130,7 @@ export default function FieldOpsJobsPage() {
 
     handleStatusChange(jobId, 'Completed');
 
-    if (job.notes && !isOffline) {
+    if (job.notes) {
       SyncManager.getInstance().enqueue({
         id: `mutation-${Date.now()}`,
         type: 'draft_quote',

@@ -7,7 +7,8 @@ export interface OfflineAction {
 
 const DB_NAME = "OHC_Offline_Queue";
 const STORE_NAME = "actions";
-const DB_VERSION = 1;
+const JOBS_STORE_NAME = "jobs";
+const DB_VERSION = 2;
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -31,8 +32,65 @@ function getDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
       }
+      if (!db.objectStoreNames.contains(JOBS_STORE_NAME)) {
+        db.createObjectStore(JOBS_STORE_NAME, { keyPath: "id" });
+      }
     };
   });
+}
+
+export async function cacheJobs(jobs: any[]): Promise<void> {
+  if (typeof window === "undefined" || !window.indexedDB) return;
+  try {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([JOBS_STORE_NAME], "readwrite");
+      const store = transaction.objectStore(JOBS_STORE_NAME);
+
+      // Clear existing jobs first, to ensure no deleted jobs stay around
+      store.clear().onsuccess = () => {
+        let count = 0;
+        if (jobs.length === 0) return resolve();
+
+        jobs.forEach(job => {
+          const req = store.put(job);
+          req.onsuccess = () => {
+            count++;
+            if (count === jobs.length) resolve();
+          };
+          req.onerror = () => reject(req.error);
+        });
+      };
+
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to cache jobs", err);
+    }
+  }
+}
+
+export async function getCachedJobs(): Promise<any[]> {
+  if (typeof window === "undefined" || !window.indexedDB) return [];
+  try {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([JOBS_STORE_NAME], "readonly");
+      const store = transaction.objectStore(JOBS_STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to get cached jobs", err);
+    }
+    return [];
+  }
 }
 
 export async function enqueueAction(action: OfflineAction): Promise<void> {
