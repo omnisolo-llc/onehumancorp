@@ -114,6 +114,11 @@ function CheckoutContent() {
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
+        if (response.status === 409 || (data.message && data.message.includes("checked out by another customer"))) {
+          setCheckoutStatus("Item just sold out");
+          setIsProcessing(false);
+          return;
+        }
         throw new Error(data.message || data.error || "Failed to create checkout session");
       }
 

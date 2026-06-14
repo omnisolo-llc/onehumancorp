@@ -1,10 +1,11 @@
 use axum::{extract::State, Json};
+use axum::response::IntoResponse;
+use axum::http::StatusCode;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::OnceLock;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
-use axum::http::StatusCode;
 use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
@@ -101,21 +102,27 @@ pub async fn create_checkout_session_handler(
     _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
-) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
+) -> axum::response::Response {
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
+        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_bytes = match axum::body::to_bytes(request.into_body(), 1024 * 64).await {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "bad request"}))).into_response(),
+    };
+    let req: CreateCheckoutSessionRequest = match serde_json::from_slice(&body_bytes) {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "bad request"}))).into_response(),
+    };
 
     let amount_usd = match req.tier.to_lowercase().as_str() {
         "starter" => 29.0,
         "pro" => 79.0,
         "business" => 299.0,
-        _ => return Err(StatusCode::BAD_REQUEST),
+        _ => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "invalid tier"}))).into_response(),
     };
 
     let mut acquired_lock_id = "".to_string();
@@ -126,12 +133,15 @@ pub async fn create_checkout_session_handler(
             match inventory_service.reserve_inventory(&tenant_id, product_id, quantity, ttl).await {
                 Ok(result) => {
                     if !result.success {
-                        return Err(StatusCode::CONFLICT);
+                        return (StatusCode::CONFLICT, Json(serde_json::json!({
+                            "message": "Item is currently being checked out by another customer",
+                            "error": "Conflict"
+                        }))).into_response();
                     }
                     acquired_lock_id = result.lock_id;
                 }
                 Err(_) => {
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "internal server error"}))).into_response();
                 }
             }
         }
@@ -140,7 +150,7 @@ pub async fn create_checkout_session_handler(
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
-            Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
+            Ok(url) => (StatusCode::OK, Json(CreateCheckoutSessionResponse { checkout_url: url })).into_response(),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
                 if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
@@ -149,12 +159,12 @@ pub async fn create_checkout_session_handler(
                         let _ = inventory_service.release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id).await;
                     }
                 }
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to create stripe checkout session"}))).into_response()
             },
         }
     } else {
         // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        (StatusCode::OK, Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) })).into_response()
     }
 }
 
