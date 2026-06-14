@@ -204,7 +204,13 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id")
+                let is_standalone = crate::is_standalone_runtime();
+                let query_str = if is_standalone {
+                    "UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id"
+                } else {
+                    "UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id"
+                };
+                sqlx::query(query_str)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -700,6 +706,21 @@ mod tests {
             .await
             .unwrap();
 
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
             // Insert initial record
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
                 .bind("test_mission_id")
@@ -1103,6 +1124,21 @@ mod tests {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     tenant_id TEXT,
                     mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )"
             )
             .execute(&pool)

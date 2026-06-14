@@ -27,6 +27,16 @@ test.describe('Conversational Setup CUJ', () => {
 
   test('Persona: Maya (Home Baker) completes the Zero-Click Conversational Onboarding', async ({ page }) => {
 
+    // We are testing against the real backend per the "Real Owner/Operator E2E Standard"
+    // No mocking of network requests is allowed.
+
+    // We will verify the start onboarding API was called.
+    let onboardingStarted = false;
+    page.on('request', request => {
+      if (request.url().includes('/api/onboarding/start') && request.method() === 'POST') {
+        onboardingStarted = true;
+      }
+    });
 
     await page.goto('/onboarding');
 
