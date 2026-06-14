@@ -607,9 +607,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             )}
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] shadow-sm bg-white/40 dark:bg-black/40 backdrop-blur-md opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up, Maya!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
@@ -1107,7 +1107,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         <button
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Reject proposal"
+                          aria-label="Dismiss proposal"
                           data-testid="reject-proposal"
                         >
                           Deny
