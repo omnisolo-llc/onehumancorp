@@ -977,15 +977,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
             hideTooltip();
         }
     });
@@ -1130,8 +1133,9 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             z-index: 99990;
@@ -1308,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>Help Center</h3>
-            <button id="ohc-floating-help-close" aria-label="Close">
+            <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -1481,15 +1485,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
             hideTooltip();
         }
     });
