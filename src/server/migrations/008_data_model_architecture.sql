@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS products (
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
     type TEXT NOT NULL, -- "physical | digital | food"
     inventory_count INT DEFAULT 0,
+    locked_quantity INT DEFAULT 0,
+    available_quantity INT DEFAULT 0,
     is_sold_out BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
