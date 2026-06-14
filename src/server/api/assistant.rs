@@ -166,7 +166,7 @@ pub struct FileChange {
 
 async fn list_workspaces(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<Workspace>>, (StatusCode, String)> {
     let rows: Vec<WorkspaceRow> = sqlx::query_as(
         r#"
@@ -175,7 +175,7 @@ async fn list_workspaces(
         WHERE tenant_id = $1
         "#
     )
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_all(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -194,7 +194,7 @@ async fn list_workspaces(
 
 async fn create_workspace(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Json(payload): Json<Workspace>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
     let mut ws = payload;
@@ -209,7 +209,7 @@ async fn create_workspace(
         "#
     )
     .bind(&ws.id)
-    .bind(&claims.organization_id)
+    .bind(&_claims.organization_id)
     .bind(&ws.name)
     .bind(&ws.default_work_dir)
     .bind(&ws.default_model)
@@ -222,7 +222,7 @@ async fn create_workspace(
 
 async fn get_workspace(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
     let row: Option<WorkspaceRow> = sqlx::query_as(
@@ -233,7 +233,7 @@ async fn get_workspace(
         "#
     )
     .bind(id)
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_optional(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -261,7 +261,7 @@ async fn update_workspace(
 
 async fn list_tasks(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<Task>>, (StatusCode, String)> {
     let rows: Vec<TaskRow> = sqlx::query_as(
         r#"
@@ -271,7 +271,7 @@ async fn list_tasks(
         ORDER BY created_at DESC
         "#
     )
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_all(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -296,7 +296,7 @@ async fn list_tasks(
 
 async fn create_task(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Json(payload): Json<Task>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
     let mut task = payload;
@@ -311,7 +311,7 @@ async fn create_task(
         "#
     )
     .bind(&task.id)
-    .bind(&claims.organization_id)
+    .bind(&_claims.organization_id)
     .bind(&task.workspace_id)
     .bind(&task.title)
     .bind(&task.prompt)
@@ -330,7 +330,7 @@ async fn create_task(
 
 async fn get_task(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
     let row: Option<TaskRow> = sqlx::query_as(
@@ -341,7 +341,7 @@ async fn get_task(
         "#
     )
     .bind(id)
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_optional(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -376,7 +376,7 @@ async fn update_task(
 
 async fn list_messages(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<Message>>, (StatusCode, String)> {
     let rows: Vec<MessageRow> = sqlx::query_as(
@@ -388,7 +388,7 @@ async fn list_messages(
         "#
     )
     .bind(id)
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_all(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -407,7 +407,7 @@ async fn list_messages(
 
 async fn create_message(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<Message>,
 ) -> Result<Json<Message>, (StatusCode, String)> {
@@ -423,7 +423,7 @@ async fn create_message(
         "#
     )
     .bind(&msg.id)
-    .bind(&claims.organization_id)
+    .bind(&_claims.organization_id)
     .bind(&msg.task_id)
     .bind(&msg.role)
     .bind(&msg.content)
@@ -437,7 +437,7 @@ async fn create_message(
 
 async fn list_artifacts(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<Artifact>>, (StatusCode, String)> {
     let rows: Vec<ArtifactRow> = sqlx::query_as(
@@ -449,7 +449,7 @@ async fn list_artifacts(
         "#
     )
     .bind(id)
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_all(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -471,7 +471,7 @@ async fn list_artifacts(
 
 async fn create_artifact(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<Artifact>,
 ) -> Result<Json<Artifact>, (StatusCode, String)> {
@@ -487,7 +487,7 @@ async fn create_artifact(
         "#
     )
     .bind(&artifact.id)
-    .bind(&claims.organization_id)
+    .bind(&_claims.organization_id)
     .bind(&artifact.task_id)
     .bind(&artifact.type_)
     .bind(&artifact.filename)
@@ -504,7 +504,7 @@ async fn create_artifact(
 
 async fn list_file_changes(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<FileChange>>, (StatusCode, String)> {
     let rows: Vec<FileChangeRow> = sqlx::query_as(
@@ -516,7 +516,7 @@ async fn list_file_changes(
         "#
     )
     .bind(id)
-    .bind(claims.organization_id)
+    .bind(_claims.organization_id)
     .fetch_all(&db.pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -536,7 +536,7 @@ async fn list_file_changes(
 
 async fn create_file_change(
     Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<FileChange>,
 ) -> Result<Json<FileChange>, (StatusCode, String)> {
@@ -552,7 +552,7 @@ async fn create_file_change(
         "#
     )
     .bind(&change.id)
-    .bind(&claims.organization_id)
+    .bind(&_claims.organization_id)
     .bind(&change.task_id)
     .bind(&change.path)
     .bind(&change.change_type)
