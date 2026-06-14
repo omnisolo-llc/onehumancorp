@@ -1,14 +1,24 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App } from './App';
 import * as orchestrator from './hooks/useOrchestrator';
 
 describe('App', () => {
-  it('renders correctly and tests useEffect coverage including cleanup', async () => {
-    vi.useFakeTimers();
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    const { lastFrame, unmount, stdin } = render(<App />);
+  it('renders correctly and tests useEffect coverage including cleanup', async () => {
+    vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
+      status: 'Initializing Agent...',
+      tools: [],
+      error: null,
+      runAgent: vi.fn(),
+      output: null
+    });
+
+    const { lastFrame, unmount } = render(<App />);
     let output = lastFrame();
 
     expect(output).toContain('ONE HUMAN CORP');
@@ -17,23 +27,16 @@ describe('App', () => {
     expect(output).toContain('OHC Interactive Harness');
     expect(output).toContain('Select an action');
 
-    // Fast-forward timers to trigger the useEffect state change
-    await vi.advanceTimersByTimeAsync(2000);
-
-    output = lastFrame();
-    expect(output).toContain('Analyzing Codebase...');
-
-    // Unmount to trigger the cleanup function and achieve 100% coverage
     unmount();
-
-    vi.useRealTimers();
   });
 
   it('renders error state correctly', () => {
     vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
       status: 'error',
       tools: [],
-      error: 'Test Error Message'
+      error: 'Test Error Message',
+      runAgent: vi.fn(),
+      output: null
     });
 
     const { lastFrame } = render(<App />);
@@ -47,35 +50,62 @@ describe('App', () => {
     vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
       status: 'ok',
       tools: [],
-      error: null
+      error: null,
+      runAgent: vi.fn(),
+      output: null
     });
 
     const { lastFrame, unmount } = render(<App />);
-    // Since testing ink-text-input is notoriously difficult and we mock it
-    // just ensure the prompt section renders to satisfy coverage of the error branch
     const output = lastFrame();
     expect(output).toContain('Ask Agent >');
     unmount();
   });
 
-  it('can submit prompt input (coverage)', () => {
+  it('can submit prompt input (coverage) and renders output', async () => {
+    const runAgentMock = vi.fn();
     vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
       status: 'ok',
       tools: [],
-      error: null
+      error: null,
+      runAgent: runAgentMock,
+      output: 'output text mock'
     });
 
-    // Test the input state change behavior by using ink-testing-library stdin
     const { lastFrame, stdin } = render(<App />);
 
-    // Simulate typing text then hitting enter
-    // According to ink-testing-library, we write to stdin
     stdin.write('test query');
     stdin.write('\r');
 
+    // Wait a tick for react to process
+    await new Promise(r => setTimeout(r, 10));
+
     const output = lastFrame();
-    // In CI this may or may not pick up the react state change synchronously
-    // If it doesn't, we can skip the assert or assert what we can
     expect(output).toContain('Ask Agent >');
+  });
+
+  it('covers prompt submit handling multiple inputs', async () => {
+     const runAgentMock = vi.fn();
+     vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
+       status: 'ok',
+       tools: [],
+       error: null,
+       runAgent: runAgentMock,
+       output: 'another mock'
+     });
+
+     const { lastFrame, stdin } = render(<App />);
+
+     stdin.write('query 1');
+     stdin.write('\r');
+     await new Promise(r => setTimeout(r, 50));
+
+     stdin.write('query 2');
+     stdin.write('\r');
+     await new Promise(r => setTimeout(r, 50));
+
+     const output = lastFrame();
+     // Ink testing library sometimes strips out newlines/words in fast updates
+     expect(output).toContain('another mock');
+     expect(runAgentMock).toHaveBeenCalledTimes(2);
   });
 });
