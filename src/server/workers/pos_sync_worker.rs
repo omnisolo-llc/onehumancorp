@@ -112,6 +112,45 @@ impl PosSyncWorker {
                     .bind(&ai_payload)
                     .execute(&mut *tx)
                     .await;
+
+                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let notification_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "transaction_id": transaction_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&notification_id)
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
+
+                    let conflict_payload = serde_json::json!({
+                        "transaction_id": transaction_id,
+                        "product_id": product_id,
+                        "shortage": quantity_deducted as i32 - stock,
+                        "timestamp": chrono::Utc::now().to_rfc3339()
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "UPDATE pos_terminal_sessions
+                         SET sync_status = 'CONFLICTS_PENDING',
+                             pending_reconciliation = pending_reconciliation || $1::jsonb
+                         WHERE tenant_id = $2
+                         AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
+                    )
+                    .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                    .bind(&job.tenant_id)
+                    .bind(&transaction_id)
+                    .execute(&mut *tx)
+                    .await;
                 }
 
                 let cache = crate::builder::edge::get_edge_cache();
@@ -233,6 +272,7 @@ impl PosSyncWorker {
                                 let notification_id = uuid::Uuid::new_v4().to_string();
                                 let notification_payload = serde_json::json!({
                                     "product_id": product_id,
+                                    "transaction_id": transaction_id,
                                     "expected_stock": qty,
                                     "actual_stock": stock,
                                     "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
@@ -240,11 +280,31 @@ impl PosSyncWorker {
 
                                 let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&notification_id)
                                 .bind(&job.tenant_id)
                                 .bind(&notification_payload)
+                                .execute(&mut *tx)
+                                .await;
+
+                                let conflict_payload = serde_json::json!({
+                                    "transaction_id": transaction_id,
+                                    "product_id": product_id,
+                                    "shortage": qty as i32 - stock,
+                                    "timestamp": chrono::Utc::now().to_rfc3339()
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "UPDATE pos_terminal_sessions
+                                     SET sync_status = 'CONFLICTS_PENDING',
+                                         pending_reconciliation = pending_reconciliation || $1::jsonb
+                                     WHERE tenant_id = $2
+                                     AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
+                                )
+                                .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                                .bind(&job.tenant_id)
+                                .bind(&transaction_id)
                                 .execute(&mut *tx)
                                 .await;
                             }
