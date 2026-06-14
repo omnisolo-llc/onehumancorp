@@ -339,7 +339,7 @@
                 // Update powered-by-link
                 const poweredByLink = document.getElementById('powered-by-link');
                 if (poweredByLink) {
-                    poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+                    poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=instant_quote_widget`;
                 }
 
                 // For demonstration, we'll mock the fetch if it fails (offline mode)
