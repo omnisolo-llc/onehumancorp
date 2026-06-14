@@ -499,6 +499,10 @@ pub struct GenerateCustomerReferralResponse {
 pub struct GenerateCartRequest {
     pub customer_name: Option<String>,
     pub cart_value: Option<String>,
+    pub tenant_id: Option<String>,
+    pub store_name: Option<String>,
+    pub discount_offer: Option<String>,
+    pub is_pro: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -766,11 +770,19 @@ async fn handle_generate_cart(
     Json(req): Json<GenerateCartRequest>,
 ) -> impl IntoResponse {
     let name = req.customer_name.unwrap_or_else(|| "there".to_string());
-    let value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
+    let value = req.cart_value.unwrap_or_else(|| "".to_string());
+    let store_name = req.store_name.unwrap_or_else(|| "Our Store".to_string());
+    let discount_offer = req.discount_offer.unwrap_or_else(|| "10".to_string());
+    let is_pro = req.is_pro.unwrap_or(false);
+
+    let branding = if is_pro { "".to_string() } else { "\n\n⚡ Powered by OHC".to_string() };
+    let cart_worth = if value.is_empty() { "".to_string() } else { format!(" worth {}", value) };
+
     let generated = format!(
-        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
-        name, value
+        "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://ohc.store/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
+        name, cart_worth, store_name, discount_offer, discount_offer, store_name, branding
     );
+
     Json(GenerateCartResponse {
         message: generated,
     })
@@ -2150,14 +2162,24 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
-        let req = GenerateCartRequest { customer_name: Some("Bob".to_string()), cart_value: Some("$100.00".to_string()) };
+        let req = GenerateCartRequest {
+            customer_name: Some("Bob".to_string()),
+            cart_value: Some("$100.00".to_string()),
+            tenant_id: Some("demo".to_string()),
+            store_name: Some("Bob Store".to_string()),
+            discount_offer: Some("20".to_string()),
+            is_pro: Some(false),
+        };
         let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
 
         let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json: GenerateCartResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(res_json.message.contains("Hi Bob"));
-        assert!(res_json.message.contains("totaling $100.00"));
+        assert!(res_json.message.contains("worth $100.00"));
+        assert!(res_json.message.contains("Bob Store"));
+        assert!(res_json.message.contains("COMEBACK20"));
+        assert!(res_json.message.contains("Powered by OHC"));
     }
 
     #[tokio::test]
