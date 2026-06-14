@@ -154,7 +154,7 @@ impl SyncService for MySyncService {
                          tracing::error!("failed to insert sync_event via PowerSync: {}", e);
                     } else {
                         // Dispatch event directly to orchestration if it's Operations Agent
-                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                        let _event = crate::orchestration::departments::types::DepartmentEvent {
                             id: event_id,
                             tenant_id: tenant_id.to_string(),
                             event_type: format!("SyncEvent:{}", action_type),
