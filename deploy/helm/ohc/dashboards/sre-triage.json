@@ -8,12 +8,6 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
         "type": "dashboard"
       }
     ]
@@ -21,36 +15,21 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 4,
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
-      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -99,52 +78,110 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 0
       },
-      "id": 2,
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+          "placement": "bottom"
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "title": "Error Signals by Category",
       "targets": [
         {
-          "datasource": "Prometheus",
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"ohc-.*\"}[5m])) by (pod)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (category) (ohc_error_signals_total)",
+          "legendFormat": "{{category}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "OHC CPU Usage",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
-      "type": "text",
-      "title": "",
-      "gridPos": {
-        "x": 0,
-        "y": 10,
-        "w": 12,
-        "h": 3
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
-      "id": 3,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
       "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Infrastructure Dashboard",
-        "mode": "html"
-      }
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "Current Swarm Queue Depth",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "ohc_sub_agent_queue_length",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "gauge"
     }
   ],
-  "refresh": false,
-  "schemaVersion": 38,
+  "refresh": "",
+  "schemaVersion": 36,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "sre",
+    "triage",
+    "ohc"
+  ],
   "templating": {
     "list": []
   },
@@ -154,7 +191,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OHC Infrastructure Dashboard",
-  "uid": "ohc-infra-dash",
-  "version": 1
+  "title": "SRE Triage Dashboard",
+  "uid": "sre-triage",
+  "version": 1,
+  "weekStart": ""
 }

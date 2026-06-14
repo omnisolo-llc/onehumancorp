@@ -36,21 +36,48 @@ static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
 pub fn categorize_error_signal(err_msg: &str) -> &'static str {
     let lower = err_msg.to_lowercase();
-    if lower.contains("panic") || lower.contains("segfault") || lower.contains("unreachable") || lower.contains("fatal") || lower.contains("bug") {
-        "bug"
-    } else if lower.contains("unimplemented") || lower.contains("not supported") || lower.contains("missing feature") || lower.contains("feature") {
-        "feature"
-    } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") {
-        "refactor"
-    } else if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") || lower.contains("cleanup") {
-        "cleanup"
-    } else if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") {
-        "docs"
-    } else if lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") || lower.contains("auth") || lower.contains("security") || lower.contains("malware") || lower.contains("permission") || lower.contains("denied") {
-        "security"
-    } else {
-        "bug"
+
+    // Security Category
+    if lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") ||
+       lower.contains("auth") || lower.contains("security") || lower.contains("malware") ||
+       lower.contains("permission") || lower.contains("denied") || lower.contains("unauthorized") ||
+       lower.contains("forbidden") || lower.contains("sandbox") || lower.contains("violation") {
+        return "security";
     }
+
+    // Bug Category
+    if lower.contains("panic") || lower.contains("segfault") || lower.contains("unreachable") ||
+       lower.contains("fatal") || lower.contains("bug") || lower.contains("null") ||
+       lower.contains("error") || lower.contains("fail") || lower.contains("crash") ||
+       lower.contains("overflow") || lower.contains("corrupt") || lower.contains("invalid") {
+        return "bug";
+    }
+
+    // Feature Category
+    if lower.contains("unimplemented") || lower.contains("not supported") ||
+       lower.contains("missing feature") || lower.contains("feature") || lower.contains("todo") {
+        return "feature";
+    }
+
+    // Refactor Category
+    if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") ||
+       lower.contains("technical debt") || lower.contains("optimize") || lower.contains("performance") {
+        return "refactor";
+    }
+
+    // Cleanup Category
+    if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") ||
+       lower.contains("cleanup") || lower.contains("unused") || lower.contains("obsolete") {
+        return "cleanup";
+    }
+
+    // Docs Category
+    if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") ||
+       lower.contains("documentation") || lower.contains("changelog") {
+        return "docs";
+    }
+
+    "bug"
 }
 
 pub fn get_error_signal_counter() -> &'static Counter<u64> {
@@ -1744,3 +1771,5 @@ mod harness_security_divergence_tests {
 }
 #[cfg(test)]
 mod dashboard_test;
+#[cfg(test)]
+mod categorization_test;

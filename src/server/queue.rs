@@ -586,6 +586,26 @@ impl QueueManager {
         Ok(())
     }
 
+    pub async fn prune_stagnant_jobs(&self, timeout: Duration) -> Result<u64, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+
+        let timeout_seconds = timeout.as_secs();
+        let rows = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < (CURRENT_TIMESTAMP - (INTERVAL '1 second' * $1))")
+            .bind(timeout_seconds as i64)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+
+        let count = rows.rows_affected();
+        if count > 0 {
+            tracing::warn!("Pruned {} stagnant jobs from the queue", count);
+        }
+
+        Ok(count)
+    }
+
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
@@ -728,6 +748,11 @@ impl QueueManager {
                                                 "swarm_queue_depth": queue_depth,
                                                 "status": if queue_depth > 50 { "BACKLOGGED" } else { "HEALTHY" }
                                             }));
+                                        }
+
+                                        // Alert on high queue depth
+                                        if queue_depth > 100 {
+                                            ::server_telemetry::record_error_signal("Swarm queue is heavily backlogged");
                                         }
                                     }
                                 }

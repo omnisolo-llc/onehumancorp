@@ -5715,6 +5715,12 @@ async fn create_ui_bom_item_handler(
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
                         tracing::error!("failed to cleanup stagnant missions: {}", e);
                     }
+
+                    let qm = crate::queue::QueueManager::new(hub_for_sched.pool.clone());
+                    if let Err(e) = qm.prune_stagnant_jobs(std::time::Duration::from_secs(300)).await {
+                        ::server_telemetry::record_error_signal("[MAINTENANCE] failed to prune stagnant jobs");
+                        tracing::error!("failed to prune stagnant jobs: {}", e);
+                    }
                 }
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();

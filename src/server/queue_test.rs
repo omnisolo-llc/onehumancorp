@@ -106,3 +106,16 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod health_tests {
+    use server_lib::queue::QueueManager;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_prune_stagnant_jobs_signature() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/ohc").unwrap();
+        let qm = QueueManager::new(pool);
+        let _ = qm.prune_stagnant_jobs(Duration::from_secs(300));
+    }
+}
