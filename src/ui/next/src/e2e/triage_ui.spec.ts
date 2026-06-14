@@ -99,4 +99,20 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await expect(triageCard).not.toBeVisible();
   });
+
+  test('Owner can view and approve the Morning Briefing from Decision Assistant', async ({ page }) => {
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-db"]');
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+
+    await triageCard.click();
+
+    await expect(page.locator('text=Decision Assistant')).toBeVisible();
+    await expect(page.locator('text=Morning Briefing ready:')).toBeVisible();
+    await expect(page.locator('text=Draft new auto-reply')).toBeVisible();
+
+    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    await approveBtn.click();
+
+    await expect(triageCard).not.toBeVisible();
+  });
 });

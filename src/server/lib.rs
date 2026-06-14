@@ -2511,6 +2511,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
 
+    // Start Daily Briefing Worker
+    let daily_briefing_worker = crate::workers::daily_briefing_worker::DailyBriefingWorker::new(db.clone());
+    daily_briefing_worker.start();
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
@@ -5221,6 +5225,32 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Decision Assistant")
+                                    .bind("Normal")
+                                    .bind("Morning Briefing ready: \n - Sales are up\n - New orders\n - New messages")
+                                    .bind("pending")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("action-test-db")
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("Review")
+                                    .bind("Draft new auto-reply")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
                                         "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                                     )
                                     .bind("prod_demo1")
@@ -5306,6 +5336,32 @@ async fn create_ui_bom_item_handler(
                                     .bind(tenant_id)
                                     .bind("My Local Business")
                                     .bind("free")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Decision Assistant")
+                                    .bind("Normal")
+                                    .bind("Morning Briefing ready: \n - Sales are up\n - New orders\n - New messages")
+                                    .bind("pending")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("action-test-db")
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("Review")
+                                    .bind("Draft new auto-reply")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
