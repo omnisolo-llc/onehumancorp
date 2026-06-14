@@ -240,7 +240,7 @@ impl PosSyncWorker {
 
                                 let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&notification_id)
                                 .bind(&job.tenant_id)
