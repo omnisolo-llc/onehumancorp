@@ -75,3 +75,23 @@ message JobStatusUpdate {
   bytes details_payload = 4;
   int64 timestamp_ms = 5;
 }
+
+// Represents a mutation that occurred offline to be synced.
+message OfflineMutation {
+  string id = 1;
+  string tenant_id = 2;
+  string action_type = 3;
+  bytes payload = 4;
+  string status = 5;
+  int64 created_at_ms = 6;
+}
+
+// Emitted when an offline batch is successfully synced to the cloud.
+message SyncEvent {
+  string id = 1;
+  string tenant_id = 2;
+  string batch_id = 3;
+  string action_type = 4;
+  bytes payload = 5;
+  int64 synced_at_ms = 6;
+}
