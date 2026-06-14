@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
+
 
 test.describe('Mobile Payload Optimization', () => {
 
-  test('UI Triage request succeeds with mobile_optimized=true', async ({ adminPage, request }) => {
+  test('UI Triage request succeeds with mobile_optimized=true', async ({ request }) => {
      // Verify the actual endpoint returns 200 OK and valid JSON
      const response = await request.get(`/api/ui/triage?mobile_optimized=true`);
      expect(response.status()).toBe(200);
@@ -15,15 +15,15 @@ test.describe('Mobile Payload Optimization', () => {
      }
   });
 
-  test('UI Triage request succeeds with mobile_optimized=false', async ({ adminPage, request }) => {
+  test('UI Triage request succeeds with mobile_optimized=false', async ({ request }) => {
      const response = await request.get(`/api/ui/triage?mobile_optimized=false`);
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
   });
 
-  test('UI Inbox request succeeds with mobile_optimized=true', async ({ adminPage, request }) => {
-     const response = await request.get(`/api/ui/inbox?mobile_optimized=true`);
+  test('UI Inbox request succeeds with mobile_optimized=true', async ({ request }) => {
+     const response = await request.get(`/api/ui/inbox/messages?mobile_optimized=true`);
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -33,14 +33,14 @@ test.describe('Mobile Payload Optimization', () => {
      }
   });
 
-  test('UI Inbox request succeeds with mobile_optimized=false', async ({ adminPage, request }) => {
-     const response = await request.get(`/api/ui/inbox?mobile_optimized=false`);
+  test('UI Inbox request succeeds with mobile_optimized=false', async ({ request }) => {
+     const response = await request.get(`/api/ui/inbox/messages?mobile_optimized=false`);
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
   });
 
-  test('UI Unified Feed request succeeds with mobile_optimized=true', async ({ adminPage, request }) => {
+  test('UI Unified Feed request succeeds with mobile_optimized=true', async ({ request }) => {
      const response = await request.get(`/api/ui/dashboard/unified-feed?mobile_optimized=true`);
      expect(response.status()).toBe(200);
      const json = await response.json();
