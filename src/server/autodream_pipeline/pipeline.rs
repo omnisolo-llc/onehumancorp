@@ -324,7 +324,7 @@ mod tests {
             .unwrap();
         }
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let db = Arc::new(DB {
             pool: pg_pool,
             store: DbStore::Sqlite(sqlite_pool.clone()),

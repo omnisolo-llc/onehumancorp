@@ -53,7 +53,7 @@ mod tests {
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new()
 
-                .connect_lazy("postgres://localhost/dummy").unwrap(),
+                .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
@@ -107,7 +107,7 @@ mod tests {
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new()
 
-                .connect_lazy("postgres://localhost/dummy").unwrap(),
+                .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
@@ -160,7 +160,7 @@ mod tests {
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new()
 
-                .connect_lazy("postgres://localhost/dummy").unwrap(),
+                .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
