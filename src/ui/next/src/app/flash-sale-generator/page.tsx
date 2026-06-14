@@ -59,7 +59,7 @@ export default function FlashSaleGeneratorPage() {
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Flash Sale Generator ⚡</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
+          className="px-4 py-2 bg-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
         >
           Back to Dashboard
         </button>
@@ -68,7 +68,7 @@ export default function FlashSaleGeneratorPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Settings Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[24px] shadow-lg glassmorphism border border-white/40">
+            <div className="p-6 rounded-[16px] shadow-lg glassmorphism border border-white/40">
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Widget Settings</h2>
 
                 <div className="mb-4">
@@ -77,7 +77,7 @@ export default function FlashSaleGeneratorPage() {
                         type="text"
                         value={saleTitle}
                         onChange={(e) => setSaleTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                         placeholder="e.g. 24-Hour Flash Sale!"
                     />
                 </div>
@@ -89,7 +89,7 @@ export default function FlashSaleGeneratorPage() {
                             type="text"
                             value={discountCode}
                             onChange={(e) => setDiscountCode(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30] uppercase"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30] uppercase"
                             placeholder="e.g. FLASH20"
                         />
                     </div>
@@ -99,7 +99,7 @@ export default function FlashSaleGeneratorPage() {
                             type="number"
                             value={discountPercent}
                             onChange={(e) => setDiscountPercent(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                             placeholder="20"
                         />
                     </div>
@@ -111,7 +111,7 @@ export default function FlashSaleGeneratorPage() {
                         type="datetime-local"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                     />
                 </div>
 
@@ -121,14 +121,14 @@ export default function FlashSaleGeneratorPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -141,20 +141,20 @@ export default function FlashSaleGeneratorPage() {
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                         placeholder="e.g. my-store"
                     />
                 </div>
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-[#FF3B30] text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] hover:bg-[#E02424] transition-colors shadow-sm"
                 >
                     Get Widget
                 </button>
             </div>
 
-            <div className="p-6 rounded-[20px] glassmorphism border border-white/40">
+            <div className="p-6 rounded-[16px] glassmorphism border border-white/40">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🔥</span> Create Urgency
                 </h3>
@@ -166,15 +166,15 @@ export default function FlashSaleGeneratorPage() {
 
         {/* Live Preview */}
         <div className="w-full md:w-2/3">
-            <div className="p-8 rounded-[24px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 shadow-inner">
+            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 shadow-inner">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 {/* The Widget Preview */}
-                <div className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" style={getThemeStyles()}>
+                <div className="relative w-full max-w-md rounded-[16px] shadow-2xl overflow-hidden" style={getThemeStyles()}>
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FF3B30] via-orange-500 to-yellow-500"></div>
 
                     <div className="p-6 flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">
+                        <div className="w-12 h-12 bg-red-100 text-[#FF3B30] rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">
                             ⚡
                         </div>
 
@@ -203,7 +203,7 @@ export default function FlashSaleGeneratorPage() {
                             </div>
                             <div className="text-xl font-bold mt-2 text-gray-400">:</div>
                             <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-mono text-xl font-bold ${theme === 'dark' ? 'bg-gray-800 text-red-400' : 'bg-red-50 text-red-600'} shadow-sm border border-red-100`}>
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-mono text-xl font-bold ${theme === 'dark' ? 'bg-gray-800 text-red-400' : 'bg-red-50 text-[#FF3B30]'} shadow-sm border border-red-100`}>
                                     {String(timeLeft.seconds).padStart(2, '0')}
                                 </div>
                                 <span className="text-[10px] uppercase font-semibold mt-1 text-gray-400">Secs</span>
@@ -212,7 +212,7 @@ export default function FlashSaleGeneratorPage() {
 
                         {/* Discount Code & CTA */}
                         <div className="w-full flex items-stretch gap-2">
-                            <div className={`flex-1 border-2 border-dashed ${theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-300 bg-gray-50'} rounded-xl flex items-center justify-center py-2 px-3 relative overflow-hidden group cursor-pointer`}
+                            <div className={`flex-1 border-2 border-dashed ${theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-300 bg-gray-50'} rounded-[8px] min-h-[44px] min-w-[44px] flex items-center justify-center py-2 px-3 relative overflow-hidden group cursor-pointer`}
                                  onClick={() => {
                                      navigator.clipboard.writeText(discountCode);
                                      alert('Code copied to clipboard!');
@@ -225,7 +225,7 @@ export default function FlashSaleGeneratorPage() {
                                 </div>
                             </div>
                             <button
-                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 rounded-xl text-sm transition-colors shadow-md"
+                                className="bg-[#FF3B30] hover:bg-[#E02424] text-white font-bold px-4 rounded-[8px] min-h-[44px] min-w-[44px] text-sm transition-colors shadow-md"
                             >
                                 Shop Now
                             </button>
@@ -245,7 +245,7 @@ export default function FlashSaleGeneratorPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="app-card rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -263,12 +263,12 @@ export default function FlashSaleGeneratorPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/20 focus:border-[#FF3B30] transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/20 focus:border-[#FF3B30] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
-                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-red-600 transition-colors"
+                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-[#FF3B30] transition-colors"
                             title="Copy to clipboard"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
@@ -279,13 +279,13 @@ export default function FlashSaleGeneratorPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#FF3B30] hover:bg-[#E02424] text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-xl transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
