@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
 
 type Message = {
@@ -84,7 +84,7 @@ export function HelpChat() {
     return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
   }, []);
 
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSend = useCallback(async (e?: React.FormEvent) => {
     e?.preventDefault();
     const messageText = inputValue.trim();
     if (!messageText || isLoading) return;
@@ -139,7 +139,7 @@ export function HelpChat() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [inputValue, isLoading]);
 
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const forceChat =
