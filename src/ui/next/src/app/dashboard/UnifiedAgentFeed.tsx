@@ -499,7 +499,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 {item.action_type && (
                   <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
                     <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">{item.action_payload}</div>
                   </div>
                 )}
 
@@ -537,7 +537,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 {item.action_type && (
                   <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
                     <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap break-words">{item.action_payload}</div>
                   </div>
                 )}
 
@@ -1195,7 +1195,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
+            <div className="flex flex-col gap-3 w-full max-w-full">
             {activities.map((activity) => (
               <div
                 key={activity.id}
