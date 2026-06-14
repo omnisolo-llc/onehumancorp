@@ -2891,10 +2891,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     match sqlx::query(
         "SELECT id, tenant_id, source, content,
-                COALESCE(original_content, content) AS original_content,
+                COALESCE(original_content, translated_content) AS original_content,
                 COALESCE(translated_from_language, '') AS translated_from_language,
                 draft_reply, status, created_at
-         FROM inbox_messages
+         FROM omni_inbox_messages
          ORDER BY created_at DESC"
     )
         .fetch_all(&mut *tx)
@@ -2909,7 +2909,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
-                    "content": row.get::<String, _>("content"),
+                    "content": row.get::<String, _>("translated_content"),
                     "original_message": row.get::<String, _>("original_content"),
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "generated_response": row.get::<String, _>("draft_reply"),
@@ -3101,7 +3101,7 @@ pub async fn update_ui_triage_action_handler(
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
-                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status) VALUES ($1, $2, $3, $4, $4, 'English', $5, $6)"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
@@ -3291,8 +3291,8 @@ pub(crate) async fn load_ui_dashboard_metrics(
         },
         async {
             match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM omni_inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM omni_inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
             }
         }
     );
@@ -3445,7 +3445,7 @@ async fn ui_dashboard_analytics_chat_handler(
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(translated_content, '') AS translated_content, COALESCE(original_content, translated_content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
@@ -3453,7 +3453,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
+                            "content": row.get::<String, _>("translated_content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -3461,7 +3461,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
+                            "content": row.get::<String, _>("translated_content"),
                             "original_message": row.get::<String, _>("original_content"),
                             "translated_from_language": row.get::<String, _>("translated_from_language"),
                             "generated_response": row.get::<String, _>("draft_reply"),
@@ -3473,7 +3473,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(translated_content, '') AS translated_content, COALESCE(original_content, translated_content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
@@ -3481,7 +3481,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
+                            "content": row.get::<String, _>("translated_content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -3489,7 +3489,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
+                            "content": row.get::<String, _>("translated_content"),
                             "original_message": row.get::<String, _>("original_content"),
                             "translated_from_language": row.get::<String, _>("translated_from_language"),
                             "generated_response": row.get::<String, _>("draft_reply"),
@@ -4476,13 +4476,13 @@ async fn list_ui_inbox_handler(
             match sqlx::query(
                 "SELECT id,
                         COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_content, '') AS translated_content,
+                        COALESCE(original_content, translated_content, '') AS original_content,
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
                         COALESCE(created_at::text, '') AS created_at
-                 FROM inbox_messages
+                 FROM omni_inbox_messages
                  WHERE tenant_id = $1
                  ORDER BY created_at DESC
                  LIMIT 50"
@@ -4495,7 +4495,7 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
+                                "content": row.get::<String, _>("translated_content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -4503,7 +4503,7 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
+                                "content": row.get::<String, _>("translated_content"),
                                 "original_message": row.get::<String, _>("original_content"),
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),
@@ -4519,13 +4519,13 @@ async fn list_ui_inbox_handler(
             match sqlx::query(
                 "SELECT id,
                         COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_content, '') AS translated_content,
+                        COALESCE(original_content, translated_content, '') AS original_content,
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
                         COALESCE(CAST(created_at AS TEXT), '') AS created_at
-                 FROM inbox_messages
+                 FROM omni_inbox_messages
                  WHERE tenant_id = ?
                  ORDER BY created_at DESC
                  LIMIT 50"
@@ -4538,7 +4538,7 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
+                                "content": row.get::<String, _>("translated_content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -4546,7 +4546,7 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
+                                "content": row.get::<String, _>("translated_content"),
                                 "original_message": row.get::<String, _>("original_content"),
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),

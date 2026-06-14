@@ -217,8 +217,8 @@ async fn handle_webhook(
     // Insert the raw message initially; the TranslationAgent will update it with translated content and a draft reply.
     let _ = sqlx::query(
         r#"
-        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', NOW())
+        INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, '', 'unread', NOW())
         "#
     )
     .bind(&id)
@@ -226,8 +226,7 @@ async fn handle_webhook(
     .bind(&payload.source)
     .bind(&payload.message)
     .bind(&payload.message) // content starts as original until translated
-    .bind(None::<String>) // translated_from_language starts empty
-    .bind(None::<String>) // draft_reply starts empty
+    .bind("English") // default target language
     .execute(&pool)
     .await;
 

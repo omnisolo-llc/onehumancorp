@@ -47,7 +47,7 @@ test.describe('Omnichannel Inbox Identity Resolution', () => {
     expect(identities[0].customer_id).toBe('test-customer-1');
 
     // 4. Verify message in database
-    const messages = await e2eDbQuery(`SELECT * FROM inbox_messages WHERE tenant_id = '${tenantId}'`);
+    const messages = await e2eDbQuery(`SELECT * FROM omni_inbox_messages WHERE tenant_id = '${tenantId}'`);
     expect(messages.length).toBeGreaterThan(0);
     expect(messages[0].source).toBe('whatsapp');
     expect(messages[0].original_content).toBe('Hello, what is the status of my order?');

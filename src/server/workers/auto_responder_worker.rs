@@ -192,7 +192,7 @@ impl AutoResponderWorker {
 
             match &db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET status = 'auto_replied', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&drafted_msg)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -204,7 +204,7 @@ impl AutoResponderWorker {
                         .await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET status = 'auto_replied', draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&drafted_msg)
                         .bind(&message_id)
                         .bind(&tenant_id)

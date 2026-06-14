@@ -59,8 +59,8 @@ pub async fn handle_omnichannel_webhook(
         crate::db::DbStore::Postgres => {
             sqlx::query(
                 r#"
-                INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'unread', $6, $7, NOW())
+                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, 'unread', $7, $8, NOW())
                 "#
             )
             .bind(&id)
@@ -68,6 +68,7 @@ pub async fn handle_omnichannel_webhook(
             .bind(&payload.source)
             .bind(&payload.message)
             .bind(&payload.message)
+            .bind(&target_language)
             .bind(&payload.sender_id)
             .bind(&customer_id)
             .execute(pool)
@@ -76,8 +77,8 @@ pub async fn handle_omnichannel_webhook(
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
                 r#"
-                INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'unread', ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'unread', ?, ?, CURRENT_TIMESTAMP)
                 "#
             )
             .bind(&id)
@@ -85,6 +86,7 @@ pub async fn handle_omnichannel_webhook(
             .bind(&payload.source)
             .bind(&payload.message)
             .bind(&payload.message)
+            .bind(&target_language)
             .bind(&payload.sender_id)
             .bind(&customer_id)
             .execute(sqlite_pool)

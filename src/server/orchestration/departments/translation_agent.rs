@@ -64,8 +64,8 @@ impl Department for TranslationAgent {
             let pool = crate::db::get_pool();
             let _ = sqlx::query(
                 r#"
-                UPDATE inbox_messages
-                SET content = $1, translated_from_language = $2
+                UPDATE omni_inbox_messages
+                SET translated_content = $1, source_language = $2
                 WHERE id = $3 AND tenant_id = $4
                 "#
             )
