@@ -1898,22 +1898,22 @@ async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
+    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING referral_code")
         .bind(&req.id)
-        .execute(&state.pool)
+        .fetch_one(&state.pool)
         .await
     {
-        Ok(result) => {
-            if result.rows_affected() == 0 {
-                return Err(StatusCode::NOT_FOUND);
-            }
-            state.hub.referral_tracker().record_click(&req.id);
+        Ok(row) => {
+            use sqlx::Row;
+            let ref_code: String = row.get("referral_code");
+            state.hub.referral_tracker().record_click(&ref_code);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg);
 
             Ok(Json(()))
         }
+        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1951,21 +1951,23 @@ async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
+    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING referral_code, user_id")
         .bind(&req.id)
-        .execute(&state.pool)
+        .fetch_one(&state.pool)
         .await
     {
-        Ok(result) => {
-            if result.rows_affected() == 0 {
-                return Err(StatusCode::NOT_FOUND);
-            }
-            state.hub.referral_tracker().record_conversion(&req.id);
+        Ok(row) => {
+            use sqlx::Row;
+            let ref_code: String = row.get("referral_code");
+            let user_id: String = row.get("user_id");
+            state.hub.referral_tracker().record_conversion(&ref_code);
+            state.hub.referral_tracker().record_referral(&ref_code, Some(&user_id));
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
         }
+        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1989,6 +1991,7 @@ async fn handle_referral_generate(
         .await
     {
         Ok(_) => {
+            state.hub.referral_tracker().seed_referral_mapping(&ref_code, &auth_info.agent_id);
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {

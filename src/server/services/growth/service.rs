@@ -345,6 +345,8 @@ impl GrowthService for MyGrowthService {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
+        self.hub.referral_tracker().seed_referral_mapping(&referral_code, &req.user_id);
+
         Ok(Response::new(Referral {
             id,
             user_id: req.user_id,
@@ -372,6 +374,8 @@ impl GrowthService for MyGrowthService {
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        self.hub.referral_tracker().record_click(_row.get::<&str, _>("referral_code"));
 
         Ok(Response::new(Referral {
             id: _row.get("id"),
@@ -424,6 +428,11 @@ impl GrowthService for MyGrowthService {
             .await;
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let ref_code: &str = _row.get("referral_code");
+        let user_id: &str = _row.get("user_id");
+        self.hub.referral_tracker().record_conversion(ref_code);
+        self.hub.referral_tracker().record_referral(ref_code, Some(user_id));
 
         Ok(Response::new(Referral {
             id: _row.get("id"),
