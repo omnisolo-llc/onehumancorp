@@ -109,7 +109,7 @@ export default function FieldOpsJobsPage() {
 
     handleStatusChange(jobId, 'Completed');
 
-    if (job.notes && !isOffline) {
+    if (job.notes) {
       SyncManager.getInstance().enqueue({
         id: `mutation-${Date.now()}`,
         type: 'draft_quote',
