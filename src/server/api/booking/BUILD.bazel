@@ -3,7 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "mod.rs",
-        "request.rs"
+        "request.rs",
+        "reserve_time_slot.rs"
     ],
     visibility = ["//visibility:public"],
 )
