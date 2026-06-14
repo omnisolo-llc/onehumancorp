@@ -43,11 +43,19 @@ async fn get_orders_handler(
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
             let pool = crate::db::get_pool();
+            let mut tx = match pool.begin().await {
+                Ok(t) => t,
+                Err(_) => return,
+            };
+            if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id_bg).await.is_err() {
+                return;
+            }
             let rows = sqlx::query("SELECT id, total_amount, status, created_at FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
                 .bind(&tenant_id_bg)
-                .fetch_all(&pool)
+                .fetch_all(&mut *tx)
                 .await
                 .unwrap_or_default();
+            if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
             let orders: Vec<Value> = rows.into_iter().map(|row| {
                 json!({
@@ -66,12 +74,20 @@ async fn get_orders_handler(
     }
 
     let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Json(json!({"orders": []})),
+    };
+    if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+        return Json(json!({"orders": []}));
+    }
 
     let rows = sqlx::query("SELECT id, total_amount, status, created_at FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
         .bind(&tenant_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await
         .unwrap_or_default();
+    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
     let orders: Vec<Value> = rows.into_iter().map(|row| {
         json!({
@@ -94,12 +110,20 @@ async fn get_inventory_handler(
 ) -> Json<Value> {
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
     let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Json(json!({"inventory": []})),
+    };
+    if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+        return Json(json!({"inventory": []}));
+    }
 
     let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await
         .unwrap_or_default();
+    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
     let inventory: Vec<Value> = rows.into_iter().map(|row| {
         json!({

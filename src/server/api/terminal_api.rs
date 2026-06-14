@@ -68,6 +68,13 @@ pub async fn start_terminal_session_handler(
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: format!("DB Error: {}", e) })
+    };
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: format!("Auth Error: {}", e) });
+    }
 
     let res = sqlx::query(
         "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
@@ -77,8 +84,9 @@ pub async fn start_terminal_session_handler(
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&req_data.device_id)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await;
+    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
     match res {
         Ok(row) => {
@@ -130,7 +138,13 @@ pub async fn update_terminal_session_status_handler(
     };
 
     let pool = crate::db::get_pool();
-
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: format!("DB Error: {}", e) })
+    };
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: format!("Auth Error: {}", e) });
+    }
 
     let status_str = req_data.status.as_str();
     let query = if status_str == "RESOLVED" {
@@ -143,16 +157,17 @@ pub async fn update_terminal_session_status_handler(
         sqlx::query(query)
             .bind(&req_data.session_id)
             .bind(&tenant_id)
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
     } else {
         sqlx::query(query)
             .bind(&req_data.status)
             .bind(&req_data.session_id)
             .bind(&tenant_id)
-            .execute(&pool)
+            .execute(&mut *tx)
             .await
     };
+    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
 
     match res {
@@ -199,14 +214,22 @@ pub async fn end_terminal_session_handler(
     };
 
     let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return Json(EndTerminalSessionResponse { success: false, error_message: format!("DB Error: {}", e) })
+    };
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return Json(EndTerminalSessionResponse { success: false, error_message: format!("Auth Error: {}", e) });
+    }
 
     let res = sqlx::query(
         "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
     )
     .bind(&req_data.session_id)
     .bind(&tenant_id)
-    .execute(&pool)
+    .execute(&mut *tx)
     .await;
+    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
 
     match res {
         Ok(result) => {
@@ -340,17 +363,22 @@ pub async fn sync_offline_transactions_handler(
 
     // Update pos_terminal_sessions
     let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let _ = sqlx::query(
-        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
-    )
-    .bind(&session_id)
-    .bind(&tenant_id)
-    .bind(&client_id)
-    .bind(req_data.transactions.len() as i32)
-    .execute(&pool)
-    .await;
+    if let Ok(mut tx) = pool.begin().await {
+        if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_ok() {
+            let _ = sqlx::query(
+                "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+                 VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+                 ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
+            )
+            .bind(&session_id)
+            .bind(&tenant_id)
+            .bind(&client_id)
+            .bind(req_data.transactions.len() as i32)
+            .execute(&mut *tx)
+            .await;
+            if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
+        }
+    }
 
     for tx in &req_data.transactions {
 
@@ -507,7 +535,7 @@ pub async fn commit_inventory_handler(
                             timestamp: chrono::Utc::now().timestamp(),
                         });
                     }
-                    let _ = tx.commit().await;
+                    if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
                 }
             }
 
@@ -584,16 +612,21 @@ pub async fn create_payment_intent_handler(
             Ok(client_secret) => {
                 let pool = crate::db::get_pool();
                 let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
-                let _ = sqlx::query(
-                    "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-                     VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
-                     ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'"
-                )
-                .bind(uuid::Uuid::new_v4().to_string())
-                .bind(&tenant_id)
-                .bind(device_id)
-                .execute(&pool)
-                .await;
+                if let Ok(mut tx) = pool.begin().await {
+                    if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_ok() {
+                        let _ = sqlx::query(
+                            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+                             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+                             ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(device_id)
+                        .execute(&mut *tx)
+                        .await;
+                        if let Err(e) = tx.commit().await { tracing::error!("Commit error: {}", e); }
+                    }
+                }
                 Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
             },
             Err(e) => {
