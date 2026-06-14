@@ -279,7 +279,7 @@ test.describe('OnboardingWizard CUJ', () => {
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
@@ -298,7 +298,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Intercept the API route to fail
     await context.route('/api/onboarding/intake', route => route.abort('failed'));
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Should display a real error message, not mock data
     await expect(page.getByText(/Failed to launch. Please try again./i)).toBeVisible();
