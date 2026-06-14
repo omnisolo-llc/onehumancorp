@@ -171,9 +171,26 @@ Your response:",
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
+                let mut mock_name = "Mock Business".to_string();
+                let mut mock_type = "Mock Type".to_string();
+
+                for line in input.lines() {
+                    if line.starts_with("Business Name: ") {
+                        mock_name = line.trim_start_matches("Business Name: ").trim().to_string();
+                    } else if line.starts_with("What we sell: ") {
+                        let desc = line.trim_start_matches("What we sell: ").trim();
+                        if desc.chars().count() > 30 {
+                            let truncated: String = desc.chars().take(27).collect();
+                            mock_type = format!("{}...", truncated);
+                        } else {
+                            mock_type = desc.to_string();
+                        }
+                    }
+                }
+
                 return Ok(IntakeData {
-                    business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
+                    business_name: mock_name,
+                    business_type: mock_type,
                     categories: vec!["physical".to_string()],
                     initial_products: vec![
                         IntakeProduct {
