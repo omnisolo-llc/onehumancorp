@@ -820,6 +820,7 @@ impl DB {
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
                         subdomain TEXT,
+                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -2115,7 +2116,7 @@ mod e2e_search_workspace_tests {
         let unique_tenant = format!("tenant_{}", uuid::Uuid::new_v4());
 
         // Setup SQLite Schema
-        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY)")
+        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT, plan_tier TEXT DEFAULT 'free', has_claimed_trial_extension BOOLEAN DEFAULT FALSE)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
