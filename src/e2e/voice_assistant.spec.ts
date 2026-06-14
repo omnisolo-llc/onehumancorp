@@ -25,7 +25,7 @@ test.describe('Voice Assistant Command Center', () => {
     // 7. Success state and transcription display
     // Our mock backend returns a fixed transcription for the demo
     await expect(page.getByText('Action Prepared!')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/Create a \$150 repair quote/)).toBeVisible();
+    await expect(page.getByText(/Create an estimate for \$250/)).toBeVisible();
 
     // 8. Verify the proposed action card appears in the Agent Feed
     // Navigate to Triage/Feed if not on the same page, but UnifiedAgentFeed is on Dashboard
@@ -35,7 +35,7 @@ test.describe('Voice Assistant Command Center', () => {
     // Check for the new proposal card
     const actionCard = page.getByTestId('draft-quote-card');
     await expect(actionCard).toBeVisible();
-    await expect(actionCard).toContainText('$150');
+    await expect(actionCard).toContainText('$250');
 
     // 9. Carlos can approve the quote with one tap
     const approveBtn = page.getByTestId('approve-quote-draft');

@@ -621,6 +621,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
+                data-testid={((approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' || (approval.proposed_action || approval.context_payload)?.feature_type === 'field_service_action') ? "draft-quote-card" : "approval-card"}
                 className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
@@ -1116,13 +1117,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </button>
                       </div>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' || (approval.proposed_action || approval.context_payload)?.feature_type === 'field_service_action' ? (
                     <>
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'field_service_action' && (
+                        <div className="mb-4 text-sm bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <p className="font-semibold text-gray-900 dark:text-white mb-1">Drafted SMS:</p>
+                          <p className="text-gray-700 dark:text-gray-300 italic">"{(approval.proposed_action || approval.context_payload)?.sms_draft || 'Hi, here is the estimate for the disposal as discussed. Please review and approve.'}"</p>
+                        </div>
+                      )}
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
-                        data-testid="approve-send-proposal"
+                        data-testid="approve-quote-draft"
                       >
                         Approve & Send
                       </button>
