@@ -48,7 +48,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Wait for UI to reflect offline state
-    await expect(page.locator('text=Offline Mode')).toBeVisible();
+    await expect(page.locator('text=Working Offline').first()).toBeVisible();
 
     // Perform optimistic action 1: Update order status
     await page.getByTestId('btn-prepare-1').click();
@@ -69,7 +69,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
 
     // Expect offline badge to disappear
-    await expect(page.locator('text=Offline Mode')).toBeHidden();
+    await expect(page.locator('text=Working Offline')).toBeHidden();
 
     // Wait for background sync to trigger (interval is 5s) and clear events
     await expect(async () => {

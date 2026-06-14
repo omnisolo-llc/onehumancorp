@@ -14,7 +14,7 @@ test.describe('Offline Field Operations', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Verify offline indicator
-    await expect(page.locator('text=Offline Mode')).toBeVisible();
+    await expect(page.locator('text=Working Offline').first()).toBeVisible();
 
     // Interact with a job (add notes and complete)
     const notesArea = page.locator('textarea').first();
@@ -33,6 +33,6 @@ test.describe('Offline Field Operations', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
 
     // Sync is handled by SyncManager in background - we're verifying the offline UX flow
-    await expect(page.locator('text=Offline Mode')).not.toBeVisible();
+    await expect(page.locator('text=Working Offline')).not.toBeVisible();
   });
 });

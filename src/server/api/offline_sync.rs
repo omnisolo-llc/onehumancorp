@@ -53,6 +53,19 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
+        // Idempotency check for general mutations
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ohc_job_queue WHERE payload->>'transaction_id' = $1 AND tenant_id = $2)")
+            .bind(&mutation.transaction_id)
+            .bind(&tenant_id_clone)
+            .fetch_one(&db_clone)
+            .await
+            .unwrap_or(false);
+
+        if exists {
+            tracing::info!("Skipping duplicate general offline mutation transaction_id: {}", mutation.transaction_id);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();

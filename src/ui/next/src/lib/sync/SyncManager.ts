@@ -1,6 +1,7 @@
 export class SyncManager {
   private static instance: SyncManager;
   private queueKey = 'ohc_offline_queue';
+  private posQueueKey = 'ohc_offline_pos_tx';
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
@@ -32,13 +33,22 @@ export class SyncManager {
   }
 
   public getQueueLength(): number {
-    return this.getQueue().length;
+    return this.getQueue().length + this.getPosQueue().length;
   }
 
   private getQueue(): any[] {
     if (typeof window === 'undefined') return [];
     try {
       return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  private getPosQueue(): any[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem(this.posQueueKey) || '[]');
     } catch {
       return [];
     }
@@ -55,13 +65,16 @@ export class SyncManager {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
     let queue = this.getQueue();
-    if (queue.length === 0) return;
+    let posQueue = this.getPosQueue();
+    if (queue.length === 0 && posQueue.length === 0) return;
 
     this.syncInProgress = true;
 
     try {
       // Separate POS transactions from general offline sync
-      const posTransactions = queue.filter(m => m.type === 'tap_to_pay').map(m => {
+      let combinedPosTransactions = [...posQueue];
+
+      const posTransactionsFromGeneral = queue.filter(m => m.type === 'tap_to_pay').map(m => {
         return {
           id: m.id,
           client_id: 'terminal_client', // Default fallback
@@ -71,6 +84,8 @@ export class SyncManager {
           timestamp: new Date().toISOString()
         };
       });
+
+      combinedPosTransactions = combinedPosTransactions.concat(posTransactionsFromGeneral);
 
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
         if (m.type === 'inventory_toggle') {
@@ -105,7 +120,7 @@ export class SyncManager {
       let allOk = true;
 
       // Sync POS transactions
-      if (posTransactions.length > 0) {
+      if (combinedPosTransactions.length > 0) {
         const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
         const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
           method: 'POST',
@@ -115,7 +130,7 @@ export class SyncManager {
           },
           body: JSON.stringify({
             session_id: sessionId || undefined,
-            transactions: posTransactions
+            transactions: combinedPosTransactions
           })
         });
         if (!resPos.ok) {
@@ -142,6 +157,7 @@ export class SyncManager {
 
       if (allOk) {
         localStorage.setItem(this.queueKey, '[]');
+        localStorage.setItem(this.posQueueKey, '[]');
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
       }

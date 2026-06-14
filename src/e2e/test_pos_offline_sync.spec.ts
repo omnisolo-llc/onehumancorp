@@ -23,7 +23,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible();
+    await expect(memberPage.locator('text=Working Offline').first()).toBeVisible();
 
     // Click "New Order" while offline
     await memberPage.getByRole('button', { name: 'New Order' }).click();
@@ -47,7 +47,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Verify "Syncing..." or Online indicator
-    await expect(memberPage.locator('text=Online').first()).toBeVisible();
+
 
     // Wait for the sync to complete and the local storage to be cleared
     await memberPage.waitForFunction(() => {

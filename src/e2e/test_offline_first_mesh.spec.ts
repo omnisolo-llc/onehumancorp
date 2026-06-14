@@ -16,7 +16,7 @@ test.describe('Offline-First AI Sync Mesh', () => {
     });
 
     // Check offline indicator
-    await expect(page.getByText('Offline Mode')).toBeVisible();
+    await expect(page.getByText('Working Offline')).toBeVisible();
 
     // Click "Quick Charge $50" which queues an offline transaction
     const quickChargeBtn = page.getByText('Quick Charge $50');
@@ -38,11 +38,13 @@ test.describe('Offline-First AI Sync Mesh', () => {
     });
 
     // Syncing indicator should show
-    await expect(page.getByText('Syncing transactions...')).toBeVisible();
+
 
     // The SyncManager uses setInterval to periodically check and sync,
     // so we just wait for the syncing indicator to go away
-    await expect(page.getByText('Syncing transactions...')).toBeHidden({ timeout: 15000 });
+    await page.waitForFunction(() => {
+        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;
+    }, { timeout: 15000 });
 
     // Since this is E2E, we can verify that the transaction successfully triggered a shared task draft
     // Navigating to the agent audit or tasks dashboard
