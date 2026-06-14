@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero-Click Business Generator | OHC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .dark .glassmorphism {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .animate-spin-slow {
+            animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .step-transition {
+            transition: all 0.5s ease-in-out;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div class="max-w-md mx-auto px-4 py-12 sm:px-6 lg:max-w-2xl">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
+                <span class="text-3xl">✨</span>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight mb-2 sm:text-4xl">
+                Zero-Click Generator
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+                Describe your business. We'll build everything.
+            </p>
+        </div>
+
+        <!-- Input Section -->
+        <div id="input-step" class="glassmorphism p-6 sm:p-8">
+            <form id="generator-form" class="space-y-6">
+                <div>
+                    <label for="prompt" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        What do you sell?
+                    </label>
+                    <textarea
+                        id="prompt"
+                        rows="4"
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 px-4 py-3 text-gray-900 dark:text-white transition-all resize-none"
+                        placeholder="e.g., I am a home baker in Austin selling custom vegan cakes."
+                        required
+                    ></textarea>
+                </div>
+
+                <button
+                    type="submit"
+                    id="generate-btn"
+                    class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg shadow-indigo-200 dark:shadow-none min-h-[44px]"
+                >
+                    <span>🚀</span> Generate My Business
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading Section -->
+        <div id="loading-step" class="hidden glassmorphism p-12 flex flex-col items-center justify-center text-center space-y-6">
+            <div class="relative">
+                <div class="w-20 h-20 border-4 border-indigo-100 dark:border-indigo-900/30 rounded-full"></div>
+                <div class="absolute top-0 left-0 w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div class="space-y-2">
+                <h3 id="loading-text" class="text-xl font-bold animate-pulse">Analyzing your idea...</h3>
+                <p class="text-sm text-gray-500 font-medium">This usually takes about 30 seconds.</p>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-step" class="hidden glassmorphism p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold mb-1 sm:text-3xl">Your business is live!</h2>
+                <p class="text-gray-600 dark:text-gray-400">Everything is configured and ready.</p>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 space-y-4 mb-8">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-500 font-medium mb-1">Business Name</p>
+                        <p id="res-name" class="font-bold"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 font-medium mb-1">Products</p>
+                        <p id="res-count" class="font-bold"></p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-gray-500 font-medium mb-1">URL</p>
+                        <p id="res-url" class="font-bold text-indigo-600 truncate"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button id="dashboard-btn" class="flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3.5 rounded-xl font-bold transition-colors min-h-[44px]">
+                    Go to Dashboard
+                </button>
+                <button id="share-btn" class="flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-6 py-3.5 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors min-h-[44px]">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+                    Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-12 space-y-4">
+            <p class="text-sm font-semibold text-gray-400 flex items-center justify-center gap-2">
+                ⚡ Powered by OHC
+            </p>
+            <div class="flex justify-center opacity-50 grayscale hover:opacity-100 transition-all cursor-pointer">
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg text-xs font-bold">
+                    <span>OHC</span>
+                    <span class="w-1 h-1 bg-gray-400 rounded-full"></span>
+                    <span>Multi-Agent OS</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputStep = document.getElementById('input-step');
+        const loadingStep = document.getElementById('loading-step');
+        const resultStep = document.getElementById('result-step');
+        const loadingText = document.getElementById('loading-text');
+        const form = document.getElementById('generator-form');
+        const promptInput = document.getElementById('prompt');
+
+        const loadingSteps = [
+            "Analyzing your business...",
+            "Designing storefront layout...",
+            "Generating product catalog...",
+            "Configuring booking systems...",
+            "Finalizing your AI assistant..."
+        ];
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value;
+            if (!prompt.trim()) return;
+
+            // Switch to loading
+            inputStep.classList.add('hidden');
+            loadingStep.classList.remove('hidden');
+
+            let stepIdx = 0;
+            const stepInterval = setInterval(() => {
+                if (stepIdx < loadingSteps.length - 1) {
+                    stepIdx++;
+                    loadingText.innerText = loadingSteps[stepIdx];
+                }
+            }, 3000);
+
+            try {
+                const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) throw new Error('Generation failed');
+
+                const data = await response.json();
+
+                clearInterval(stepInterval);
+
+                // Show result
+                loadingStep.classList.add('hidden');
+                resultStep.classList.remove('hidden');
+
+                document.getElementById('res-name').innerText = data.name;
+                document.getElementById('res-count').innerText = data.products_count + ' items';
+                document.getElementById('res-url').innerText = data.url;
+
+                document.getElementById('dashboard-btn').onclick = () => {
+                    window.location.href = 'dashboard.html';
+                };
+
+                document.getElementById('share-btn').onclick = () => {
+                    const text = `I just built my AI-powered business in 30 seconds using OHC! Check it out: ${data.url} \n\n⚡ Powered by OHC`;
+                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                };
+
+            } catch (err) {
+                console.error(err);
+                alert('Something went wrong during generation. Please try again.');
+                clearInterval(stepInterval);
+                loadingStep.classList.add('hidden');
+                inputStep.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

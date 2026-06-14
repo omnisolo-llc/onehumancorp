@@ -20,6 +20,20 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use chrono::Datelike;
 use crate::hub::Hub;
+use crate::services::onboarding::onboarding_agent::OnboardingAgent;
+
+#[derive(Debug, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: i32,
+    pub organization_id: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -271,6 +285,61 @@ pub async fn handle_conversational_chat(
     }))
 }
 
+pub async fn handle_zero_click_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, StatusCode> {
+    let intake_data = state.onboarding_agent.process_intake(&req.prompt).await.map_err(|e| {
+        tracing::error!("Zero-click intake failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let onboarding_req = ::server_ohc::orchestration::StartOnboardingRequest {
+        business_type: intake_data.business_type.clone(),
+        company_name: intake_data.business_name.clone(),
+        company_description: req.prompt.clone(),
+        selling_categories: intake_data.categories.clone(),
+        payment_pref: "online".to_string(),
+        admin_email: format!("owner@{}", intake_data.business_name.to_lowercase().replace(" ", "") + ".com"),
+        admin_name: "Owner".to_string(),
+        admin_password: "Password123!".to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name: intake_data.initial_products.get(0).map(|p| p.name.clone()).unwrap_or_default(),
+        first_product_price: intake_data.initial_products.get(0).map(|p| p.price.clone()).unwrap_or_default(),
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.clone().unwrap_or_default(),
+        target_audience: intake_data.target_audience.clone().unwrap_or_default(),
+        initial_products: intake_data.initial_products.iter().map(|p| {
+            ::server_ohc::orchestration::IntakeProductProto {
+                name: p.name.clone(),
+                price: p.price.clone(),
+                description: p.description.clone().unwrap_or_default(),
+                variants: p.variants.as_ref().map(|vars| vars.iter().map(|v| {
+                    ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: v.name.clone(),
+                        price_modifier: v.price_modifier.clone(),
+                    }
+                }).collect()).unwrap_or_default(),
+            }
+        }).collect(),
+        ai_agents: vec![],
+        ai_auto_respond: true,
+    };
+
+    let start_res = state.onboarding_agent.start_onboarding(onboarding_req).await.map_err(|e| {
+        tracing::error!("Zero-click onboarding start failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(ZeroClickGenerateResponse {
+        name: intake_data.business_name,
+        url: format!("https://{}.ohc.app", start_res.organization_id),
+        products_count: intake_data.initial_products.len() as i32,
+        organization_id: start_res.organization_id,
+    }))
+}
+
 pub async fn handle_conversational_execute(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
@@ -304,11 +373,12 @@ pub async fn handle_conversational_execute(
     }))
 }
 
-pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
+pub fn router<S>(pool: PgPool, hub: Arc<Hub>, onboarding_agent: Arc<OnboardingAgent>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/zero-click-builder/generate", post(handle_zero_click_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
@@ -349,7 +419,7 @@ where
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .route("/wrapped", get(handle_wrapped))
-        .layer(Extension(GrowthState { pool, hub }))
+        .layer(Extension(GrowthState { pool, hub, onboarding_agent }))
 }
 
 #[derive(Debug, Serialize)]
@@ -665,6 +735,7 @@ pub struct TeamInvitesResponse {
 pub struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
+    onboarding_agent: Arc<OnboardingAgent>,
 }
 
 async fn handle_social_post(
@@ -2351,6 +2422,31 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_zero_click_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let onboarding_agent = Arc::new(OnboardingAgent::new(db, hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub, onboarding_agent };
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I am a coffee roaster in Seattle".to_string(),
+        };
+
+        // This will attempt to use LocalLLMClient in tests which returns mock data
+        let res = handle_zero_click_generate(Extension(state), Json(req)).await;
+        assert!(res.is_ok());
+        let resp = res.unwrap().0;
+        assert!(!resp.organization_id.is_empty());
+        assert!(resp.products_count > 0);
     }
 
     #[tokio::test]

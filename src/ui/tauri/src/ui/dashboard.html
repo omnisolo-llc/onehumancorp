@@ -1488,6 +1488,69 @@
           }
           triageQueue.innerHTML = proposals.map(item => {
             const actionType = item.action_type || item.proposed_action?.action_type;
+
+            // Mission 2: Order Interceptor Card
+            if (item.proposed_action?.order_data || item.context_payload?.order_data || item.action_payload?.order_data) {
+                let payload = item.proposed_action || item.context_payload || {};
+                if (typeof item.action_payload === 'string') {
+                    try { payload = JSON.parse(item.action_payload); } catch(e){}
+                } else if (item.action_payload) {
+                    payload = item.action_payload;
+                }
+                const summary = payload.order_data?.summary || 'New Order';
+                const itemsList = payload.order_data?.items || [];
+                const itemsHtml = itemsList.map(i => `<li>${i.quantity}x ${i.name}</li>`).join('');
+
+                return `
+                    <div class="triage-item glassmorphism" data-testid="order-interceptor-card" id="triage-${item.id}">
+                    <div class="triage-header">
+                        <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(52, 199, 89, 0.1); color: #34C759; padding: 4px 8px; border-radius: 4px;">Order Interceptor</div>
+                        <div class="triage-priority" style="font-size: 12px; color: #6b7280;">New Order</div>
+                    </div>
+                    <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${summary}</div>
+                    <ul style="font-size: 14px; margin-top: 4px; color: #333; padding-left: 20px;">
+                        ${itemsHtml}
+                    </ul>
+                    <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                        <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1;">Accept Order</button>
+                        <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1;">Ignore</button>
+                    </div>
+                    </div>
+                `;
+            }
+
+            // Mission 3: Negotiation Card
+            if (item.proposed_action?.negotiation_data || item.context_payload?.negotiation_data || item.action_payload?.negotiation_data) {
+                let payload = item.proposed_action || item.context_payload || {};
+                if (typeof item.action_payload === 'string') {
+                    try { payload = JSON.parse(item.action_payload); } catch(e){}
+                } else if (item.action_payload) {
+                    payload = item.action_payload;
+                }
+                const service = payload.negotiation_data?.service_name || 'Service';
+                const date = payload.negotiation_data?.preferred_date || 'TBD';
+                const time = payload.negotiation_data?.preferred_time || 'TBD';
+                const availability = payload.availability || 'Unknown';
+
+                return `
+                    <div class="triage-item glassmorphism" data-testid="negotiation-card" id="triage-${item.id}">
+                    <div class="triage-header">
+                        <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(255, 149, 0, 0.1); color: #FF9500; padding: 4px 8px; border-radius: 4px;">AI Negotiation</div>
+                        <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Decision Required</div>
+                    </div>
+                    <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${service} - ${date} at ${time}</div>
+                    <div style="font-size: 14px; margin-top: 4px; color: #333;">Availability: <span style="font-weight: 600; color: ${availability === 'Available' ? '#34C759' : '#FF3B30'}">${availability}</span></div>
+                    <div style="font-size: 13px; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 8px; font-style: italic;">
+                        "${payload.translated_message || 'Booking inquiry received'}"
+                    </div>
+                    <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                        <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #34C759;">Confirm Booking</button>
+                        <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1;">Dismiss</button>
+                    </div>
+                    </div>
+                `;
+            }
+
             const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";

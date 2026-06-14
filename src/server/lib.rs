@@ -2622,6 +2622,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
     let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
+    let order_interceptor_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::order_interceptor_agent::OrderInterceptorAgent::new(dept_orchestrator.clone())));
+    let negotiator_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::negotiator_agent::NegotiatorAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2631,7 +2633,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
         dept_orchestrator.register_department(advisory_agent),
-        dept_orchestrator.register_department(translation_agent)
+        dept_orchestrator.register_department(translation_agent),
+        dept_orchestrator.register_department(order_interceptor_agent),
+        dept_orchestrator.register_department(negotiator_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
@@ -5510,10 +5514,13 @@ async fn create_ui_bom_item_handler(
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
-        .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
+        .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler));
+
+        let onboarding_agent = std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()));
+        let app = app
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
-        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
-        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/onboarding", api::onboarding::router(onboarding_agent.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), onboarding_agent.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
