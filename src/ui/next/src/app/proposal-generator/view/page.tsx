@@ -3,16 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-
-function PoweredByOHC({ tenantId }: { tenantId: string }) {
-  return (
-    <div className="mt-4 pt-4 border-t w-full text-center border-gray-200">
-        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity text-gray-500">
-            ⚡ Powered by OHC
-        </a>
-    </div>
-  );
-}
+import { PoweredByOHC } from '../../components/PoweredByOHC';
 
 function ProposalViewContent() {
   const searchParams = useSearchParams();

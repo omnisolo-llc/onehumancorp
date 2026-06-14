@@ -268,6 +268,14 @@ export default function TerminalPage() {
     setOrderStatus('');
   };
 
+  const handleOptimisticReserve = (productId: string) => {
+    setInventory(prev => prev.map(p => p.id === productId ? { ...p, stock: p.stock - 1 } : p));
+  };
+
+  const handleOptimisticRollback = (productId: string) => {
+    setInventory(prev => prev.map(p => p.id === productId ? { ...p, stock: p.stock + 1 } : p));
+  };
+
   if (!activeStaff) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter w-full overflow-hidden">
@@ -401,7 +409,7 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="app-card p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm active:scale-[0.98]">
+             <button className="p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -423,7 +431,7 @@ export default function TerminalPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="font-bold text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-500 line-clamp-1">{product.description}</div>
+                      <div className="text-xs text-gray-500 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
                     </div>
                     <div className="text-blue-600 font-bold">
                       ${(product.price_cents / 100).toFixed(2)}
@@ -444,10 +452,12 @@ export default function TerminalPage() {
                    Tap to Pay to automatically apply reward to this transaction.
                  </p>
                </div>
-               <StripeTerminalClient
+                              <StripeTerminalClient
                   amount={selectedProduct.price_cents}
                   productId={selectedProduct.id}
                   tenantId={activeStaff?.tenant_id || "default_tenant"}
+                  onOptimisticReserve={() => handleOptimisticReserve(selectedProduct.id)}
+                  onOptimisticRollback={() => handleOptimisticRollback(selectedProduct.id)}
                />
              </>
            )}

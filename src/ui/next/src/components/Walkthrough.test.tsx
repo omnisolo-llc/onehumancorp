@@ -124,4 +124,26 @@ describe('Walkthrough Component', () => {
 
     expect(handleClose).toHaveBeenCalled();
   });
+
+  it('warns when target element is not found and renders nothing', () => {
+    const consoleWarnMock = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const handleClose = vi.fn();
+
+    const { container } = render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'missing-target', title: 'Missing', content: 'Missing content' },
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+
+    expect(consoleWarnMock).toHaveBeenCalledWith(
+      'Walkthrough: Target element with id "missing-target" not found.'
+    );
+    expect(container.firstChild).toBeNull();
+
+    consoleWarnMock.mockRestore();
+  });
 });
