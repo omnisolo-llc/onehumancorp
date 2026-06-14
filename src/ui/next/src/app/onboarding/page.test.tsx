@@ -526,7 +526,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Open Assistant/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Storefront Builder/i })).toBeInTheDocument();
     });
   });
 

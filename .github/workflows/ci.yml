@@ -368,8 +368,8 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          docker pull pgvector/pgvector:pg15
+          docker pull public.ecr.aws/docker/library/redis:7
 
       - name: Test Playwright UI E2E target
         run: |
@@ -492,11 +492,11 @@ jobs:
             docker load -i /tmp/ohc-kind-images/images.tar
           fi
           docker pull pgvector/pgvector:pg15
-          docker pull valkey/valkey:8-alpine
+          docker pull public.ecr.aws/docker/library/redis:7
           mkdir -p /tmp/ohc-kind-images
           docker save \
             pgvector/pgvector:pg15 \
-            valkey/valkey:8-alpine \
+            public.ecr.aws/docker/library/redis:7 \
             -o /tmp/ohc-kind-images/images.tar
 
       - name: Run Kind smoke test
@@ -561,12 +561,12 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          docker pull pgvector/pgvector:pg15
+          docker pull public.ecr.aws/docker/library/redis:7
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg16 \
-            valkey/valkey:8-alpine \
+            pgvector/pgvector:pg15 \
+            public.ecr.aws/docker/library/redis:7 \
             -o /tmp/ohc-docker-compose-images/images.tar
 
       - name: Set Bazel cache week
