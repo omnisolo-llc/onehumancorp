@@ -171,7 +171,7 @@ pub async fn handle_omnichannel_webhook(
         "sender_id": sender_id
     });
 
-    if let Some(c_id) = &customer_id {
+    if let Some(ref c_id) = customer_id {
         payload_json["customer_id"] = serde_json::json!(c_id);
     }
 
