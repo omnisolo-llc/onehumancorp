@@ -40,11 +40,17 @@ impl TaskStatus {
 pub struct StateMachine {
     db: Arc<DB>,
     sqlite_mutex: Mutex<()>,
+    mesh: Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>>,
 }
 
 impl StateMachine {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db, sqlite_mutex: Mutex::new(()) }
+        Self { db, sqlite_mutex: Mutex::new(()), mesh: None }
+    }
+
+    pub fn with_mesh(mut self, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        self.mesh = Some(mesh);
+        self
     }
 
     fn increment_transition_metric(status: &TaskStatus) {
@@ -181,6 +187,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::InProgress);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "IN_PROGRESS"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
                     Ok(())
                 } else {
                     Err("Task not found or locked".to_string())
@@ -234,6 +249,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::InProgress);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "IN_PROGRESS"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -274,6 +298,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Completed);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "COMPLETED"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
 
                     // Emitting telemetry for general tasks as well.
                     // Shared_tasks don't track tokens individually yet but we can log 0 tokens and role 'system' or similar,
@@ -322,6 +355,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Completed);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "COMPLETED"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -361,6 +403,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Blocked);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "BLOCKED"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -395,6 +446,15 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Blocked);
+
+                    if let Some(mesh) = &self.mesh {
+                        let payload = serde_json::json!({
+                            "task_id": task_id,
+                            "previous_state": status,
+                            "new_state": "BLOCKED"
+                        });
+                        let _ = mesh.publish("mesh:tasks", serde_json::to_vec(&payload).unwrap_or_default()).await;
+                    }
                     Ok(())
                 } else {
                     Err("Task not found".to_string())

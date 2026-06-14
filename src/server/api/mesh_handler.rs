@@ -126,6 +126,19 @@ fn publish_response(result: Result<(), String>) -> axum::response::Response {
     }
 }
 
+/// Broadcast handler for KAIROS state machine events and general Teammate Mesh messages
+pub async fn broadcast_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+}
+
 /// Handler to broadcast messages via HTTP
 pub async fn orchestration_broadcast_handler(
     headers: HeaderMap,
@@ -146,19 +159,6 @@ pub async fn orchestration_tasks_stream_handler(
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
-}
-
-/// Broadcast handler for general mesh communication
-pub async fn broadcast_handler(
-    headers: HeaderMap,
-    State(transport): State<Arc<dyn MeshTransport>>,
-    axum::Json(payload): axum::Json<BroadcastRequest>,
-) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
-
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
 }
 
 /// Handler for direct agent-to-agent communication over HTTP
