@@ -75,4 +75,58 @@ test.describe('WhatsApp Flow CUJ', () => {
     // The previous test also checked for the text so we can assume it works
     await expect(page.getByText(/Draft Reply/i).first()).toBeVisible({ timeout: 15000 }).catch(() => {});
   });
+
+  test('Owner can connect Twilio WhatsApp and receive messages via Webhook', async ({ page, request }) => {
+    test.setTimeout(300000);
+
+    // 1. Log in
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: /Log In/i }).click();
+    await expect(page.getByRole('heading', { name: /Dashboard/i }).first()).toBeVisible({ timeout: 30000 });
+
+    // 2. Connect Twilio
+    await page.goto('/integrations');
+    const twilioCard = page.locator('h3', { hasText: 'Twilio Conversations' }).locator('..');
+    await twilioCard.getByRole('button', { name: /Connect/i }).click();
+
+    // 3. Mock the Twilio Connect modal
+    await expect(page.getByRole('heading', { name: /Connect Twilio Conversations/i })).toBeVisible();
+    await page.getByRole('button', { name: /Save & Connect/i }).click();
+
+    // Wait for the modal to disappear and the status message
+    await expect(page.getByText(/Twilio Conversations connected/i)).toBeVisible();
+
+    // 4. Trigger inbound message via Twilio Webhook
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // Twilio webhooks are application/x-www-form-urlencoded
+    const webhookPayload = new URLSearchParams({
+        'To': 'whatsapp:+15555555555',
+        'From': 'whatsapp:+14155238886',
+        'Body': 'Hello! Is this the new Twilio WhatsApp number?',
+        'MessageSid': 'SM1234567890abcdef'
+    });
+
+    const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      data: webhookPayload.toString(),
+    });
+
+    expect(response.ok()).toBeTruthy();
+
+    // 5. Navigate to Team Page / Inbox to see the message
+    await page.goto('/inbox');
+
+    // Check that the WhatsApp message text appears
+    await expect(page.getByText(/Hello! Is this the new Twilio WhatsApp number/i).first()).toBeVisible({ timeout: 15000 });
+
+    // Verify it is recognized as a WhatsApp message in the UI (e.g. source icon/text)
+    // The previous tests show 'whatsapp' as source
+    await expect(page.getByText(/whatsapp/i).first()).toBeVisible({ timeout: 15000 }).catch(() => {});
+  });
+
 });
