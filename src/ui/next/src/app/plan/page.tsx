@@ -46,7 +46,7 @@ export default function MyPlanPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(amount / 100);
   };
 
   if (loading) {

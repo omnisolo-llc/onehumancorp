@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 
-export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
+export default function StripeTerminalClient({ amount, productId, tenantId, onOptimisticReserve, onOptimisticRollback }: { amount: number, productId: string, tenantId: string, onOptimisticReserve?: () => void, onOptimisticRollback?: () => void }) {
   const [terminal, setTerminal] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
@@ -134,6 +134,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     if (!navigator.onLine) {
        setStatus('Processing offline payment...');
+       onOptimisticReserve?.();
        // Mock the terminal process for offline
        setTimeout(() => {
           const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -158,6 +159,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     }
 
     setStatus('Reserving inventory...');
+    onOptimisticReserve?.();
 
     let lockId = '';
     try {
@@ -169,12 +171,14 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       const reserveData = await reserveRes.json();
 
       if (!reserveData.success) {
+        onOptimisticRollback?.();
         setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
         setReserving(false);
         return;
       }
       lockId = reserveData.lock_id;
     } catch (e: any) {
+      onOptimisticRollback?.();
       setStatus('Reservation error: ' + e.message);
       setReserving(false);
       return;
@@ -192,6 +196,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       setStatus('Collecting payment method...');
       const collectResult = await terminal.collectPaymentMethod(data.client_secret);
       if (collectResult.error) {
+        onOptimisticRollback?.();
         setStatus('Payment collection failed: ' + collectResult.error.message);
         setReserving(false);
         return;
@@ -200,6 +205,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       setStatus('Processing payment...');
       const processResult = await terminal.processPayment(collectResult.paymentIntent);
       if (processResult.error) {
+        onOptimisticRollback?.();
         setStatus('Payment processing failed: ' + processResult.error.message);
       } else {
         setStatus('Payment successful. Committing inventory...');
