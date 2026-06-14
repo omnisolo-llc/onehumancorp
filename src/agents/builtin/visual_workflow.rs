@@ -62,6 +62,163 @@ pub struct WorkflowGraph {
     pub edges: Vec<Edge>,
 }
 
+impl WorkflowGraph {
+    pub fn validate(&self) -> Result<(), String> {
+        // 0. Check for duplicate node IDs
+        let mut seen_ids = std::collections::HashSet::new();
+        for node in &self.nodes {
+            if !seen_ids.insert(node.id.clone()) {
+                return Err(format!(
+                    "Graph validation failed: Duplicate node ID '{}'",
+                    node.id
+                ));
+            }
+        }
+
+        // 1. Check for Input node
+        if !self
+            .nodes
+            .iter()
+            .any(|n| matches!(n.node_type, NodeType::Input { .. }))
+        {
+            return Err("Graph validation failed: No Input node found".to_string());
+        }
+
+        // 2. Check for Output node
+        if !self
+            .nodes
+            .iter()
+            .any(|n| matches!(n.node_type, NodeType::Output))
+        {
+            return Err("Graph validation failed: No Output node found".to_string());
+        }
+
+        let mut node_ids = std::collections::HashSet::new();
+        for node in &self.nodes {
+            node_ids.insert(node.id.clone());
+        }
+
+        // 3. Check for invalid edges
+        let mut adj_list: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+        for edge in &self.edges {
+            if !node_ids.contains(&edge.source) {
+                return Err(format!(
+                    "Graph validation failed: Edge source '{}' does not exist",
+                    edge.source
+                ));
+            }
+            if !node_ids.contains(&edge.target) {
+                return Err(format!(
+                    "Graph validation failed: Edge target '{}' does not exist",
+                    edge.target
+                ));
+            }
+            adj_list
+                .entry(edge.source.clone())
+                .or_default()
+                .push(edge.target.clone());
+        }
+
+        // 4. Check for reachability (every node except Input must be reachable from an Input node)
+        let mut reachable = std::collections::HashSet::new();
+        let mut queue = std::collections::VecDeque::new();
+
+        for node in &self.nodes {
+            if matches!(node.node_type, NodeType::Input { .. }) {
+                queue.push_back(node.id.clone());
+                reachable.insert(node.id.clone());
+            }
+        }
+
+        while let Some(current) = queue.pop_front() {
+            if let Some(neighbors) = adj_list.get(&current) {
+                for neighbor in neighbors {
+                    if !reachable.contains(neighbor) {
+                        reachable.insert(neighbor.clone());
+                        queue.push_back(neighbor.clone());
+                    }
+                }
+            }
+
+            // Handle targets embedded in nodes
+            let current_node = self.nodes.iter().find(|n| n.id == current).unwrap();
+            match &current_node.node_type {
+                NodeType::Condition {
+                    true_target,
+                    false_target,
+                    ..
+                } => {
+                    for target in [true_target, false_target] {
+                        if !node_ids.contains(target) {
+                            return Err(format!(
+                                "Graph validation failed: Condition target '{}' does not exist",
+                                target
+                            ));
+                        }
+                        if !reachable.contains(target) {
+                            reachable.insert(target.clone());
+                            queue.push_back(target.clone());
+                        }
+                    }
+                }
+                NodeType::ParallelFork { targets } => {
+                    for target in targets {
+                        if !node_ids.contains(target) {
+                            return Err(format!(
+                                "Graph validation failed: ParallelFork target '{}' does not exist",
+                                target
+                            ));
+                        }
+                        if !reachable.contains(target) {
+                            reachable.insert(target.clone());
+                            queue.push_back(target.clone());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for node in &self.nodes {
+            if !reachable.contains(&node.id) {
+                return Err(format!(
+                    "Graph validation failed: Node '{}' is unreachable",
+                    node.id
+                ));
+            }
+        }
+
+        // 5. Template variable validation
+        for node in &self.nodes {
+            let templates = match &node.node_type {
+                NodeType::Llm { prompt_template } => vec![prompt_template.clone()],
+                NodeType::Tool { args_template, .. } => vec![args_template.clone()],
+                NodeType::Condition {
+                    condition_expression,
+                    ..
+                } => vec![condition_expression.clone()],
+                NodeType::SubAgent { task_template, .. } => vec![task_template.clone()],
+                _ => vec![],
+            };
+
+            for template in templates {
+                // Ensure balanced braces for variables {{var}}
+                let open_count = template.matches("{{").count();
+                let close_count = template.matches("}}").count();
+                if open_count != close_count {
+                    return Err(format!(
+                        "Graph validation failed: Unbalanced template variables in node '{}'",
+                        node.id
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 pub struct WorkflowExecutor {
     pub graph: WorkflowGraph,
     pub agent: Arc<Agent>,
@@ -136,6 +293,7 @@ impl WorkflowExecutor {
     }
 
     pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
+        self.graph.validate()?;
         let mut state: HashMap<String, String> = input_vars.clone();
 
         // Find input node to start
@@ -626,6 +784,179 @@ impl WorkflowExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_graph_validation_duplicate_node() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "start".to_string(),
+                    },
+                },
+                Node {
+                    id: "in".to_string(), // Duplicate ID
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Duplicate node ID 'in'"));
+    }
+
+    #[test]
+    fn test_graph_validation_unbalanced_templates() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "start".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Prompt {{var".to_string(), // Unbalanced
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(
+            res.unwrap_err()
+                .contains("Unbalanced template variables in node 'llm1'")
+        );
+    }
+
+    #[test]
+    fn test_graph_validation_valid() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "start".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![Edge {
+                source: "in".to_string(),
+                target: "out".to_string(),
+            }],
+        };
+        assert!(graph.validate().is_ok());
+    }
+
+    #[test]
+    fn test_graph_validation_no_input() {
+        let graph = WorkflowGraph {
+            nodes: vec![Node {
+                id: "out".to_string(),
+                node_type: NodeType::Output,
+            }],
+            edges: vec![],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("No Input node"));
+    }
+
+    #[test]
+    fn test_graph_validation_no_output() {
+        let graph = WorkflowGraph {
+            nodes: vec![Node {
+                id: "in".to_string(),
+                node_type: NodeType::Input {
+                    name: "start".to_string(),
+                },
+            }],
+            edges: vec![],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("No Output node"));
+    }
+
+    #[test]
+    fn test_graph_validation_invalid_edge() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "start".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![Edge {
+                source: "in".to_string(),
+                target: "missing".to_string(),
+            }],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(
+            res.unwrap_err()
+                .contains("Edge target 'missing' does not exist")
+        );
+    }
+
+    #[test]
+    fn test_graph_validation_unreachable_node() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "start".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+                Node {
+                    id: "isolated".to_string(),
+                    node_type: NodeType::Output, // Valid node type
+                },
+            ],
+            edges: vec![Edge {
+                source: "in".to_string(),
+                target: "out".to_string(),
+            }],
+        };
+        let res = graph.validate();
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Node 'isolated' is unreachable"));
+    }
+
     use crate::llm::LlmClient;
     use crate::tools::{Tool, ToolExecutor};
     use crate::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
@@ -734,7 +1065,11 @@ mod tests {
 
         let result = executor.execute(inputs).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Node not found: missing");
+        let err_msg = result.unwrap_err();
+        assert!(
+            err_msg.contains("Graph validation failed: No Output node found")
+                || err_msg.contains("Edge target 'missing' does not exist")
+        );
     }
 
     struct ErrorMockVisualLlmClient;
@@ -764,11 +1099,21 @@ mod tests {
                         prompt_template: "Prompt".to_string(),
                     },
                 },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
             ],
-            edges: vec![Edge {
-                source: "in".to_string(),
-                target: "llm1".to_string(),
-            }],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
         };
 
         let agent = Arc::new(Agent::new(Arc::new(ErrorMockVisualLlmClient), vec![]));
@@ -803,11 +1148,21 @@ mod tests {
                         args_template: "{invalid_json".to_string(),
                     },
                 },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
             ],
-            edges: vec![Edge {
-                source: "in".to_string(),
-                target: "tool1".to_string(),
-            }],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "tool1".to_string(),
+                },
+                Edge {
+                    source: "tool1".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
         };
 
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
@@ -994,6 +1349,10 @@ mod tests {
                     source: "llm2".to_string(),
                     target: "llm1".to_string(),
                 }, // CYCLE
+                Edge {
+                    source: "llm2".to_string(),
+                    target: "out".to_string(),
+                },
             ],
         };
 

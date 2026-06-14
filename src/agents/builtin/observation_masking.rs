@@ -102,7 +102,9 @@ impl JetBrainsObservationMasker {
                             "[... Masked array: {} elements truncated ...]",
                             original_len - current_element_limit
                         )));
-                        new_arr.extend_from_slice(&arr[original_len - (current_element_limit - half)..]);
+                        new_arr.extend_from_slice(
+                            &arr[original_len - (current_element_limit - half)..],
+                        );
                         *arr = new_arr;
                     } else {
                         arr.truncate(current_element_limit);
