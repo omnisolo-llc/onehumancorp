@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Walkthrough and Tooltips features', () => {
   test('Dashboard walkthrough and help center elements are visible and work', async ({ page }) => {
     // Navigate using the admin credentials implicitly logged in by global setup, or just go directly
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#dashboard-walkthrough-btn');
@@ -25,7 +25,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('POS walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/pos.html');
+    await page.goto('/api/ui/pos.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#pos-walkthrough-btn');
@@ -51,7 +51,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Assistant walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/assistant.html');
+    await page.goto('/api/ui/assistant.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#assistant-walkthrough-btn');
@@ -77,7 +77,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Tooltips are injected into the page', async ({ page }) => {
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check tooltips registry is available
     const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
@@ -86,7 +86,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Help Center elements are visible', async ({ page }) => {
-    await page.goto('/help.html');
+    await page.goto('/api/ui/help.html');
 
     // Verify title
     await expect(page.locator('h1')).toHaveText('Help Center');
