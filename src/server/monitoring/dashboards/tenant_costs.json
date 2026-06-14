@@ -131,7 +131,8 @@
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "datasource": {
@@ -221,7 +222,8 @@
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "datasource": {
@@ -311,7 +313,8 @@
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "schemaVersion": 38,
@@ -326,7 +329,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Tenant Cost Visibility (💰 Miser)",
+  "title": "Tenant Cost Visibility (\ud83d\udcb0 Miser)",
   "uid": "tenant_costs",
   "version": 1,
   "weekStart": ""
