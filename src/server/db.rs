@@ -568,7 +568,10 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
+        #[cfg(not(test))]
         let timeout_duration = std::time::Duration::from_secs(60);
+        #[cfg(test)]
+        let timeout_duration = std::time::Duration::from_millis(600);
 
         let retry_loop = async {
             loop {
