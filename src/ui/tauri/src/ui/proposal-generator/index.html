@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposal Generator</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 500px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    h1 {
+      color: #1d1d1f;
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    h2 {
+      color: #86868b;
+      font-size: 16px;
+      font-weight: 500;
+      margin-top: 0;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    label {
+      display: block;
+      color: #1d1d1f;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+    }
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+    button:hover { background-color: #0052cc; }
+    button:active { transform: scale(0.98); }
+
+    #success-area {
+      display: none;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    #success-area h3 {
+      font-weight: 700;
+      color: #25D366;
+      margin-top: 0;
+      font-size: 20px;
+    }
+    #preview-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: rgba(0, 102, 255, 0.1);
+      color: #0066FF;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+  </style>
+  <style>
+  @media (prefers-color-scheme: dark) {
+      body {
+          background-color: #16161a;
+          color: #f5f5f7;
+      }
+      .container {
+          background: rgba(22, 22, 26, 0.7) !important;
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      h1, h2, h3, label {
+          color: #f5f5f7;
+      }
+      input, textarea {
+          background: rgba(32, 32, 36, 0.8) !important;
+          color: #f5f5f7;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Proposal Generator</h1>
+    <h2>Create Professional Proposal</h2>
+
+    <div id="form-area">
+      <label for="client_name">Client Name</label>
+      <input type="text" id="client_name" placeholder="e.g. Acme Corp" />
+
+      <label for="scope">Project Scope</label>
+      <textarea id="scope" rows="4" placeholder="e.g. Website Redesign, SEO Optimization, and Content Strategy"></textarea>
+
+      <label for="price">Project Price ($)</label>
+      <input type="number" id="price" placeholder="e.g. 2500.00" step="0.01" />
+
+      <label for="timeline">Estimated Timeline</label>
+      <input type="text" id="timeline" placeholder="e.g. 4-6 Weeks" />
+
+      <button id="generate-btn">Generate Shareable Proposal</button>
+    </div>
+
+    <div id="success-area">
+      <h3>Your Proposal is Ready!</h3>
+      <p>Share this link with your client or preview it below.</p>
+      <a href="#" id="preview-link" target="_blank">Preview Proposal</a>
+    </div>
+  </div>
+  <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    document.getElementById('generate-btn').addEventListener('click', () => {
+      const clientName = document.getElementById('client_name').value.trim();
+      const scope = document.getElementById('scope').value.trim();
+      const price = document.getElementById('price').value.trim();
+      const timeline = document.getElementById('timeline').value.trim();
+
+      const proposalData = {
+        clientName: clientName,
+        scope: scope,
+        price: price,
+        timeline: timeline,
+        tenantId: localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant'
+      };
+
+      const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(proposalData))));
+
+      const baseUrl = window.location.origin;
+      const previewUrl = `${baseUrl}/proposal-generator/view?data=${encodedData}`;
+
+      const previewLink = document.getElementById('preview-link');
+      previewLink.href = previewUrl;
+
+      document.getElementById('form-area').style.display = 'none';
+      document.getElementById('success-area').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
