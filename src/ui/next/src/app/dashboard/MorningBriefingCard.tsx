@@ -62,7 +62,7 @@ export function MorningBriefingCard({ tenant }: { tenant: string }) {
   };
 
   return (
-    <div className="glassmorphism p-6 rounded-[16px] mb-6 shadow-sm border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 w-full relative overflow-hidden group">
+    <div className="p-6 rounded-[16px] mb-6 shadow-sm w-full relative overflow-hidden group bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10">
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/40 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
 
       <div className="flex flex-col gap-4">

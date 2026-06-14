@@ -700,6 +700,21 @@ mod tests {
             .await
             .unwrap();
 
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
             // Insert initial record
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
                 .bind("test_mission_id")
@@ -1103,6 +1118,21 @@ mod tests {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     tenant_id TEXT,
                     mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS department_dead_letters (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    error_message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )"
             )
             .execute(&pool)
