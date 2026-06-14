@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { page } from './fixtures';
 
 test.describe('Walkthrough Features', () => {
   test('should display walkthrough when dashboard tour is triggered', async ({ page }) => {

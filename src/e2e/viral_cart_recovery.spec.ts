@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Cart Recovery Feature', () => {
   test('should verify abandoned cart recovery flow', async ({ page, context }) => {
     // 1. Setup admin session
-    await adminPage(page, context);
+    await page(page, context);
 
     // 2. Navigate to cart recovery
     await page.goto('/cart-recovery');

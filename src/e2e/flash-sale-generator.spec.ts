@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Growth & Virality: Flash Sale Generator', () => {
   test('User can create and preview a flash sale widget', async ({ browser }) => {
-    const page = await adminPage(browser);
+    const page = await page(browser);
 
     // Navigate from Dashboard to Flash Sale Generator
     await page.click('text=Flash Sale Generator');
