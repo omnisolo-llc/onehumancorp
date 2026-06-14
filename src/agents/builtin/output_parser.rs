@@ -110,6 +110,43 @@ pub struct RetryWithErrorOutputParser<'a, T> {
     llm: Arc<dyn LlmClientForParser>,
 }
 
+pub trait RetryStrategy: Send + Sync {
+    fn next_backoff(&self, attempt: usize) -> std::time::Duration;
+}
+
+pub struct ExponentialBackoffWithJitter {
+    base_ms: u64,
+    jitter_max_ms: u64,
+}
+
+impl Default for ExponentialBackoffWithJitter {
+    fn default() -> Self {
+        Self {
+            base_ms: 500,
+            jitter_max_ms: 100,
+        }
+    }
+}
+
+impl ExponentialBackoffWithJitter {
+    pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
+        Self { base_ms, jitter_max_ms }
+    }
+}
+
+impl RetryStrategy for ExponentialBackoffWithJitter {
+    fn next_backoff(&self, attempt: usize) -> std::time::Duration {
+        let base_backoff = self.base_ms * (1 << attempt);
+        use rand::Rng;
+        let jitter = if self.jitter_max_ms > 0 {
+            rand::thread_rng().gen_range(0..self.jitter_max_ms)
+        } else {
+            0
+        };
+        std::time::Duration::from_millis(base_backoff + jitter)
+    }
+}
+
 impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     pub fn new(
         parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
@@ -122,6 +159,15 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         &self,
         req: ChatRequest,
         max_retries: usize,
+    ) -> Result<T, ToolError> {
+        self.parse_with_prompt_and_strategy(req, max_retries, &ExponentialBackoffWithJitter::default()).await
+    }
+
+    pub async fn parse_with_prompt_and_strategy(
+        &self,
+        req: ChatRequest,
+        max_retries: usize,
+        strategy: &dyn RetryStrategy,
     ) -> Result<T, ToolError> {
         let mut current_req = req.clone();
 
@@ -161,10 +207,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         )));
                     }
 
-                    let base_backoff = 500 * (1 << attempt);
-                    use rand::Rng;
-                    let jitter = rand::thread_rng().gen_range(0..100);
-                    let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
+                    let backoff = strategy.next_backoff(attempt);
                     tokio::time::sleep(backoff).await;
 
                     attempt += 1;
