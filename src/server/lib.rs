@@ -3576,60 +3576,72 @@ async fn ui_dashboard_analytics_chat_handler(
     }))).into_response()
 }
 
-async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+pub(crate) async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            let query_str = if mobile_optimized {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50"
+            } else {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50"
+            };
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
+                            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default()
                         })
                     } else {
                         serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
-                            "original_message": row.get::<String, _>("original_content"),
-                            "translated_from_language": row.get::<String, _>("translated_from_language"),
-                            "generated_response": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "created_at": row.get::<String, _>("created_at")
+                            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                            "original_message": row.try_get::<String, _>("original_content").unwrap_or_default(),
+                            "translated_from_language": row.try_get::<String, _>("translated_from_language").unwrap_or_default(),
+                            "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "sender_id": row.try_get::<String, _>("sender_id").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default()
                         })
                     }
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            let query_str = if mobile_optimized {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50"
+            } else {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50"
+            };
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
+                            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default()
                         })
                     } else {
                         serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
-                            "original_message": row.get::<String, _>("original_content"),
-                            "translated_from_language": row.get::<String, _>("translated_from_language"),
-                            "generated_response": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "created_at": row.get::<String, _>("created_at")
+                            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                            "original_message": row.try_get::<String, _>("original_content").unwrap_or_default(),
+                            "translated_from_language": row.try_get::<String, _>("translated_from_language").unwrap_or_default(),
+                            "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "sender_id": row.try_get::<String, _>("sender_id").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default()
                         })
                     }
                 }).collect())
@@ -3739,7 +3751,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
 
 
 
-async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+pub(crate) async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     let mut results = Vec::new();
 
     let db1 = db.clone();
@@ -3754,9 +3766,12 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut legacy_rows_json = Vec::new();
             match &db1.store {
                 crate::db::DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query(
+                    let query_str = if mobile_optimized {
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                    } else {
                         "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    )
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id1)
                     .fetch_all(&db1.pool)
                     .await {
@@ -3791,9 +3806,12 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    if let Ok(rows) = sqlx::query(
+                    let query_str = if mobile_optimized {
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                    } else {
                         "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    )
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id1)
                     .fetch_all(pool)
                     .await {

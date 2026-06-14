@@ -20,7 +20,7 @@ test.describe('Help Components', () => {
     await expect(page.locator('h3:has-text("Getting Started with Your Store")')).toBeVisible();
 
     // Check videos loaded from API fallback
-    await expect(page.locator('h3:has-text("Video Tutorials")')).toBeVisible();
+    await expect(page.locator('h3:has-text("Video Guides")')).toBeVisible();
   });
 
   test('Contextual Tooltip triggers correctly', async ({ page }) => {
