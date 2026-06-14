@@ -102,7 +102,8 @@ pub async fn handle_omnichannel_webhook(
         "message_id": id,
         "source": payload.source,
         "content": payload.message,
-        "sender_id": payload.sender_id
+        "sender_id": payload.sender_id,
+        "target_language": target_language
     });
 
     let enqueue_result = match &state.db.store {

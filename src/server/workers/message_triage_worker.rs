@@ -108,6 +108,7 @@ impl MessageTriageWorker {
             let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let target_language = payload.get("target_language").and_then(|v| v.as_str()).unwrap_or("English");
 
             // Extract intent & context using LLM
             let prompt = format!(
@@ -115,8 +116,11 @@ impl MessageTriageWorker {
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
+Target translation language for the owner: {}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+Please extract the context, priority, and decide if the request needs a Quote, a Booking, an Order, or a General Reply.
+If it is an Order, extract the items and pickup_time into the action_payload.
+Translate the context_summary and the action_payload into the target language provided above. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
@@ -125,7 +129,7 @@ Output JSON format:
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote details, or booking details.\"
 }}",
-                sender_id, customer_message, source
+                sender_id, customer_message, source, target_language
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);

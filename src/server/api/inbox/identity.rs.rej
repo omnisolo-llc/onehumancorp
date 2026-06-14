@@ -1,0 +1,6 @@
+--- identity.rs
++++ identity.rs
+@@ -1,5 +1,4 @@
+-use std::sync::Arc;
+ use crate::db::DB;
+ use uuid::Uuid;
