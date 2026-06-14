@@ -2537,6 +2537,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Ensure local database permissions are secure in standalone mode
     if is_standalone_runtime() {
+        // Clean up unbounded temp files on startup to prevent unbounded growth synchronously
+        let _ = std::fs::remove_dir_all(std::env::temp_dir().join("ohc"));
+
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
