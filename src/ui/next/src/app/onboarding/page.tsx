@@ -492,7 +492,15 @@ export default function OnboardingWizard() {
           location: location || '',
           target_audience: targetAudience || '',
           ai_agents: aiAgents,
-          ai_auto_respond: aiAutoRespond
+          ai_auto_respond: aiAutoRespond,
+          initial_products: (() => {
+            try {
+              return JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('onboarding_initial_products') || '[]' : '[]');
+            } catch (e) {
+              console.error('Failed to parse onboarding_initial_products', e);
+              return [];
+            }
+          })()
         })
       });
 
