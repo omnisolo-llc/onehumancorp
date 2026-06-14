@@ -65,14 +65,6 @@ impl OnboardingAgent {
     pub async fn process_chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, String> {
         let user_messages: Vec<&ChatMessage> = messages.iter().filter(|m| m.role == "user").collect();
 
-        if user_messages.len() <= 1 {
-            return Ok(ChatResponse {
-                is_complete: false,
-                reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                intake_data: None,
-            });
-        }
-
         let combined_input = user_messages.iter().map(|m| {
             let mut text = m.content.clone();
             if let Some(url) = &m.image_url {

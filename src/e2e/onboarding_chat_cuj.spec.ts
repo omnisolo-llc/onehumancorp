@@ -122,7 +122,7 @@ test.describe('Conversational Setup CUJ', () => {
     // 5. Send second message (simulating uploading a photo or additional details)
     await chatInput.fill('Here is a picture of my cakes.');
     const chatImageUrl = page.locator('#chat-image-url');
-    await chatImageUrl.fill('https://example.com/cake.jpg');
+    await chatImageUrl.evaluate((node: HTMLInputElement) => node.value = 'https://example.com/cake.jpg');
     await chatSendBtn.click();
 
     // 6. Verify bot finishes the conversation
