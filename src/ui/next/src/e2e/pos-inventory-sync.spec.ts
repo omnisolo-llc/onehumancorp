@@ -38,7 +38,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     // It should fail gracefully
     const lockData2 = await reserveRes2.json();
     expect(lockData2.success).toBe(false);
-    expect(lockData2.error_message).toContain('another customer');
+    expect(lockData2.error_message).toContain('Item just sold out');
 
     // POS (User B) completes checkout
     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {

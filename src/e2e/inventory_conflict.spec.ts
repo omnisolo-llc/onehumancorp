@@ -70,6 +70,6 @@ test.describe('Centralized Inventory & Distributed POS Architecture', () => {
     const reserveData2 = await reserveRes2.json();
     // It should fail because Redlock prevents it
     expect(reserveData2.success).toBeFalsy();
-    expect(reserveData2.error_message).toContain('Item is currently being checked out');
+    expect(reserveData2.error_message).toContain('Item just sold out');
   });
 });
