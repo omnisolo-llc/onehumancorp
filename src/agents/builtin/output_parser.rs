@@ -240,7 +240,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             .map(|tc| crate::types::ToolResult {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
-                                error: detailed_error.clone(),
+                                error: crate::types::ToolResult::new_llm_recoverable(tc.id.clone(), &detailed_error).error,
                             })
                             .collect();
 
