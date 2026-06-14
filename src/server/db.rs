@@ -1103,6 +1103,50 @@ impl DB {
                         agenda TEXT NOT NULL DEFAULT '',
                         participants TEXT NOT NULL DEFAULT '[]'
                     );
+
+                    CREATE TABLE IF NOT EXISTS builder_sites (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        domain TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_pages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        site_id TEXT NOT NULL,
+                        path TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        seo_metadata TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(site_id) REFERENCES builder_sites(id) ON DELETE CASCADE
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_blocks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        page_id TEXT NOT NULL,
+                        block_type TEXT NOT NULL,
+                        content TEXT NOT NULL DEFAULT '{}',
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(page_id) REFERENCES builder_pages(id) ON DELETE CASCADE
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_brand_toolboxes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        source_description TEXT NOT NULL DEFAULT '',
+                        toolbox TEXT NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_builder_brand_toolboxes_tenant_id ON builder_brand_toolboxes(tenant_id);
+                    CREATE INDEX IF NOT EXISTS idx_builder_sites_tenant_id ON builder_sites(tenant_id);
+                    CREATE INDEX IF NOT EXISTS idx_builder_pages_tenant_id ON builder_pages(tenant_id);
+                    CREATE INDEX IF NOT EXISTS idx_builder_blocks_tenant_id ON builder_blocks(tenant_id);
+
                     CREATE TABLE IF NOT EXISTS meeting_transcripts (
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         meeting_id TEXT NOT NULL,
@@ -2198,5 +2242,76 @@ mod e2e_search_workspace_tests {
             assert_eq!(sqlite_res.subtitle, pg_res.subtitle, "Subtitle parity failed");
             assert_eq!(sqlite_res.route, pg_res.route, "Route parity failed");
         }
+    }
+}
+
+#[cfg(test)]
+mod builder_sqlite_tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn test_builder_sqlite_schema_exists() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to connect to SQLite in memory");
+
+        let db = DB {
+            pool: super::create_dummy_pg_pool().await,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        // Run migrations which will execute our schema creation string
+        db.run_migrations().await.expect("Failed to run migrations on SQLite");
+
+        let tenant_id = Uuid::new_v4().to_string();
+
+        // 1. Insert a builder_site
+        let site_id = Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO builder_sites (id, tenant_id, domain) VALUES (?, ?, ?)")
+            .bind(&site_id)
+            .bind(&tenant_id)
+            .bind("example.com")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Failed to insert builder_site");
+
+        // 2. Insert a builder_page
+        let page_id = Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO builder_pages (id, tenant_id, site_id, path, title) VALUES (?, ?, ?, ?, ?)")
+            .bind(&page_id)
+            .bind(&tenant_id)
+            .bind(&site_id)
+            .bind("/")
+            .bind("Home")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Failed to insert builder_page");
+
+        // 3. Insert a builder_block
+        let block_id = Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO builder_blocks (id, tenant_id, page_id, block_type) VALUES (?, ?, ?, ?)")
+            .bind(&block_id)
+            .bind(&tenant_id)
+            .bind(&page_id)
+            .bind("HeroBlock")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Failed to insert builder_block");
+
+        // 4. Insert a builder_brand_toolbox
+        let toolbox_id = Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO builder_brand_toolboxes (id, tenant_id, name) VALUES (?, ?, ?)")
+            .bind(&toolbox_id)
+            .bind(&tenant_id)
+            .bind("My Brand")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Failed to insert builder_brand_toolbox");
+
+        // Check if records exist
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM builder_sites").fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(count.0, 1);
     }
 }
