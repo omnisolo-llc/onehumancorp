@@ -13,6 +13,10 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe(pattern, handler).await
+    }
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
@@ -55,6 +59,10 @@ impl MeshTransport for LocalTeammateMesh {
         // But what about messages from the hub? Usually the hub doesn't receive teammate mesh events from websockets,
         // it just broadcasts them. So we only need to subscribe to `inner`.
         self.inner.subscribe(topic, handler).await
+    }
+
+    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.inner.subscribe_pattern(pattern, handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -118,6 +126,11 @@ impl TeammateMesh for CentrifugeNode {
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         self.transport.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.receive_counter.add(1, &[KeyValue::new("pattern", pattern.to_string())]);
+        self.transport.subscribe_pattern(pattern, handler).await
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
@@ -482,8 +495,8 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
     match db_store {
         crate::db::DbStore::Postgres => {
             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(&redis_url).await
-                .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
+            let transport = crate::orchestration::hub::RedisMeshTransport::new(&redis_url).await
+                .map_err(|e| format!("Failed to create RedisMeshTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
@@ -511,7 +524,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
                 Err(e) => {
                     tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
-                    let transport = ohc_builtin_agent::mesh::transport::InProcessTransport::new();
+                    let transport = crate::orchestration::hub::MemoryMeshTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
             }
