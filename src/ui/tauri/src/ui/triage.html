@@ -454,9 +454,7 @@
             actionHtml = `
               <div class="detail-group">
                 <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
-                <div class="detail-value proposed-action">
-                  ${selected.action_payload || "No specific payload"}
-                </div>
+                <textarea id="edit-payload-${selected.id}" class="detail-value proposed-action" style="width: 100%; min-height: 100px; resize: vertical; border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); color: #1d1d1f;">${selected.action_payload || "No specific payload"}</textarea>
               </div>
             `;
           }

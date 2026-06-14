@@ -19,6 +19,8 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editedPayloads, setEditedPayloads] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchFeed() {
@@ -87,22 +89,34 @@ export default function FeedPage() {
     };
   }, []);
 
-  const handleAction = async (id: string, state: string) => {
+  const handleAction = async (id: string, state: string, modifiedPayload?: string) => {
     try {
       setProcessingId(id);
       const res = await fetch(`/api/agent-feed/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state, modified_payload: modifiedPayload }),
       });
       if (!res.ok) throw new Error('Action failed');
 
       // Update UI optimistically or refetch
       setItems((prev) => prev.filter((item) => item.id !== id));
+      if (expandedId === id) setExpandedId(null);
     } catch (err: any) {
       alert(err.message);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const toggleExpand = (id: string, currentDraft: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      if (!editedPayloads[id]) {
+        setEditedPayloads(prev => ({ ...prev, [id]: currentDraft }));
+      }
     }
   };
 
@@ -139,14 +153,18 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isExpanded = expandedId === item.id;
+            const contextText = item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.';
+            const draftResponse = item.proposed_action?.payload || item.proposed_action?.message || contextText;
 
             return (
               <div
                 key={item.id}
                 className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
                 data-testid="agent-feed-card"
+                onClick={() => { if (!isExpanded) toggleExpand(item.id, draftResponse); }}
               >
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-3 cursor-pointer">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
                     {item.event_source.replace(/_/g, ' ')}
@@ -156,30 +174,56 @@ export default function FeedPage() {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
+                <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug cursor-pointer">
                   {item.proposed_action?.title || 'Review Required'}
                 </h3>
 
-                <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
-                  {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                </p>
+                {isExpanded ? (
+                  <div className="mb-5 animate-fade-in cursor-default" onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-4">
+                      <div className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-1">Context</div>
+                      <pre className="text-[13px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-black/20 p-3 rounded-lg border border-gray-100 dark:border-white/5">
+                        {contextText}
+                      </pre>
+                    </div>
+                    <div className="mb-4">
+                      <div className="text-xs uppercase tracking-wider font-semibold text-gray-500 mb-1">AI Drafted Action</div>
+                      <textarea
+                        className="w-full text-[13px] text-gray-900 dark:text-white bg-white dark:bg-black/40 border border-[#0066FF]/30 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] rounded-lg p-3 min-h-[100px] resize-y"
+                        value={editedPayloads[item.id] !== undefined ? editedPayloads[item.id] : draftResponse}
+                        onChange={(e) => setEditedPayloads(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        data-testid="feed-edit-textarea"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed line-clamp-2 cursor-pointer">
+                    {contextText}
+                  </p>
+                )}
 
-                <div className="flex gap-3">
+                <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
+                    onClick={() => handleAction(item.id, 'APPROVED', editedPayloads[item.id])}
                     disabled={isProcessing}
                     className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
                     data-testid="feed-approve-btn"
                   >
-                    {isProcessing ? 'Processing...' : 'Approve'}
+                    {isProcessing ? 'Processing...' : (isExpanded ? 'Send' : 'Review')}
                   </button>
                   <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
+                    onClick={(e) => {
+                      if (isExpanded) {
+                        toggleExpand(item.id, draftResponse);
+                      } else {
+                        handleAction(item.id, 'DISMISSED');
+                      }
+                    }}
                     disabled={isProcessing}
                     className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
                     data-testid="feed-dismiss-btn"
                   >
-                    Dismiss
+                    {isExpanded ? 'Cancel' : 'Dismiss'}
                   </button>
                 </div>
               </div>

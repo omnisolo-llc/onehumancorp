@@ -176,9 +176,7 @@ export default function TriagePage() {
               {selected.action_type && (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-[8px] border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium whitespace-pre-wrap">
-                    {selected.action_payload || "No specific payload"}
-                  </div>
+                  <textarea key={selected.id} className="w-full mt-2 rounded-[8px] border border-blue-200 dark:border-blue-900/30 bg-white dark:bg-black/40 p-4 text-sm leading-6 text-gray-900 dark:text-gray-100 font-medium min-h-[120px] resize-y" defaultValue={selected.action_payload || "No specific payload"} />
                 </div>
               )}
 
