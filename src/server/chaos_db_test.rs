@@ -64,10 +64,10 @@ mod chaos_db_tests {
         // We simulate a long-running sync (lag) that times out.
         // We enforce the 60-second ML-Resilience rule here by using tokio::time::timeout
         // and expecting an error.
-        let timeout_duration = std::time::Duration::from_millis(60);
+        let timeout_duration = std::time::Duration::from_secs(60);
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a query that takes longer than the timeout due to sync lag
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
             Ok::<(), String>(())
         })
         .await;

@@ -405,7 +405,7 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -428,7 +428,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -440,7 +440,8 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -451,7 +452,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -480,7 +481,7 @@ impl DB {
             }
             DbStore::Postgres => {
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -502,7 +503,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -513,7 +514,8 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -524,7 +526,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
