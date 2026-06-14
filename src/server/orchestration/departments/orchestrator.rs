@@ -966,6 +966,12 @@ impl DepartmentOrchestrator {
                                 {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
                             }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -1039,6 +1045,36 @@ impl DepartmentOrchestrator {
                                 {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
+                if let Some(payload) = payload_to_use {
+                    if payload.get("inbox_message_id").is_some() && payload.get("feature_type").and_then(|v| v.as_str()) != Some("quote_draft") {
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        if !inbox_message_id.is_empty() {
+                            let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
+                            if let DbStore::Postgres = &self.db.store {
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(draft_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(draft_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
                             }
                         }
                     }

@@ -110,13 +110,46 @@ impl MessageTriageWorker {
             let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
             // Extract intent & context using LLM
+            let rag_inventory_context = match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let rows = sqlx::query("SELECT name, quantity FROM products WHERE tenant_id = $1 LIMIT 5")
+                        .bind(&tenant_id)
+                        .fetch_all(&self.db.pool)
+                        .await
+                        .unwrap_or_default();
+                    let mut ctx = String::new();
+                    for r in rows {
+                        let n: String = r.get("name");
+                        let q: i64 = r.get("quantity");
+                        ctx.push_str(&format!("{}: {} in stock\n", n, q));
+                    }
+                    ctx
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let rows = sqlx::query("SELECT name, quantity FROM products WHERE tenant_id = ? LIMIT 5")
+                        .bind(&tenant_id)
+                        .fetch_all(pool)
+                        .await
+                        .unwrap_or_default();
+                    let mut ctx = String::new();
+                    for r in rows {
+                        let n: String = r.get("name");
+                        let q: i64 = r.get("quantity");
+                        ctx.push_str(&format!("{}: {} in stock\n", n, q));
+                    }
+                    ctx
+                }
+            };
+
             let prompt = format!(
                 "You are an AI order and task triage assistant for a business.
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
+Current Inventory Context:
+{}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Based on the inventory, generate a context-aware polite draft reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
@@ -125,7 +158,7 @@ Output JSON format:
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote details, or booking details.\"
 }}",
-                sender_id, customer_message, source
+                sender_id, customer_message, source, rag_inventory_context
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
@@ -198,6 +231,7 @@ Output JSON format:
             let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
+            let approval_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
             if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
                 event_source = "instagram_dm".to_string();
@@ -235,6 +269,22 @@ Output JSON format:
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO agent_approvals (id, tenant_id, department, description, payload, status, action_risk, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, $4, 'DRAFT', 'DraftForReview', NOW(), NOW())"
+                    )
+                    .bind(&approval_id)
+                    .bind(&tenant_id)
+                    .bind(format!("Draft reply to {} message", source))
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id,
+                        "customer_message": customer_message,
+                    }))
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert agent approval: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
                             .bind(&job_id)
                             .execute(&self.db.pool).await;
@@ -273,6 +323,22 @@ Output JSON format:
                     }).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO agent_approvals (id, tenant_id, department, description, payload, status, action_risk, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, ?, 'DRAFT', 'DraftForReview', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&approval_id)
+                    .bind(&tenant_id)
+                    .bind(format!("Draft reply to {} message", source))
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id,
+                        "customer_message": customer_message,
+                    }).to_string())
+                    .execute(sqlite_pool).await {
+                        tracing::error!("Failed to insert agent approval (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
                             .execute(sqlite_pool).await;

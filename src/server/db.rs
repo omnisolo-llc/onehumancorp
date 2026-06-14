@@ -1119,6 +1119,21 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        original_content TEXT NOT NULL,
+                        translated_content TEXT NOT NULL,
+                        source_language TEXT,
+                        target_language TEXT NOT NULL,
+                        draft_reply TEXT,
+                        status TEXT NOT NULL DEFAULT 'unread',
+                        sender_id TEXT,
+                        customer_id TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
 
                     CREATE TABLE IF NOT EXISTS customer_identities (
                         id TEXT PRIMARY KEY,
