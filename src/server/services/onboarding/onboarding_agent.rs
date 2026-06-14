@@ -72,7 +72,7 @@ impl OnboardingAgent {
         }
 
         let combined_input = user_messages.iter().map(|m| m.content.clone()).collect::<Vec<String>>().join("\n");
-        let intake_data = self.process_intake(&combined_input).await?;
+        let intake_data = self.process_intake(&combined_input, None).await?;
 
         Ok(ChatResponse {
             is_complete: true,
@@ -81,7 +81,7 @@ impl OnboardingAgent {
         })
     }
 
-    pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
+    pub async fn process_intake(&self, input: &str, image: Option<&str>) -> Result<IntakeData, String> {
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,
             None => {
@@ -116,7 +116,7 @@ impl OnboardingAgent {
             }
         };
 
-        let prompt = format!(
+                let prompt = format!(
             "You are the OHC Onboarding Expert. Extract structured business information from the user description.
             We serve various OHC personas like:
             - Maya (Home Baker): Needs cake customizer, deposits, and delivery.
@@ -128,6 +128,7 @@ impl OnboardingAgent {
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
+            If there is a menu or image provided, extract the items and prices.
 
             Return ONLY a valid JSON object with fields:
             - business_name (string)
@@ -138,6 +139,7 @@ impl OnboardingAgent {
             - target_audience (string)
 
             Description: \"{}\"
+            Image Provided: {}
 
             Example JSON:
             {{
@@ -154,7 +156,8 @@ impl OnboardingAgent {
                 {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": []}}
               ]
             }}",
-            input
+            input,
+            if image.is_some() { "Yes" } else { "No" }
         );
 
         let mut attempts = 0;
@@ -2861,7 +2864,7 @@ mod tests {
         }
 
         let input = "I sell custom vegan cakes in Austin, Texas. Maya's Cakes.";
-        let res = agent.process_intake(input).await;
+        let res = agent.process_intake(input, None).await;
         assert!(res.is_ok());
         let data = res.unwrap();
 

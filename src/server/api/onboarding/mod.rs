@@ -25,6 +25,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 #[derive(serde::Deserialize)]
 pub struct IntakeRequest {
     pub description: String,
+    pub image: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -36,7 +37,7 @@ async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
-    match agent.process_intake(&payload.description).await {
+    match agent.process_intake(&payload.description, payload.image.as_deref()).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
