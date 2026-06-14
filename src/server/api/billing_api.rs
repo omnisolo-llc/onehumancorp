@@ -112,7 +112,9 @@ pub async fn create_checkout_session_handler(
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let mut amount_usd = 0.0;
+    let _ = amount_usd;
     let mut item_name = "Checkout".to_string();
+    let _ = item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
