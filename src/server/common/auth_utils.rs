@@ -1,5 +1,17 @@
 use sqlx::{Executor, Postgres, query};
 
+pub fn validate_tenant_id(tenant_id: &str) -> Result<(), String> {
+    if ::server_config::get().multitenant {
+        if tenant_id.trim().eq_ignore_ascii_case("system") {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
+        if tenant_id.trim().is_empty() {
+            return Err("empty tenant_id is not allowed in multi-tenant mode".into());
+        }
+    }
+    Ok(())
+}
+
 pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
@@ -14,13 +26,8 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if ::server_config::get().multitenant {
-        if org_id.trim().eq_ignore_ascii_case("system") {
-            return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
-        }
-        if org_id.trim().is_empty() {
-            return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
-        }
+    if let Err(e) = validate_tenant_id(org_id) {
+        return Err(sqlx::Error::Configuration(e.into()));
     }
 
     if org_id.trim().eq_ignore_ascii_case("system") {

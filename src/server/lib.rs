@@ -63,10 +63,11 @@ pub fn get_redis_client() -> Option<redis::Client> {
 
 #[cfg(test)]
 mod triage_cache_tests {
-    use super::*;
+
 
     #[tokio::test]
     async fn test_ui_triage_cache_initialization() {
+        use crate::{UI_TRIAGE_CACHE, get_redis_client};
         // Just checking that the OnceLock can be initialized correctly.
         let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
         // Note: we can't do full integration test easily without db setup, but we verify get/set compiles and runs
@@ -3409,10 +3410,11 @@ pub(crate) async fn fetch_dashboard_feeds_parallel(db: std::sync::Arc<crate::db:
     )
 }
 
-pub(crate) async fn load_ui_dashboard_metrics(
+pub async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
         async {
             match &db.store {
@@ -3464,6 +3466,7 @@ pub(crate) async fn load_ui_dashboard_metrics(
 
 
 async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
@@ -3584,6 +3587,7 @@ async fn ui_dashboard_analytics_chat_handler(
 }
 
 pub(crate) async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     match &db.store {
         crate::db::DbStore::Postgres => {
             let query_str = if mobile_optimized {
@@ -3684,6 +3688,7 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 }
 
 async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3759,6 +3764,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
 
 
 pub(crate) async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     let mut results = Vec::new();
 
     let db1 = db.clone();
@@ -3977,6 +3983,7 @@ pub(crate) async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, 
 
 
 async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -4042,6 +4049,7 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
 }
 
 async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    ::server_common::auth_utils::validate_tenant_id(tenant_id).map_err(|e| sqlx::Error::Configuration(e.into()))?;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -5863,11 +5871,12 @@ pub mod crypto;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use crate::settings::Store;
 
     #[tokio::test]
     async fn test_voice_settings_logic() {
+        use std::sync::Arc;
         let store = Arc::new(Store::new());
         // Enable Voice Settings
         store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();

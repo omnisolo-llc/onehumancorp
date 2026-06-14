@@ -1,3 +1,4 @@
+use std::env;
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::fs::PermissionsExt;
 use chrono::{DateTime, Utc};
@@ -5,7 +6,7 @@ use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use sqlx::sqlite::SqliteConnectOptions;
-use std::env;
+
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -69,7 +70,7 @@ pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
         .unwrap()
 }
 
-#[derive(serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 pub struct SearchResult {
     pub id: String,
     pub entity_type: String,
@@ -392,6 +393,8 @@ impl DB {
         tenant_id: &str,
         query: &str,
     ) -> Result<Vec<SearchResult>, String> {
+        ::server_common::auth_utils::validate_tenant_id(tenant_id)?;
+
         let query_lower = format!("%{}%", query.to_lowercase());
         let mut results = Vec::new();
 
@@ -2198,5 +2201,39 @@ mod e2e_search_workspace_tests {
             assert_eq!(sqlite_res.subtitle, pg_res.subtitle, "Subtitle parity failed");
             assert_eq!(sqlite_res.route, pg_res.route, "Route parity failed");
         }
+    }
+}
+
+#[cfg(test)]
+mod security_isolation_tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_sqlite_multitenant_search_workspace_system_block() {
+        temp_env::with_vars(vec![("OHC_MULTITENANT", Some("true"))], || {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+                        .connect("sqlite::memory:")
+                        .await
+                        .unwrap();
+                    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+                        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+                        .unwrap();
+
+                    let db = DB {
+                        pool: dummy_pg_pool,
+                        store: DbStore::Sqlite(pool),
+                    };
+
+                    let res = db.search_workspace("system", "query").await;
+                    assert!(res.is_err());
+                    assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+                });
+        });
     }
 }
