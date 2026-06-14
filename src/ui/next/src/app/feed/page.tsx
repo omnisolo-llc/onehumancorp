@@ -93,7 +93,7 @@ export default function FeedPage() {
 
   const handleEditClick = (item: FeedItem) => {
     setEditingId(item.id);
-    setEditContent(item.context_payload?.summary || item.proposed_action?.description || '');
+    setEditContent(item.proposed_action?.generated_response || item.context_payload?.summary || item.proposed_action?.description || '');
     setTimeout(() => {
       editInputRef.current?.focus();
     }, 50);
@@ -103,6 +103,15 @@ export default function FeedPage() {
     setItems((prev) =>
       prev.map((i) => {
         if (i.id === item.id) {
+          if (i.proposed_action?.feature_type === 'ambassador_reply') {
+            return {
+              ...i,
+              proposed_action: {
+                ...i.proposed_action,
+                generated_response: editContent,
+              }
+            };
+          }
           return {
             ...i,
             proposed_action: {
@@ -187,7 +196,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {item.event_source.replace(/_/g, ' ')}
+                    {item.proposed_action?.feature_type === 'ambassador_reply' ? `Draft Reply: ${item.proposed_action.source} from ${item.proposed_action.sender_id}` : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -195,8 +204,15 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {item.proposed_action?.title || 'Review Required'}
+                  {item.proposed_action?.feature_type === 'ambassador_reply' ? 'Review Proposed Reply' : (item.proposed_action?.title || 'Review Required')}
                 </h3>
+
+                {item.proposed_action?.feature_type === 'ambassador_reply' && (
+                  <div className="mb-4 p-3 bg-[#f2f2f7] dark:bg-[rgba(255,255,255,0.05)] rounded-xl border border-gray-100 dark:border-gray-800">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-1">Customer Message</p>
+                    <p className="text-[13px] text-gray-700 dark:text-gray-300 italic">"{item.proposed_action.original_message}"</p>
+                  </div>
+                )}
 
                 {isEditing ? (
                   <div className="mb-5">
@@ -210,9 +226,28 @@ export default function FeedPage() {
                     />
                   </div>
                 ) : (
-                  <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
-                    {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                  </p>
+                  <div className="mb-5">
+                    {item.proposed_action?.feature_type === 'ambassador_reply' ? (
+                      <>
+                        <div className="mb-3">
+                          <p className="text-[11px] font-bold text-gray-400 uppercase mb-1">Context Summary</p>
+                          <p className="text-[12px] text-gray-600 dark:text-gray-400 leading-snug">
+                            {item.proposed_action.context_used.split('\n\nUnified Customer History:\n')[1] || item.proposed_action.context_used || 'New customer.'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-[#0066FF] dark:text-[#0071E3] uppercase mb-1">AI Drafted Response</p>
+                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed font-medium">
+                            {item.proposed_action.generated_response}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-3">

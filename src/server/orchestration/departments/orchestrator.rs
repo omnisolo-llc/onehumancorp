@@ -864,6 +864,27 @@ impl DepartmentOrchestrator {
                 KeyValue::new("department", dep.to_string())
             ]);
 
+            // Sync agent_action_drafts
+            let draft_state = if approved { "approved" } else { "discarded" };
+            match &self.db.store {
+                DbStore::Postgres => {
+                    let _ = sqlx::query("UPDATE agent_action_drafts SET state = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3")
+                        .bind(draft_state)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .execute(&self.db.pool)
+                        .await;
+                }
+                DbStore::Sqlite(pool) => {
+                    let _ = sqlx::query("UPDATE agent_action_drafts SET state = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
+                        .bind(draft_state)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .execute(pool)
+                        .await;
+                }
+            }
+
             if approved {
                 let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
 

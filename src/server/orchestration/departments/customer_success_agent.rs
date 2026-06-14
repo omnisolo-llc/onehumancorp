@@ -64,6 +64,17 @@ impl Department for CustomerSuccessAgent {
 
             let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let inbox_id = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())).unwrap_or("");
+
+            // Update state in agent_action_drafts
+            if !inbox_id.is_empty() {
+                let pool = crate::db::get_pool();
+                let _ = sqlx::query("UPDATE agent_action_drafts SET state = 'approved', updated_at = CURRENT_TIMESTAMP WHERE message_id = $1 AND tenant_id = $2")
+                    .bind(inbox_id)
+                    .bind(&event.tenant_id)
+                    .execute(&pool)
+                    .await;
+            }
 
             let target_language = original.and_then(|orig| orig.get("translated_from_language").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let text = if !target_language.is_empty() && target_language.to_lowercase() != "en" && target_language.to_lowercase() != "english" && target_language.to_lowercase() != "unknown" {
@@ -143,11 +154,21 @@ impl Department for CustomerSuccessAgent {
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Identity Resolution: Look up customer by phone, email, or name
+            // Identity Resolution: Look up customer using the shared resolution engine
             let mut customer_id = "".to_string();
             let mut past_orders = "".to_string();
-            if !sender_id.is_empty() && sender_id != "unknown" {
-                let pool = crate::db::get_pool();
+            let mut context_summary = "".to_string();
+
+            let pool = crate::db::get_pool();
+            let db = crate::db::DB {
+                pool: pool.clone(),
+                store: crate::db::DbStore::Postgres, // Agent currently only supports Postgres natively for this call
+            };
+
+            if let Some(resolved_id) = crate::api::inbox::identity::resolve_identity(&db, &event.tenant_id, source, sender_id).await {
+                customer_id = resolved_id;
+                tracing::info!("Resolved sender {} to customer {} via inbox engine", sender_id, customer_id);
+            } else if !sender_id.is_empty() && sender_id != "unknown" {
                 let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2) LIMIT 1")
                     .bind(&event.tenant_id)
                     .bind(&sender_id)
@@ -156,7 +177,10 @@ impl Department for CustomerSuccessAgent {
                 if let Ok((id,)) = result {
                     customer_id = id.clone();
                     tracing::info!("Resolved sender {} to customer {}", sender_id, customer_id);
+                }
+            }
 
+            if !customer_id.is_empty() {
                     // Fetch past orders context
                     let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
                         .bind(&event.tenant_id)
@@ -166,6 +190,36 @@ impl Department for CustomerSuccessAgent {
                     if let Ok(orders) = orders {
                         if !orders.is_empty() {
                             past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                            context_summary.push_str(&past_orders);
+                        }
+                    }
+
+                    // Fetch past bookings context
+                    let bookings: Result<Vec<(String,)>, sqlx::Error> = sqlx::query_as("SELECT status FROM bookings WHERE tenant_id = $1 AND customer_id = $2")
+                        .bind(&event.tenant_id)
+                        .bind(&customer_id)
+                        .fetch_all(&pool)
+                        .await;
+                    if let Ok(bookings) = bookings {
+                        if !bookings.is_empty() {
+                            if !context_summary.is_empty() { context_summary.push_str(" "); }
+                            context_summary.push_str(&format!("Has {} previous bookings.", bookings.len()));
+                        }
+                    }
+
+                    // Fetch recent omnichannel messages context
+                    let messages: Result<Vec<(String,)>, sqlx::Error> = sqlx::query_as("SELECT original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 3")
+                        .bind(&event.tenant_id)
+                        .bind(&customer_id)
+                        .fetch_all(&pool)
+                        .await;
+                    if let Ok(messages) = messages {
+                        if !messages.is_empty() {
+                            if !context_summary.is_empty() { context_summary.push_str("\n"); }
+                            context_summary.push_str("Recent conversation history:\n");
+                            for m in messages {
+                                context_summary.push_str(&format!("- {}\n", m.0));
+                            }
                         }
                     }
                 }
@@ -186,15 +240,15 @@ impl Department for CustomerSuccessAgent {
 
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
-            let mut context_summary = if !memories.is_empty() {
+            let mut final_context_summary = if !memories.is_empty() {
                 memories.join("\n")
             } else {
-                "No relevant memory found.".to_string()
+                "No relevant long-term memory found.".to_string()
             };
 
-            if !past_orders.is_empty() {
-                context_summary.push_str("\n");
-                context_summary.push_str(&past_orders);
+            if !context_summary.is_empty() {
+                final_context_summary.push_str("\n\nUnified Customer History:\n");
+                final_context_summary.push_str(&context_summary);
             }
 
             if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
@@ -204,7 +258,7 @@ impl Department for CustomerSuccessAgent {
 
             let prompt = format!(
                 "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
-                event.tenant_id, message, context_summary
+                event.tenant_id, message, final_context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
@@ -239,7 +293,7 @@ impl Department for CustomerSuccessAgent {
                 "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
-                "context_used": context_summary,
+                "context_used": final_context_summary,
                 "inbox_message_id": inbox_id,
                 "source": source,
                 "original_content": message,
@@ -255,6 +309,18 @@ impl Department for CustomerSuccessAgent {
                 risk.clone(),
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
+
+            // Store in agent_action_drafts table using the same ID as the approval request
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query("INSERT INTO agent_action_drafts (id, tenant_id, customer_id, message_id, proposed_response, context_used, state) VALUES ($1, $2, $3, $4, $5, $6, 'pending')")
+                .bind(&approval_req.id)
+                .bind(&event.tenant_id)
+                .bind(&customer_id)
+                .bind(inbox_id)
+                .bind(&generated_response)
+                .bind(&final_context_summary)
+                .execute(&pool)
+                .await;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {

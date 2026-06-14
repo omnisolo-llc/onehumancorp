@@ -289,6 +289,19 @@ async fn update_feed_item_state(
                     .bind(&tenant_id)
                     .execute(&pool)
                     .await;
+
+                // Sync agent_action_drafts as well
+                let draft_status = match payload.state.as_str() {
+                    "APPROVED" => "approved",
+                    "DISMISSED" | "REJECTED" => "discarded",
+                    _ => "pending",
+                };
+                let _ = sqlx::query("UPDATE agent_action_drafts SET state = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3")
+                    .bind(draft_status)
+                    .bind(&id)
+                    .bind(&tenant_id)
+                    .execute(&pool)
+                    .await;
             }
 
             // Handle incident resolution execution
