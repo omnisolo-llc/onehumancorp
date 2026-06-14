@@ -69,14 +69,6 @@ impl OnboardingAgent {
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
-                if user_messages.len() <= 1 {
-                    return Ok(ChatResponse {
-                        is_complete: false,
-                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                        intake_data: None,
-                    });
-                }
-
                 let combined_input = user_messages.iter().map(|m| {
                     let mut text = m.content.clone();
                     if let Some(url) = &m.image_url {
@@ -84,11 +76,13 @@ impl OnboardingAgent {
                     }
                     text
                 }).collect::<Vec<String>>().join("\n");
+
+                // Immediately return complete for faster E2E tests, extracting what we can
                 let intake_data = self.process_intake(&combined_input).await?;
 
                 return Ok(ChatResponse {
                     is_complete: true,
-                    reply: "Give me a minute... I'm building your business.".to_string(),
+                    reply: "Got it! Give me a minute... I'm building your business.".to_string(),
                     intake_data: Some(intake_data),
                 });
             }
@@ -105,15 +99,16 @@ impl OnboardingAgent {
         }
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business.
+            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business via a friendly chat conversation.
 You need to know at least:
-1. What they sell or what service they provide.
-2. A rough idea of their business type (e.g. bakery, handyman, tutor).
+1. Business Name (if they have one)
+2. What they sell or what service they provide.
+3. Their location and target audience (optional, but helpful).
 
 Review the following conversation history:
 {}
 
-If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
+If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, friendly, conversational question asking for the missing information. Keep it short and supportive.
 If you DO have enough information, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
 
 Your response:",
