@@ -32,7 +32,7 @@ impl Repository for MockRepository {
 async fn test_statemachine_valid_transitions() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = StateMachine::new(repo.clone(), lock);
+    let sm = StateMachine::new(repo.clone(), lock, None);
 
     let task_id = "task1";
 
@@ -61,7 +61,7 @@ async fn test_statemachine_valid_transitions() {
 async fn test_statemachine_invalid_transition() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = StateMachine::new(repo.clone(), lock);
+    let sm = StateMachine::new(repo.clone(), lock, None);
 
     let task_id = "task2";
 
@@ -74,7 +74,7 @@ async fn test_statemachine_invalid_transition() {
 async fn test_statemachine_concurrent_transitions() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = Arc::new(StateMachine::new(repo.clone(), lock));
+    let sm = Arc::new(StateMachine::new(repo.clone(), lock, None));
 
     let task_id = "task3";
 
@@ -99,4 +99,42 @@ async fn test_statemachine_concurrent_transitions() {
     if res2.is_ok() { success_count += 1; }
 
     assert_eq!(success_count, 1, "Only one transition should succeed");
+}
+
+#[tokio::test]
+async fn test_mesh_trigger_state_transition() {
+    let repo = Arc::new(MockRepository::new());
+    let lock = Arc::new(StandaloneLock::new());
+    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+    let sm = Arc::new(StateMachine::new(repo.clone(), lock, Some(transport.clone())));
+
+    let task_id = "task_mesh_trigger";
+
+    sm.transition_to_ready(task_id).await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
+
+    sm.clone().start_mesh_listener().await.unwrap();
+
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "agent1".to_string(),
+        action: "task_completed".to_string(),
+        status: "ok".to_string(),
+        payload: task_id.as_bytes().to_vec(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    let mut buf = Vec::new();
+    prost::Message::encode(&event, &mut buf).unwrap();
+
+    let msg = ohc_builtin_agent::mesh::transport::Message {
+        msg_id: "msg1".to_string(),
+        payload: buf,
+    };
+
+    let _ = transport.publish("mesh:tasks", event).await;
+
+    // wait for the transition to complete
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    assert_eq!(repo.get_task_state(task_id).unwrap(), State::Completed);
 }

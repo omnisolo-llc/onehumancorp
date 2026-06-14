@@ -28,6 +28,7 @@ import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
+import { TeammateSyncIndicator } from "./TeammateSyncIndicator";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -434,6 +435,7 @@ export default function Dashboard() {
       <DashboardViralInviteWidget />
 
       <AiTimeSavingsWidget />
+      <TeammateSyncIndicator />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
       <VoiceAssistantFAB />

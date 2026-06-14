@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use super::locks::DistributedLock;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
@@ -34,10 +35,11 @@ pub struct StateMachine {
     repo: Arc<dyn Repository>,
     lock: Arc<dyn DistributedLock>,
     allowed_transitions: HashMap<State, Vec<State>>,
+    transport: Option<Arc<dyn MeshTransport>>,
 }
 
 impl StateMachine {
-    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>) -> Self {
+    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>, transport: Option<Arc<dyn MeshTransport>>) -> Self {
         let mut allowed_transitions = HashMap::new();
         allowed_transitions.insert(State::Pending, vec![State::Ready]);
         allowed_transitions.insert(State::Ready, vec![State::InProgress]);
@@ -48,6 +50,7 @@ impl StateMachine {
             repo,
             lock,
             allowed_transitions,
+            transport,
         }
     }
 
@@ -63,9 +66,19 @@ impl StateMachine {
             return Err(format!("invalid transition from {:?} to {:?}", current_state, new_state));
         }
 
-        self.repo.update_task_state(task_id, new_state, agent_id)?;
+        self.repo.update_task_state(task_id, new_state.clone(), agent_id)?;
 
         // Publish to Teammate Mesh here
+        if let Some(transport) = &self.transport {
+            let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                agent_id: if agent_id.is_empty() { "system".to_string() } else { agent_id.to_string() },
+                action: format!("state_transition_to_{}", new_state.as_str()),
+                status: "ok".to_string(),
+                payload: task_id.as_bytes().to_vec(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            };
+            let _ = transport.publish("mesh:tasks", event).await;
+        }
 
         Ok(())
     }
@@ -88,5 +101,25 @@ impl StateMachine {
 
     pub async fn transition_to_failed(&self, task_id: &str) -> Result<(), String> {
         self.transition(task_id, State::Failed, "").await
+    }
+
+    pub async fn start_mesh_listener(self: Arc<Self>) -> Result<(), String> {
+        if let Some(transport) = &self.transport {
+            let sm_clone = self.clone();
+            let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
+                use prost::Message;
+                if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
+                    if event.action == "task_completed" {
+                        let task_id = String::from_utf8_lossy(&event.payload).to_string();
+                        let sm = sm_clone.clone();
+                        tokio::spawn(async move {
+                            let _ = sm.transition_to_completed(&task_id).await;
+                        });
+                    }
+                }
+            });
+            transport.subscribe("mesh:tasks", handler).await?;
+        }
+        Ok(())
     }
 }
