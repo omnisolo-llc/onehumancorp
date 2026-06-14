@@ -56,7 +56,11 @@ impl StripeClient {
     pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
-        tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
+        if savings > 0.0 {
+            tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees", savings);
+        } else {
+            tracing::info!("💰 Miser telemetry: Standard payment method chosen.");
+        }
 
         // For MercadoPago and others not routed to Stripe Checkout
         match pm {
