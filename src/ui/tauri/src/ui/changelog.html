@@ -124,7 +124,137 @@
       </div>
     </div>
 
-<script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    let hideTimeout;
+
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+
+        const targetRect = e.target.getBoundingClientRect();
+
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject chat CSS
     const style = document.createElement('style');
@@ -391,81 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
-    <script>
-      const container = document.getElementById('changelog-container');
+    <script src="ohc-help-widget.mjs"></script>
 
-      async function loadChangelog() {
-        try {
-          let data = null;
-          if (window.__TAURI__ && window.__TAURI__.core) {
-             data = await window.__TAURI__.core.invoke('get_changelog', {});
-          } else {
-             const res = await fetch(`/api/changelog`);
-             if (res.ok) data = await res.json();
-          }
-
-
-
-          let html = '';
-          data.forEach(item => {
-             let contentHtml = item.contentLines ? item.contentLines.map(line => {
-                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
-                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
-                return `<p>${line}</p>`;
-             }).join('') : (item.content_lines ? item.content_lines.map(line => {
-                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
-                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
-                return `<p>${line}</p>`;
-             }).join('') : '');
-
-             let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
-
-             html += `
-               <div class="changelog-card">
-                 <h2 class="version-title">${item.version}</h2>
-                 ${imgHtml}
-                 <div class="content">${contentHtml}</div>
-               </div>
-             `;
-          });
-          container.innerHTML = html;
-        } catch (e) {
-          console.error("Failed to load changelog", e);
-          container.innerHTML = `<div class="changelog-card"><p style="color:#FF3B30">Failed to load changelog.</p></div>`;
-        }
-      }
-
-      loadChangelog();
-    </script>
-
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
+<script src="ohc-help-widget.mjs"></script>
 </body>
 </html>
-<script src="ohc-help-widget.mjs"></script>

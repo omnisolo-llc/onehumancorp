@@ -215,55 +215,6 @@
     </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tenant = urlParams.get('tenant') || 'default-team';
-      const name = urlParams.get('name') || 'AI Assistant';
-      const welcome = urlParams.get('welcome') || 'Hello! How can I help you today?';
-
-      document.getElementById('agent-name').textContent = name;
-      document.getElementById('welcome-message').textContent = welcome;
-
-      const brandingLink = document.getElementById('branding-link');
-      brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
-
-      const input = document.getElementById('chat-input');
-      const sendBtn = document.getElementById('send-btn');
-      const messages = document.getElementById('chat-messages');
-
-      async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
-
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
-
-        try {
-            // Fake delay for UI feedback
-            await new Promise(r => setTimeout(r, 600));
-
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = "I'm a demo agent embedded from OHC! In a real environment, I would connect to the backend API to answer your request.";
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        } catch(e) {
-            console.error(e);
-        }
-      }
-
-      sendBtn.addEventListener('click', sendMessage);
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-      });
-    });
-  </script>
+  <script src="ohc-help-widget.mjs"></script>
 </body>
 </html>
-<script src="ohc-help-widget.mjs"></script>

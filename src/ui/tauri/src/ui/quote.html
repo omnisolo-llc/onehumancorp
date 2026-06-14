@@ -972,28 +972,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
-<!-- Draft Review View (Owner) -->
+<script src="ohc-help-widget.mjs"></script>
+
+<script src="ohc-help-widget.mjs"></script>
+
+    <!-- Draft Review View (Owner) -->
     <div id="draft-review-view" style="display: none; padding-top: 60px;">
         <h2 style="margin-top: 12px; margin-bottom: 24px;">Draft Estimate Review</h2>
         <div id="draft-customer-issue" style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -1069,4 +1052,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-<script src="ohc-help-widget.mjs"></script>
