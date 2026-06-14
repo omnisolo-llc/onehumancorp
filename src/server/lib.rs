@@ -1311,7 +1311,7 @@ impl HubService for MyHubService {
 
         let base_bill = tier.base_price();
         let llm_cost_cents = self.hub.tracker().get_tenant_cost_cents(tenant_id);
-        let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
+        let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + self.hub.tracker().get_storage_cost_cents(storage_used_bytes);
         let next_bill_estimated = total_cost_cents;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
