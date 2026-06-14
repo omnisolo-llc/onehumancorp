@@ -37,6 +37,6 @@ test.describe('Growth Cloud Bridge Loop', () => {
     await expect(page.locator('#share-whatsapp-btn')).toBeVisible();
 
     // Verify share on X (Twitter) is available
-    await expect(page.locator('#share-twitter-btn')).toBeVisible();
+    await expect(page.locator('#share-x-btn')).toBeVisible();
   });
 });
