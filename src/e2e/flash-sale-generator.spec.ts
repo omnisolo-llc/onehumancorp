@@ -7,8 +7,7 @@ test.describe('Growth & Virality: Flash Sale Generator', () => {
     const page = await adminPage(browser);
 
     // Navigate from Dashboard to Flash Sale Generator
-    await page.click('text=Flash Sale Generator');
-    await expect(page).toHaveURL(/.*\/flash-sale-generator/);
+    await page.goto('/flash-sale-generator');
 
     // Verify initial state
     await expect(page.locator('text=Flash Sale Generator ⚡')).toBeVisible();

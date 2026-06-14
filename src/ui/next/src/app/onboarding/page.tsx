@@ -583,6 +583,12 @@ export default function OnboardingWizard() {
                   Start My Business
                 </button>
               </div>
+
+              <div className="mt-8">
+                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=website-builder" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                  ⚡ Powered by OHC
+                </a>
+              </div>
             </div>
           )}
 
