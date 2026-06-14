@@ -1547,7 +1547,7 @@
               "X-Tenant-ID": tenantId,
               "X-User-ID": userId,
             },
-            body: JSON.stringify({ wizardState: state }),
+            body: JSON.stringify(state),
           }).catch(console.error);
         }
       }
@@ -2198,7 +2198,7 @@
           }
 
           const payload = {
-            wizardState: state,
+            ...state,
             step: currentStepIdx,
             instantBio: document.getElementById("instant-bio")?.value || "",
           };
