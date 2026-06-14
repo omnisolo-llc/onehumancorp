@@ -173,6 +173,44 @@ pub struct WaitlistResponse {
     pub referral_link: String,
 }
 
+
+#[derive(Debug, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: usize,
+}
+
+async fn handle_zero_click_builder_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, StatusCode> {
+    let db = std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres });
+    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, state.hub.clone());
+
+    match agent.process_intake(&req.prompt).await {
+        Ok(intake_data) => {
+            let slug = intake_data.business_name.to_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "-").trim_matches('-').to_string();
+            let url = format!("https://{}.ohc.store", if slug.is_empty() { "store".to_string() } else { slug });
+
+            Ok(Json(ZeroClickGenerateResponse {
+                name: intake_data.business_name,
+                url,
+                products_count: intake_data.initial_products.len(),
+            }))
+        },
+        Err(e) => {
+            tracing::error!("Failed to generate zero click store: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 async fn handle_waitlist(
     Json(req): Json<WaitlistRequest>,
 ) -> Result<Json<WaitlistResponse>, StatusCode> {
@@ -311,6 +349,7 @@ where
     Router::new()
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
+        .route("/zero-click-builder/generate", post(handle_zero_click_builder_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -975,16 +1014,121 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     let target_emails: i64 = if req.target_segment == "abandoned_carts" {
-        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
-            .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
-            .await
-        {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
-                0
+        use crate::cart_recovery::{CartRecoveryStore, CartRecoveryDispatcher, PostgresCartRecoveryStore, PostgresQueueRecoveryDispatcher, RecoveryMessage, RecoveryChannel};
+        let store = PostgresCartRecoveryStore::new(std::sync::Arc::new(state.pool.clone()));
+        let dispatcher = PostgresQueueRecoveryDispatcher::new(std::sync::Arc::new(state.pool.clone()), true);
+
+        let now = chrono::Utc::now();
+        // Since this is triggered from the UI, we might want to recover recent carts as well.
+        let abandoned_before = now;
+
+        let mut sent_count = 0;
+        // Tenant context is set automatically via RLS if set_system_context is not used,
+        // but PostgresCartRecoveryStore::abandoned_checkout_sessions uses set_system_context.
+        // Wait, abandoned_checkout_sessions sets system context.
+        // We shouldn't use it directly here if it fetches cross-tenant.
+        // Let's implement an inline query scoped by tenant instead to safely fetch abandoned carts.
+        let rows_result = sqlx::query(
+            r#"
+            SELECT
+                ccs.id,
+                ccs.tenant_id,
+                ccs.customer_id,
+                ccs.type as checkout_type,
+                ccs.amount as amount_cents,
+                ccs.status,
+                customers.email as customer_email,
+                customers.phone as customer_phone,
+                customers.name as customer_name,
+                tenants.business_name,
+                COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
+            FROM conversational_checkout_sessions ccs
+            INNER JOIN customers
+                ON customers.id = ccs.customer_id
+               AND customers.tenant_id = ccs.tenant_id
+            INNER JOIN tenants
+                ON tenants.id::text = ccs.tenant_id
+            WHERE lower(ccs.status) = 'pending'
+              AND ccs.tenant_id = $1
+              AND COALESCE(ccs.updated_at, ccs.created_at) <= $2
+              AND (
+                    NULLIF(trim(customers.email), '') IS NOT NULL
+                 OR NULLIF(trim(customers.phone), '') IS NOT NULL
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM ohc_job_queue jobs
+                    WHERE jobs.tenant_id = ccs.tenant_id
+                      AND jobs.job_type = $3
+                      AND jobs.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
+                      AND jobs.payload ->> 'checkout_session_id' = ccs.id
+              )
+            ORDER BY COALESCE(ccs.updated_at, ccs.created_at) ASC
+            LIMIT 1000
+            "#
+        )
+        .bind(auth_info.org_id.clone())
+        .bind(abandoned_before)
+        .bind("cart_recovery.dispatch")
+        .fetch_all(&state.pool)
+        .await;
+
+        match rows_result {
+            Ok(rows) => {
+                sent_count = rows.len() as i64;
+                use sqlx::Row;
+                for row in rows {
+                    let amount_cents_i64: Option<i64> = row.get("amount_cents");
+                    let last_touched_at: Option<chrono::DateTime<chrono::Utc>> = row.get("last_touched_at");
+                    let session = crate::cart_recovery::AbandonedCheckoutSession {
+                        session_id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        checkout_type: row.get("checkout_type"),
+                        amount_cents: amount_cents_i64.unwrap_or(0),
+                        status: row.get("status"),
+                        customer_email: row.get("customer_email"),
+                        customer_phone: row.get("customer_phone"),
+                        last_touched_at: last_touched_at.unwrap_or_else(chrono::Utc::now),
+                        customer_name: row.get("customer_name"),
+                        business_name: row.get("business_name"),
+                    };
+
+                    let message = RecoveryMessage {
+                        channel: RecoveryChannel::Email,
+                        to: session.customer_email.clone(),
+                        subject: req.subject.clone(),
+                        body: req.body.clone(),
+                        checkout_url: format!("{}/checkout/recover/{}", std::env::var("OHC_CHECKOUT_BASE_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()), session.session_id),
+                    };
+
+                    if let Err(e) = dispatcher.dispatch_recovery(&session, &message).await {
+                        tracing::error!("Failed to dispatch recovery for session {}: {}", session.session_id, e);
+                    } else {
+                        // Mark as recorded
+                        let _ = store.record_recovery_action(&session, &crate::cart_recovery::RecoveryDispatchReceipt { channel: message.channel.clone(), provider_message_id: None }).await;
+                    }
+                }
             }
+            Err(e) => {
+                tracing::error!("Failed to fetch abandoned carts for campaign: {:?}", e);
+            }
+        }
+
+        if sent_count == 0 {
+            match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Failed to fetch abandoned carts count for campaign fallback: {}", e);
+                    0
+                }
+            }
+        } else {
+            sent_count
         }
     } else if req.target_segment == "recent_buyers_no_review" {
         // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
@@ -1754,22 +1898,22 @@ async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
+    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING referral_code")
         .bind(&req.id)
-        .execute(&state.pool)
+        .fetch_one(&state.pool)
         .await
     {
-        Ok(result) => {
-            if result.rows_affected() == 0 {
-                return Err(StatusCode::NOT_FOUND);
-            }
-            state.hub.referral_tracker().record_click(&req.id);
+        Ok(row) => {
+            use sqlx::Row;
+            let ref_code: String = row.get("referral_code");
+            state.hub.referral_tracker().record_click(&ref_code);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg);
 
             Ok(Json(()))
         }
+        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1807,21 +1951,23 @@ async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
+    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING referral_code, user_id")
         .bind(&req.id)
-        .execute(&state.pool)
+        .fetch_one(&state.pool)
         .await
     {
-        Ok(result) => {
-            if result.rows_affected() == 0 {
-                return Err(StatusCode::NOT_FOUND);
-            }
-            state.hub.referral_tracker().record_conversion(&req.id);
+        Ok(row) => {
+            use sqlx::Row;
+            let ref_code: String = row.get("referral_code");
+            let user_id: String = row.get("user_id");
+            state.hub.referral_tracker().record_conversion(&ref_code);
+            state.hub.referral_tracker().record_referral(&ref_code, Some(&user_id));
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
         }
+        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1845,6 +1991,7 @@ async fn handle_referral_generate(
         .await
     {
         Ok(_) => {
+            state.hub.referral_tracker().seed_referral_mapping(&ref_code, &auth_info.agent_id);
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {
@@ -2152,6 +2299,22 @@ mod tests {
         assert_eq!(json.success, true);
         assert_eq!(json.position, 42);
         assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
+    }
+
+    #[tokio::test]
+    async fn test_zero_click_generate() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = super::ZeroClickGenerateRequest { prompt: "Business Name: Maya's Cakes".to_string() };
+        let res = super::handle_zero_click_builder_generate(Extension(state.clone()), Json(req)).await.unwrap();
+
+        let data = res.0;
+        assert_eq!(data.name, "Maya's Cakes");
+        assert!(data.products_count > 0);
+        assert_eq!(data.url, "https://maya-s-cakes.ohc.store");
     }
 
     #[tokio::test]

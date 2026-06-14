@@ -19,7 +19,7 @@ mod tests {
         let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
 
-            .connect_lazy("postgres://localhost/dummy")
+            .connect_lazy("postgres://127.0.0.1:1/dummy")
             .unwrap();
 
         let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
@@ -766,7 +766,7 @@ mod tests {
             );"
         ).execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let sip_db = Arc::new(SipDB::new(pg_pool, "system".to_string()));
 
         // Cloud Mode Simulation (100 simultaneous business owners)

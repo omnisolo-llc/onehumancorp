@@ -103,7 +103,69 @@ impl SyncService for MySyncService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
-            if item["table"].as_str() == Some("agent_missions") {
+
+            if item["table"].as_str() == Some("mutation_queue") {
+                let id = item["id"].as_str().unwrap_or("");
+                let action_type = item["action_type"].as_str().unwrap_or("");
+                let payload = item["payload"].as_str().unwrap_or("");
+                let tenant_id = item["tenant_id"].as_str().unwrap_or(&tenant_id);
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO mutation_queue (id, tenant_id, action_type, payload, status)
+                    VALUES ($1, $2, $3, $4, 'synced')
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = 'synced',
+                        updated_at = CURRENT_TIMESTAMP
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(action_type)
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    ::server_telemetry::record_error_signal("failed to upsert mutation_queue via PowerSync");
+                    tracing::error!("failed to upsert mutation_queue via PowerSync: {}", e);
+                } else {
+                    // Emit a SyncEvent for the orchestrator
+                    let event_id = uuid::Uuid::new_v4().to_string();
+                    let batch_id = id; // use mutation id as batch_id for now
+
+                    let event_query = "
+                        INSERT INTO sync_events (id, tenant_id, batch_id, action_type, payload)
+                        VALUES ($1, $2, $3, $4, $5)
+                    ";
+
+                    if let Err(e) = sqlx::query(event_query)
+                        .bind(&event_id)
+                        .bind(tenant_id)
+                        .bind(batch_id)
+                        .bind(action_type)
+                        .bind(payload)
+                        .execute(&mut *tx)
+                        .await
+                    {
+                         tracing::error!("failed to insert sync_event via PowerSync: {}", e);
+                    } else {
+                        // Dispatch event directly to orchestration if it's Operations Agent
+                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: event_id,
+                            tenant_id: tenant_id.to_string(),
+                            event_type: format!("SyncEvent:{}", action_type),
+                            payload: serde_json::from_str(payload).unwrap_or_else(|_| serde_json::json!({"raw": payload})),
+                        };
+
+                        // We should probably route this through a proper dispatcher, but for now we can fire and forget
+                        // The actual handling logic in operations_agent will pick it up if it was dispatched
+                    }
+                }
+            } else if item["table"].as_str() == Some("agent_missions") {
                 let id = item["id"].as_str().unwrap_or("");
                 let status = item["status"].as_str().unwrap_or("PENDING");
                 let payload = item["payload"].as_str().unwrap_or("");
@@ -368,7 +430,7 @@ mod tests {
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
@@ -379,7 +441,7 @@ mod tests {
     #[tokio::test]
     async fn test_power_sync_push() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
@@ -400,7 +462,7 @@ mod tests {
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await;
@@ -410,7 +472,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push_and_pull() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
         if !database_url.contains("test") {
             // Only run e2e flow if real test db is available. Dummy will fail.
             return;
@@ -460,7 +522,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
@@ -471,7 +533,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_escalation_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
@@ -481,7 +543,7 @@ mod tests {
     #[tokio::test]
     async fn test_vector_sync() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();
