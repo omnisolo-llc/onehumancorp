@@ -36,6 +36,8 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
+        let client_id_opt = payload.get("client_id").and_then(|v| v.as_str());
+
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
@@ -247,6 +249,23 @@ impl PosSyncWorker {
                                 .bind(&notification_payload)
                                 .execute(&mut *tx)
                                 .await;
+
+                                if let Some(client_id) = client_id_opt {
+                                    let _ = sqlx::query("UPDATE pos_terminal_sessions SET sync_status = 'CONFLICT', pending_reconciliation = $1::jsonb WHERE tenant_id = $2 AND device_id = $3")
+                                        .bind(serde_json::json!([{ "product_id": product_id, "transaction_id": transaction_id }]).to_string())
+                                        .bind(&job.tenant_id)
+                                        .bind(client_id)
+                                        .execute(&mut *tx)
+                                        .await;
+                                }
+                            } else {
+                                if let Some(client_id) = client_id_opt {
+                                    let _ = sqlx::query("UPDATE pos_terminal_sessions SET sync_status = 'SYNCED', last_conflict_resolved_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND device_id = $2")
+                                        .bind(&job.tenant_id)
+                                        .bind(client_id)
+                                        .execute(&mut *tx)
+                                        .await;
+                                }
                             }
 
                             let cache = crate::builder::edge::get_edge_cache();
