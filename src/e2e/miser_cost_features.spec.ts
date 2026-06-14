@@ -6,7 +6,7 @@ test.describe('Miser Cost Features E2E', () => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Wait for the main headings
@@ -22,19 +22,19 @@ test.describe('Miser Cost Features E2E', () => {
     // Verify Budget Health Alert is rendered
     await expect(page.locator('#budget-health-alert')).toBeVisible();
 
-    // Verify navigation back to My Plan works
+    // Verify navigation back to My Plan works (returns to dashboard.html from the UI widget)
     const myPlanButton = page.locator('button', { hasText: 'Back to My Plan' });
     await expect(myPlanButton).toBeVisible();
 
-    // Click the button and verify URL changes to /plan
+    // Click the button and verify URL changes to dashboard.html
     await myPlanButton.click();
-    await page.waitForURL('**/plan', { timeout: 10000 });
-    await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
+    await page.waitForURL('**/dashboard.html', { timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Welcome to your workforce' })).toBeVisible({ timeout: 15000 });
   });
 
   test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const freeCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Free', exact: true }) });
@@ -52,7 +52,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const starterCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
@@ -73,7 +73,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const proCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Pro', exact: true }) });
@@ -94,7 +94,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const businessCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Business', exact: true }) });
