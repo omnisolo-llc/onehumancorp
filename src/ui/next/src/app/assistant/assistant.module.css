@@ -644,3 +644,34 @@
     width: 100%;
   }
 }
+
+@media (max-width: 768px) {
+  .workstation {
+    grid-template-columns: 1fr;
+  }
+  .leftRail {
+    display: none; /* In a real app this would be a slide-out drawer or bottom sheet */
+  }
+  .rightPanel {
+    display: none; /* In a real app this would be a slide-out drawer or bottom sheet */
+  }
+  .resultsPanel {
+      display: none; /* Handled via tabs or secondary screen on mobile */
+  }
+}
+
+@media (max-width: 375px) {
+  .workstation {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+  .leftRail, .rightPanel {
+      display: none;
+  }
+  .centerColumn {
+      padding: 0 10px;
+  }
+  .messageContent {
+      font-size: 14px;
+  }
+}
