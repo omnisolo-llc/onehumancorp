@@ -97,7 +97,6 @@ pub fn ollama_tool() -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ToolExecutor;
 
     #[tokio::test]
     async fn test_ollama_pydantic_adapter_missing_action() {

@@ -164,7 +164,6 @@ pub fn topic_write_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ToolExecutor;
     use serde_json::json;
 
     struct MockMemoryAccessor;

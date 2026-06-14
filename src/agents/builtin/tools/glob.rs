@@ -30,7 +30,7 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
         let safe_base = base_dir.strip_prefix("/").unwrap_or(base_dir);
         let safe_pattern = pattern.strip_prefix("/").unwrap_or(pattern);
 
-        let mut full_pattern = if safe_base == "." || safe_base == "" {
+        let mut full_pattern = if safe_base == "." || safe_base.is_empty() {
             safe_pattern.to_string()
         } else {
             format!("{}/{}", safe_base.trim_end_matches('/'), safe_pattern)
