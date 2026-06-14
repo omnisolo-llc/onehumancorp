@@ -358,7 +358,7 @@ impl UserRepository for SqliteUserRepository {
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
-            ON CONFLICT (jti) DO NOTHING
+            ON CONFLICT (jti, tenant_id) DO NOTHING
             "#
         )
         .bind(jti)
@@ -459,9 +459,10 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS revoked_tokens (
-                jti TEXT PRIMARY KEY,
+                jti TEXT,
                 tenant_id TEXT,
-                expires_at TIMESTAMPTZ
+                expires_at TIMESTAMPTZ,
+                PRIMARY KEY (jti, tenant_id)
             )"
         )
         .execute(&pool)
