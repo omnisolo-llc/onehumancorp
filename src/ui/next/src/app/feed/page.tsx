@@ -19,6 +19,8 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
 
   useEffect(() => {
     async function fetchFeed() {
@@ -86,6 +88,35 @@ export default function FeedPage() {
       }
     };
   }, []);
+
+  const startEditing = (item: FeedItem) => {
+    setEditingId(item.id);
+    setEditValue(item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+  };
+
+  const saveEdit = (id: string) => {
+    setItems((prev) => prev.map((item) => {
+      if (item.id === id) {
+        return {
+          ...item,
+          proposed_action: {
+            ...item.proposed_action,
+            description: editValue,
+          },
+          context_payload: {
+            ...item.context_payload,
+            summary: editValue,
+          }
+        };
+      }
+      return item;
+    }));
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
 
   const handleAction = async (id: string, state: string) => {
     try {
@@ -160,9 +191,45 @@ export default function FeedPage() {
                   {item.proposed_action?.title || 'Review Required'}
                 </h3>
 
-                <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
-                  {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                </p>
+                {editingId === item.id ? (
+                  <div className="mb-5">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
+                      rows={3}
+                      data-testid="feed-edit-input"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEdit(item.id)}
+                        className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-1 rounded"
+                        data-testid="feed-save-edit-btn"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-5">
+                    <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
+                      {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                    </p>
+                    <button
+                      onClick={() => startEditing(item)}
+                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
+                      data-testid="feed-edit-btn"
+                    >
+                      Edit Action
+                    </button>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <button

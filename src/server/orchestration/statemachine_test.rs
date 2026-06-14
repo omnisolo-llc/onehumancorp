@@ -129,6 +129,9 @@ async fn test_mesh_trigger_state_transition() {
     let msg = ohc_builtin_agent::mesh::transport::Message {
         msg_id: "msg1".to_string(),
         payload: buf,
+        action: "task_completed".to_string(),
+        agent_id: "agent1".to_string(),
+        status: "ok".to_string(),
     };
 
     let _ = transport.publish("mesh:tasks", event).await;
