@@ -363,9 +363,8 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let cost_per_gb = auditor.get_cost_per_gb_month();
-    let storage_cost_f64 = storage_gb * cost_per_gb;
+    let storage_cost_cents = ::server_pricing::calculator::calculate_storage_cost_cents(storage_bytes, &::server_pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+    let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
     let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
     let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
@@ -387,7 +386,7 @@ pub async fn cost_dashboard_handler(
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
         llm_cost: llm_cost_cents,
-        storage_cost: (storage_cost_f64 * 100.0).round() as i64,
+        storage_cost: storage_cost_cents,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
         compute_cost: (compute_cost_f64 * 100.0).round() as i64,
