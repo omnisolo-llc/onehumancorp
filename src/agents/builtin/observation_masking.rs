@@ -154,10 +154,12 @@ impl JetBrainsObservationMasker {
 
     pub fn apply_masking(&self, messages: &mut [Message]) {
         let msg_count = messages.len();
-        for i in 0..msg_count {
+        let mut tool_interaction_count = 0;
+        for i in (0..msg_count).rev() {
             if messages[i].role == Role::Tool {
-                let age = msg_count - i;
-                if age > self.threshold {
+                tool_interaction_count += 1;
+                // Recency-Aware Masking: Only mask if older than threshold
+                if tool_interaction_count > self.threshold {
                     for tr in &mut messages[i].tool_results {
                         if tr.error.is_empty()
                             && (!tr.content.starts_with("{\"_masked_observation\"")
@@ -363,7 +365,7 @@ mod tests {
         // Oh! If size_limit is 100, then "large" is 500 bytes and gets masked.
         // The total size becomes smaller. Does it become < 100 bytes? No, because "large" will be replaced by "[Masked string: 500 bytes...]" which is ~30 bytes, but the rest of JSON is around 40 bytes.
         // Let's set limit to 150 to be safe so the fallback doesn't trigger.
-        apply_observation_masking(&mut messages, 1, 150, 50);
+        apply_observation_masking(&mut messages, 0, 150, 50);
 
         let masked_content = &messages[0].tool_results[0].content;
 
