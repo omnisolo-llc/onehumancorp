@@ -65,28 +65,105 @@ impl OnboardingAgent {
     pub async fn process_chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, String> {
         let user_messages: Vec<&ChatMessage> = messages.iter().filter(|m| m.role == "user").collect();
 
-        if user_messages.len() <= 1 {
-            return Ok(ChatResponse {
-                is_complete: false,
-                reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                intake_data: None,
-            });
+        let minimax = match self.minimax.as_ref() {
+            Some(m) => m,
+            None => {
+                // E2E Test / Local adapter mock fallback when no LLM is configured
+                if user_messages.len() <= 1 {
+                    return Ok(ChatResponse {
+                        is_complete: false,
+                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
+                        intake_data: None,
+                    });
+                }
+
+                let combined_input = user_messages.iter().map(|m| {
+                    let mut text = m.content.clone();
+                    if let Some(url) = &m.image_url {
+                        text.push_str(&format!("\nImage provided: {}", url));
+                    }
+                    text
+                }).collect::<Vec<String>>().join("\n");
+                let intake_data = self.process_intake(&combined_input).await?;
+
+                return Ok(ChatResponse {
+                    is_complete: true,
+                    reply: "Give me a minute... I'm building your business.".to_string(),
+                    intake_data: Some(intake_data),
+                });
+            }
+        };
+
+        let mut conversation_history = String::new();
+        for msg in &messages {
+            let role = if msg.role == "user" { "User" } else { "Assistant" };
+            let mut content = msg.content.clone();
+            if let Some(url) = &msg.image_url {
+                content.push_str(&format!(" (Image provided: {})", url));
+            }
+            conversation_history.push_str(&format!("{}: {}\n", role, content));
         }
 
-        let combined_input = user_messages.iter().map(|m| {
-            let mut text = m.content.clone();
-            if let Some(url) = &m.image_url {
-                text.push_str(&format!("\nImage provided: {}", url));
-            }
-            text
-        }).collect::<Vec<String>>().join("\n");
-        let intake_data = self.process_intake(&combined_input).await?;
+        let prompt = format!(
+            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business.
+You need to know at least:
+1. What they sell or what service they provide.
+2. A rough idea of their business type (e.g. bakery, handyman, tutor).
 
-        Ok(ChatResponse {
-            is_complete: true,
-            reply: "Give me a minute... I'm building your business.".to_string(),
-            intake_data: Some(intake_data),
-        })
+Review the following conversation history:
+{}
+
+If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
+If you DO have enough information, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
+
+Your response:",
+            conversation_history
+        );
+
+        let mut attempts = 0;
+        let mut response = String::new();
+        while attempts < 3 {
+            match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
+                Ok(Ok(content)) => {
+                    response = content;
+                    break;
+                },
+                _ => {
+                    attempts += 1;
+                    if attempts == 3 {
+                        return Err("AI call failed after 3 attempts".into());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                }
+            }
+        }
+
+        let response = response.trim();
+
+        if response.starts_with("[COMPLETE]") {
+            let reply_msg = response.trim_start_matches("[COMPLETE]").trim().to_string();
+            let combined_input = user_messages.iter().map(|m| {
+                let mut text = m.content.clone();
+                if let Some(url) = &m.image_url {
+                    text.push_str(&format!("\nImage provided: {}", url));
+                }
+                text
+            }).collect::<Vec<String>>().join("\n");
+
+            let intake_data = self.process_intake(&combined_input).await?;
+
+            Ok(ChatResponse {
+                is_complete: true,
+                reply: if reply_msg.is_empty() { "Give me a minute... I'm building your business.".to_string() } else { reply_msg },
+                intake_data: Some(intake_data),
+            })
+        } else {
+            Ok(ChatResponse {
+                is_complete: false,
+                reply: response.to_string(),
+                intake_data: None,
+            })
+        }
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
