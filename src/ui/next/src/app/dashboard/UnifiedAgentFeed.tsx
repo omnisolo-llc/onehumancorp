@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 
@@ -60,6 +60,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
   const [triageLoading, setTriageLoading] = useState(true);
   const [triageError, setTriageError] = useState("");
+  const [processingApprovals, setProcessingApprovals] = useState<Record<string, string>>({});
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(timeoutRefs.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -403,8 +412,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       return;
     }
 
-    // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
+    // Visual transition
+    setProcessingApprovals(prev => ({ ...prev, [id]: approved ? "APPROVED" : "DISMISSED" }));
+
+    // Wait for animation then Optimistic UI update
+    const timerId = setTimeout(() => {
+        setItems(prev => prev.filter(app => app.id !== id));
+        delete timeoutRefs.current[id];
+    }, 500);
+    timeoutRefs.current[id] = timerId;
 
     try {
       await submitDecision(id, approved);
@@ -609,10 +625,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
-                  Your agents are currently monitoring the business. While you're here, why not help us grow?
-                </p>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up! Here's a quick summary of yesterday's sales...</h3>
                 <div className="w-full max-w-md text-left">
                    <GrowthReferralWidget />
                 </div>
@@ -621,7 +634,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-500 border ${processingApprovals[approval.id] === 'APPROVED' ? 'border-green-500 scale-95' : 'border-transparent'}`}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -1084,6 +1097,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           Ask Agent to Adjust
                         </button>
                       </div>
+                      {editingItemId === approval.id && (
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {JSON.stringify(approval.proposed_action || approval.context_payload, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
@@ -1097,7 +1117,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
-                          onClick={() => {}}
+                          onClick={() => setEditingItemId(editingItemId === approval.id ? null : approval.id)}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit proposal"
                           data-testid="edit-proposal"
@@ -1113,6 +1133,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           Deny
                         </button>
                       </div>
+                      {editingItemId === approval.id && (
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {JSON.stringify(approval.proposed_action || approval.context_payload, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

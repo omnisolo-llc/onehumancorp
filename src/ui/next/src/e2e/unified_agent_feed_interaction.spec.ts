@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../../../e2e/fixtures';
 
 test.describe('Unified Agent Feed Interactive Flow', () => {
   test.use({ viewport: { width: 375, height: 812 } });
