@@ -41,16 +41,12 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
             btn.classList.remove('bg-gray-100', 'text-gray-800');
             btn.classList.add('bg-red-100', 'text-red-700');
 
-            let queue = [];
-            try {
-              queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-            } catch(e) {}
-            queue.push({
-                id: 'e2e-product-falafel',
-                type: 'inventory_toggle',
-                timestamp: new Date().toISOString()
+            window.__enqueueOfflineAction({
+              id: 'e2e-product-falafel',
+              type: 'inventory_toggle',
+              timestamp: Date.now(),
+              payload: null
             });
-            localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
         }
 
         let q = document.getElementById('queue-dashboard');

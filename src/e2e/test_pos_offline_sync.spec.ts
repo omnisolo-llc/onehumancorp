@@ -33,7 +33,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Assert the transaction was written to localStorage
     const queuedTxs = await memberPage.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+      return window.__getOfflineQueue ? window.__getOfflineQueue() : Promise.resolve([]);
     });
     expect(queuedTxs.length).toBeGreaterThan(0);
     expect(queuedTxs[0].amount_cents).toBe(5000);
@@ -50,13 +50,13 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.locator('text=Online').first()).toBeVisible();
 
     // Wait for the sync to complete and the local storage to be cleared
-    await memberPage.waitForFunction(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;
+    await memberPage.waitForFunction(async () => {
+        const q = window.__getOfflineQueue ? await window.__getOfflineQueue() : []; return q.length === 0;
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        return window.__getOfflineQueue ? window.__getOfflineQueue() : Promise.resolve([]);
     });
     expect(afterSyncTxs.length).toBe(0);
   });

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import StripeTerminalClient from './StripeTerminalClient';
+import { SyncManager } from '../../../lib/sync/SyncManager';
 import Link from 'next/link';
 
 // Offline storage helper for staff data
@@ -101,10 +102,9 @@ export default function TerminalPage() {
     const syncInterval = setInterval(async () => {
       if (navigator.onLine) {
         const events = OfflineStore.getEvents();
-        const posTransactions = OfflineStore.getPosTransactions();
 
-        if (events.length > 0 || posTransactions.length > 0) {
-          setSyncCount(events.length + posTransactions.length);
+        if (events.length > 0) {
+          setSyncCount(events.length);
           setSyncing(true);
           try {
             const syncTasks = [];
@@ -118,26 +118,6 @@ export default function TerminalPage() {
               );
             }
 
-            if (posTransactions.length > 0) {
-              const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
-              syncTasks.push(
-                fetch("/api/v1/payments/terminal/sync_offline", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
-                }).then(async (res) => {
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
-                      const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
-                      OfflineStore.setPosTransactions(failedTxs);
-                    } else {
-                      OfflineStore.clearPosTransactions();
-                    }
-                  }
-                })
-              );
-            }
             await Promise.all(syncTasks);
 
           } catch (e) {
@@ -219,7 +199,17 @@ export default function TerminalPage() {
         client_id: 'terminal_1',
         timestamp: new Date().toISOString()
       };
-      OfflineStore.addPosTransaction(tx);
+      import("../../../lib/sync/SyncManager").then(m => {
+        m.SyncManager.getInstance().enqueue({
+          id: tx.id,
+          type: "tap_to_pay",
+          payload: tx.payload,
+          timestamp: Date.now(),
+          amount: tx.amount_cents,
+          currency: tx.currency,
+          client_id: tx.client_id
+        });
+      });
       setOrderStatus(`${t('Payment Saved Locally (Offline)')} - ${converted.amount / 100} ${currency}`);
       setTimeout(() => setOrderStatus(''), 3000);
     } else {

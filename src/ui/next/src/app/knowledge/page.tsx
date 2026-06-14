@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { PageHeader } from "@/components/PageHeader";
+import { useTranslation } from "../../lib/localizationStore";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 export default function KnowledgePage() {
   const { t } = useTranslation();

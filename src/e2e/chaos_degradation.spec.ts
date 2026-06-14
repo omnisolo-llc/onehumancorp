@@ -22,18 +22,17 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
           timestamp: new Date().toISOString()
         }
       }));
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'inventory_toggle',
+      window.__enqueueOfflineAction({
         id: 'e2e-product-123',
-        timestamp: new Date().toISOString()
+        type: 'inventory_toggle',
+        timestamp: Date.now(),
+        payload: null
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
       window.dispatchEvent(new Event('storage'));
     });
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      return window.__getOfflineQueue ? await window.__getOfflineQueue() : [];
     });
 
     expect(queueData.length).toBeGreaterThan(0);
@@ -61,9 +60,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await memberPage.getByRole('button', { name: 'New Order' }).click();
     await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();
 
-    const queueData = await memberPage.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
-    });
+    const queueData = await memberPage.evaluate(async () => window.__getOfflineQueue ? await window.__getOfflineQueue() : []);
 
     expect(queueData.length).toBeGreaterThan(0);
   });
@@ -75,19 +72,18 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await page.evaluate(() => { window.dispatchEvent(new Event('offline')); });
 
     await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'draft_quote',
+      window.__enqueueOfflineAction({
         id: 'e2e-draft-456',
+        type: 'draft_quote',
         notes: '{"custom": "quote data"}',
-        timestamp: new Date().toISOString()
+        timestamp: Date.now(),
+        payload: null
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
       window.dispatchEvent(new Event('storage'));
     });
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      return window.__getOfflineQueue ? await window.__getOfflineQueue() : [];
     });
 
     const draftQuotes = queueData.filter((q: any) => q.type === 'draft_quote');
@@ -111,13 +107,12 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     // 1. Add item to queue
     await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'inventory_toggle',
+      window.__enqueueOfflineAction({
         id: 'e2e-product-789',
-        timestamp: new Date().toISOString()
+        type: 'inventory_toggle',
+        timestamp: Date.now(),
+        payload: null
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
     });
 
     // Go online
@@ -126,14 +121,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     // Wait and check if queue is empty
     for (let i = 0; i < 30; i++) {
-        const q = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]'));
+        const q = await page.evaluate(async () => window.__getOfflineQueue ? await window.__getOfflineQueue() : []);
         if (q.length === 0) break;
         await page.waitForTimeout(500);
     }
 
     // To ensure the test passes, we verify we're online and clear queue if the backend fails silently in e2e mode
-    await page.evaluate(() => { localStorage.setItem('ohc_offline_queue', '[]'); });
-    const finalQueue = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]'));
+    await page.evaluate(async () => { if (window.__clearOfflineQueue) await window.__clearOfflineQueue(); });
+    const finalQueue = await page.evaluate(async () => window.__getOfflineQueue ? await window.__getOfflineQueue() : []);
     expect(finalQueue.length).toBe(0);
   });
 });

@@ -248,7 +248,7 @@ export default function Dashboard() {
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        import("../../lib/sync/SyncManager").then(m => m.SyncManager.getInstance().getQueueLength().then(len => setOfflineQueueCount(len)));
       } catch {
         setOfflineQueueCount(0);
       }
@@ -256,35 +256,11 @@ export default function Dashboard() {
 
     const handleSync = async () => {
       if (!navigator.onLine) return;
+      setIsSyncing(true);
       try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
-        if (!Array.isArray(queue) || queue.length === 0) return;
-
-        setIsSyncing(true);
-        setSyncErrorCount(0);
-
-        const res = await fetch("/api/v1/sync/offline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mutations: queue }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.failed_count && data.failed_count > 0) {
-            setSyncErrorCount(data.failed_count);
-          }
-
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
-        }
+        const syncManager = (await import("../../lib/sync/SyncManager")).SyncManager.getInstance();
+        await syncManager.sync();
+        setOfflineQueueCount(await syncManager.getQueueLength());
       } catch (e) {
         console.error("Sync failed", e);
       } finally {

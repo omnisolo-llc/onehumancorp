@@ -113,7 +113,9 @@ export default function FieldOpsJobsPage() {
       SyncManager.getInstance().enqueue({
         id: `mutation-${Date.now()}`,
         type: 'draft_quote',
-        notes: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`
+        notes: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`,
+        payload: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`,
+        timestamp: Date.now()
       });
     }
   };
