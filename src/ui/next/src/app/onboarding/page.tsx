@@ -380,13 +380,18 @@ export default function OnboardingWizard() {
         setFirstProductPrice(intakeData.initial_products?.[0]?.price || "0.00");
         setLocation(intakeData.location || "");
         setTargetAudience(intakeData.target_audience || "");
-
-        // Let the normal handleStartOnboarding function take over if admin details are missing
+        // Automatically generate admin credentials if missing for zero-click flow
+        let finalEmail = adminEmail;
+        let finalPassword = adminPassword;
         if (!adminEmail.trim() || !adminPassword.trim()) {
-          setStep(3); syncStateToBackend({ step: 3 });
-          setIsLoading(false);
-          return;
+          const generatedEmail = `admin@${crypto.randomUUID().substring(0, 6)}.ohc.local`;
+          const generatedPassword = `Auto${crypto.randomUUID().substring(0, 8)}!`;
+          setAdminEmail(generatedEmail);
+          setAdminPassword(generatedPassword);
+          finalEmail = generatedEmail;
+          finalPassword = generatedPassword;
         }
+
 
         const startRes = await fetchWithRetry(`${backendUrl}/api/onboarding/start`, {
           method: 'POST',
@@ -401,9 +406,9 @@ export default function OnboardingWizard() {
             company_description: newHistory.map(m => m.content).join(" "),
             selling_categories: intakeData.categories || ["physical"],
             payment_pref: "online",
-            admin_email: adminEmail,
+            admin_email: finalEmail,
             admin_name: adminName || intakeData.business_name || "Admin",
-            admin_password: adminPassword,
+            admin_password: finalPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
             first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
@@ -727,21 +732,27 @@ export default function OnboardingWizard() {
                         setBusinessType(inferredBusinessType);
                         setFirstProductName(inferredProductName);
                         setFirstProductPrice(inferredProductPrice);
-
+                        // Automatically generate admin credentials if missing for zero-click flow
+                        let finalEmail = adminEmail;
+                        let finalPassword = adminPassword;
                         if (!adminEmail.trim() || !adminPassword.trim()) {
-                          setStep(3); syncStateToBackend({ step: 3 });
-                          setIsLoading(false);
-                          return;
+                          const generatedEmail = `admin@${crypto.randomUUID().substring(0, 6)}.ohc.local`;
+                          const generatedPassword = `Auto${crypto.randomUUID().substring(0, 8)}!`;
+                          setAdminEmail(generatedEmail);
+                          setAdminPassword(generatedPassword);
+                          finalEmail = generatedEmail;
+                          finalPassword = generatedPassword;
                         }
+
 
                         const startRes = await fetch('/api/onboarding/start', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
                           body: JSON.stringify({
                             company_name: inferredBusinessName,
-                            admin_email: adminEmail,
+                            admin_email: finalEmail,
                             admin_name: adminName || 'Admin',
-                            admin_password: adminPassword,
+                            admin_password: finalPassword,
                             business_type: inferredBusinessType,
                             company_description: bio,
                             selling_categories: data.categories || ["physical"],
@@ -1437,6 +1448,16 @@ export default function OnboardingWizard() {
                       <span className="text-[#0066FF] font-semibold">{generateSubdomain(businessName)}</span>
                    </div>
                 </div>
+                {adminEmail.includes('.ohc.local') && (
+                  <div className="p-3 glassmorphism rounded-[8px] flex flex-col items-center mb-6 border border-[#34C759]/30">
+                     <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2 text-[#34C759]">Auto-Generated Admin Credentials</p>
+                     <div className="flex flex-col items-center gap-1 text-sm">
+                        <div><span className="text-gray-500 dark:text-[#A1A1A6]">Email:</span> <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{adminEmail}</span></div>
+                        <div><span className="text-gray-500 dark:text-[#A1A1A6]">Password:</span> <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{adminPassword}</span></div>
+                     </div>
+                  </div>
+                )}
+
 
                 <a
                   href="/assistant"
