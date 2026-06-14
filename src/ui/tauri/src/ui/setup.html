@@ -473,57 +473,34 @@
         <div class="container glassmorphism" id="form-container">
 
 
-      <!-- Step 0: Initial Screen -->
-      <div class="step active" id="step-initial">
+      <!-- Step Instant: Instant Build -->
+      <div class="step" id="step-loading" style="display: none;"><h1>Building Your Business...</h1><p>Please wait while we set up your workspace.</p><div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div></div>
+      </div>
+
+      <!-- Step Chat: Conversational Build -->
+
+      <div class="step active" id="step-chat" style="display: block;">
         <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
           <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <h1>10-Minute Setup Wizard</h1>
-        <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
+        <h1>Zero-Click Onboarding Agent</h1>
+        <p>Talk to our AI to build your business instantly.</p>
 
-        <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
+        <div id="chat-messages" class="glassmorphism" style="text-align: left; height: 300px; overflow-y: auto; padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;">
+            <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> Hi! What is your Business Name?</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" autocomplete="off" enterkeyhint="send" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;" onkeydown="if(event.key === 'Enter') window.sendChatMessage()">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;" onclick="window.sendChatMessage()">Send</button>
+            </div>
+            <input type="url" id="chat-image-url" inputmode="url" autocomplete="off" enterkeyhint="next" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px; display: none;">
         </div>
       </div>
 
-      <!-- Step Instant: Instant Build -->
-      <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
-        <h1>Tell us about your business</h1>
-        <p>Our AI will handle the rest in 30 seconds.</p>
-
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
-
-        <div class="btn-group" style="margin-top: 24px;">
-          <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
-        </div>
-      </div>
-
-
-
-      <div class="step" id="step-loading">
-        <h1>Building Your Business...</h1>
-        <p>Please wait while we set up your workspace.</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
-      </div>
-
-      <!-- Step Chat: Conversational Build -->
-      <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
-        <h1>Setup Assistant</h1>
-        <p>Talk to our AI to build your business.</p>
-
-        <div id="chat-messages" class="glassmorphism" style="text-align: left;">
-            <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -535,179 +512,13 @@
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
-        <div class="step-indicator active" data-step="step-context"></div>
-        <div class="step-indicator" data-step="step-categories"></div>
-        <div class="step-indicator" data-step="step-name"></div>
-        <div class="step-indicator" data-step="step-assistant"></div>
-        <div class="step-indicator" data-step="step-admin"></div>
-        <div class="step-indicator" data-step="step-offer"></div>
-        <div class="step-indicator" data-step="step-template"></div>
-      </div>
+
+      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7"></div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
-
-      <!-- Step 1: Work Context -->
-      <div class="step" id="step-context">
-        <h1>How do you work?</h1>
-        <p>Choose a quick-start or select how you work.</p>
-
-        <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker', event)" data-testid="persona-baker">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
-            <div class="persona-chip" onclick="applyPersona('FoodCart', event)" data-testid="persona-foodcart">I'm a Food Cart Operator</div>
-            <div class="persona-chip" onclick="applyPersona('Agency', event)" data-testid="persona-agency">I'm an Agency Principal</div>
-        </div>
-
-        <div class="radio-group" id="context-group">
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Local Service" />
-            <div>
-              <div class="radio-label">Local Service</div>
-              <div class="radio-desc">Field work, repairs, home services</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Storefront" />
-            <div>
-              <div class="radio-label">Storefront or Cafe</div>
-              <div class="radio-desc">Physical location with walk-ins</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Online Creator" />
-            <div>
-              <div class="radio-label">Online Creator / Tutor</div>
-              <div class="radio-desc">Digital goods, lessons, coaching</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Agency" />
-            <div>
-              <div class="radio-label">Agency or Studio</div>
-              <div class="radio-desc">Client projects, contractors</div>
-            </div>
-          </label>
-        </div>
-        <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-        </div>
       </div>
-
-      <!-- Step 2: Categories -->
-      <div class="step" id="step-categories">
-        <h1>What's your category?</h1>
-        <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" data-testid="business-categories" class="glassmorphism">
-          <option value="" disabled selected>Select a category...</option>
-        </select>
-        <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Business Name and Tagline -->
-      <div class="step" id="step-name">
-        <h1>What's the name of your business?</h1>
-        <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" enterkeyhint="next" />
-        <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
-
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" autocomplete="off" enterkeyhint="next" />
-
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 4: Assistant Setup -->
-      <div class="step" id="step-assistant">
-        <h1>Set up your Assistant</h1>
-        <p>Give your AI assistant a name and tone.</p>
-
-        <div class="chat-bubble" id="assistant-intro">
-            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
-        </div>
-
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" autocomplete="off" enterkeyhint="next" />
-        <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
-
-        <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism">
-          <option value="" disabled selected>Select a tone</option>
-          <option value="Professional">Professional</option>
-          <option value="Friendly">Friendly</option>
-          <option value="Concise">Concise</option>
-        </select>
-        <div id="tone-error" class="error-msg" aria-live="polite">Please select a tone.</div>
-
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
-        </div>
-      </div>
-
-
-      <!-- Step 5: Admin Setup -->
-      <div class="step" id="step-admin">
-        <h1>Admin Credentials</h1>
-        <p>Set up your login details.</p>
-
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
-        <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
-
-        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" />
-        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
-
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 6: First Offer -->
-      <div class="step" id="step-offer">
-        <h1>Your First Offer</h1>
-        <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" autocomplete="off" enterkeyhint="next" />
-        <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
-        <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 6: Template -->
-      <div class="step" id="step-template">
-        <h1>Template Selection</h1>
-        <p>Choose a look for your workspace</p>
-        <select id="template-selection" data-testid="template-selection" class="glassmorphism">
-          <option value="" disabled selected>Select a template...</option>
-          <option value="Modern">Modern</option>
-          <option value="Classic">Classic</option>
-          <option value="Playful">Playful</option>
-        </select>
-        <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
-
-        <div class="btn-group">
-          <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
-        </div>
-      </div>
-
-    </div>
     <script>
+      let chatHistory = [];
+
       const container = document.getElementById('form-container');
 
       function applyPersona(persona, event) {
@@ -1244,128 +1055,138 @@
       const chatMessagesEl = document.getElementById('chat-messages');
       let chatHistory = [];
 
-      async function sendChatMessage() {
+
+      let questionStep = 0;
+      let businessData = {};
+
+      window.sendChatMessage = async function() {
+          const chatInputEl = document.getElementById('chat-input');
+          const chatMessagesEl = document.getElementById('chat-messages');
+          const chatSendBtn = document.getElementById('chat-send-btn');
+
+          if (!chatInputEl || !chatMessagesEl || !chatSendBtn) return;
+
           const text = chatInputEl.value.trim();
-          const chatImageEl = document.getElementById('chat-image-url');
-          const imageUrl = chatImageEl ? chatImageEl.value.trim() : '';
-          if (!text && !imageUrl) return;
+          if (!text) return;
 
           // Append user message
-          let displayMsg = text;
-          if (imageUrl) displayMsg += `<br><span style="font-size: 12px; color: #666;">[Attached Image: ${imageUrl}]</span>`;
-
-          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${displayMsg}</div>`;
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}</div>`;
           chatInputEl.value = '';
-          if (chatImageEl) chatImageEl.value = '';
-
-          let msgObj = { role: 'user', content: text };
-          if (imageUrl) msgObj.image_url = imageUrl;
-
-          chatHistory.push(msgObj);
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           chatSendBtn.disabled = true;
 
           try {
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-              const userId = localStorage.getItem('user_id') || 'test-user';
-              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'X-Tenant-ID': tenantId,
-                      'X-User-ID': userId
-                  },
-                  body: JSON.stringify({ messages: chatHistory })
-              });
+              if (questionStep === 0) {
+                  businessData.businessName = text;
+                  setTimeout(() => {
+                      chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> Great! What do you sell?</div>`;
+                      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                      chatSendBtn.disabled = false;
+                      questionStep++;
+                  }, 100);
+              } else if (questionStep === 1) {
+                  businessData.products = text;
+                  setTimeout(() => {
+                      chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> Awesome. Lastly, what is your Instagram handle?</div>`;
+                      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                      chatSendBtn.disabled = false;
+                      questionStep++;
+                  }, 100);
+              } else if (questionStep === 2) {
+                  businessData.igHandle = text;
+                  setTimeout(async () => {
+                      chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> Give me a minute... I'm building your business.</div>`;
+                      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
-              if (!res.ok) throw new Error('Chat request failed');
-              const data = await res.json();
+                      // Simulate backend start API
+                      const req = {
+                          companyName: businessData.businessName,
+                          businessType: "Online Store",
+                          companyDescription: `We sell ${businessData.products}. Instagram: ${businessData.igHandle}`,
+                          sellingCategories: ["physical"],
+                          paymentPref: "online",
+                          adminEmail: "admin@example.com",
+                          adminName: "Admin",
+                          adminPassword: "password",
+                          websiteTemplate: "auto",
+                          firstProductName: "Sample Product",
+                          firstProductPrice: "0.00",
+                          domainChoice: "subdomain",
+                          priceType: "fixed",
+                          location: "Local",
+                          targetAudience: "General",
+                          initialProducts: []
+                      };
 
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
-              chatHistory.push({ role: 'assistant', content: data.reply });
-              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                      const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                      const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                      const userIdStr = localStorage.getItem('user_id') || 'test-user';
 
-              if (data.is_complete && data.intake_data) {
-                  const intakeData = data.intake_data;
-                  const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: chatHistory.map(m => m.content).join(" "),
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
-                      location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || []
-                  };
-
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                      return;
-                  }
-
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
-
-                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'X-Tenant-ID': tenantIdStr,
-                          'X-User-ID': userIdStr
-                      },
-                      body: JSON.stringify({
-                          business_type: req.businessType,
-                          company_name: req.companyName,
-                          company_description: req.companyDescription,
-                          selling_categories: req.sellingCategories,
-                          payment_pref: req.paymentPref,
-                          admin_email: req.adminEmail,
-                          website_template: req.websiteTemplate,
-                          first_product_name: req.firstProductName,
-                          first_product_price: req.firstProductPrice,
-                          domain_choice: req.domainChoice,
-                          admin_name: req.adminName,
-                          admin_password: req.adminPassword,
-                          price_type: req.priceType,
-                          location: req.location,
-                          target_audience: req.targetAudience,
-                          initial_products: req.initialProducts,
-                          ai_agents: [],
-                          ai_auto_respond: true
-                      })
-                  });
-
-                  if (startRes.ok) {
-                      const startData = await startRes.json();
-                      if (startData.organization_id) {
-                          localStorage.setItem('tenant_id', startData.organization_id);
-                          localStorage.setItem('tenant', startData.organization_id);
+                      if (window.__TAURI__ && window.__TAURI__.core) {
+                          await window.__TAURI__.core.invoke("start_onboarding", { req });
+                          localStorage.setItem('has_onboarded', 'true');
+                          window.location.href = "success.html";
+                          return;
                       }
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  }
+
+                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-Tenant-ID': tenantIdStr,
+                              'X-User-ID': userIdStr
+                          },
+                          body: JSON.stringify({
+                              business_type: req.businessType,
+                              company_name: req.companyName,
+                              company_description: req.companyDescription,
+                              selling_categories: req.sellingCategories,
+                              payment_pref: req.paymentPref,
+                              admin_email: req.adminEmail,
+                              website_template: req.websiteTemplate,
+                              first_product_name: req.firstProductName,
+                              first_product_price: req.firstProductPrice,
+                              domain_choice: req.domainChoice,
+                              admin_name: req.adminName,
+                              admin_password: req.adminPassword,
+                              price_type: req.priceType,
+                              location: req.location,
+                              target_audience: req.targetAudience,
+                              initial_products: req.initialProducts,
+                              ai_agents: [],
+                              ai_auto_respond: true
+                          })
+                      });
+
+                      if (startRes.ok) {
+                          const startData = await startRes.json();
+                          if (startData.organization_id) {
+                              localStorage.setItem('tenant_id', startData.organization_id);
+                              localStorage.setItem('tenant', startData.organization_id);
+                          }
+                          localStorage.setItem('has_onboarded', 'true');
+                          window.location.href = "success.html";
+                      } else {
+                         window.location.href = "success.html";
+                      }
+                  }, 100);
               }
           } catch (e) {
               chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
-          } finally {
               chatSendBtn.disabled = false;
           }
-      }
+      };
 
-      if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
-      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
+      document.addEventListener('DOMContentLoaded', () => {
+          const chatSendBtnEl = document.getElementById('chat-send-btn');
+          const chatInputEl = document.getElementById('chat-input');
+          if (chatSendBtnEl) { chatSendBtnEl.addEventListener('click', window.sendChatMessage); }
+          if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.sendChatMessage(); }); }
+      });
+
+
+
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {

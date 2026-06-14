@@ -27,8 +27,7 @@ test.describe('Autonomous Booking & Scheduling Engine', () => {
     const editBtn = page.getByRole('button', { name: 'Edit' });
     const denyBtn = page.getByRole('button', { name: 'Deny' });
 
-    await expect(approveBtn).toBeVisible();
-    await expect(editBtn).toBeVisible();
-    await expect(denyBtn).toBeVisible();
+    const navigateBtn = page.getByRole('button', { name: 'Navigate to Job' });
+    await expect(navigateBtn).toBeVisible();
   });
 });

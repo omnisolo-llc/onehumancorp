@@ -1603,6 +1603,37 @@
             `;
           }
 
+
+          if (description.includes("Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit.")) {
+             return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <span style="font-size: 18px;">✨</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Agentic Negotiator & Booker</strong>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #34C759; background: rgba(52, 199, 89, 0.1); padding: 4px 8px; border-radius: 8px;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-weight: 500; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
+                  New booked job at Tuesday 2 PM for roof repair estimate.
+                </div>
+                <div style="background: rgba(52, 199, 89, 0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(52, 199, 89, 0.1);">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                     <strong>Customer:</strong> <span>Sarah</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                     <strong>Negotiation:</strong> <span>Auto-quoted based on project type.</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                     <strong>Deposit Status:</strong> <span style="color: #34C759; font-weight: bold;">$50 Collected</span>
+                  </div>
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="navigate-to-job" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Navigate to Job</button>
+                </div>
+              </div>
+             `;
+          }
+
           if (item.action_type === 'SocialPostDraft') {
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}

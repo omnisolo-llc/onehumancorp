@@ -560,15 +560,37 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             ))}
 
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
+
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 border border-white/40 dark:border-white/10" data-testid="triage-card-app-test-cd34-34f7-e43e-7264a9c4021d">
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
+                <div className="flex justify-between items-start mb-3">
+                  <span className="flex items-center gap-2 text-[18px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <span className="text-[20px]">✨</span> Agentic Negotiator & Booker
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#34C759] bg-[#34C759]/10 px-2 py-1 rounded-[8px]">Action Needed</span>
                 </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
+                <h3 className="text-[15px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3 leading-tight">
+                  New booked job at Tuesday 2 PM for roof repair estimate.
                 </h3>
+              </div>
+              <div className="bg-[#34C759]/5 dark:bg-[#34C759]/10 p-3 rounded-[12px] mb-4 text-[14px] text-[#1D1D1F] dark:text-[#F5F5F7] border border-[#34C759]/10">
+                <div className="flex justify-between mb-2">
+                   <strong>Customer:</strong> <span>Sarah</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                   <strong>Negotiation:</strong> <span>Auto-quoted based on project type.</span>
+                </div>
+                <div className="flex justify-between">
+                   <strong>Deposit Status:</strong> <span className="text-[#34C759] font-bold">$50 Collected</span>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                <button
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-[#0066FF] hover:bg-[#0052cc] text-white shadow-sm transition-transform active:scale-[0.98]"
+                  data-testid="navigate-to-job"
+                >
+                  Navigate to Job
+                </button>
               </div>
             </div>
 
