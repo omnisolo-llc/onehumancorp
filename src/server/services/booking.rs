@@ -306,6 +306,7 @@ mod tests {
 
     #[test]
     fn test_approve_quote() {
+        use chrono::Timelike;
         let tenant_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let amount = 15000;
@@ -321,7 +322,15 @@ mod tests {
         let (time_slot, stripe_link) = result.unwrap();
 
         assert_eq!(quote.status, "approved");
-        assert_eq!(quote.amount, 20000);
+
+        let mut expected_amount = 20000;
+        let now = Utc::now();
+        let start_time = now + chrono::Duration::days(1);
+        if start_time.hour() >= 17 && start_time.hour() <= 20 {
+            expected_amount = (expected_amount as f64 * 1.15) as i64;
+        }
+
+        assert_eq!(quote.amount, expected_amount);
         assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert!(time_slot.start_time < time_slot.end_time);
     }
