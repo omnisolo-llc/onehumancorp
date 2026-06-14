@@ -34,17 +34,6 @@ export default function SmartPricingPage() {
       localStorage.setItem('smartPricingPerishables', JSON.stringify(discountPerishables));
       localStorage.setItem('smartPricingSurge', JSON.stringify(surgePricing));
       localStorage.setItem('smartPricingMaxAdjustment', maxAdjustment.toString());
-
-      // Simulate real backend mutation loop silently if enabled
-      if (enabled) {
-         fetch('/api/agents/approvals/simulate-smart-pricing', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-              'Content-Type': 'application/json'
-            }
-         }).catch(() => { /* silent fail in local mode */ });
-      }
     }
   }, [enabled, discountPerishables, surgePricing, maxAdjustment]);
 

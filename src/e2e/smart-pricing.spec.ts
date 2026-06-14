@@ -5,33 +5,60 @@ test.describe('Smart Pricing Audit', () => {
     await page.goto('/smart-pricing');
   });
 
-  test('should display correctly with default values, enable smart pricing, and persist state', async ({ page }) => {
-    // Check main title
+  test('should display correctly with default values', async ({ page }) => {
     await expect(page.locator('h1').first()).toHaveText('Smart Pricing');
+    await expect(page.getByText('Let AI automatically adjust your prices')).toBeVisible();
+    await expect(page.getByText('Configuration')).not.toBeVisible();
+  });
 
-    // Enable smart pricing
+  test('should enable smart pricing and show configuration', async ({ page }) => {
     const enableToggle = page.getByTestId('enable-smart-pricing-toggle');
     await enableToggle.click();
-
-    // Verify configuration options show up
     await expect(page.getByText('Configuration')).toBeVisible();
-    await expect(page.getByText('Auto-discount perishables 2 hours before closing')).toBeVisible();
+  });
 
-    // Toggle specific options
+  test('should toggle specific options like perishables and surge pricing', async ({ page }) => {
+    const enableToggle = page.getByTestId('enable-smart-pricing-toggle');
+    await enableToggle.click();
+    await expect(page.getByText('Configuration')).toBeVisible();
+
     const perishablesToggle = page.getByTestId('discount-perishables-toggle');
     await perishablesToggle.click();
 
-    // Change max bounds using slider
-    const slider = page.getByTestId('price-bounds-slider');
-    await slider.fill('40'); // set to 40%
+    const surgeToggle = page.getByTestId('surge-pricing-toggle');
+    await surgeToggle.click();
 
-    // Ensure the state persists by reloading the page
-    // await page.reload();
+    await expect(perishablesToggle).toHaveClass(/bg-\[#0066FF\]/);
+    await expect(surgeToggle).toHaveClass(/bg-\[#0066FF\]/);
+  });
 
-    // Check if configuration panel is still visible (meaning it's enabled)
+  test('should adjust maximum price bounds using slider', async ({ page }) => {
+    const enableToggle = page.getByTestId('enable-smart-pricing-toggle');
+    await enableToggle.click();
     await expect(page.getByText('Configuration')).toBeVisible();
 
-    // Check slider value is preserved
+    const slider = page.getByTestId('price-bounds-slider');
+    await slider.fill('40');
+
     await expect(slider).toHaveValue('40');
+    await expect(page.getByText('40%')).toBeVisible();
+  });
+
+  test('should not make any mock api network requests to simulate-smart-pricing', async ({ page }) => {
+    const requestFailed: string[] = [];
+    page.on('request', request => {
+      if (request.url().includes('simulate-smart-pricing')) {
+        requestFailed.push(request.url());
+      }
+    });
+
+    const enableToggle = page.getByTestId('enable-smart-pricing-toggle');
+    await enableToggle.click();
+    await expect(page.getByText('Configuration')).toBeVisible();
+
+    // wait briefly to ensure no request is fired in the background
+    await page.waitForTimeout(500);
+
+    expect(requestFailed).toHaveLength(0);
   });
 });
