@@ -10,6 +10,14 @@ pub enum PlanTier {
 }
 
 impl PlanTier {
+    pub fn name(&self) -> &'static str {
+        match self {
+            PlanTier::Free => "Free",
+            PlanTier::Starter => "Starter",
+            PlanTier::Pro => "Pro",
+            PlanTier::Business => "Business",
+        }
+    }
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
@@ -224,11 +232,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -244,11 +248,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -284,11 +284,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -331,11 +327,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit
                     )),
                 });
@@ -389,12 +381,7 @@ impl RedisRateLimiter {
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            _ => "Current",
-                        },
+                        tier.name(),
                         limit_mb
                     )),
                 });

@@ -498,7 +498,7 @@ async fn handle_trial_extension_claim(
     };
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
         .bind(parsed_uuid)
         .fetch_optional(&state.pool)
         .await
@@ -518,7 +518,7 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id::text = $1::text")
         .bind(parsed_uuid)
         .execute(&state.pool)
         .await
@@ -2197,7 +2197,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
+        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1::text, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 
@@ -2210,13 +2210,13 @@ mod tests {
         let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         assert!(res.0.success);
 
-        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id::text = $1::text")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
+        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
@@ -2619,12 +2619,13 @@ pub async fn handle_embed_widget(
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WrappedStats {
-    pub totalSales: String,
-    pub totalOrders: i64,
-    pub newCustomers: i64,
-    pub topProduct: String,
-    pub aiHoursSaved: i64,
+    pub total_sales: String,
+    pub total_orders: i64,
+    pub new_customers: i64,
+    pub top_product: String,
+    pub ai_hours_saved: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -2682,11 +2683,11 @@ async fn handle_wrapped(
         title: "Your Year in Review 🎉".to_string(),
         subtitle: "You crushed it this year! See your impact and share with your community.".to_string(),
         stats: WrappedStats {
-            totalSales: "$14,250".to_string(), // In a real app we'd aggregate order totals
-            totalOrders: total_orders,
-            newCustomers: new_customers,
-            topProduct: "Custom Service".to_string(),
-            aiHoursSaved: hours_saved,
+            total_sales: "$14,250".to_string(), // In a real app we'd aggregate order totals
+            total_orders: total_orders,
+            new_customers: new_customers,
+            top_product: "Custom Service".to_string(),
+            ai_hours_saved: hours_saved,
         },
         share_text: format!("I just reviewed my {} business stats on OHC and I'm blown away! Start growing your business on OHC:", year),
     };

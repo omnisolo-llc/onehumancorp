@@ -1357,13 +1357,6 @@ Your response:",
                 ("Distillery Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Distillery Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Food Truck" => vec![
-                ("Premium Food Truck Package", "Comprehensive service for your needs", 19999, "booking"),
-                ("Basic Food Truck Service", "Essential services to get you started", 9999, "booking"),
-                ("Food Truck Consultation", "Expert advice and planning", 4999, "booking"),
-                ("Food Truck Assessment", "Initial evaluation and report", 7500, "booking"),
-                ("Food Truck Starter Kit", "Everything you need in one bundle", 12000, "physical"),
-            ],
             "Pop-up Restaurant" => vec![
                 ("Premium Pop-up Restaurant Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Pop-up Restaurant Service", "Essential services to get you started", 9999, "booking"),

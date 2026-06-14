@@ -252,7 +252,7 @@ pub async fn my_plan_handler(
 
     let base_bill = tier.base_price();
     let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
-    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
+    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + tracker.get_storage_cost_cents(storage_used_bytes);
     let next_bill_estimated = total_cost_cents as i32;
 
     let resp = MyPlanResponse {

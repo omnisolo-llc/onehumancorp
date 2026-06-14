@@ -1311,7 +1311,7 @@ impl HubService for MyHubService {
 
         let base_bill = tier.base_price();
         let llm_cost_cents = self.hub.tracker().get_tenant_cost_cents(tenant_id);
-        let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
+        let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + self.hub.tracker().get_storage_cost_cents(storage_used_bytes);
         let next_bill_estimated = total_cost_cents;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
@@ -2511,6 +2511,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
 
+    // Start Daily Briefing Worker
+    let daily_briefing_worker = crate::workers::daily_briefing_worker::DailyBriefingWorker::new(db.clone());
+    daily_briefing_worker.start();
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
@@ -2537,6 +2541,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Ensure local database permissions are secure in standalone mode
     if is_standalone_runtime() {
+        // Clean up unbounded temp files on startup to prevent unbounded growth synchronously
+        let _ = std::fs::remove_dir_all(std::env::temp_dir().join("ohc"));
+
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -5218,6 +5225,32 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Decision Assistant")
+                                    .bind("Normal")
+                                    .bind("Morning Briefing ready: \n - Sales are up\n - New orders\n - New messages")
+                                    .bind("pending")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("action-test-db")
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("Review")
+                                    .bind("Draft new auto-reply")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
                                         "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                                     )
                                     .bind("prod_demo1")
@@ -5303,6 +5336,32 @@ async fn create_ui_bom_item_handler(
                                     .bind(tenant_id)
                                     .bind("My Local Business")
                                     .bind("free")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Decision Assistant")
+                                    .bind("Normal")
+                                    .bind("Morning Briefing ready: \n - Sales are up\n - New orders\n - New messages")
+                                    .bind("pending")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("action-test-db")
+                                    .bind("triage-test-db")
+                                    .bind(tenant_id)
+                                    .bind("Review")
+                                    .bind("Draft new auto-reply")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
@@ -5554,6 +5613,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
+        }))
+        .route("/api/ui/quote.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/quote.html"))
         }))
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))

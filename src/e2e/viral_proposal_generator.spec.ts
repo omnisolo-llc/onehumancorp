@@ -55,7 +55,7 @@ test.describe('Viral Proposal Generator Loop', () => {
     await expect(ctaLink).toBeVisible();
 
     const onboardingHref = await ctaLink.getAttribute('href');
-    expect(onboardingHref).toContain('/onboarding?ref=');
+    expect(onboardingHref).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=');
     expect(onboardingHref).toContain('source=proposal_generator');
   });
 });

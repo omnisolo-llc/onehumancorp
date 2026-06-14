@@ -291,7 +291,7 @@ export default function OrderDetailsPage() {
       </main>
 
       <div className="mt-8 text-center pb-8">
-        <a href="/onboarding?ref=my-store" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
+        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=my-store" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

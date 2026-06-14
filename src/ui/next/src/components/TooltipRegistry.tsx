@@ -102,8 +102,12 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
 
   // Mobile support: Long press
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleTouchStart = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+
     timerRef.current = setTimeout(() => {
       handleMouseEnter();
     }, 500); // 500ms for long press
@@ -111,15 +115,17 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
 
   const handleTouchEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    const hideTimer = setTimeout(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+
+    hideTimerRef.current = setTimeout(() => {
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
-    timerRef.current = hideTimer;
   };
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
 
@@ -133,7 +139,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
       id={id}
-      className="inline-block relative cursor-help"
+      className="inline-block relative cursor-help select-none touch-callout-none"
     >
       {children}
     </div>
