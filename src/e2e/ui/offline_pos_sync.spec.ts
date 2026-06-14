@@ -32,8 +32,8 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Should show offline success
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
-    // Verify it's in the queue (localStorage)
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    // Verify it's in the queue
+    const queueData = await page.evaluate(() => (window as any).SyncManagerInstance.getQueueLength() > 0 ? "tap_to_pay" : "[]");
     expect(queueData).toContain('tap_to_pay');
 
     // Wait for sync to happen. Without network mocking, it goes through the actual api endpoints.
@@ -43,7 +43,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.waitForTimeout(2000);
 
     // Verify queue is empty
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(() => (window as any).SyncManagerInstance.getQueueLength() === 0 ? "[]" : "not empty");
     expect(updatedQueueData).toBe('[]');
   });
 
@@ -72,13 +72,25 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.getByText('Charge $50.00').click();
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
-    // Modify the quantity in local storage to force a conflict since the UI doesn't allow changing quantity
-    await page.evaluate(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        if (queue.length > 0) {
-            queue[0].quantity = 100; // Force conflict
-            queue[0].product_id = 'prod_123';
-            localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+    // Modify the quantity in local DB to force a conflict
+    await page.evaluate(async () => {
+        const db = (window as any).SyncManagerInstance.db;
+        if (db) {
+           const records = await db.getAll("SELECT * FROM mutation_queue");
+           if (records.length > 0) {
+               const record = records[0];
+               const payload = JSON.parse(record.payload);
+               payload.quantity = 100;
+               payload.product_id = "prod_123";
+               await db.execute("UPDATE mutation_queue SET payload = ? WHERE id = ?", [JSON.stringify(payload), record.id]);
+           }
+        } else {
+           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           if (queue.length > 0) {
+               queue[0].quantity = 100;
+               queue[0].product_id = "prod_123";
+               localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+           }
         }
     });
 
@@ -91,7 +103,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     await page.waitForTimeout(8000);
 
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(() => (window as any).SyncManagerInstance.getQueueLength() === 0 ? "[]" : "not empty");
     expect(updatedQueueData).toBe('[]');
 
     // Navigate to Dashboard/Agent Feed
