@@ -205,7 +205,7 @@ impl Store {
                     // Ensure permissions are strictly 0o600
                     use std::os::unix::fs::PermissionsExt;
                     if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                        if perms.mode() & 0o777 != 0o600 {
+                        if (perms.mode() & 0o777) != 0o600 {
                             perms.set_mode(0o600);
                             let _ = std::fs::set_permissions(&secret_path, perms);
                         }
