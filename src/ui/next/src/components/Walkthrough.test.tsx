@@ -4,10 +4,24 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { InteractiveWalkthrough } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 describe('Walkthrough Component', () => {
   let mockGetElementById: any;
 
   beforeEach(() => {
+    global.ResizeObserver = ResizeObserverMock;
+    global.IntersectionObserver = IntersectionObserverMock as any;
     mockGetElementById = vi.spyOn(document, 'getElementById').mockImplementation((id) => {
       if (id === 'test-target') {
         const div = document.createElement('div');
