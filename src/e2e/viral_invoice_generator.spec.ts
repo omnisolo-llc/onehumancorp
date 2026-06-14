@@ -52,8 +52,11 @@ test.describe('Viral Invoice Generator Loop', () => {
     const poweredByLink = page.locator('a', { hasText: 'Powered by OHC' }).last();
     await expect(poweredByLink).toBeVisible();
 
-    const onboardingHref = await poweredByLink.getAttribute('href');
-    expect(onboardingHref).toContain('/onboarding?ref=');
-    expect(onboardingHref).toContain('source=footer_widget');
+    const ctaLink = page.getByRole('link', { name: /Create your own professional invoices/i });
+    await expect(ctaLink).toBeVisible();
+
+    const onboardingHref = await ctaLink.getAttribute('href');
+    expect(onboardingHref).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=');
+    expect(onboardingHref).toContain('source=invoice_generator');
   });
 });
