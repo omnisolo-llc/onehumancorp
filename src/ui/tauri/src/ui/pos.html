@@ -510,30 +510,106 @@
         currentStepIndex = 0;
     }
 
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-        currentSteps = steps;
-        currentStepIndex = 0;
+        // Walkthroughs
+    if (!window.startWalkthrough) {
+            // Walkthroughs
+    if (!window.startWalkthrough) {
+        window.startWalkthrough = function(steps) {
+            if (!steps || steps.length === 0) return;
 
-        endWalkthrough();
+            let currentStepIndex = 0;
+            let currentSteps = steps;
 
-        overlayEl = document.createElement('div');
-        overlayEl.className = 'ohc-walkthrough-overlay';
+            const overlayEl = document.createElement('div');
+            overlayEl.className = 'ohc-walkthrough-overlay';
+            document.body.appendChild(overlayEl);
 
-        highlightEl = document.createElement('div');
-        highlightEl.className = 'ohc-walkthrough-highlight';
+            const highlightEl = document.createElement('div');
+            highlightEl.className = 'ohc-walkthrough-highlight';
+            document.body.appendChild(highlightEl);
 
-        bubbleEl = document.createElement('div');
-        bubbleEl.className = 'ohc-walkthrough-bubble';
+            const bubbleEl = document.createElement('div');
+            bubbleEl.className = 'ohc-walkthrough-bubble';
+            document.body.appendChild(bubbleEl);
 
-        document.body.appendChild(overlayEl);
-        document.body.appendChild(highlightEl);
-        document.body.appendChild(bubbleEl);
+            function endWalkthrough() {
+                if (overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+                if (highlightEl.parentNode) highlightEl.parentNode.removeChild(highlightEl);
+                if (bubbleEl.parentNode) bubbleEl.parentNode.removeChild(bubbleEl);
+                window.removeEventListener('resize', positionHighlight);
+                window.removeEventListener('scroll', positionHighlight);
+            }
 
-        renderStep();
-    };
+            function positionHighlight() {
+                const step = currentSteps[currentStepIndex];
+                const target = document.querySelector(step.selector || step.targetId);
 
-})();
+                if (!target) {
+                    console.warn('Walkthrough target not found:', step.selector);
+                    endWalkthrough();
+                    return;
+                }
+
+                const rect = target.getBoundingClientRect();
+
+                highlightEl.style.top = `${rect.top - 4}px`;
+                highlightEl.style.left = `${rect.left - 4}px`;
+                highlightEl.style.width = `${rect.width + 8}px`;
+                highlightEl.style.height = `${rect.height + 8}px`;
+
+                bubbleEl.innerHTML = `
+                    <button class="ohc-walkthrough-close" aria-label="Close walkthrough">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                    <h4 class="ohc-walkthrough-title">${step.title}</h4>
+                    <p class="ohc-walkthrough-text">${step.text || step.content}</p>
+                    <div class="ohc-walkthrough-controls">
+                        ${currentStepIndex > 0 ? '<button class="ohc-walkthrough-btn-secondary prev-btn">Back</button>' : '<div></div>'}
+                        <button class="ohc-walkthrough-btn next-btn">${currentStepIndex === currentSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                `;
+
+                bubbleEl.querySelector('.ohc-walkthrough-close').onclick = endWalkthrough;
+
+                if (currentStepIndex > 0) {
+                    bubbleEl.querySelector('.prev-btn').onclick = () => {
+                        currentStepIndex--;
+                        positionHighlight();
+                    };
+                }
+
+                bubbleEl.querySelector('.next-btn').onclick = () => {
+                    if (currentStepIndex === currentSteps.length - 1) {
+                        endWalkthrough();
+                    } else {
+                        currentStepIndex++;
+                        positionHighlight();
+                    }
+                };
+
+                let top = rect.bottom + 16;
+                let left = rect.left + (rect.width / 2) - 150;
+
+                if (top + 200 > window.innerHeight) {
+                    top = rect.top - bubbleEl.offsetHeight - 16;
+                }
+
+                if (left < 16) left = 16;
+                if (left + 300 > window.innerWidth - 16) left = window.innerWidth - 316;
+
+                bubbleEl.style.top = `${top}px`;
+                bubbleEl.style.left = `${left}px`;
+
+                requestAnimationFrame(() => {
+                    bubbleEl.classList.add('visible');
+                });
+            }
+
+            positionHighlight();
+            window.addEventListener('resize', positionHighlight);
+            window.addEventListener('scroll', positionHighlight);
+        };
+    })();
 </script>
 
 <script>
@@ -1166,60 +1242,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
+        // Walkthroughs
+    if (!window.startWalkthrough) {
+            // Walkthroughs
+    if (!window.startWalkthrough) {
+        window.startWalkthrough = function(steps) {
+            if (!steps || steps.length === 0) return;
 
-        let currentStep = 0;
+            let currentStepIndex = 0;
+            let currentSteps = steps;
 
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
+            const overlayEl = document.createElement('div');
+            overlayEl.className = 'ohc-walkthrough-overlay';
+            document.body.appendChild(overlayEl);
 
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.className = 'ohc-walkthrough-bubble';
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
+            const highlightEl = document.createElement('div');
+            highlightEl.className = 'ohc-walkthrough-highlight';
+            document.body.appendChild(highlightEl);
 
-        function renderStep() {
-            const step = steps[currentStep];
+            const bubbleEl = document.createElement('div');
+            bubbleEl.className = 'ohc-walkthrough-bubble';
+            document.body.appendChild(bubbleEl);
 
-            // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-            });
+            function endWalkthrough() {
+                if (overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+                if (highlightEl.parentNode) highlightEl.parentNode.removeChild(highlightEl);
+                if (bubbleEl.parentNode) bubbleEl.parentNode.removeChild(bubbleEl);
+                window.removeEventListener('resize', positionHighlight);
+                window.removeEventListener('scroll', positionHighlight);
+            }
 
-            // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+            function positionHighlight() {
+                const step = currentSteps[currentStepIndex];
+                const target = document.querySelector(step.selector || step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
+                if (!target) {
+                    console.warn('Walkthrough target not found:', step.selector);
+                    endWalkthrough();
+                    return;
                 }
-            };
+
+                const rect = target.getBoundingClientRect();
+
+                highlightEl.style.top = `${rect.top - 4}px`;
+                highlightEl.style.left = `${rect.left - 4}px`;
+                highlightEl.style.width = `${rect.width + 8}px`;
+                highlightEl.style.height = `${rect.height + 8}px`;
+
+                bubbleEl.innerHTML = `
+                    <button class="ohc-walkthrough-close" aria-label="Close walkthrough">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                    <h4 class="ohc-walkthrough-title">${step.title}</h4>
+                    <p class="ohc-walkthrough-text">${step.text || step.content}</p>
+                    <div class="ohc-walkthrough-controls">
+                        ${currentStepIndex > 0 ? '<button class="ohc-walkthrough-btn-secondary prev-btn">Back</button>' : '<div></div>'}
+                        <button class="ohc-walkthrough-btn next-btn">${currentStepIndex === currentSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                `;
+
+                bubbleEl.querySelector('.ohc-walkthrough-close').onclick = endWalkthrough;
+
+                if (currentStepIndex > 0) {
+                    bubbleEl.querySelector('.prev-btn').onclick = () => {
+                        currentStepIndex--;
+                        positionHighlight();
+                    };
+                }
+
+                bubbleEl.querySelector('.next-btn').onclick = () => {
+                    if (currentStepIndex === currentSteps.length - 1) {
+                        endWalkthrough();
+                    } else {
+                        currentStepIndex++;
+                        positionHighlight();
+                    }
+                };
+
+                let top = rect.bottom + 16;
+                let left = rect.left + (rect.width / 2) - 150;
+
+                if (top + 200 > window.innerHeight) {
+                    top = rect.top - bubbleEl.offsetHeight - 16;
+                }
+
+                if (left < 16) left = 16;
+                if (left + 300 > window.innerWidth - 16) left = window.innerWidth - 316;
+
+                bubbleEl.style.top = `${top}px`;
+                bubbleEl.style.left = `${left}px`;
+
+                requestAnimationFrame(() => {
+                    bubbleEl.classList.add('visible');
+                });
+            }
+
+            positionHighlight();
+            window.addEventListener('resize', positionHighlight);
+            window.addEventListener('scroll', positionHighlight);
+        };
+    };
 
             if (target) {
                 target.classList.add('walkthrough-highlight');
@@ -1486,7 +1608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'ohc-floating-help-btn';
+    btn.id = 'help-center-nav-btn';
     btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
@@ -1687,56 +1809,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Walkthroughs
     if (!window.startWalkthrough) {
+            // Walkthroughs
+    if (!window.startWalkthrough) {
+            // Walkthroughs
+    if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
             if (!steps || steps.length === 0) return;
 
-            let currentStep = 0;
+            let currentStepIndex = 0;
+            let currentSteps = steps;
 
-            const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-            document.body.appendChild(overlay);
+            const overlayEl = document.createElement('div');
+            overlayEl.className = 'ohc-walkthrough-overlay';
+            document.body.appendChild(overlayEl);
 
-            const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-            document.body.appendChild(bubble);
+            const highlightEl = document.createElement('div');
+            highlightEl.className = 'ohc-walkthrough-highlight';
+            document.body.appendChild(highlightEl);
 
-            function renderStep() {
-                const step = steps[currentStep];
+            const bubbleEl = document.createElement('div');
+            bubbleEl.className = 'ohc-walkthrough-bubble';
+            document.body.appendChild(bubbleEl);
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
-                });
+            function endWalkthrough() {
+                if (overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+                if (highlightEl.parentNode) highlightEl.parentNode.removeChild(highlightEl);
+                if (bubbleEl.parentNode) bubbleEl.parentNode.removeChild(bubbleEl);
+                window.removeEventListener('resize', positionHighlight);
+                window.removeEventListener('scroll', positionHighlight);
+            }
 
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+            function positionHighlight() {
+                const step = currentSteps[currentStepIndex];
+                const target = document.querySelector(step.selector || step.targetId);
 
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                if (!target) {
+                    console.warn('Walkthrough target not found:', step.selector);
+                    endWalkthrough();
+                    return;
+                }
+
+                const rect = target.getBoundingClientRect();
+
+                highlightEl.style.top = `${rect.top - 4}px`;
+                highlightEl.style.left = `${rect.left - 4}px`;
+                highlightEl.style.width = `${rect.width + 8}px`;
+                highlightEl.style.height = `${rect.height + 8}px`;
+
+                bubbleEl.innerHTML = `
+                    <button class="ohc-walkthrough-close" aria-label="Close walkthrough">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                    <h4 class="ohc-walkthrough-title">${step.title}</h4>
+                    <p class="ohc-walkthrough-text">${step.text || step.content}</p>
+                    <div class="ohc-walkthrough-controls">
+                        ${currentStepIndex > 0 ? '<button class="ohc-walkthrough-btn-secondary prev-btn">Back</button>' : '<div></div>'}
+                        <button class="ohc-walkthrough-btn next-btn">${currentStepIndex === currentSteps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
+                bubbleEl.querySelector('.ohc-walkthrough-close').onclick = endWalkthrough;
+
+                if (currentStepIndex > 0) {
+                    bubbleEl.querySelector('.prev-btn').onclick = () => {
+                        currentStepIndex--;
+                        positionHighlight();
+                    };
+                }
+
+                bubbleEl.querySelector('.next-btn').onclick = () => {
+                    if (currentStepIndex === currentSteps.length - 1) {
+                        endWalkthrough();
                     } else {
-                        currentStep++;
-                        renderStep();
+                        currentStepIndex++;
+                        positionHighlight();
                     }
                 };
+
+                let top = rect.bottom + 16;
+                let left = rect.left + (rect.width / 2) - 150;
+
+                if (top + 200 > window.innerHeight) {
+                    top = rect.top - bubbleEl.offsetHeight - 16;
+                }
+
+                if (left < 16) left = 16;
+                if (left + 300 > window.innerWidth - 16) left = window.innerWidth - 316;
+
+                bubbleEl.style.top = `${top}px`;
+                bubbleEl.style.left = `${left}px`;
+
+                requestAnimationFrame(() => {
+                    bubbleEl.classList.add('visible');
+                });
+            }
+
+            positionHighlight();
+            window.addEventListener('resize', positionHighlight);
+            window.addEventListener('scroll', positionHighlight);
+        };
+    };
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
