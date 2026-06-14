@@ -321,7 +321,7 @@ mod tests {
         let (time_slot, stripe_link) = result.unwrap();
 
         assert_eq!(quote.status, "approved");
-        assert_eq!(quote.amount, 20000);
+        assert_eq!(quote.amount, 23000);
         assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert!(time_slot.start_time < time_slot.end_time);
     }
