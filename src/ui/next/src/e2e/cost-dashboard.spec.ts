@@ -3,10 +3,10 @@ import { test, expect } from './fixtures';
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
     // Navigate to the dashboard page
-    await page.goto('/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to appear, indicating successful load
-    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Check that the Advisory Summary is present
     await expect(page.locator('h2', { hasText: 'Advisory Summary' })).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('a', { hasText: 'Back to Dashboard' }).click();
-    await expect(page.url()).toContain('/dashboard.html');
+    await page.locator('button', { hasText: 'Back to My Plan' }).click();
+    await expect(page).toHaveURL('/plan');
   });
 });
