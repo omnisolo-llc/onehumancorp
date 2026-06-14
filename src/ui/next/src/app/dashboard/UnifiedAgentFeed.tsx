@@ -484,7 +484,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
 
             {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+              <div key={item.id} data-testid={`triage-card-${item.id}`} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -523,7 +523,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             ))}
 
             {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
+              <div key={item.id} data-testid={`triage-card-${item.id}`} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
