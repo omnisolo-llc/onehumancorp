@@ -112,6 +112,25 @@ impl PosSyncWorker {
                     .bind(&ai_payload)
                     .execute(&mut *tx)
                     .await;
+
+                    // Trigger an actionable push notification event via Operations Agent
+                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let notification_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&notification_id)
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
                 }
 
                 let cache = crate::builder::edge::get_edge_cache();
@@ -240,7 +259,7 @@ impl PosSyncWorker {
 
                                 let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&notification_id)
                                 .bind(&job.tenant_id)
