@@ -251,6 +251,16 @@ impl DB {
                 std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
                     let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                                let perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
+                                }
+                            }
+                        }
                         if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return bytes.trim().to_string();
