@@ -19,6 +19,7 @@ impl Department for OperationsAgent {
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
+            "SyncEvent:JobCompleted".to_string(),
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
@@ -50,6 +51,14 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
+            "SyncEvent:JobCompleted" => {
+                let job_notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
+                if !job_notes.is_empty() {
+                    format!("Draft an invoice based on these offline job notes: {}", job_notes)
+                } else {
+                    "Draft an invoice for the completed job".to_string()
+                }
+            },
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");

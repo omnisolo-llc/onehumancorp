@@ -8,3 +8,5 @@ bucket_definitions:
       - select: * FROM agent_memories WHERE organization_id = bucket.parameters[0]
       - select: * FROM omni_inbox_messages WHERE tenant_id = bucket.parameters[0]
       - select: * FROM agent_feed_items WHERE tenant_id = bucket.parameters[0]
+      - select: * FROM mutation_queue WHERE tenant_id = bucket.parameters[0]
+      - select: * FROM sync_events WHERE tenant_id = bucket.parameters[0]
