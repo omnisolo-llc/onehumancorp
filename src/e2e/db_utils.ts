@@ -1,7 +1,11 @@
 import { Pool } from 'pg';
 
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc',
+  connectionString: process.env.DATABASE_URL,
 });
 
 export async function e2eDbQuery(query: string, values?: any[]) {
