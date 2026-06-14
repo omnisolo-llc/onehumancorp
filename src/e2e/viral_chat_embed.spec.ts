@@ -8,7 +8,7 @@ test.describe('Viral Chat Embed Loop', () => {
 
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-    const dashboardHtml = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
+    const dashboardHtml = fs.readFileSync(path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
     await page.setContent(dashboardHtml);
 
     // Bypass clipboard mock limitations entirely for test
@@ -31,7 +31,7 @@ test.describe('Viral Chat Embed Loop', () => {
     const srcMatch = (clipboardText as string).match(/src="([^"]+)"/);
     expect(srcMatch).not.toBeNull();
 
-    const chatHtml = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/chat-embed.html'), 'utf-8');
+    const chatHtml = fs.readFileSync(path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui/chat-embed.html'), 'utf-8');
     await page.setContent(chatHtml);
 
     await expect(page.getByText('AI Assistant', { exact: true }).or(page.getByText('Support', { exact: true }))).toBeVisible();
