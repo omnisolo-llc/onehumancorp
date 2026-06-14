@@ -22,6 +22,7 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 server_ohc = { path = "../../../server/ohc" }
+server_pricing = { path = "../../../server/pricing" }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }
 tracing = "0.1"

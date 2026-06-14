@@ -525,6 +525,10 @@
             <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
         </div>
 
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (optional)..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+        </div>
+
         <div style="display: flex; gap: 10px;">
             <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
             <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
@@ -1209,16 +1213,35 @@
       const chatInputEl = document.getElementById('chat-input');
       const chatSendBtn = document.getElementById('chat-send-btn');
       const chatMessagesEl = document.getElementById('chat-messages');
+      const chatImageUrlEl = document.getElementById('chat-image-url');
       let chatHistory = [];
 
       async function sendChatMessage() {
           const text = chatInputEl.value.trim();
+          const imageUrl = chatImageUrlEl.value.trim();
           if (!text) return;
 
           // Append user message
-          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}</div>`;
+          let userMsgHtml = `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> `;
+
+          const safeText = text.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+          userMsgHtml += safeText;
+
+          if (imageUrl) {
+              let safeImageUrl = imageUrl.replace(/"/g, "&quot;");
+              userMsgHtml += `<br><img src="${safeImageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 5px;" onerror="this.style.display='none'">`;
+          }
+          userMsgHtml += `</div>`;
+          chatMessagesEl.innerHTML += userMsgHtml;
           chatInputEl.value = '';
-          chatHistory.push({ role: 'user', content: text });
+          chatImageUrlEl.value = '';
+          const messageData = { role: 'user', content: text };
+          if (imageUrl) messageData.image_url = imageUrl;
+          chatHistory.push(messageData);
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           chatSendBtn.disabled = true;
@@ -1234,7 +1257,13 @@
               if (!res.ok) throw new Error('Chat request failed');
               const data = await res.json();
 
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
+              const safeReplyText = data.reply.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${safeReplyText}</div>`;
               chatHistory.push({ role: 'assistant', content: data.reply });
               chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
@@ -2479,6 +2508,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('ohc-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
+        text = text.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
         const msg = document.createElement('div');
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
