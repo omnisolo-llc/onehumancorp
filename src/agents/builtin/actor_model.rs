@@ -20,6 +20,7 @@ pub struct ActorMessage {
     pub original_sender: String, // Tracks the original sender across delegations
 }
 
+#[async_trait::async_trait]
 pub trait Actor: Send + Sync {
     fn name(&self) -> String;
     fn start(
@@ -27,10 +28,23 @@ pub trait Actor: Send + Sync {
         receiver: mpsc::Receiver<ActorMessage>,
         system: Arc<ActorSystem>,
     ) -> tokio::task::JoinHandle<()>;
+
+    /// Support for automatic restarts in the ActorSystem supervision tree
+    async fn restart(&self, system: Arc<ActorSystem>) {
+        let (tx, rx) = mpsc::channel(10);
+        let handle = self.start(rx, system.clone());
+        system.register_with_handle(self.name(), tx, handle).await;
+        tracing::info!("Actor {} has been automatically restarted", self.name());
+    }
+}
+
+pub struct ActorRef {
+    pub sender: mpsc::Sender<ActorMessage>,
+    pub handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 pub struct ActorSystem {
-    mailboxes: Mutex<HashMap<String, mpsc::Sender<ActorMessage>>>,
+    mailboxes: Mutex<HashMap<String, ActorRef>>,
     dead_letters: Mutex<Vec<ActorMessage>>,
 }
 
@@ -53,16 +67,91 @@ impl ActorSystem {
         dlq.clone()
     }
 
+    pub async fn process_dead_letters(&self) -> usize {
+        let mut dlq = self.dead_letters.lock().await;
+        let mut processed = 0;
+        let msgs = dlq.clone();
+        dlq.clear();
+
+        let mailboxes = self.mailboxes.lock().await;
+        for msg in msgs {
+            if let Some(actor_ref) = mailboxes.get(&msg.recipient) {
+                if let Err(_) = actor_ref.sender.try_send(msg.clone()) {
+                    dlq.push(msg);
+                } else {
+                    processed += 1;
+                }
+            } else {
+                dlq.push(msg);
+            }
+        }
+        processed
+    }
+
     pub async fn register(&self, name: String, sender: mpsc::Sender<ActorMessage>) {
         let mut mb = self.mailboxes.lock().await;
-        mb.insert(name, sender);
+        mb.insert(
+            name,
+            ActorRef {
+                sender,
+                handle: Arc::new(Mutex::new(None)),
+            },
+        );
+    }
+
+    pub async fn register_with_handle(
+        &self,
+        name: String,
+        sender: mpsc::Sender<ActorMessage>,
+        handle: tokio::task::JoinHandle<()>,
+    ) {
+        let mut mb = self.mailboxes.lock().await;
+        mb.insert(
+            name,
+            ActorRef {
+                sender,
+                handle: Arc::new(Mutex::new(Some(handle))),
+            },
+        );
+    }
+
+    pub async fn get_actor_sender(&self, name: &str) -> Option<mpsc::Sender<ActorMessage>> {
+        let mb = self.mailboxes.lock().await;
+        mb.get(name).map(|r| r.sender.clone())
+    }
+
+    pub fn supervise_actor(system: Arc<ActorSystem>, actor: Arc<dyn Actor>) {
+        let name = actor.name();
+        tokio::spawn(async move {
+            loop {
+                let handle = {
+                    let mb = system.mailboxes.lock().await;
+                    if let Some(actor_ref) = mb.get(&name) {
+                        let mut guard = actor_ref.handle.lock().await;
+                        guard.take()
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(h) = handle {
+                    let res = h.await;
+                    if let Err(e) = res {
+                        tracing::warn!("Actor {} panicked: {}. Restarting...", name, e);
+                        actor.restart(system.clone()).await;
+                    } else {
+                        tracing::info!("Actor {} exited normally.", name);
+                        break;
+                    }
+                } else {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                }
+            }
+        });
     }
 
     pub async fn send(&self, msg: ActorMessage) -> Result<(), String> {
-        let sender = {
-            let mb = self.mailboxes.lock().await;
-            mb.get(&msg.recipient).cloned()
-        };
+        let sender = self.get_actor_sender(&msg.recipient).await;
 
         if let Some(sender) = sender {
             sender
@@ -83,6 +172,7 @@ pub struct ToolActor {
     pub agent: Arc<Agent>,
 }
 
+#[async_trait::async_trait]
 impl Actor for ToolActor {
     fn name(&self) -> String {
         self.name.clone()
@@ -175,6 +265,7 @@ pub struct AgentActor {
     pub config: AgentRunConfig,
 }
 
+#[async_trait::async_trait]
 impl Actor for AgentActor {
     fn name(&self) -> String {
         self.name.clone()
@@ -430,14 +521,18 @@ mod tests {
             agent: coord_agent.clone(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        let (tool_tx, tool_rx) = mpsc::channel(10);
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let (tool_tx, tool_rx) = mpsc::channel::<ActorMessage>(10);
 
-        system.register(coord_actor.name(), coord_tx).await;
-        system.register(tool_actor.name(), tool_tx).await;
+        let h1 = coord_actor.start(coord_rx, system.clone());
+        let h2 = tool_actor.start(tool_rx, system.clone());
 
-        coord_actor.start(coord_rx, system.clone());
-        tool_actor.start(tool_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h1)
+            .await;
+        system
+            .register_with_handle(tool_actor.name(), tool_tx, h2)
+            .await;
 
         let (test_tx, mut test_rx) = mpsc::channel(10);
         system
@@ -490,11 +585,13 @@ mod tests {
             config: AgentRunConfig::default(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        system.register(coord_actor.name(), coord_tx).await;
-        coord_actor.start(coord_rx, system.clone());
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
 
-        let (test_tx, mut test_rx) = mpsc::channel(10);
+        let (test_tx, mut test_rx) = mpsc::channel::<ActorMessage>(10);
         system
             .register("ProductionHarness".to_string(), test_tx)
             .await;
@@ -537,11 +634,13 @@ mod tests {
             config: AgentRunConfig::default(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        system.register(coord_actor.name(), coord_tx).await;
-        coord_actor.start(coord_rx, system.clone());
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
 
-        let (test_tx, mut test_rx) = mpsc::channel(10);
+        let (test_tx, mut test_rx) = mpsc::channel::<ActorMessage>(10);
         system
             .register("ProductionHarness".to_string(), test_tx)
             .await;
@@ -590,11 +689,13 @@ mod tests {
             config: AgentRunConfig::default(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        system.register(coord_actor.name(), coord_tx).await;
-        coord_actor.start(coord_rx, system.clone());
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
 
-        let (test_tx, mut test_rx) = mpsc::channel(10);
+        let (test_tx, mut test_rx) = mpsc::channel::<ActorMessage>(10);
         // Register the *target* actor to intercept the routed message
         system.register("OtherActor".to_string(), test_tx).await;
 
@@ -644,11 +745,13 @@ mod tests {
             config: AgentRunConfig::default(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        system.register(coord_actor.name(), coord_tx).await;
-        coord_actor.start(coord_rx, system.clone());
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
 
-        let (test_tx, mut test_rx) = mpsc::channel(10);
+        let (test_tx, mut test_rx) = mpsc::channel::<ActorMessage>(10);
         system
             .register("ProductionHarness".to_string(), test_tx)
             .await;
@@ -691,12 +794,13 @@ mod tests {
             config: AgentRunConfig::default(),
         };
 
-        let (coord_tx, coord_rx) = mpsc::channel(10);
-        system.register(coord_actor.name(), coord_tx).await;
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
 
-        coord_actor.start(coord_rx, system.clone());
-
-        let (test_tx, mut test_rx) = mpsc::channel(10);
+        let (test_tx, mut test_rx) = mpsc::channel::<ActorMessage>(10);
         system
             .register("ProductionHarness".to_string(), test_tx)
             .await;
@@ -737,7 +841,7 @@ mod tests {
             original_sender: "ProductionHarness".to_string(),
         };
 
-        let result = system.send(msg).await;
+        let result = system.send(msg.clone()).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Recipient NonExistentActor not found");
 
@@ -745,5 +849,114 @@ mod tests {
         assert_eq!(dlq.len(), 1);
         assert_eq!(dlq[0].content, "Lost message");
         assert_eq!(dlq[0].recipient, "NonExistentActor");
+
+        // Now let's register the actor and process DLQ
+        let coord_llm = Arc::new(MockLlm {
+            response_text: "Final".to_string(),
+            calls: Arc::new(Mutex::new(0)),
+        });
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "NonExistentActor".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel::<ActorMessage>(10);
+        let h = coord_actor.start(coord_rx, system.clone());
+        system
+            .register_with_handle(coord_actor.name(), coord_tx, h)
+            .await;
+
+        let processed = system.process_dead_letters().await;
+        assert_eq!(processed, 1);
+
+        let dlq_after = system.get_dead_letters().await;
+        assert_eq!(dlq_after.len(), 0);
+    }
+
+    struct PanicActor {
+        name: String,
+        should_panic: Arc<Mutex<bool>>,
+    }
+
+    #[async_trait::async_trait]
+    impl Actor for PanicActor {
+        fn name(&self) -> String {
+            self.name.clone()
+        }
+
+        fn start(
+            &self,
+            mut receiver: mpsc::Receiver<ActorMessage>,
+            system: Arc<ActorSystem>,
+        ) -> tokio::task::JoinHandle<()> {
+            let should_panic = self.should_panic.clone();
+            tokio::spawn(async move {
+                while let Some(_msg) = receiver.recv().await {
+                    let p = {
+                        let mut guard = should_panic.lock().await;
+                        let val = *guard;
+                        *guard = false; // only panic once
+                        val
+                    };
+                    if p {
+                        panic!("Intentional panic for testing supervision");
+                    }
+                }
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_supervision_restart() {
+        let system = Arc::new(ActorSystem::new());
+
+        let panic_actor = Arc::new(PanicActor {
+            name: "FailingActor".to_string(),
+            should_panic: Arc::new(Mutex::new(true)),
+        });
+
+        let (tx, rx) = mpsc::channel::<ActorMessage>(10);
+        let handle = panic_actor.start(rx, system.clone());
+        system
+            .register_with_handle(panic_actor.name(), tx, handle)
+            .await;
+
+        ActorSystem::supervise_actor(system.clone(), panic_actor.clone());
+
+        // Send a message to trigger the panic
+        system
+            .send(ActorMessage {
+                sender: "Test".to_string(),
+                recipient: "FailingActor".to_string(),
+                content: "Trigger panic".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                correlation_id: "tx-panic".to_string(),
+                original_sender: "Test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        // Give it time to panic and restart
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // Ensure it restarted and we can send another message without error
+        let res = system
+            .send(ActorMessage {
+                sender: "Test".to_string(),
+                recipient: "FailingActor".to_string(),
+                content: "Should work now".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                correlation_id: "tx-ok".to_string(),
+                original_sender: "Test".to_string(),
+            })
+            .await;
+
+        assert!(res.is_ok());
     }
 }

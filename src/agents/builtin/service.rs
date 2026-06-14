@@ -1670,10 +1670,12 @@ mod memory_tests {
         // we expect it to return an error (either LLM initialization failure or early exit). We check for an Ok or Err safely.
         match res {
             Ok(_) => println!("Sub-agent dispatch succeeded"),
-            Err(e) => println!("Sub-agent dispatch safely errored as expected without panic: {}", e),
+            Err(e) => println!(
+                "Sub-agent dispatch safely errored as expected without panic: {}",
+                e
+            ),
         }
 
         let _ = tokio::fs::remove_dir_all(".test-agent-memory-subagent").await;
     }
-
 }
