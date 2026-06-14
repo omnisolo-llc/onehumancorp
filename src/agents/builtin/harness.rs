@@ -1,5 +1,3 @@
-
-
 use ::server_harness::sandbox::{SandboxAdapter, SandboxManager};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -368,50 +366,51 @@ impl ASTValidator {
         let node_kind = node.kind();
 
         if node_kind == "command"
-            && let Some(command_name_node) = node.child_by_field_name("name") {
-                let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
+            && let Some(command_name_node) = node.child_by_field_name("name")
+        {
+            let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
 
-                let name_cleaned = name.replace("\"", "").replace("'", "").replace("\\", "");
-                if self.blocked_commands.contains(&name_cleaned) {
-                    return Err(format!("{} is not allowed", name_cleaned));
-                }
+            let name_cleaned = name.replace("\"", "").replace("'", "").replace("\\", "");
+            if self.blocked_commands.contains(&name_cleaned) {
+                return Err(format!("{} is not allowed", name_cleaned));
+            }
 
-                let mut has_expansion = false;
+            let mut has_expansion = false;
 
-                let mut cursor = command_name_node.walk();
-                for child in command_name_node.children(&mut cursor) {
-                    let kind = child.kind();
-                    if kind == "command_substitution" || kind == "expansion" {
-                        has_expansion = true;
-                    }
-                    if kind == "string" || kind == "raw_string" || kind == "word" {
-                        let text = &source[child.start_byte()..child.end_byte()];
-                        if text.contains("$(")
-                            || text.contains("`")
-                            || text.contains("${")
-                            || text.contains("$[")
-                        {
-                            has_expansion = true;
-                        }
-                    }
-                }
-
-                if name.contains("$(")
-                    || name.contains("`")
-                    || name.contains("${")
-                    || name.contains("$[")
-                {
+            let mut cursor = command_name_node.walk();
+            for child in command_name_node.children(&mut cursor) {
+                let kind = child.kind();
+                if kind == "command_substitution" || kind == "expansion" {
                     has_expansion = true;
                 }
-
-                if has_expansion {
-                    return Err("dynamic command names (subshells/expansions) are not allowed for security reasons".to_string());
-                }
-
-                if name_cleaned == "eval" {
-                    return Err("eval is not allowed".to_string());
+                if kind == "string" || kind == "raw_string" || kind == "word" {
+                    let text = &source[child.start_byte()..child.end_byte()];
+                    if text.contains("$(")
+                        || text.contains("`")
+                        || text.contains("${")
+                        || text.contains("$[")
+                    {
+                        has_expansion = true;
+                    }
                 }
             }
+
+            if name.contains("$(")
+                || name.contains("`")
+                || name.contains("${")
+                || name.contains("$[")
+            {
+                has_expansion = true;
+            }
+
+            if has_expansion {
+                return Err("dynamic command names (subshells/expansions) are not allowed for security reasons".to_string());
+            }
+
+            if name_cleaned == "eval" {
+                return Err("eval is not allowed".to_string());
+            }
+        }
 
         if node_kind == "process_substitution" {
             return Err("process substitution is not allowed".to_string());
@@ -532,10 +531,11 @@ impl LocalBackend {
         }
 
         if self.config.enable_seccomp
-            && let Some(path) = &self.config.seccomp_bpf_path {
-                args.push("--seccomp".to_string());
-                args.push(path.clone());
-            }
+            && let Some(path) = &self.config.seccomp_bpf_path
+        {
+            args.push("--seccomp".to_string());
+            args.push(path.clone());
+        }
 
         args.push("--".to_string());
         args.push("bash".to_string());

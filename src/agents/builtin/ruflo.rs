@@ -296,12 +296,13 @@ impl SwarmCoordinator {
         let mut actual_task = original_task.clone();
 
         if let Some(memory) = &self.sona_memory
-            && let Ok(Some(pattern)) = memory.recall_pattern(task).await {
-                actual_task = format!(
-                    "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
-                    pattern.successful_trajectory, task
-                );
-            }
+            && let Ok(Some(pattern)) = memory.recall_pattern(task).await
+        {
+            actual_task = format!(
+                "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
+                pattern.successful_trajectory, task
+            );
+        }
 
         let task = &actual_task;
 
@@ -406,21 +407,22 @@ impl SwarmCoordinator {
         };
 
         if let Ok(res_str) = &result
-            && let Some(memory) = &self.sona_memory {
-                let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
-                let trajectory_prompt = format!("Task: {}\nResult: {}\n", original_task, res_str);
-                if let Ok(trajectory) = self
-                    .lead_agent
-                    .process_task(&trajectory_prompt, extract_instruction)
-                    .await
-                {
-                    let pattern = SonaPattern {
-                        task_signature: original_task.clone(), // In a real system, LLM extracts the signature
-                        successful_trajectory: trajectory,
-                    };
-                    let _ = memory.store_pattern(pattern).await;
-                }
+            && let Some(memory) = &self.sona_memory
+        {
+            let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
+            let trajectory_prompt = format!("Task: {}\nResult: {}\n", original_task, res_str);
+            if let Ok(trajectory) = self
+                .lead_agent
+                .process_task(&trajectory_prompt, extract_instruction)
+                .await
+            {
+                let pattern = SonaPattern {
+                    task_signature: original_task.clone(), // In a real system, LLM extracts the signature
+                    successful_trajectory: trajectory,
+                };
+                let _ = memory.store_pattern(pattern).await;
             }
+        }
 
         result
     }
