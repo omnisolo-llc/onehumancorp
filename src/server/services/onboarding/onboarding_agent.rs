@@ -51,7 +51,7 @@ pub struct ChatResponse {
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
     hub: std::sync::Arc<crate::hub::Hub>,
-    minimax: Option<std::sync::Arc<MinimaxClient>>,
+    pub minimax: Option<std::sync::Arc<MinimaxClient>>,
 }
 
 impl OnboardingAgent {
