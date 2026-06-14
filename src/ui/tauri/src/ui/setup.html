@@ -498,7 +498,8 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; margin-bottom: 16px;"></textarea>
+        <input id="instant-image-url" type="url" class="glassmorphism" placeholder="Optional: Link to your logo or a product image" />
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
         <div class="btn-group" style="margin-top: 24px;">
@@ -1348,11 +1349,18 @@
                   const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
                   const userIdStr = localStorage.getItem('user_id') || 'test-user';
 
+                  const instantImageUrlEl = document.getElementById('instant-image-url');
+                  const instantImageUrl = instantImageUrlEl ? instantImageUrlEl.value.trim() : "";
+
                   let intakeData = null;
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput, imageUrl: instantImageUrl || undefined });
                   } else {
+                     const reqBody = { description: bioInput };
+                     if (instantImageUrl) {
+                         reqBody.image_url = instantImageUrl;
+                     }
                      const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
                          method: 'POST',
                          headers: {
@@ -1360,7 +1368,7 @@
                              'X-Tenant-ID': tenantIdStr,
                              'X-User-ID': userIdStr
                          },
-                         body: JSON.stringify({ description: bioInput })
+                         body: JSON.stringify(reqBody)
                      });
                      if (!res.ok) {
                          const errData = await res.json().catch(()=>({}));
