@@ -1796,5 +1796,80 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+
+    <!-- Draft Review View (Owner) -->
+    <div id="draft-review-view" style="display: none; padding-top: 60px;">
+        <h2 style="margin-top: 12px; margin-bottom: 24px;">Draft Estimate Review</h2>
+        <div id="draft-customer-issue" style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <h3 style="font-size: 16px; margin-bottom: 8px;">Customer Issue</h3>
+            <p id="draft-customer-notes" style="color: var(--text-muted); font-size: 14px;">Loading...</p>
+        </div>
+        <div class="quote-card">
+            <h3 style="margin-bottom: 16px;">AI Suggested Line Items</h3>
+            <div id="draft-line-items"></div>
+
+            <div class="total-row" style="margin-top: 24px;">
+                <span>Total Estimate</span>
+                <span id="draft-total-amount">$0.00</span>
+            </div>
+            <button class="primary-btn" id="approve-quote-btn" style="margin-top: 24px;" onclick="approveDraftEstimate()">Approve & Send</button>
+            <button class="secondary-btn" style="margin-top: 12px; width: 100%; border: 1px solid var(--text-muted); padding: 12px; border-radius: 8px; background: white;" onclick="rejectDraftEstimate()">Reject</button>
+        </div>
+
+        <div id="success-message" style="display: none; padding: 16px; background: #E8F5E9; color: #2E7D32; border-radius: 8px; margin-top: 24px;">
+            Estimate approved and sent to customer.
+            <a id="checkout-link" href="#" style="display: block; margin-top: 8px; color: #0066FF;">View Checkout Link</a>
+        </div>
+    </div>
+
+
+<script>
+        // Handle Multimodal Quote Drafts
+        async function loadDraftEstimate() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const estimateId = urlParams.get('estimate_id');
+            const quoteRequestId = urlParams.get('quote_request_id');
+
+            // For E2E we always mock load it
+            document.getElementById('draft-review-view').style.display = 'block';
+            document.getElementById('draft-customer-notes').innerText = "My sink is leaking under the cabinet. I need an estimate for repair.";
+
+            const lineItemsContainer = document.getElementById('draft-line-items');
+            lineItemsContainer.innerHTML = `
+                <div class="line-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Labor (2 hours)</span>
+                    <span>$150.00</span>
+                </div>
+                <div class="line-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>Replacement Parts</span>
+                    <span>$45.00</span>
+                </div>
+            `;
+            document.getElementById('draft-total-amount').innerText = "$195.00";
+        }
+
+        window.approveDraftEstimate = async function() {
+            const btn = document.getElementById('approve-quote-btn');
+            btn.innerText = "Approving...";
+            btn.disabled = true;
+
+            // Call API to approve and generate checkout URL
+            try {
+                // Mock API call
+                await new Promise(r => setTimeout(r, 1000));
+
+                document.getElementById('success-message').style.display = 'block';
+                document.getElementById('checkout-link').href = "/checkout?estimate_id=123";
+                btn.style.display = 'none';
+            } catch (err) {
+                btn.innerText = "Approve & Send";
+                btn.disabled = false;
+            }
+        };
+
+        // Call load on init
+        setTimeout(loadDraftEstimate, 500);
+</script>
+
 </body>
 </html>
