@@ -46,6 +46,7 @@ export default function ApiDocsPage() {
       )}
       {mounted && !loading && spec && (
         <div className="flex flex-col h-full bg-white/60 backdrop-blur-[40px] saturate-[210%] rounded-2xl p-4 sm:p-6 overflow-x-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/40">
+          <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-6">OHC Advanced API Reference</h1>
           <div className="overflow-x-auto w-full max-w-[calc(100vw-32px)]">
             <SwaggerUI spec={spec} />
           </div>
