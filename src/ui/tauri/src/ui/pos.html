@@ -256,7 +256,11 @@
     <div class="container" id="main-container">
 
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
-          <div class="header">
+
+      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
+
+      <div class="header">
             <a href="dashboard.html" class="back-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               Dashboard
@@ -1773,6 +1777,149 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+</script>
+
+<script>
+    // Offline Sync Logic
+
+    function enqueueOfflineMutation(mutation) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+        queue.push(mutation);
+        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+        window.dispatchEvent(new Event("ohc_queue_updated"));
+
+        if (navigator.onLine) {
+            syncOfflineQueue();
+        }
+    }
+
+    function updateOfflineStatus() {
+        const networkIndicator = document.getElementById("network-status-indicator");
+        const queueIndicator = document.getElementById("queue-dashboard");
+        if (!networkIndicator || !queueIndicator) return;
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "block";
+            networkIndicator.classList.remove("hidden");
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length > 0) {
+            queueIndicator.style.display = "block";
+            queueIndicator.classList.remove("hidden");
+            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+        } else {
+            queueIndicator.style.display = "none";
+            queueIndicator.classList.add("hidden");
+        }
+    }
+
+    async function syncOfflineQueue() {
+        if (!navigator.onLine) return;
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length === 0) return;
+
+        const posTransactions = [];
+        const generalMutations = [];
+        queue.forEach(m => {
+            if (m.type === "tap_to_pay") {
+                posTransactions.push({
+                    id: m.id,
+                    client_id: "terminal_client",
+                    amount_cents: Math.round(m.amount),
+                    currency: m.currency || "usd",
+                    payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+                    timestamp: new Date().toISOString()
+                });
+            } else if (m.type === "inventory_toggle") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: m.id.replace("e2e-product-", ""),
+                    quantity_deducted: 1,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: null
+                });
+            } else {
+                generalMutations.push(m);
+            }
+        });
+
+        const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+        const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+
+        let allOk = true;
+        if (posTransactions.length > 0) {
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+            try {
+                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (generalMutations.length > 0) {
+
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+            try {
+                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (generalMutations.length > 0) {
+            try {
+                const res = await fetch("/api/v1/sync/offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ mutations: generalMutations })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (allOk) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            updateOfflineStatus();
+        }
+    }
+
+    window.addEventListener("online", () => {
+        updateOfflineStatus();
+        syncOfflineQueue();
+    });
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+    updateOfflineStatus();
 </script>
 </body>
 </html>
