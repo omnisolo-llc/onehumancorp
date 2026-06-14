@@ -338,6 +338,45 @@ pub struct PaymentEvent {
 }
 
 
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct QuoteRequest {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub description: String,
+    pub image_url: Option<String>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Estimate {
+    pub id: String,
+    pub tenant_id: String,
+    pub quote_request_id: Option<String>,
+    pub customer_id: String,
+    pub status: String,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
+    pub checkout_url: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EstimateLineItem {
+    pub id: String,
+    pub estimate_id: String,
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+    pub is_optional: bool,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Quote {
     pub id: String,
@@ -345,6 +384,9 @@ pub struct Quote {
     pub customer_id: String,
     pub status: String,
     pub valid_until: Option<DateTime<Utc>>,
+    pub total_amount: Option<i64>,
+    pub required_deposit: Option<i64>,
+    pub checkout_url: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
