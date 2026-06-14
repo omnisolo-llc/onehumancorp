@@ -5,6 +5,9 @@ test.describe('Onboarding Setup', () => {
     const fileUrl = `file://${process.cwd()}/src/ui/tauri/src/ui/setup.html`;
     await page.goto(fileUrl);
 
+    // Click "Start My Business" to move past the initial step
+    await page.locator('button:has-text("Start My Business")').click();
+
     // Select "I'm a Baker" to move to the next step
     await page.locator('text="I\'m a Baker"').click();
 
