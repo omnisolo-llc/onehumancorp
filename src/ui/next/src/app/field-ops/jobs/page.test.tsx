@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FieldOpsJobsPage from './page';
+import { localDB } from '../../../lib/sync/LocalDB';
 
 vi.mock('../../../lib/sync/SyncManager', () => ({
   SyncManager: {
@@ -8,6 +9,18 @@ vi.mock('../../../lib/sync/SyncManager', () => ({
       enqueue: vi.fn(),
     })),
   },
+}));
+
+vi.mock('../../../lib/sync/LocalDB', () => ({
+  localDB: {
+    init: vi.fn().mockResolvedValue(undefined),
+    setAppointments: vi.fn().mockResolvedValue(undefined),
+    getAppointments: vi.fn().mockResolvedValue([]),
+    addMutation: vi.fn().mockResolvedValue(undefined),
+    getMutations: vi.fn().mockResolvedValue([]),
+    clearMutations: vi.fn().mockResolvedValue(undefined),
+    removeMutations: vi.fn().mockResolvedValue(undefined)
+  }
 }));
 
 describe('FieldOpsJobsPage', () => {
@@ -82,7 +95,7 @@ describe('FieldOpsJobsPage', () => {
     const startWorkButton = await screen.findByText('Start Work');
     fireEvent.click(startWorkButton);
 
-    const completeButton = await screen.findByText('Job Done');
+    const completeButton = await screen.findByText('Complete Job');
     fireEvent.click(completeButton);
 
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();

@@ -178,3 +178,61 @@ global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, in
     }
     return originalFetch2(url, init);
 }) as any;
+
+// Mock IndexedDB
+const indexedDBMock = {
+  open: vi.fn().mockImplementation((name, version) => {
+    const request: any = {
+      result: {
+        objectStoreNames: { contains: vi.fn().mockReturnValue(true) },
+        createObjectStore: vi.fn(),
+        transaction: vi.fn().mockReturnValue({
+          objectStore: vi.fn().mockImplementation((storeName: string) => {
+             return {
+                getAll: () => {
+                   const req: any = { result: [] };
+                   setTimeout(() => { if (req.onsuccess) req.onsuccess({ target: { result: req.result } }); }, 0);
+                   return req;
+                },
+                put: () => {
+                   const req: any = {};
+                   setTimeout(() => { if (req.onsuccess) req.onsuccess({ target: { result: req.result } }); }, 0);
+                   return req;
+                },
+                clear: () => {
+                   const req: any = {};
+                   setTimeout(() => { if (req.onsuccess) req.onsuccess({ target: { result: req.result } }); }, 0);
+                   return req;
+                },
+                delete: () => {
+                   const req: any = {};
+                   setTimeout(() => { if (req.onsuccess) req.onsuccess({ target: { result: req.result } }); }, 0);
+                   return req;
+                }
+             };
+          })
+        })
+      },
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
+    };
+    setTimeout(() => {
+      if (request.onsuccess) request.onsuccess({ target: { result: request.result } });
+    }, 0);
+    return request;
+  })
+};
+
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'indexedDB', {
+    writable: true,
+    value: indexedDBMock,
+  });
+}
+if (typeof global !== 'undefined') {
+  Object.defineProperty(global, 'indexedDB', {
+    writable: true,
+    value: indexedDBMock,
+  });
+}

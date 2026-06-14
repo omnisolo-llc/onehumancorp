@@ -1,6 +1,7 @@
+import { localDB } from './LocalDB';
+
 export class SyncManager {
   private static instance: SyncManager;
-  private queueKey = 'ohc_offline_queue';
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
@@ -18,12 +19,10 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public enqueue(mutation: any) {
+  public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
 
-    const queue = this.getQueue();
-    queue.push(mutation);
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    await localDB.addMutation(mutation);
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -31,17 +30,9 @@ export class SyncManager {
     }
   }
 
-  public getQueueLength(): number {
-    return this.getQueue().length;
-  }
-
-  private getQueue(): any[] {
-    if (typeof window === 'undefined') return [];
-    try {
-      return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
-    } catch {
-      return [];
-    }
+  public async getQueueLength(): Promise<number> {
+    const queue = await localDB.getMutations();
+    return queue.length;
   }
 
   private notifyListeners() {
@@ -54,7 +45,7 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = this.getQueue();
+    let queue = await localDB.getMutations();
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
@@ -141,7 +132,7 @@ export class SyncManager {
       }
 
       if (allOk) {
-        localStorage.setItem(this.queueKey, '[]');
+        await localDB.clearMutations();
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
       }

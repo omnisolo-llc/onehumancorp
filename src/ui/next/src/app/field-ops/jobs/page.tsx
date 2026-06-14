@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { localDB } from '../../../lib/sync/LocalDB';
 
 type Appointment = {
   id: string;
@@ -31,19 +32,44 @@ export default function FieldOpsJobsPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Fetch initial schedule
-    fetch('/api/v1/field-ops/appointments')
-      .then(res => res.json())
-      .then(data => {
-        if (data.appointments) {
-          setJobs(data.appointments);
+    const loadData = async () => {
+      try {
+        // Init LocalDB first
+        await localDB.init();
+
+        if (navigator.onLine) {
+          // Fetch initial schedule
+          const res = await fetch('/api/v1/field-ops/appointments');
+          const data = await res.json();
+          if (data.appointments) {
+            setJobs(data.appointments);
+            // Cache locally
+            await localDB.setAppointments(data.appointments);
+          }
+        } else {
+          // Load from cache when offline
+          const cachedJobs = await localDB.getAppointments();
+          if (cachedJobs && cachedJobs.length > 0) {
+            setJobs(cachedJobs);
+          }
         }
-        setLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error("Failed to load appointments", err);
+        // Fallback to cache if fetch fails
+        try {
+          const cachedJobs = await localDB.getAppointments();
+          if (cachedJobs && cachedJobs.length > 0) {
+            setJobs(cachedJobs);
+          }
+        } catch (cacheErr) {
+          console.error("Failed to load cached appointments", cacheErr);
+        }
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    loadData();
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -51,21 +77,10 @@ export default function FieldOpsJobsPage() {
     };
   }, []);
 
-  const handleStatusChange = (jobId: string, newStatus: string) => {
+  const handleStatusChange = async (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
-    setJobs(currentJobs =>
-      currentJobs.map(j => {
-        if (j.id === jobId) {
-          const updated = { ...j, status: newStatus };
-          if (newStatus === 'In-Progress') updated.actual_start_time = now;
-          if (newStatus === 'Completed') updated.actual_end_time = now;
-          return updated;
-        }
-        return j;
-      })
-    );
 
-    // Call optimize route endpoint after state change to simulate Operations Agent logic
+    // Optimistic UI Update
     const updatedJobs = jobs.map(j => {
       if (j.id === jobId) {
         const updated = { ...j, status: newStatus };
@@ -76,7 +91,13 @@ export default function FieldOpsJobsPage() {
       return j;
     });
 
-    if (newStatus === 'Completed') {
+    setJobs(updatedJobs);
+
+    // Optimistically update localDB
+    await localDB.setAppointments(updatedJobs);
+
+    // Call optimize route endpoint after state change to simulate Operations Agent logic
+    if (newStatus === 'Completed' && !isOffline) {
        fetch('/api/v1/field-ops/optimize-route', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
@@ -90,6 +111,7 @@ export default function FieldOpsJobsPage() {
        .then(data => {
          if (data.success) {
            setJobs(data.optimizedRoute);
+           localDB.setAppointments(data.optimizedRoute); // Update cache
            if (data.agentSuggestion) {
              setAgentSuggestion(data.agentSuggestion);
            }
@@ -99,18 +121,22 @@ export default function FieldOpsJobsPage() {
     }
   };
 
-  const handleNotesChange = (jobId: string, notes: string) => {
-    setJobs(jobs.map(j => j.id === jobId ? { ...j, notes } : j));
+  const handleNotesChange = async (jobId: string, notes: string) => {
+    const updatedJobs = jobs.map(j => j.id === jobId ? { ...j, notes } : j);
+    setJobs(updatedJobs);
+    // Persist locally
+    await localDB.setAppointments(updatedJobs);
   };
 
-  const handleComplete = (jobId: string) => {
+  const handleComplete = async (jobId: string) => {
     const job = jobs.find(j => j.id === jobId);
     if (!job) return;
 
-    handleStatusChange(jobId, 'Completed');
+    await handleStatusChange(jobId, 'Completed');
 
-    if (job.notes && !isOffline) {
-      SyncManager.getInstance().enqueue({
+    if (job.notes) {
+      const syncManager = SyncManager.getInstance();
+      await syncManager.enqueue({
         id: `mutation-${Date.now()}`,
         type: 'draft_quote',
         notes: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`
@@ -216,7 +242,7 @@ export default function FieldOpsJobsPage() {
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
                         onClick={() => handleComplete(job.id)}
                       >
-                        Job Done
+                        Complete Job
                       </button>
                   )}
                 </div>
