@@ -32,3 +32,17 @@ class MockWebSocket {
 }
 
 global.WebSocket = MockWebSocket as any;
+
+class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+global.ResizeObserver = MockResizeObserver as any;
+
+class MockIntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+global.IntersectionObserver = MockIntersectionObserver as any;
