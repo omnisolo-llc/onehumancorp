@@ -22,7 +22,7 @@ exports_files(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
-        "sync_mesh.rs",
+
         "staff_mesh.rs",
         "telemetry.rs",
         "chaos.rs",
@@ -65,7 +65,7 @@ rust_library(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
-        "sync_mesh.rs",
+
         "staff_mesh.rs",
         "telemetry.rs",
         "chaos.rs",
