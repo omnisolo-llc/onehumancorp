@@ -150,6 +150,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:mesh.rs",
     "//src/server/orchestration:minimax_swarm.rs",
     "//src/server/orchestration:mod.rs",
+    "//src/server/orchestration:unified_orchestrator.rs",
     "//src/server/orchestration:orchestration_test.rs",
     "//src/server/orchestration:sandbox.rs",
     "//src/server/orchestration:sandbox_ask.rs",
