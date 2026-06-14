@@ -76,7 +76,37 @@ pub async fn offline_sync_handler(
         futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-            let mut db_tx = db_clone.begin().await.unwrap();
+            let mut db_tx = match db_clone.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {}", e);
+                    return;
+                }
+            };
+
+            // Idempotency check
+            let idempotency_res = sqlx::query(
+                "INSERT INTO sync_events (id, tenant_id, batch_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (batch_id) DO NOTHING"
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id_clone)
+            .bind(&mutation.transaction_id)
+            .bind("OfflineSync")
+            .bind(serde_json::to_string(&mutation).unwrap_or_default())
+            .execute(&mut *db_tx)
+            .await;
+
+            match idempotency_res {
+                Ok(res) if res.rows_affected() == 0 => {
+                    tracing::info!("Skipping duplicate mutation: {}", mutation.transaction_id);
+                    return;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to insert sync event for idempotency: {}", e);
+                    return;
+                }
+                _ => {} // proceed
+            }
 
             let query = "SELECT inventory_count, available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
@@ -307,7 +337,24 @@ mod tests {
             ],
         };
 
-        let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
+        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
+
+        let req_duplicate = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx2".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 10,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                },
+            ],
+        };
+
+        let response3 = offline_sync_handler(state, headers, Json(req_duplicate)).await.into_response();
+        assert_eq!(response3.status(), StatusCode::OK); // IDEMPOTENT
     }
 }

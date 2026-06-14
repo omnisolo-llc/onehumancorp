@@ -1,3 +1,4 @@
+import { enqueueAction, getActions, removeAction, OfflineAction } from '../../app/utils/offlineQueue';
 export class SyncManager {
   private static instance: SyncManager;
   private queueKey = 'ohc_offline_queue';
@@ -18,12 +19,18 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public enqueue(mutation: any) {
+  public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
 
-    const queue = this.getQueue();
-    queue.push(mutation);
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    // Adapt to IndexedDB Action format
+    const action: OfflineAction = {
+      id: mutation.id || 'tx_offline_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      type: mutation.type || 'unknown',
+      payload: mutation,
+      timestamp: Date.now()
+    };
+
+    await enqueueAction(action);
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -31,14 +38,16 @@ export class SyncManager {
     }
   }
 
-  public getQueueLength(): number {
-    return this.getQueue().length;
+  public async getQueueLength(): Promise<number> {
+    const actions = await this.getQueue();
+    return actions.length;
   }
 
-  private getQueue(): any[] {
+  private async getQueue(): Promise<any[]> {
     if (typeof window === 'undefined') return [];
     try {
-      return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
+      const actions = await getActions();
+      return actions.map(a => a.payload);
     } catch {
       return [];
     }
@@ -54,7 +63,7 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = this.getQueue();
+    let queue = await this.getQueue();
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
@@ -141,7 +150,11 @@ export class SyncManager {
       }
 
       if (allOk) {
-        localStorage.setItem(this.queueKey, '[]');
+
+        const syncedActions = await getActions();
+        for (const act of syncedActions) {
+            await removeAction(act.id);
+        }
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
       }
