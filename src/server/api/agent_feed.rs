@@ -77,6 +77,7 @@ where
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
         .route("/{id}/state", put(update_feed_item_state))
+        .route("/ws", get(ws_feed_handler))
 }
 
 pub async fn ws_feed_handler(
