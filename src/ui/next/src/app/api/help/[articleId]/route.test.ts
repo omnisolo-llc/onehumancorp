@@ -27,10 +27,10 @@ describe('/api/help/[articleId] GET', () => {
       ok: false,
       status: 404,
     });
-    const request = new NextRequest('http://localhost:3000/api/help/add-products');
-    const response = await GET(request, { params: Promise.resolve({ articleId: 'add-products' }) });
+    const request = new NextRequest('http://localhost:3000/api/help/my-store');
+    const response = await GET(request, { params: Promise.resolve({ articleId: 'my-store' }) });
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.id).toEqual("add-products");
+    expect(data.id).toEqual("my-store");
   });
 });
