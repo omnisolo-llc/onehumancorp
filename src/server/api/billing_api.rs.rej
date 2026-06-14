@@ -1,0 +1,27 @@
+--- src/server/api/billing_api.rs
++++ src/server/api/billing_api.rs
+@@ -173,11 +173,23 @@
+         None => return Err(StatusCode::UNAUTHORIZED),
+     };
+
+-    let customer_id = format!("cus_{}", tenant_id); // Simulated customer ID based on tenant
++    // Get the actual customer ID from the database
++    let customer_id_result: Result<String, _> = sqlx::query_scalar("SELECT customer_id FROM subscribers WHERE tenant_id = $1 LIMIT 1")
++        .bind(&tenant_id)
++        .fetch_one(&hub.pool)
++        .await;
++
++    let customer_id = match customer_id_result {
++        Ok(id) => id,
++        Err(_) => format!("cus_{}", tenant_id), // Fallback
++    };
++
++    // Pass the correct return_url
++    let return_url = std::env::var("OHC_APP_URL").unwrap_or_else(|_| "http://localhost:3000".to_string()) + "/cost-dashboard";
+
+     if let Some(client) = &hub.tracker().stripe_client {
+-        match client.create_billing_portal_session(&customer_id, "https://example.com/cost-dashboard").await {
++        match client.create_billing_portal_session(&customer_id, &return_url).await {
+             Ok(url) => Ok(Json(CreatePortalSessionResponse { portal_url: url })),
+             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+         }

@@ -377,9 +377,10 @@ async fn test_hybrid_sync_clears_error_on_success() {
     let error: Option<String> = row.try_get("sync_error").unwrap_or(None);
     assert_eq!(status, "SYNCED");
     assert_eq!(error, None, "sync_error should be cleared on success");
+}
 
-    #[tokio::test]
-    async fn test_hybrid_sync_pos_offline_transactions() {
+#[tokio::test]
+async fn test_hybrid_sync_pos_offline_transactions() {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
@@ -443,4 +444,3 @@ async fn test_hybrid_sync_clears_error_on_success() {
         assert!(job_row.is_some());
     }
 
-}

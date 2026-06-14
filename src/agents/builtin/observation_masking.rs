@@ -30,8 +30,22 @@ impl JetBrainsObservationMasker {
 
         // Prevent extremely deep recursion that could blow up the stack
         if depth > 10 {
-            *val = Value::String("[Masked: depth limit exceeded]".to_string());
-            return true;
+            match val {
+                Value::Array(arr) => {
+                    let len = arr.len();
+                    *val = Value::String(format!("[Masked array: {} elements truncated due to depth limit]", len));
+                    return true;
+                }
+                Value::Object(obj) => {
+                    let len = obj.len();
+                    *val = Value::String(format!("[Masked object: {} keys truncated due to depth limit]", len));
+                    return true;
+                }
+                _ => {
+                    *val = Value::String("[Masked: depth limit exceeded]".to_string());
+                    return true;
+                }
+            }
         }
 
         match val {
@@ -498,6 +512,44 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-        assert!(masked_content.contains("[Masked: depth limit exceeded]") || masked_content.contains("[Observation Masked"));
+        assert!(masked_content.contains("[Masked object: 1 keys truncated due to depth limit]") || masked_content.contains("[Observation Masked"));
+    }
+
+    #[test]
+    fn test_mask_advanced_nesting() {
+        let mut deep_array = Value::Array(vec![Value::Number(1.into()), Value::Number(2.into())]);
+        for _ in 0..15 {
+            deep_array = Value::Array(vec![deep_array]);
+        }
+        let json_str = serde_json::to_string(&deep_array).unwrap();
+
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_7".to_string(),
+                    content: json_str,
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let masker = JetBrainsObservationMasker::new(0, 10, 20);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        assert!(masked_content.contains("[Masked array: 1 elements truncated due to depth limit]") || masked_content.contains("[Observation Masked"));
     }
 }

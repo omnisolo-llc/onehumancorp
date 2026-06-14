@@ -206,7 +206,7 @@ impl ClaudeSubagentSpawner {
 
                 let req = ohc_builtin_agent_core::types::ChatRequest {
                     model: config.model.clone(),
-                    system: system_prompt.to_string(),
+                    system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                     messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
                     tools: vec![],
                     max_tokens: 2000,
@@ -238,7 +238,7 @@ impl ClaudeSubagentSpawner {
         if raw_output.len() == current_text.len() {
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: config.model.clone(),
-                system: system_prompt.to_string(),
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                 messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
                 tools: vec![],
                 max_tokens: 2000,
