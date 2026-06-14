@@ -1,9 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Unified Agent Dashboard', () => {
-  test('displays real cross-agent actions without mock data', async ({ page, request }) => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('displays real cross-agent actions without mock data and correctly handles mobile viewport', async ({ page, request }) => {
     // Navigate to the dashboard
     await page.goto('/dashboard');
+
+    // Wait for the page to load
+    await page.waitForLoadState('networkidle');
+
+    // The feed should be present and visible
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+
+    // Ensure there is no horizontal scroll on the body
+    const isScrollable = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    });
+    expect(isScrollable).toBeFalsy();
 
     // Trigger the real-time event by inserting it via backend API
     await request.post('/api/agents/approvals/simulate-quote-draft', {

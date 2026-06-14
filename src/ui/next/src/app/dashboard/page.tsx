@@ -493,12 +493,12 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6">
-          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+        <div className="order-first mb-6">
+          {/* Action Feed: Always prioritized on all views as the primary work command center. */}
           <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
         </div>
 
-        <div className="order-last md:order-first">
+        <div className="order-last">
           <SuccessMilestoneAlert />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
