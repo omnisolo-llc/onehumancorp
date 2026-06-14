@@ -78,7 +78,7 @@ pub async fn offline_sync_handler(
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
-            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let query = "SELECT inventory_count, available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
@@ -88,15 +88,18 @@ pub async fn offline_sync_handler(
             match current_stock {
                 Ok(Some(row)) => {
                     let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                    let available_stock: i32 = sqlx::Row::try_get(&row, "available_quantity").unwrap_or(stock);
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+                    let new_available_stock = std::cmp::max(0, available_stock - mutation.quantity_deducted);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = $2 WHERE id = $3 AND tenant_id = $4")
                         .bind(new_stock)
+                        .bind(new_available_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
                         .execute(&mut *db_tx)
