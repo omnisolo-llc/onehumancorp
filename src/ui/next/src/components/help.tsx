@@ -375,7 +375,7 @@ export function HelpWidget() {
                 </div>
                 <div className="app-card border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
                   <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md mb-2">LATEST</span>
-                  <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Storefront Builder</h4>
+                  <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Store Builder</h4>
                   <p className="text-sm text-gray-600 leading-relaxed mb-4">You can now generate a complete storefront from just a short description of your business. Try it out in the Storefront Builder.</p>
 
                   <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">

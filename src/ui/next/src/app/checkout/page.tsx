@@ -112,6 +112,12 @@ function CheckoutContent() {
           quantity: tier ? undefined : quantity
         }),
       });
+      if (response.status === 409) {
+        setCheckoutStatus("Item just sold out.");
+        setIsProcessing(false);
+        return;
+      }
+
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
         throw new Error(data.message || data.error || "Failed to create checkout session");
@@ -124,6 +130,24 @@ function CheckoutContent() {
       setCheckoutStatus("Checkout is temporarily unavailable.");
       setIsProcessing(false);
     }
+  };
+
+  const handleMercadoPago = async () => {
+    setIsMercadoPagoProcessing(true);
+    setCheckoutStatus("Preparing Mercado Pago Checkout...");
+    try {
+      const response = await fetch("/api/checkout/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity }),
+      });
+      const data = await response.json();
+      if (data.init_point) window.location.assign(data.init_point);
+      else setCheckoutStatus("Mercado Pago checkout failed.");
+    } catch {
+      setCheckoutStatus("Mercado Pago unavailable.");
+    }
+    setIsMercadoPagoProcessing(false);
   };
 
   return (
@@ -317,6 +341,16 @@ function CheckoutContent() {
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               {isProcessing ? "Processing..." : "Pay"}
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={handleMercadoPago}
+              disabled={isMercadoPagoProcessing || isProcessing}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#008ACB] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              {isMercadoPagoProcessing ? "Processing..." : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 

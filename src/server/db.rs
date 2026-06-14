@@ -185,7 +185,7 @@ impl DB {
                     {
                         if let Ok(metadata) = file.metadata() {
                             let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
                                     tracing::error!(
@@ -216,7 +216,7 @@ impl DB {
                     let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
                     if db_path.exists() {
                          let mut perms = std::fs::metadata(&db_path)?.permissions();
-                         if perms.mode() & 0o777 != 0o600 {
+                         if (perms.mode() & 0o777) != 0o600 {
                              perms.set_mode(0o600);
                              std::fs::set_permissions(&db_path, perms)?;
                          }
@@ -228,7 +228,7 @@ impl DB {
                             .mode(0o600)
                             .open(&db_path)?;
                          let mut perms = file.metadata()?.permissions();
-                         if perms.mode() & 0o777 != 0o600 {
+                         if (perms.mode() & 0o777) != 0o600 {
                              perms.set_mode(0o600);
                              std::fs::set_permissions(&db_path, perms)?;
                          }
@@ -289,7 +289,7 @@ impl DB {
                         // Ensure permissions are strictly 0o600
                         use std::os::unix::fs::PermissionsExt;
                         if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 let _ = std::fs::set_permissions(&secret_path, perms);
                             }
@@ -405,7 +405,7 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -428,7 +428,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -440,7 +440,8 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -451,7 +452,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -479,11 +480,14 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| format!("DB Error: {}", e))?;
+
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -502,10 +506,10 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -513,7 +517,8 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -524,10 +529,10 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -549,6 +554,8 @@ impl DB {
                         route: format!("/inbox/{}", id),
                     });
                 }
+
+                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
             }
         }
 
@@ -568,46 +575,58 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
-        loop {
-            match f().await {
-                Ok(val) => return Ok(val),
-                Err(err) => {
-                    let err_str = err.to_string().to_lowercase();
-                    let is_sqlite_lock = self.is_sqlite()
-                        && (err_str.contains("database is locked")
-                            || err_str.contains("sqlite_busy"));
-                    let is_postgres_lock = !self.is_sqlite()
-                        && (err_str.contains("serialization failure")
-                            || err_str.contains("deadlock detected")
-                            || err_str.contains("40001")
-                            || err_str.contains("could not obtain lock"));
+        let timeout_duration = std::time::Duration::from_secs(60);
 
-                    if is_sqlite_lock || is_postgres_lock {
-                        attempt += 1;
-                        if attempt >= max_attempts {
-                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                                &self.pool, operation,
-                            )
-                            .await;
-                            return Err(E::from(format!(
-                                "Database retry exhausted after {} attempts: {}",
-                                max_attempts, err
-                            )));
-                        }
-                        if is_postgres_lock {
-                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+        let retry_loop = async {
+            loop {
+                match f().await {
+                    Ok(val) => return Ok::<T, E>(val),
+                    Err(err) => {
+                        let err_str = err.to_string().to_lowercase();
+                        let is_sqlite_lock = self.is_sqlite()
+                            && (err_str.contains("database is locked")
+                                || err_str.contains("sqlite_busy"));
+                        let is_postgres_lock = !self.is_sqlite()
+                            && (err_str.contains("serialization failure")
+                                || err_str.contains("deadlock detected")
+                                || err_str.contains("40001")
+                                || err_str.contains("could not obtain lock"));
+
+                        if is_sqlite_lock || is_postgres_lock {
+                            attempt += 1;
+                            if attempt >= max_attempts {
+                                let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                                return Err(E::from(format!(
+                                    "Database retry exhausted after {} attempts: {}",
+                                    max_attempts, err
+                                )));
+                            }
+                            if is_postgres_lock {
+                                tracing::warn!("postgres_skip_locked contention in {}", operation);
+                            } else {
+                                let _ = ::server_telemetry::record_sqlite_lock_contention(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                            }
+                            tokio::time::sleep(backoff).await;
+                            backoff *= 2;
                         } else {
-                            let _ = ::server_telemetry::record_sqlite_lock_contention(
-                                &self.pool, operation,
-                            )
-                            .await;
+                            return Err(err);
                         }
-                        tokio::time::sleep(backoff).await;
-                        backoff *= 2;
-                    } else {
-                        return Err(err);
                     }
                 }
+            }
+        };
+
+        match tokio::time::timeout(timeout_duration, retry_loop).await {
+            Ok(result) => result,
+            Err(_) => {
+                tracing::error!("Database operation timed out after 60 seconds: {}", operation);
+                Err(E::from(format!("Database operation timed out after 60 seconds: {}", operation)))
             }
         }
     }
@@ -1864,7 +1883,7 @@ mod security_tests_final {
                                 .expect("Database URL or operation failed in test");
                             let metadata = file.metadata().expect("Database URL or operation failed in test");
                             let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 file.set_permissions(perms).expect("Database URL or operation failed in test");
                             }

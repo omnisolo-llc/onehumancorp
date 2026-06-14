@@ -131,7 +131,7 @@ export default function CostDashboardPage() {
       return (
           <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8" data-testid="cost-dashboard-loading">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
-                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
+                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/2 md:w-1/4"></div>
                   <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
                   <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
               </div>
@@ -256,14 +256,26 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Budget Health Alert */}
-        {data && data.projected_monthly_cost > 10000 && (
-            <div id="budget-health-alert" className="p-4 bg-amber-50/70 border border-amber-200 backdrop-blur-xl saturate-200 rounded-xl flex items-start gap-3">
-                <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+        {data && (
+            <div id="budget-health-alert" className={`p-4 border backdrop-blur-xl saturate-200 rounded-xl flex items-start gap-3 ${data.projected_monthly_cost > 10000 ? 'bg-amber-50/70 border-amber-200' : 'bg-emerald-50/70 border-emerald-200'}`}>
+                {data.projected_monthly_cost > 10000 ? (
+                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                ) : (
+                    <svg className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                )}
                 <div>
-                    <h3 className="text-sm font-semibold text-amber-800">Budget Health Warning</h3>
-                    <p className="text-sm text-amber-700 mt-1">Your projected monthly cost ({formatCurrency(data.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <h3 className={`text-sm font-semibold ${data.projected_monthly_cost > 10000 ? 'text-amber-800' : 'text-emerald-800'}`}>
+                        {data.projected_monthly_cost > 10000 ? 'Budget Health Warning' : 'Budget Health Good'}
+                    </h3>
+                    <p className={`text-xs mt-1 ${data.projected_monthly_cost > 10000 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                        {data.projected_monthly_cost > 10000
+                            ? 'Projected costs are trending higher than average. Review department usage or upgrade your plan.'
+                            : 'Projected costs are well within normal operating parameters.'}
+                    </p>
                 </div>
             </div>
         )}

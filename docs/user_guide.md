@@ -64,7 +64,7 @@ Don't forget to share your store link on social media or with your friends and f
 Running a business takes a lot of work. That's why we give you AI helpers—smart computer programs that can do tasks for you invisibly, like a real team!
 
 ### Hiring AI Helpers
-Go to the AI Agents page to see all the helpers you can hire. They are organized into simple functional areas:
+Go to the AI Departments page to see all the helpers you can hire. They are organized into simple functional areas:
 - **Operations (The Manager)**: Handles day-to-day orders and bookings.
 - **Marketing & Advertising (The Promoter)**: Gets your business noticed and designs your site.
 - **Sales & Acquisition (The Salesperson)**: Helps you turn interest into revenue.

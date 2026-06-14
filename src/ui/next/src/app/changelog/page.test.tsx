@@ -11,7 +11,7 @@ describe('ChangelogPage', () => {
       version: "Version 1.0 (Latest)",
       contentLines: [
         "### 🌟 New Features",
-        "- **Interactive AI Storefront Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
+        "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
         "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
         "Faster loading times for product images."
       ]
@@ -31,7 +31,7 @@ describe('ChangelogPage', () => {
     });
 
     // Check for some content points
-    expect(screen.getByText(/Interactive AI Storefront Builder:/)).toBeInTheDocument();
+    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
     expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
   });
 

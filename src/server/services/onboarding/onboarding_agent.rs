@@ -65,28 +65,105 @@ impl OnboardingAgent {
     pub async fn process_chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, String> {
         let user_messages: Vec<&ChatMessage> = messages.iter().filter(|m| m.role == "user").collect();
 
-        if user_messages.len() <= 1 {
-            return Ok(ChatResponse {
-                is_complete: false,
-                reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                intake_data: None,
-            });
+        let minimax = match self.minimax.as_ref() {
+            Some(m) => m,
+            None => {
+                // E2E Test / Local adapter mock fallback when no LLM is configured
+                if user_messages.len() <= 1 {
+                    return Ok(ChatResponse {
+                        is_complete: false,
+                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
+                        intake_data: None,
+                    });
+                }
+
+                let combined_input = user_messages.iter().map(|m| {
+                    let mut text = m.content.clone();
+                    if let Some(url) = &m.image_url {
+                        text.push_str(&format!("\nImage provided: {}", url));
+                    }
+                    text
+                }).collect::<Vec<String>>().join("\n");
+                let intake_data = self.process_intake(&combined_input).await?;
+
+                return Ok(ChatResponse {
+                    is_complete: true,
+                    reply: "Give me a minute... I'm building your business.".to_string(),
+                    intake_data: Some(intake_data),
+                });
+            }
+        };
+
+        let mut conversation_history = String::new();
+        for msg in &messages {
+            let role = if msg.role == "user" { "User" } else { "Assistant" };
+            let mut content = msg.content.clone();
+            if let Some(url) = &msg.image_url {
+                content.push_str(&format!(" (Image provided: {})", url));
+            }
+            conversation_history.push_str(&format!("{}: {}\n", role, content));
         }
 
-        let combined_input = user_messages.iter().map(|m| {
-            let mut text = m.content.clone();
-            if let Some(url) = &m.image_url {
-                text.push_str(&format!("\nImage provided: {}", url));
-            }
-            text
-        }).collect::<Vec<String>>().join("\n");
-        let intake_data = self.process_intake(&combined_input).await?;
+        let prompt = format!(
+            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business.
+You need to know at least:
+1. What they sell or what service they provide.
+2. A rough idea of their business type (e.g. bakery, handyman, tutor).
 
-        Ok(ChatResponse {
-            is_complete: true,
-            reply: "Give me a minute... I'm building your business.".to_string(),
-            intake_data: Some(intake_data),
-        })
+Review the following conversation history:
+{}
+
+If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
+If you DO have enough information, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
+
+Your response:",
+            conversation_history
+        );
+
+        let mut attempts = 0;
+        let mut response = String::new();
+        while attempts < 3 {
+            match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
+                Ok(Ok(content)) => {
+                    response = content;
+                    break;
+                },
+                _ => {
+                    attempts += 1;
+                    if attempts == 3 {
+                        return Err("AI call failed after 3 attempts".into());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                }
+            }
+        }
+
+        let response = response.trim();
+
+        if response.starts_with("[COMPLETE]") {
+            let reply_msg = response.trim_start_matches("[COMPLETE]").trim().to_string();
+            let combined_input = user_messages.iter().map(|m| {
+                let mut text = m.content.clone();
+                if let Some(url) = &m.image_url {
+                    text.push_str(&format!("\nImage provided: {}", url));
+                }
+                text
+            }).collect::<Vec<String>>().join("\n");
+
+            let intake_data = self.process_intake(&combined_input).await?;
+
+            Ok(ChatResponse {
+                is_complete: true,
+                reply: if reply_msg.is_empty() { "Give me a minute... I'm building your business.".to_string() } else { reply_msg },
+                intake_data: Some(intake_data),
+            })
+        } else {
+            Ok(ChatResponse {
+                is_complete: false,
+                reply: response.to_string(),
+                intake_data: None,
+            })
+        }
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
@@ -94,9 +171,26 @@ impl OnboardingAgent {
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
+                let mut mock_name = "Mock Business".to_string();
+                let mut mock_type = "Mock Type".to_string();
+
+                for line in input.lines() {
+                    if line.starts_with("Business Name: ") {
+                        mock_name = line.trim_start_matches("Business Name: ").trim().to_string();
+                    } else if line.starts_with("What we sell: ") {
+                        let desc = line.trim_start_matches("What we sell: ").trim();
+                        if desc.chars().count() > 30 {
+                            let truncated: String = desc.chars().take(27).collect();
+                            mock_type = format!("{}...", truncated);
+                        } else {
+                            mock_type = desc.to_string();
+                        }
+                    }
+                }
+
                 return Ok(IntakeData {
-                    business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
+                    business_name: mock_name,
+                    business_type: mock_type,
                     categories: vec!["physical".to_string()],
                     initial_products: vec![
                         IntakeProduct {
@@ -630,7 +724,17 @@ impl OnboardingAgent {
                 ("Consultation", "1-hour professional consultation", 10000, "booking"),
                 ("Service Call", "On-site service visit", 7500, "booking"),
             ],
-                        "Plumbing" => vec![
+            "Food Cart" | "Food Truck" => vec![
+                ("Daily Special", "Our featured dish of the day", 1200, "physical"),
+                ("Signature Beverage", "Refreshing house-made drink", 450, "physical"),
+                ("Side Dish", "The perfect accompaniment to any meal", 350, "physical"),
+            ],
+            "Agency" | "Studio" => vec![
+                ("Project Deposit", "Initial payment to start your project", 50000, "physical"),
+                ("Consultation Phase", "Deep dive into your project requirements", 15000, "booking"),
+                ("Retainer Month", "Ongoing support and development", 200000, "subscriptions"),
+            ],
+            "Plumbing" => vec![
                 ("Premium Plumbing Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Plumbing Service", "Essential services to get you started", 9999, "booking"),
                 ("Plumbing Consultation", "Expert advice and planning", 4999, "booking"),
@@ -2715,6 +2819,8 @@ pub fn onboarding_feature_state(
 ) -> serde_json::Value {
     let has_services = business_type == "Service Business"
         || business_type == "Service"
+        || business_type == "Agency"
+        || business_type == "Studio"
         || req.selling_categories.iter().any(|category| category == "services");
     let has_products = req
         .selling_categories
@@ -2723,6 +2829,8 @@ pub fn onboarding_feature_state(
         || !req.first_product_name.trim().is_empty();
     let has_food = business_type == "Restaurant / Food"
         || business_type == "Food Cart"
+        || business_type == "Bakery"
+        || business_type == "Home Baker"
         || req.selling_categories.iter().any(|category| category == "food");
 
     let mut flags = serde_json::Map::new();
@@ -3169,5 +3277,21 @@ mod tests {
             .bind(org_id2)
             .fetch_all(&db.pool).await.unwrap();
         assert!(products2.iter().any(|p| p.get::<String, _>("name") == "Standard Repair Visit"));
+
+        // Test Food Cart
+        let org_id3 = "test-org-foodcart";
+        agent.generate_initial_products(org_id3, "Food Cart").await.unwrap();
+        let products3 = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
+            .bind(org_id3)
+            .fetch_all(&db.pool).await.unwrap();
+        assert!(products3.iter().any(|p| p.get::<String, _>("name") == "Daily Special"));
+
+        // Test Agency
+        let org_id4 = "test-org-agency";
+        agent.generate_initial_products(org_id4, "Agency").await.unwrap();
+        let products4 = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
+            .bind(org_id4)
+            .fetch_all(&db.pool).await.unwrap();
+        assert!(products4.iter().any(|p| p.get::<String, _>("name") == "Project Deposit"));
     }
 }

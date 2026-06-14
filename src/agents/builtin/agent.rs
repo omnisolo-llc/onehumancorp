@@ -1044,14 +1044,13 @@ impl Agent {
                     let mut futures = Vec::new();
                     for (i, tc) in batch {
                         // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
-                        if let Some(guardrails) = &cfg.guardrails {
-                            if let Err(e) = guardrails.check_tool(tc) {
+                        if let Some(guardrails) = &cfg.guardrails
+                            && let Err(e) = guardrails.check_tool(tc) {
                                 on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
                                 return Err(Box::new(std::io::Error::other(
                                     format!("Termination: Tool Guardrail tripwire fires: {}", e),
                                 )));
                             }
-                        }
 
                         // Termination Condition: Guardrail tripwire fires
                         if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
@@ -1104,8 +1103,8 @@ impl Agent {
                                 )));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                                if let Some(ref cb) = cfg.human_input_callback.0 {
-                                    if let Some(human_input) = cb(&err_msg).await {
+                                if let Some(ref cb) = cfg.human_input_callback.0
+                                    && let Some(human_input) = cb(&err_msg).await {
                                         on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
                                         let error_result = crate::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
@@ -1123,7 +1122,6 @@ impl Agent {
                                         messages.push(msg_to_push);
                                         continue;
                                     }
-                                }
                                 let full_err = format!("USER_FIXABLE: {}", err_msg);
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: full_err.clone(),
@@ -1161,14 +1159,13 @@ impl Agent {
                     // Mutating tool - execute serially
                     for (i, tc) in batch {
                         // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
-                        if let Some(guardrails) = &cfg.guardrails {
-                            if let Err(e) = guardrails.check_tool(tc) {
+                        if let Some(guardrails) = &cfg.guardrails
+                            && let Err(e) = guardrails.check_tool(tc) {
                                 on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
                                 return Err(Box::new(std::io::Error::other(
                                     format!("Termination: Tool Guardrail tripwire fires: {}", e),
                                 )));
                             }
-                        }
 
                         // Termination Condition: Guardrail tripwire fires
                         if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
@@ -3534,19 +3531,19 @@ impl Agent {
                                 .await
                             {
                                 Ok(r) => {
-                                    return (tc_clone, Ok(r));
+                                    (tc_clone, Ok(r))
                                 }
                                 Err(ToolError::Transient(msg)) => {
-                                    return (
+                                    (
                                         tc_clone,
                                         Err(ToolError::Unexpected(format!(
                                             "Transient error after retries: {}",
                                             msg
                                         ))),
-                                    );
+                                    )
                                 }
                                 Err(e) => {
-                                    return (tc_clone, Err(e));
+                                    (tc_clone, Err(e))
                                 }
                             }
                     }
