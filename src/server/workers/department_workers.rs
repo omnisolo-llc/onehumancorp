@@ -58,7 +58,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -81,7 +81,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload, event_type FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -213,6 +213,76 @@ impl OperationsWorker {
                             .execute(pool)
                             .await
                             .map_err(|e| e.to_string())?;
+                    }
+                }
+                return Ok(true);
+            } else if event_type == "SyncEvent:JobCompleted" {
+                let batch_id = payload.get("batch_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                let empty_payload = json!({});
+                let inner_payload = payload.get("payload").unwrap_or(&empty_payload);
+                let notes = inner_payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
+                let job_id = inner_payload.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                let title = "Field Operations Sync: Follow-up required".to_string();
+                let description = format!("A job was recently completed offline and synced. Review the notes to prepare the final quote/invoice. Notes: {}", notes);
+
+                let drafted_msg = format!("Based on your field notes for job {}: '{}', I have drafted a follow-up invoice. Tap to review.", job_id, notes);
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let mut tx = db.pool.begin().await.unwrap();
+                        let _ = sqlx::query(
+                            "INSERT INTO shared_tasks (id, tenant_id, title, description, status, assigned_agent_id) VALUES ($1, $2, $3, $4, 'PENDING', 'operations')"
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .execute(&mut *tx)
+                        .await;
+
+                        let notification_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, type, content) VALUES ('system', $1, $2, 'operations_agent', 'notification', $3)"
+                        )
+                        .bind(&tenant_id)
+                        .bind(&notification_id)
+                        .bind(&drafted_msg)
+                        .execute(&mut *tx)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE department_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                            .bind("COMPLETED")
+                            .bind(&id)
+                            .execute(&mut *tx).await;
+                        tx.commit().await.unwrap();
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query(
+                            "INSERT INTO shared_tasks (id, tenant_id, title, description, status, assigned_agent_id) VALUES (?, ?, ?, ?, 'PENDING', 'operations')"
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .execute(pool)
+                        .await;
+
+                        let notification_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, type, content) VALUES ('system', ?, ?, 'operations_agent', 'notification', ?)"
+                        )
+                        .bind(&tenant_id)
+                        .bind(&notification_id)
+                        .bind(&drafted_msg)
+                        .execute(pool)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE department_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind("COMPLETED")
+                            .bind(&id)
+                            .execute(pool).await;
                     }
                 }
                 return Ok(true);

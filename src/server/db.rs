@@ -981,7 +981,25 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                    CREATE TABLE IF NOT EXISTS department_tasks (
+
+                    CREATE TABLE IF NOT EXISTS mutation_queue (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS sync_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        batch_id TEXT,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS department_tasks (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         department TEXT NOT NULL,
@@ -1132,7 +1150,25 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE IF NOT EXISTS customer_identities (
+
+                    CREATE TABLE IF NOT EXISTS mutation_queue (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS sync_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        batch_id TEXT,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS customer_identities (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         customer_id TEXT NOT NULL,

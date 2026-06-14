@@ -72,7 +72,7 @@ export class SyncManager {
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'mesh_mutation').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
@@ -121,6 +121,31 @@ export class SyncManager {
         if (!resPos.ok) {
           allOk = false;
           throw new Error(`POS Sync failed with status ${resPos.status}`);
+        }
+      }
+
+      const meshMutations = queue.filter(m => m.type === 'mesh_mutation').map(m => {
+        return {
+          id: m.id,
+          action_type: m.action_type,
+          payload: m.payload,
+          timestamp: new Date().toISOString()
+        };
+      });
+
+      // Sync mesh mutations
+      if (meshMutations.length > 0) {
+        const resMesh = await fetch('/api/v1/sync/mesh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ mutations: meshMutations })
+        });
+        if (!resMesh.ok) {
+          allOk = false;
+          throw new Error(`Mesh Sync failed with status ${resMesh.status}`);
         }
       }
 
