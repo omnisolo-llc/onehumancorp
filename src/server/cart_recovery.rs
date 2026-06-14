@@ -458,7 +458,10 @@ async fn recovery_message_for(
         let business_name = session.business_name.as_deref().unwrap_or("our store");
         let checkout_type = &session.checkout_type;
 
-        let system_prompt = "You are a friendly, highly persuasive assistant acting as the store owner's Cart Recovery Agent. Your goal is to draft a short, personalized follow-up message to a customer who abandoned their cart to encourage them to complete the purchase. Be polite, natural, and helpful. Do NOT use placeholder variables like [Name]. Output only the message body and nothing else.";
+        static SYSTEM_PROMPT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        let system_prompt = SYSTEM_PROMPT.get_or_init(|| {
+            ::server_pricing::compression::reduce_tokens("You are a friendly, highly persuasive assistant acting as the store owner's Cart Recovery Agent. Your goal is to draft a short, personalized follow-up message to a customer who abandoned their cart to encourage them to complete the purchase. Be polite, natural, and helpful. Do NOT use placeholder variables like [Name]. Output only the message body and nothing else.")
+        });
         let user_prompt = format!(
             "Store Name: {}\nCustomer Name: {}\nAbandoned Cart Value: {}\nAbandoned Items Context (checkout type): {}\nCheckout Link: {}\n\nWrite a short, friendly message encouraging {} to resume their checkout at {}. Mention the items left behind based on the context. If the context is 'full' or unclear, just mention they left something behind. Give them the secure link to finish their purchase.",
             business_name, customer_name, amount, checkout_type, checkout_url, customer_name, business_name
