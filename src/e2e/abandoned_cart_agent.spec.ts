@@ -6,7 +6,7 @@ test.describe('Automated Cart Recovery Agent', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
-    // 2. We mock the server-side trigger for cart recovery because waiting 4 hours in an E2E test is impossible
+    // 2. We trigger the server-side action for cart recovery because waiting 4 hours in an E2E test is impossible
     // In a real environment, this is triggered via PostgreSQL SKIP LOCKED on a schedule.
     const triggerRes = await request.post('/api/v1/growth/campaign/send-cart', {
         data: {

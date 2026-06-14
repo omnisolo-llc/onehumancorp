@@ -2,14 +2,14 @@ import { test, expect } from './fixtures';
 import { randomUUID } from 'crypto';
 
 test.describe('Omni-Inbox Auto-Reply Agent', () => {
-  test('displays the database-backed inbox experience and processes omni messages', async ({ page, request, unlimitedAdminUser }) => {
+  test('displays the database-backed inbox experience and processes omni messages', async ({ page, request }) => {
     // 1. Simulate an incoming webhook payload
     const senderId = `user_${randomUUID()}@example.com`;
     const messageContent = 'Hello, do you fix sinks?';
 
     const response = await request.post('/api/v1/webhooks/omni_inbox', {
       data: {
-        tenant_id: unlimitedAdminUser,
+        tenant_id: 'e2e-tenant',
         source: 'email',
         sender_id: senderId,
         message: messageContent

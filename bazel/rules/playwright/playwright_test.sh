@@ -428,6 +428,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     OHC_STANDALONE="false"
     export REDIS_URL="$RD_URL"
   fi
+  export DATABASE_URL="$DB_URL"
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \

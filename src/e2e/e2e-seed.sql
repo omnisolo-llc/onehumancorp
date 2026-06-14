@@ -19,14 +19,14 @@ ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier)
+INSERT INTO tenants (id, name, industry, plan_tier)
 VALUES
   ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
   ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
-    tier = EXCLUDED.tier,
+    plan_tier = EXCLUDED.plan_tier,
     updated_at = CURRENT_TIMESTAMP;
 
 -- Ensure RLS allows us to insert ledger data
@@ -161,16 +161,17 @@ VALUES
 ('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'DRAFT', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-omnichannel-return', 'e2e-tenant', 'operations', 'Return requested by Sarah for Order #1042. Operations Agent has generated a return label and prepared a $45.00 refund. Tap ''Approve'' to finalize.', 'DRAFT', 'HIGH', '{"feature_type": "omnichannel_return", "order_id": "1042", "product_id": "product-123", "return_type": "Refund", "refund_amount": 45.00}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?', 'DRAFT', 'HIGH', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.', 'DRAFT', 'HIGH', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('app-test-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?', 'DRAFT', 'HIGH', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('app-test-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.', 'DRAFT', 'HIGH', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES
-  ('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  ('app-test-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('app-test-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('e2e-feed-test-proactive', 'e2e-tenant', 'proactive_analysis', '{"summary": "You have 3 pending orders and 1 unconfirmed booking. You should follow up.", "insight_type": "operations"}', '{"title": "DraftFollowups", "description": "Draft followups for pending orders", "type": "DraftFollowups", "payload": "Draft followups for pending orders"}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
@@ -260,6 +261,12 @@ INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status,
 VALUES
   ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending', 'maya_bakes'),
   ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending', '+15550102')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id)
+VALUES
+  ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Do you have vegan options for birthday cakes?', 'English', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending', 'maya_bakes', 'e2e-customer-ava'),
+  ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Can I schedule a consultation for my wedding?', 'English', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending', '+15550102', 'e2e-customer-ben')
 ON CONFLICT DO NOTHING;
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
@@ -526,3 +533,4 @@ ALTER TABLE IF EXISTS triage_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;

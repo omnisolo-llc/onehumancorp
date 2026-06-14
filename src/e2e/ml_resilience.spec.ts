@@ -1,11 +1,6 @@
-import { expect, test } from "./fixtures";
+import { test, expect } from './fixtures';
 
-test.describe("ML Resilience and Fallbacks", () => {
-  test("AI Agent Paused state appears when LLM API fails", async ({
-    page,
-    request,
-  }) => {
-    // 1. Insert a "PAUSED" task into the DB directly for the e2e tenant
+test('AI Agent Paused state appears when LLM API fails', async ({ page, request }) => {
     await request.post("/api/e2e/setup", {
       data: {
         query: `
@@ -16,20 +11,16 @@ test.describe("ML Resilience and Fallbacks", () => {
       },
     });
 
-    // 2. Go to the dashboard
     await page.goto("/dashboard");
 
-    // Wait for the unified feed to load
     await expect(page.locator("text=Activity Feed").first())
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
 
-    // 3. Verify the message is present in the UnifiedAgentFeed
     await expect(page.locator("text=business advisory").first())
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
     await expect(page.locator("text=System is paused").first())
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
-  });
 });

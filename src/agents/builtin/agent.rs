@@ -458,7 +458,9 @@ impl Agent {
 
             let resp = self.llm.chat(req).await?;
             let msg = resp.message;
-            messages.push(msg.clone());
+            let mut msg_clone = msg.clone();
+            msg_clone.previous_response_id = msg.response_id.clone();
+            messages.push(msg_clone);
 
             if msg.tool_calls.is_empty() {
                 if *phase == "Verify" {
@@ -559,10 +561,7 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        let self_correct_msg = format!(
-                            "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                            msg
-                        );
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -626,10 +625,7 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        let self_correct_msg = format!(
-                            "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                            msg
-                        );
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -887,7 +883,9 @@ impl Agent {
                 });
             }
 
-            messages.push(msg.clone());
+            let mut msg_clone = msg.clone();
+            msg_clone.previous_response_id = msg.response_id.clone();
+            messages.push(msg_clone);
 
             // 3. Termination Condition: Safety refusal
             if resp.stop_reason == "safety" || resp.stop_reason == "refusal" {
@@ -915,9 +913,13 @@ impl Agent {
                 }
                 if decision.action == crate::budget::BudgetAction::Continue {
                     if !msg.content.is_empty() {
-                        messages.push(msg.clone());
+                        let mut msg_clone = msg.clone();
+                        msg_clone.previous_response_id = msg.response_id.clone();
+                        messages.push(msg_clone);
                     }
-                    messages.push(crate::types::Message::user(&decision.nudge_message));
+                    let mut nudge_msg = crate::types::Message::user(&decision.nudge_message);
+                    nudge_msg.previous_response_id = msg.response_id.clone();
+                    messages.push(nudge_msg);
                     continue;
                 }
             }
@@ -1134,10 +1136,7 @@ impl Agent {
                                 )));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                let self_correct_msg = format!(
-                                    "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                    err_msg
-                                );
+                                let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
                                 on_event(AgentEvent::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
@@ -1239,10 +1238,7 @@ impl Agent {
                                     )));
                                 }
                                 Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                    let self_correct_msg = format!(
-                                        "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                        err_msg
-                                    );
+                                    let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
                                     on_event(AgentEvent::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
@@ -1570,12 +1566,7 @@ impl Agent {
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
-                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                            tool_results[idx] = crate::types::ToolResult {
-                                tool_call_id: id,
-                                content: "".to_string(),
-                                error: self_correct_msg,
-                            };
+                            tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id, &msg);
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
@@ -1615,12 +1606,7 @@ impl Agent {
                     if let Err(e) = gating_err {
                         match e {
                             crate::types::ToolError::LlmRecoverable(msg) => {
-                                let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: id,
-                                    content: "".to_string(),
-                                    error: self_correct_msg,
-                                };
+                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id, &msg);
                             }
                             crate::types::ToolError::UserFixable(msg) => {
                                 if let Some(ref cb) = cfg_arc_node.human_input_callback.0
@@ -1686,12 +1672,7 @@ impl Agent {
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
-                                let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: id,
-                                    content: "".to_string(),
-                                    error: self_correct_msg,
-                                };
+                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id, &msg);
                             }
                             Err(crate::types::ToolError::Transient(msg)) => {
                                 return Err(format!("Unexpected tool error: Transient error: {}", msg));
@@ -2166,12 +2147,7 @@ impl Agent {
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                            let error_result = crate::types::ToolResult {
-                                tool_call_id: current_tc.id.clone(),
-                                content: String::new(),
-                                error: self_correct_msg.clone(),
-                            };
+                            let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &msg);
                             let msg_to_push = crate::types::Message {
                                 role: crate::types::Role::Tool,
                                 content: String::new(),
@@ -2304,15 +2280,7 @@ impl Agent {
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        let self_correct_msg = format!(
-                            "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                            msg
-                        );
-                        let error_result = crate::types::ToolResult {
-                            tool_call_id: current_tc.id.clone(),
-                            content: String::new(),
-                            error: self_correct_msg.clone(),
-                        };
+                        let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &msg);
                         let msg_to_push = crate::types::Message {
                             role: crate::types::Role::Tool,
                             content: String::new(),
@@ -3162,7 +3130,9 @@ impl Agent {
                         on_event(AgentEvent::TaskError {
                             error: err_msg.clone(),
                         });
-                        messages.push(Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted."));
+                        let mut malformed_msg = Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted.");
+                        malformed_msg.previous_response_id = last_response_id.clone();
+                        messages.push(malformed_msg);
                         continue;
                     } else {
                         on_event(AgentEvent::TaskError { error: err.clone() });
@@ -3279,9 +3249,13 @@ impl Agent {
                 if decision.action == BudgetAction::Continue {
                     // Add the budget nudge to messages and continue.
                     if !resp.message.content.is_empty() {
-                        messages.push(resp.message.clone());
+                        let mut msg_clone = resp.message.clone();
+                        msg_clone.previous_response_id = last_response_id.clone();
+                        messages.push(msg_clone);
                     }
-                    messages.push(Message::user(&decision.nudge_message));
+                    let mut nudge_msg = Message::user(&decision.nudge_message);
+                    nudge_msg.previous_response_id = resp.response_id.clone();
+                    messages.push(nudge_msg);
                     continue;
                 }
             }
@@ -3289,7 +3263,9 @@ impl Agent {
             let tool_calls = resp.message.tool_calls.clone();
 
             // Add assistant message to history (including tool calls).
-            messages.push(resp.message.clone());
+            let mut assistant_msg = resp.message.clone();
+            assistant_msg.previous_response_id = last_response_id.clone();
+            messages.push(assistant_msg);
 
             // Telemetry: track individual tool executions
             let tool_call_counter = meter.u64_counter("ohc_agent_tool_execution_total").build();
@@ -3360,24 +3336,30 @@ impl Agent {
                     .run_computational_guides(&last_assistant_content, &current_context)
                     .await
                 {
-                    messages.push(Message::user(e));
+                    let mut user_msg = Message::user(e);
+                    user_msg.previous_response_id = last_response_id.clone();
+                    messages.push(user_msg);
                     continue;
                 }
                 if let Err(e) = verification_manager
                     .run_visual_verifiers(&last_assistant_content)
                     .await
                 {
-                    messages.push(Message::user(e));
+                    let mut user_msg = Message::user(e);
+                    user_msg.previous_response_id = last_response_id.clone();
+                    messages.push(user_msg);
                     continue;
                 }
                 if let Err(e) = verification_manager
                     .run_inferential_sensors(&last_assistant_content, initial_message)
                     .await
                 {
-                    messages.push(Message::user(format!(
+                    let mut user_msg = Message::user(format!(
                         "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
                         e
-                    )));
+                    ));
+                    user_msg.previous_response_id = last_response_id.clone();
+                    messages.push(user_msg);
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -3686,10 +3668,7 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        let self_correct_msg = format!(
-                            "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                            msg
-                        );
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -3971,10 +3950,7 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let self_correct_msg = format!(
-                                "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                msg
-                            );
+                            let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -5820,7 +5796,7 @@ mod tests {
                 let mut reqs = self.requests.lock().await;
                 reqs.push(req.clone());
 
-                if req.system.contains("You are a research planner") {
+                if req.system.contains("planner") {
                     let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant(plan.to_string()),
@@ -5828,10 +5804,7 @@ mod tests {
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
-                } else if req
-                    .system
-                    .contains("You are a specialized research execution agent")
-                {
+                } else if req.system.contains("execution agent") {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Detailed content here"),
                         usage: Usage::default(),
@@ -5864,7 +5837,7 @@ mod tests {
         let result = agent
             .run(&cfg, "Research quantum computing", &mut on_event)
             .await;
-        assert!(result.is_ok());
+                assert!(result.is_ok());
         let res_str = result.unwrap();
 
         assert!(res_str.contains("# Research Report: Research quantum computing"));

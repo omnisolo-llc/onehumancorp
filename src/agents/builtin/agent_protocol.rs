@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct TaskRequestBody {
-    pub input: String,
+    pub input: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_input: Option<serde_json::Value>,
 }
@@ -14,7 +14,7 @@ pub struct TaskRequestBody {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Task {
     pub task_id: String,
-    pub input: String,
+    pub input: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_input: Option<serde_json::Value>,
     pub artifacts: Vec<Artifact>,
@@ -23,7 +23,9 @@ pub struct Task {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Artifact {
     pub artifact_id: String,
+    pub agent_created: bool,
     pub file_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub relative_path: Option<String>,
 }
 
@@ -38,8 +40,10 @@ pub struct StepRequestBody {
 pub struct Step {
     pub task_id: String,
     pub step_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     pub status: StepStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_output: Option<serde_json::Value>,
@@ -53,7 +57,6 @@ pub enum StepStatus {
     Created,
     Running,
     Completed,
-    Failed,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -76,7 +79,7 @@ pub struct TaskListResponse {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct StepListResponse {
+pub struct TaskStepsListResponse {
     pub steps: Vec<Step>,
     pub pagination: Pagination,
 }
@@ -91,14 +94,14 @@ impl AgentProtocolServer {
     }
 
     /// POST /ap/v1/agent/tasks
-    pub async fn create_task(&self, req_json: &str) -> String {
+    pub async fn create_task(&self, req_json: &str) -> serde_json::Value {
         let req: TaskRequestBody = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => {
-                return serde_json::to_string(&ErrorResponse {
+                return serde_json::to_value(&ErrorResponse {
                     error: "Invalid request".to_string(),
                 })
-                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                .unwrap();
             }
         };
 
@@ -112,12 +115,11 @@ impl AgentProtocolServer {
             artifacts: vec![],
         };
 
-        serde_json::to_string(&resp)
-            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_value(&resp).unwrap()
     }
 
     /// GET /ap/v1/agent/tasks
-    pub async fn list_tasks(&self) -> String {
+    pub async fn list_tasks(&self) -> serde_json::Value {
         let resp = TaskListResponse {
             tasks: vec![],
             pagination: Pagination {
@@ -127,12 +129,11 @@ impl AgentProtocolServer {
                 page_size: 10,
             },
         };
-        serde_json::to_string(&resp)
-            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_value(&resp).unwrap()
     }
 
     /// GET /ap/v1/agent/tasks/{task_id}
-    pub async fn get_task(&self, task_id: &str) -> String {
+    pub async fn get_task(&self, task_id: &str) -> serde_json::Value {
         // Query the Checkpointer to see if the task exists and its state.
         let status = if let Some(cp) = &self.runner.core.agent.checkpointer {
             match cp.list_checkpoints(task_id).await {
@@ -145,17 +146,16 @@ impl AgentProtocolServer {
 
         let resp = Task {
             task_id: task_id.to_string(),
-            input: format!("State from checkpoint: {}", status),
+            input: Some(format!("State from checkpoint: {}", status)),
             additional_input: None,
             artifacts: vec![],
         };
-        serde_json::to_string(&resp)
-            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_value(&resp).unwrap()
     }
 
     /// GET /ap/v1/agent/tasks/{task_id}/steps
-    pub async fn list_steps(&self, _task_id: &str) -> String {
-        let resp = StepListResponse {
+    pub async fn list_steps(&self, _task_id: &str) -> serde_json::Value {
+        let resp = TaskStepsListResponse {
             steps: vec![],
             pagination: Pagination {
                 total_items: 0,
@@ -164,19 +164,18 @@ impl AgentProtocolServer {
                 page_size: 10,
             },
         };
-        serde_json::to_string(&resp)
-            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_value(&resp).unwrap()
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
-    pub async fn execute_step(&self, task_id: &str, req_json: &str) -> String {
+    pub async fn execute_step(&self, task_id: &str, req_json: &str) -> serde_json::Value {
         let req: StepRequestBody = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => {
-                return serde_json::to_string(&ErrorResponse {
+                return serde_json::to_value(&ErrorResponse {
                     error: "Invalid request".to_string(),
                 })
-                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                .unwrap();
             }
         };
 
@@ -195,22 +194,20 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp)
-                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_value(&resp).unwrap()
             }
             Err(e) => {
                 let resp = Step {
                     task_id: task_id.to_string(),
                     step_id: uuid::Uuid::new_v4().to_string(),
                     name: None,
-                    status: StepStatus::Failed,
-                    output: Some(e.to_string()),
+                    status: StepStatus::Completed, // Spec does not define Failed, using Completed for now
+                    output: Some(format!("Error: {}", e)),
                     additional_output: None,
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp)
-                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_value(&resp).unwrap()
             }
         }
     }
@@ -250,14 +247,14 @@ mod tests {
         // Test create task
         let req_json = r#"{"input": "do this task"}"#;
         let resp_json = server.create_task(req_json).await;
-        let resp: Task = serde_json::from_str(&resp_json).unwrap();
-        assert_eq!(resp.input, "do this task");
+        let resp: Task = serde_json::from_value(resp_json).unwrap();
+        assert_eq!(resp.input, Some("do this task".to_string()));
         let task_id = resp.task_id;
 
         // Test execute step
         let step_req = r#"{"input": "step 1"}"#;
         let step_resp_json = server.execute_step(&task_id, step_req).await;
-        let step_resp: Step = serde_json::from_str(&step_resp_json).unwrap();
+        let step_resp: Step = serde_json::from_value(step_resp_json).unwrap();
 
         assert_eq!(step_resp.task_id, task_id);
         assert_eq!(step_resp.output.unwrap(), "agent protocol success");
@@ -273,7 +270,7 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let resp_json = server.list_tasks().await;
-        let resp: TaskListResponse = serde_json::from_str(&resp_json).unwrap();
+        let resp: TaskListResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(resp.tasks.len(), 0);
         assert_eq!(resp.pagination.total_pages, 1);
     }
@@ -286,7 +283,7 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let resp_json = server.list_steps("task-123").await;
-        let resp: StepListResponse = serde_json::from_str(&resp_json).unwrap();
+        let resp: TaskStepsListResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(resp.steps.len(), 0);
         assert_eq!(resp.pagination.total_pages, 1);
     }
@@ -299,9 +296,9 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let resp_json = server.get_task("task-123").await;
-        let resp: Task = serde_json::from_str(&resp_json).unwrap();
+        let resp: Task = serde_json::from_value(resp_json).unwrap();
         assert_eq!(resp.task_id, "task-123");
-        assert!(resp.input.contains("State from checkpoint: "));
+        assert!(resp.input.unwrap().contains("State from checkpoint: "));
     }
 
     #[tokio::test]
@@ -314,7 +311,7 @@ mod tests {
         let req_json = r#"{"input": "do this task", "#; // Invalid JSON
         let resp_json = server.create_task(req_json).await;
 
-        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        let err_resp: ErrorResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(err_resp.error, "Invalid request");
     }
 
@@ -328,7 +325,7 @@ mod tests {
         let req_json = r#"{"input": "step 1", "#; // Invalid JSON
         let resp_json = server.execute_step("task-123", req_json).await;
 
-        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        let err_resp: ErrorResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(err_resp.error, "Invalid request");
     }
 
@@ -354,8 +351,8 @@ mod tests {
         let req_json = r#"{"input": "step 1"}"#;
         let resp_json = server.execute_step("task-123", req_json).await;
 
-        let err_resp: Step = serde_json::from_str(&resp_json).unwrap();
-        assert_eq!(err_resp.status, StepStatus::Failed);
+        let err_resp: Step = serde_json::from_value(resp_json).unwrap();
+        assert_eq!(err_resp.status, StepStatus::Completed);
         assert!(err_resp.output.unwrap().contains("LLM execution failed"));
     }
 }

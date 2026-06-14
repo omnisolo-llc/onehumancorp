@@ -9,7 +9,6 @@ import { MorningBriefingCard } from "./MorningBriefingCard";
 
 
 import { useEffect, useMemo, useState } from "react";
-import { TriageFeed } from "./TriageFeed";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -203,26 +202,6 @@ export default function Dashboard() {
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
   const [ledgerLoading, setLedgerLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchLedgerBalance() {
-      try {
-        const res = await fetch("/api/ledger/accounts");
-        if (res.ok) {
-          const data = await res.json();
-          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
-          if (mainAccount) {
-            setLedgerBalance(mainAccount.balance);
-            setLedgerCurrency(mainAccount.currency);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch ledger balance", err);
-      } finally {
-        setLedgerLoading(false);
-      }
-    }
-    fetchLedgerBalance();
-  }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -319,23 +298,34 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes, ledgerRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
           fetch(`/api/agents/approvals?tenant_id=${tenant}`),
           fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }),
+          fetch("/api/ledger/accounts").catch(() => null),
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
+        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
           agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
+          ledgerRes && ledgerRes.ok ? ledgerRes.json().catch(() => null) : Promise.resolve(null),
         ]);
+
+        if (ledgerData && ledgerData.accounts) {
+          const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
+          if (mainAccount) {
+            setLedgerBalance(mainAccount.balance);
+            setLedgerCurrency(mainAccount.currency);
+          }
+        }
+        setLedgerLoading(false);
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
@@ -443,7 +433,6 @@ export default function Dashboard() {
 
       <DashboardViralInviteWidget />
 
-      <TriageFeed tenantId={tenantId()} />
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
@@ -468,6 +457,7 @@ export default function Dashboard() {
             }
             setIsWalkthroughOpen(true);
           }}
+          id="dashboard-walkthrough-btn"
           className="app-button min-h-[44px]"
         >
           Start Tour
@@ -502,14 +492,21 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+      <div className="flex flex-col md:flex-col">
+        <div className="order-first md:order-last mb-6">
+          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+        </div>
 
-      <SuccessMilestoneAlert />
-      <SuccessMilestoneWidget />
-      <ViralLoopPerformanceWidget />
-      <div className="mb-6">
-        <div className="mb-4"><CartRecoveryWidget /></div>
-        <AffiliateMarketingWidget />
+        <div className="order-last md:order-first">
+          <SuccessMilestoneAlert />
+          <SuccessMilestoneWidget />
+          <ViralLoopPerformanceWidget />
+          <div className="mb-6">
+            <div className="mb-4"><CartRecoveryWidget /></div>
+            <AffiliateMarketingWidget />
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">

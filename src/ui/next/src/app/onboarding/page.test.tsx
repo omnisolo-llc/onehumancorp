@@ -50,7 +50,7 @@ describe('OnboardingWizard', () => {
 
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
-    expect(button).toBeDisabled();
+    expect(button).not.toBeDisabled();
   });
 
   it('Handles enter key progression in chat steps', async () => {
@@ -119,8 +119,8 @@ describe('OnboardingWizard', () => {
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
 
-    // Verify the button is disabled when empty
-    expect(nextBtn2).toBeDisabled();
+    // Verify the button is enabled when empty
+    expect(nextBtn2).not.toBeDisabled();
 
     // Provide value to enable button and proceed
     await user.type(sellInput, 'Cakes');
@@ -134,8 +134,8 @@ describe('OnboardingWizard', () => {
 
     const nextBtn3 = screen.getByRole('button', { name: /Next/i });
 
-    // Verify the button is disabled when empty
-    expect(nextBtn3).toBeDisabled();
+    // Verify the button is enabled when empty
+    expect(nextBtn3).not.toBeDisabled();
 
     // Provide value to enable button and proceed
     await user.type(locInput, 'NY');
@@ -742,7 +742,7 @@ describe('OnboardingWizard', () => {
     });
 
     // Submit
-    const generateBtn = screen.getByRole('button', { name: /Generate Storefront/i });
+    const generateBtn = screen.getByRole('button', { name: /Next/i });
     await user.click(generateBtn);
 
     // Check if it transitions successfully
