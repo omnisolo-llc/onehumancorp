@@ -3031,6 +3031,82 @@ pub async fn create_ui_triage_item_handler(
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct CompleteOrderPayload {
+    pub order_id: String,
+}
+
+pub async fn kds_list_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response(),
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            let rows = sqlx::query("SELECT t.id, t.context as original_message, p.payload as translated_items, t.created_at FROM triage_items t JOIN triage_proposed_actions p ON t.id = p.triage_item_id WHERE t.tenant_id = $1 AND p.action_type = 'Order' AND t.status = 'pending' ORDER BY t.created_at ASC")
+                .bind(&tenant_id)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap_or_default();
+
+            let mut items = Vec::new();
+            for r in rows {
+                use sqlx::Row;
+                let id: String = r.get("id");
+                let original_message: String = r.get("original_message");
+                let translated_items: String = r.get("translated_items");
+                let created_at: chrono::DateTime<chrono::Utc> = r.get("created_at");
+                items.push(serde_json::json!({
+                    "id": id,
+                    "original_message": original_message,
+                    "translated_items": translated_items,
+                    "created_at": created_at.to_rfc3339()
+                }));
+            }
+            (axum::http::StatusCode::OK, axum::Json(items)).into_response()
+        },
+        _ => (axum::http::StatusCode::OK, axum::Json(Vec::<serde_json::Value>::new())).into_response(),
+    }
+}
+
+pub async fn kds_complete_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::extract::Json(payload): axum::extract::Json<CompleteOrderPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response(),
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE id = $1 AND tenant_id = $2")
+                .bind(&payload.order_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let _ = tx.commit().await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+        },
+        _ => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response(),
+    }
+}
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -5180,6 +5256,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+        .route("/api/ui/kds", axum::routing::get(kds_list_handler).with_state(db.clone()))
+        .route("/api/ui/kds/complete", axum::routing::post(kds_complete_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
