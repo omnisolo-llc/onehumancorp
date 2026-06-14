@@ -163,7 +163,8 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
+        let lock_param = if acquired_lock_id.is_empty() { None } else { Some(acquired_lock_id.as_str()) };
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false), lock_param).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails

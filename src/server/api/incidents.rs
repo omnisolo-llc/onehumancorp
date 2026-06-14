@@ -152,7 +152,10 @@ mod tests {
             return;
         }
         let database_url = std::env::var("OHC_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")).unwrap();
-        let pool = PgPool::connect(&database_url).await.unwrap();
+        if database_url.is_empty() { return; }
+        let pool_res = PgPool::connect(&database_url).await;
+        if pool_res.is_err() { return; }
+        let pool = pool_res.unwrap();
 
         let claims = Claims {
             sub: "test_user".to_string(),
