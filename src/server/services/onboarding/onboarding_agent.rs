@@ -133,13 +133,14 @@ impl OnboardingAgent {
             - Leo (Creator/Tutor): Needs packages, scheduling, and student follow-ups.
             - Fatima (Food Cart): Needs simple order list, pickup timing, and offline flows.
             - Nora (Agency): Needs project intake, proposals, and task assignment.
+            - Jun (Location Manager): Needs staff coordination, issue escalation, and local customer feedback.
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
 
             Return ONLY a valid JSON object with fields:
             - business_name (string)
-            - business_type (string, e.g., 'Home Bakery', 'Handyman')
+            - business_type (string, e.g., 'Home Bakery', 'Handyman', 'Agency', 'Retail')
             - categories (array of: physical, digital, services, food, subscriptions)
             - initial_products (array of at least 3 objects with 'name', 'price' string, 'description' string, and optional 'variants' array of objects with 'name' and 'price_modifier' string)
             - location (string)
@@ -221,18 +222,31 @@ impl OnboardingAgent {
             (serde_json::json!({}), 0)
         };
 
-        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
-            for (k, v) in new_obj {
-                existing_obj.insert(k.clone(), v.clone());
+        // Recursive deep merge to preserve nested state
+        fn deep_merge(target: &mut serde_json::Value, source: &serde_json::Value) {
+            match (target, source) {
+                (serde_json::Value::Object(t_map), serde_json::Value::Object(s_map)) => {
+                    for (k, v) in s_map {
+                        deep_merge(t_map.entry(k.clone()).or_insert(serde_json::Value::Null), v);
+                    }
+                }
+                (t, s) => {
+                    *t = s.clone();
+                }
             }
-        } else {
-            merged_state = state_json.clone();
         }
+
+        deep_merge(&mut merged_state, state_json);
 
         let new_step = std::cmp::max(prev_step, current_step);
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at) \
+             VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
+             SET state_json = EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
         .bind(user_id)
@@ -621,6 +635,11 @@ impl OnboardingAgent {
                 ("Signature Dress", "Our most popular seasonal piece", 8900, "physical"),
                 ("Curated Accessory Set", "Perfectly paired jewelry and scarf", 3500, "physical"),
                 ("Private Styling Session", "1-on-1 fashion advice with our team", 5000, "booking"),
+            ],
+            "Agency" | "Studio" => vec![
+                ("Brand Identity Audit", "Comprehensive review of your brand presence", 150000, "booking"),
+                ("Landing Page Design", "High-converting single page site", 250000, "booking"),
+                ("Monthly Maintenance", "Ongoing support and updates", 50000, "booking"),
             ],
             "Online Store" => vec![
                 ("Standard Product", "A great product for your store", 1999, "physical"),
