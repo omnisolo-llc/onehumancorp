@@ -234,7 +234,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   };
 
   return (
-    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
+    <div className="p-6 border border-white/40 rounded-[16px] shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className="text-sm text-gray-600 mb-6 font-medium">Status: {status}</p>
 

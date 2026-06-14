@@ -393,7 +393,7 @@ export default function TerminalPage() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -401,7 +401,7 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="app-card p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm active:scale-[0.98]">
+             <button className="app-card p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -418,7 +418,7 @@ export default function TerminalPage() {
                 <button
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}
-                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] ${selectedProduct?.id === product.id ? 'bg-white/80 border-[#0066FF] ring-1 ring-[#0066FF]' : 'bg-white/65 border-white/40'} backdrop-blur-[30px] border shadow-sm`}
+                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] ${selectedProduct?.id === product.id ? 'bg-white/80 border-[#0066FF] ring-1 ring-[#0066FF]' : 'bg-white/65 border-white/40'} backdrop-blur-[30px] saturate-[210%] border shadow-sm`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -456,7 +456,7 @@ export default function TerminalPage() {
         </div>
 
         {syncing && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/40 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
