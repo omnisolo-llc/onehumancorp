@@ -4210,76 +4210,74 @@ async fn list_ui_orders_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let orders = match &db.store {
-        crate::db::DbStore::Postgres => {
-            match sqlx::query(
-                "SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at \
-                 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id \
-                 WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(&db.pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    } else {
-                                            serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at"),
-                        })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
-            }
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
-                "SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at \
-                 FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id \
-                 WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    } else {
-                                            serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at"),
-                        })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
-            }
-        }
-    };
-
-    match orders {
+    match load_ui_orders_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(orders) => {
-            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(60)).await;
+            let _ = cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
         },
         Err(e) => {
             ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
+async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(tenant_id)
+            .fetch_all(&db.pool)
+            .await.map(|rows| rows.into_iter().map(|row| {
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "product_title": row.get::<String, _>("product_title"),
+                        "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                        "status": row.get::<String, _>("status"),
+                    })
+                } else {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "customer_name": row.get::<String, _>("customer_name"),
+                        "product_id": row.get::<String, _>("product_id"),
+                        "product_title": row.get::<String, _>("product_title"),
+                        "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                        "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                        "status": row.get::<String, _>("status"),
+                    })
+                }
+            }).collect())
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await.map(|rows| rows.into_iter().map(|row| {
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "product_title": row.get::<String, _>("product_title"),
+                        "start_time": row.get::<String, _>("start_time"),
+                        "status": row.get::<String, _>("status"),
+                    })
+                } else {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "customer_name": row.get::<String, _>("customer_name"),
+                        "product_id": row.get::<String, _>("product_id"),
+                        "product_title": row.get::<String, _>("product_title"),
+                        "start_time": row.get::<String, _>("start_time"),
+                        "end_time": row.get::<String, _>("end_time"),
+                        "status": row.get::<String, _>("status"),
+                    })
+                }
+            }).collect())
         }
     }
 }
@@ -4303,57 +4301,7 @@ async fn list_ui_bookings_handler(
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let bookings = match &db.store {
-                crate::db::DbStore::Postgres => {
-                    match sqlx::query(
-                        "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                         FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                         LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                         WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-                    )
-                    .bind(&t)
-                    .fetch_all(&db.pool)
-                    .await {
-                        Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "status": row.get::<String, _>("status"),
-                            })
-                        }).collect::<Vec<_>>()),
-                        Err(e) => Err(e),
-                    }
-                }
-                crate::db::DbStore::Sqlite(pool) => {
-                    match sqlx::query(
-                        "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                         FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                         LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                         WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-                    )
-                    .bind(&t)
-                    .fetch_all(pool)
-                    .await {
-                        Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.get::<String, _>("start_time"),
-                                "end_time": row.get::<String, _>("end_time"),
-                                "status": row.get::<String, _>("status"),
-                            })
-                        }).collect::<Vec<_>>()),
-                        Err(e) => Err(e),
-                    }
-                }
-            };
-            if let Ok(b) = bookings {
+            if let Ok(b) = load_ui_bookings_from_db(&db, &t, mobile_optimized).await {
                 if let Some(c) = UI_BOOKINGS_CACHE.get() {
                     c.set(&cache_key_bg, b, std::time::Duration::from_secs(5)).await;
                 }
@@ -4362,80 +4310,11 @@ async fn list_ui_bookings_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let bookings = match &db.store {
-        crate::db::DbStore::Postgres => {
-            match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(&db.pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    } else {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
-            }
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.get::<String, _>("start_time"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    } else {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.get::<String, _>("start_time"),
-                            "end_time": row.get::<String, _>("end_time"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
-            }
-        }
-    };
-
-    match bookings {
+    match load_ui_bookings_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(v) => {
             cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(v)).into_response()
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to fetch ui bookings: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
@@ -4472,98 +4351,9 @@ async fn list_ui_inbox_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let messages = match &db.store {
-        crate::db::DbStore::Postgres => {
-            match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(created_at::text, '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = $1
-                 ORDER BY created_at DESC
-                 LIMIT 50"
-            )
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| {
-                        if query.mobile_optimized.unwrap_or(false) {
-                            serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.get::<String, _>("created_at"),
-                            })
-                        } else {
-                            serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
-                                "original_message": row.get::<String, _>("original_content"),
-                                "translated_from_language": row.get::<String, _>("translated_from_language"),
-                                "generated_response": row.get::<String, _>("draft_reply"),
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.get::<String, _>("created_at"),
-                            })
-                        }
-                    }).collect::<Vec<_>>()),
-                    Err(e) => Err(e),
-                }
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = ?
-                 ORDER BY created_at DESC
-                 LIMIT 50"
-            )
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| {
-                        if query.mobile_optimized.unwrap_or(false) {
-                            serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.get::<String, _>("created_at"),
-                            })
-                        } else {
-                            serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
-                                "original_message": row.get::<String, _>("original_content"),
-                                "translated_from_language": row.get::<String, _>("translated_from_language"),
-                                "generated_response": row.get::<String, _>("draft_reply"),
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.get::<String, _>("created_at"),
-                            })
-                        }
-                    }).collect::<Vec<_>>()),
-                    Err(e) => Err(e),
-                }
-        }
-    };
-
-    match messages {
+    match load_ui_inbox_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(messages) => {
-            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(60)).await;
+            let _ = cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         },
         Err(e) => {
