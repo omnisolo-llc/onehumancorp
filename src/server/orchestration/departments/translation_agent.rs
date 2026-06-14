@@ -141,12 +141,12 @@ impl Department for TranslationAgent {
                     Ok("minimax") => {
                         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                         if api_key.trim().is_empty() {
-                            crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
+                            crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
                         } else {
-                            crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await.unwrap_or_default()
+                            crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
                         }
                     },
-                    _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default(),
+                    _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
                 };
 
                 let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();

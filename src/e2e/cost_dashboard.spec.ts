@@ -12,7 +12,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 3. Check for My Plan components
     await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
-    await expect(page.locator('.card').first()).toBeVisible();
+    await expect(page.locator('.ohc-growth-card').first()).toBeVisible();
     await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("AI actions used this month")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("Storage used")').first()).toBeVisible();
@@ -92,6 +92,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Bandwidth Savings' }).first()).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Network Cost' }).first()).toBeVisible();
   });
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {

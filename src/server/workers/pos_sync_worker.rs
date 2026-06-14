@@ -42,14 +42,14 @@ impl PosSyncWorker {
             let amount_cents = mutation.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
             let customer_id = mutation.get("customer_id").and_then(|v| v.as_str());
 
-            let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(product_id)
                 .bind(&job.tenant_id)
                 .fetch_optional(&mut *tx)
                 .await;
 
             if let Ok(Some(row)) = current_stock_res {
-                let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                 let is_conflict = stock < quantity_deducted as i32;
 
                 let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
@@ -95,6 +95,31 @@ impl PosSyncWorker {
 
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                    }).to_string();
+
+                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let notification_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&notification_id)
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
+
                     let ai_payload = serde_json::json!({
                         "transaction_id": transaction_id,
                         "product_id": product_id,
@@ -168,14 +193,14 @@ impl PosSyncWorker {
                             }
                         };
 
-                        let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                        let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
                             .bind(&job.tenant_id)
                             .fetch_optional(&mut *tx)
                             .await;
 
                         if let Ok(Some(row)) = current_stock_res {
-                            let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                            let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                             let is_conflict = stock < qty as i32;
 
                             let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
@@ -212,6 +237,31 @@ impl PosSyncWorker {
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
                                 let ai_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": qty,
+                        "actual_stock": stock,
+                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                    }).to_string();
+
+                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let notification_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": qty,
+                        "actual_stock": stock,
+                        "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&notification_id)
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
+
+                    let ai_payload = serde_json::json!({
                                     "transaction_id": transaction_id,
                                     "product_id": product_id,
                                     "expected_stock": qty,

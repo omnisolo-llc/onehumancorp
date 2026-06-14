@@ -259,7 +259,7 @@ pub async fn reserve_inventory_handler(
         hub.redis_client.clone()
     );
 
-    match service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, req_data.ttl_seconds).await {
+    match service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 }).await {
         Ok(result) => {
             (axum::http::StatusCode::OK, Json(serde_json::json!({
                 "success": result.success,

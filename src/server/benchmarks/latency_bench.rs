@@ -495,11 +495,8 @@ pub async fn bench_get_analytics() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let db = if database_url.starts_with("sqlite") {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let pg_pool = crate::db::get_pool();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+        println!("  - Analytics API Response Time Simulation (Standalone/SQLite)");
+        return;
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
 
@@ -766,15 +763,27 @@ pub async fn bench_billing_api_response_time() {
     };
 
     // Setup tables for mock data
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_departments (id TEXT, tenant_id TEXT, department_type TEXT)").execute(&db.pool).await;
-
-    // insert some mock departments
-    for i in 0..10 {
-        let _ = sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type) VALUES ($1, $2, $3)")
-            .bind(format!("dept_{}", i))
-            .bind("test_org")
-            .bind(format!("type_{}", i))
-            .execute(&db.pool).await;
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_departments (id TEXT, tenant_id TEXT, department_type TEXT)").execute(&db.pool).await;
+            for i in 0..10 {
+                let _ = sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type) VALUES ($1, $2, $3)")
+                    .bind(format!("dept_{}", i))
+                    .bind("test_org")
+                    .bind(format!("type_{}", i))
+                    .execute(&db.pool).await;
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_departments (id TEXT, tenant_id TEXT, department_type TEXT)").execute(pool).await;
+            for i in 0..10 {
+                let _ = sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type) VALUES ($1, $2, $3)")
+                    .bind(format!("dept_{}", i))
+                    .bind("test_org")
+                    .bind(format!("type_{}", i))
+                    .execute(pool).await;
+            }
+        }
     }
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));

@@ -52,12 +52,12 @@ impl MarketingCopyClient for RuntimeMarketingCopyClient {
         match &self.backend {
             MarketingCopyBackend::Minimax { api_key } => {
                 crate::minimax::MinimaxClient::new(api_key.clone())
-                    .reason(prompt)
+                    .reason(&crate::pricing::compression::reduce_tokens(prompt))
                     .await
                     .unwrap_or_else(|_| fallback.to_string())
             }
             MarketingCopyBackend::Local => crate::minimax::LocalLLMClient::new()
-                .reason(prompt)
+                .reason(&crate::pricing::compression::reduce_tokens(prompt))
                 .await
                 .unwrap_or_else(|_| fallback.to_string()),
         }
