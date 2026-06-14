@@ -1464,6 +1464,27 @@
         }
       });
 
+      // Auto-save logic using event delegation
+      let autoSaveTimer = null;
+      function setupAutoSave() {
+        const triggerAutoSave = (e) => {
+          // Only trigger if the target is an input, select, or textarea
+          const tag = e.target.tagName.toLowerCase();
+          if (tag === 'input' || tag === 'select' || tag === 'textarea') {
+            if (autoSaveTimer) {
+              clearTimeout(autoSaveTimer);
+            }
+            autoSaveTimer = setTimeout(() => {
+              saveCurrentState();
+            }, 1500);
+          }
+        };
+
+        document.body.addEventListener('input', triggerAutoSave);
+        document.body.addEventListener('change', triggerAutoSave);
+      }
+      setupAutoSave();
+
       function populateForm() {
         if (state.businessName) inputs.name.value = state.businessName;
         if (state.tagline) inputs.tagline.value = state.tagline;
@@ -1515,7 +1536,7 @@
         }
       }
 
-      function saveCurrentState() {
+      function saveCurrentState(isBackground = true) {
         state.categories = inputs.categories.value;
         state.businessName = inputs.name.value;
         state.tagline = inputs.tagline.value;
@@ -1814,7 +1835,7 @@
           const nextStepId = e.target.getAttribute("data-next");
           if (validateStep(currentStep)) {
             goToStep(nextStepId);
-            saveCurrentState();
+            saveCurrentState(false);
           }
         });
       });
@@ -1823,7 +1844,7 @@
         btn.addEventListener("click", (e) => {
           const prevStepId = e.target.getAttribute("data-prev");
           goToStep(prevStepId);
-          saveCurrentState();
+          saveCurrentState(false);
         });
       });
 
@@ -1837,7 +1858,7 @@
           // Add a small delay to allow browser to render "Saving..."
           await new Promise((r) => setTimeout(r, 100));
 
-          saveCurrentState();
+          saveCurrentState(false);
 
           btn.innerText = "Saved!";
           btn.style.backgroundColor = "#34C759";
