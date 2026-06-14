@@ -2620,11 +2620,16 @@ pub async fn handle_embed_widget(
 
 #[derive(Debug, Serialize)]
 pub struct WrappedStats {
-    pub totalSales: String,
-    pub totalOrders: i64,
-    pub newCustomers: i64,
-    pub topProduct: String,
-    pub aiHoursSaved: i64,
+    #[serde(rename = "totalSales")]
+    pub total_sales: String,
+    #[serde(rename = "totalOrders")]
+    pub total_orders: i64,
+    #[serde(rename = "newCustomers")]
+    pub new_customers: i64,
+    #[serde(rename = "topProduct")]
+    pub top_product: String,
+    #[serde(rename = "aiHoursSaved")]
+    pub ai_hours_saved: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -2682,11 +2687,11 @@ async fn handle_wrapped(
         title: "Your Year in Review 🎉".to_string(),
         subtitle: "You crushed it this year! See your impact and share with your community.".to_string(),
         stats: WrappedStats {
-            totalSales: "$14,250".to_string(), // In a real app we'd aggregate order totals
-            totalOrders: total_orders,
-            newCustomers: new_customers,
-            topProduct: "Custom Service".to_string(),
-            aiHoursSaved: hours_saved,
+            total_sales: "$14,250".to_string(), // In a real app we'd aggregate order totals
+            total_orders: total_orders,
+            new_customers: new_customers,
+            top_product: "Custom Service".to_string(),
+            ai_hours_saved: hours_saved,
         },
         share_text: format!("I just reviewed my {} business stats on OHC and I'm blown away! Start growing your business on OHC:", year),
     };

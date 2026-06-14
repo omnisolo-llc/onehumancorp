@@ -3375,15 +3375,17 @@ pub(crate) struct UiDashboardMetrics {
 pub(crate) async fn fetch_dashboard_feeds_parallel(db: std::sync::Arc<crate::db::DB>, tenant_id: String, mobile_optimized: bool) -> (
     Result<UiDashboardMetrics, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<serde_json::Value, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
     Result<Vec<serde_json::Value>, sqlx::Error>,
 ) {
-    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+    let (metrics_res, orders_res, supply_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
         load_ui_dashboard_metrics(&db, &tenant_id),
         load_ui_orders_from_db(&db, &tenant_id, mobile_optimized),
+        load_ui_supply_from_db(&db, &tenant_id, mobile_optimized),
         load_ui_inbox_from_db(&db, &tenant_id, mobile_optimized),
         load_ui_triage_from_db(&db, &tenant_id, mobile_optimized),
         load_ui_agent_approvals_from_db(&db, &tenant_id),
@@ -3394,6 +3396,7 @@ pub(crate) async fn fetch_dashboard_feeds_parallel(db: std::sync::Arc<crate::db:
     (
         metrics_res,
         orders_res,
+        supply_res,
         messages_res,
         triage_res,
         approvals_res,
@@ -4110,7 +4113,7 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = fetch_dashboard_feeds_parallel(db_bg.clone(), t_bg.clone(), mobile_optimized).await;
+            let (metrics_res, orders_res, supply_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = fetch_dashboard_feeds_parallel(db_bg.clone(), t_bg.clone(), mobile_optimized).await;
 
             let mut orders = orders_res.unwrap_or_else(|_| vec![]);
             let mut inbox = messages_res.unwrap_or_else(|_| vec![]);
@@ -4152,6 +4155,7 @@ async fn ui_dashboard_unified_feed_handler(
             let result = serde_json::json!({
                 "metrics": metrics_res.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_else(|_| serde_json::json!({})),
                 "orders": orders,
+                "supply": supply_res.unwrap_or_else(|_| serde_json::json!({})),
                 "inbox": inbox,
                 "triage": triage,
                 "pending_approvals": approvals,
