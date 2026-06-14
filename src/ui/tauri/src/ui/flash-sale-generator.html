@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flash Sale Generator - OHC</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      gap: 30px;
+    }
+    .col {
+      flex: 1;
+    }
+    h1 {
+      color: #1d1d1f;
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      width: 100%;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #1d1d1f;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #1d1d1f;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+    }
+    .theme-btns {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .theme-btns button {
+      flex: 1;
+      padding: 12px;
+      min-height: 44px;
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .theme-btns button.active {
+      border-color: #0066FF;
+      background: #e6f0ff;
+      color: #0066FF;
+    }
+    .preview-box {
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 20px;
+      background: white;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .preview-box.dark {
+      background: #1d1d1f;
+      color: white;
+      border-color: #1d1d1f;
+    }
+    .preview-box.dark h3 {
+      color: white;
+    }
+    .preview-box h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .preview-box p {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ff3b30;
+      margin: 10px 0;
+    }
+    .preview-box.dark p {
+      color: #ff453a;
+    }
+    .preview-box .code-box {
+      display: inline-block;
+      background: #f2f2f7;
+      color: #1d1d1f;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-top: 10px;
+      border: 1px dashed #ccc;
+    }
+    .preview-box.dark .code-box {
+      background: #333;
+      color: white;
+      border-color: #555;
+    }
+    .btn-primary {
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .btn-primary:hover {
+      background: #0052cc;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .modal-content h2 {
+      margin-top: 0;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div style="width: 100%; max-width: 800px;">
+    <h1>Flash Sale Generator ⚡</h1>
+  </div>
+  <div class="container">
+    <div class="col">
+      <h2>Widget Settings</h2>
+
+      <label>Sale Title</label>
+      <input type="text" id="saleTitle" placeholder="e.g. 24-Hour Flash Sale!" value="Weekend Flash Sale!" />
+
+      <label>Discount Code</label>
+      <input type="text" id="discountCode" placeholder="e.g. FLASH20" value="SAVE20" />
+
+      <label>Discount Percentage</label>
+      <input type="number" id="discountPercent" placeholder="20" value="20" />
+
+      <label>Theme</label>
+      <div class="theme-btns">
+        <button id="themeLight" class="active">Light</button>
+        <button id="themeDark">Dark</button>
+      </div>
+
+      <button class="btn-primary" id="getWidgetBtn">Get Widget</button>
+    </div>
+    <div class="col">
+      <h2>Live Preview</h2>
+      <div class="preview-box" id="previewBox">
+        <h3 id="previewTitle">Weekend Flash Sale!</h3>
+        <p><span id="previewPercent">20</span>% OFF</p>
+        <div style="font-size: 14px;">Use code at checkout:</div>
+        <span class="code-box" id="previewCode">SAVE20</span>
+      </div>
+    </div>
+  </div>
+
+  <a href="dashboard.html" style="display: block; margin-top: 20px; color: #0066FF; text-decoration: none; font-weight: 600;">Back to Dashboard</a>
+
+  <!-- Embed Modal -->
+  <div class="modal" id="embedModal">
+    <div class="modal-content">
+      <h2>Embed Flash Sale</h2>
+      <p>Copy and paste this code into your website's HTML:</p>
+      <textarea id="embedCodeText" readonly></textarea>
+      <button class="btn-primary" id="closeModalBtn">Close</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const titleInput = document.getElementById('saleTitle');
+      const codeInput = document.getElementById('discountCode');
+      const percentInput = document.getElementById('discountPercent');
+
+      const themeLight = document.getElementById('themeLight');
+      const themeDark = document.getElementById('themeDark');
+
+      const previewTitle = document.getElementById('previewTitle');
+      const previewCode = document.getElementById('previewCode');
+      const previewPercent = document.getElementById('previewPercent');
+      const previewBox = document.getElementById('previewBox');
+
+      const getWidgetBtn = document.getElementById('getWidgetBtn');
+      const embedModal = document.getElementById('embedModal');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const embedCodeText = document.getElementById('embedCodeText');
+
+      let currentTheme = 'light';
+
+      function updatePreview() {
+        previewTitle.textContent = titleInput.value || 'Weekend Flash Sale!';
+        previewCode.textContent = codeInput.value || 'SAVE20';
+        previewPercent.textContent = percentInput.value || '20';
+      }
+
+      titleInput.addEventListener('input', updatePreview);
+      codeInput.addEventListener('input', updatePreview);
+      percentInput.addEventListener('input', updatePreview);
+
+      themeLight.addEventListener('click', () => {
+        currentTheme = 'light';
+        themeLight.classList.add('active');
+        themeDark.classList.remove('active');
+        previewBox.classList.remove('dark');
+      });
+
+      themeDark.addEventListener('click', () => {
+        currentTheme = 'dark';
+        themeDark.classList.add('active');
+        themeLight.classList.remove('active');
+        previewBox.classList.add('dark');
+      });
+
+      getWidgetBtn.addEventListener('click', () => {
+        const titleEnc = encodeURIComponent(titleInput.value || 'Weekend Flash Sale!');
+        const codeEnc = encodeURIComponent(codeInput.value || 'SAVE20');
+        const pctEnc = encodeURIComponent(percentInput.value || '20');
+
+        const tenant = localStorage.getItem('tenant_id') || 'demo';
+        const url = `https://ohc.app/widget/flash?tenant=${tenant}&title=${titleEnc}&code=${codeEnc}&percent=${pctEnc}&theme=${currentTheme}`;
+
+        const iframeCode = `<iframe src="${url}" width="100%" height="250" style="border:none; border-radius: 12px; overflow:hidden;"></iframe>`;
+        embedCodeText.value = iframeCode;
+
+        embedModal.style.display = 'flex';
+      });
+
+      closeModalBtn.addEventListener('click', () => {
+        embedModal.style.display = 'none';
+      });
+    });
+  </script>
+</body>
+</html>
