@@ -237,18 +237,12 @@ async fn accept_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-
     match sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1")
         .bind(quote_id)
         .execute(&pool)
         .await
     {
-        Ok(_) => {
-            // Generate Stripe Checkout URL based on approved quote logic
-            let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", quote_id);
-            // In a real app we'd use stripe crate to create the session.
-            (StatusCode::OK, Json(serde_json::json!({"success": true, "checkout_url": checkout_url}))).into_response()
-        },
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to accept quote: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response()

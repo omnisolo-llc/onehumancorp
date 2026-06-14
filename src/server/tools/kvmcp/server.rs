@@ -242,7 +242,7 @@ impl KvMcpServer {
                     }
                 }.instrument(tracing::info_span!("kv_list")).await
             }
-            _ => Err(tonic::Status::not_found(format!("tool {} not found", req.tool_id))),
+            _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

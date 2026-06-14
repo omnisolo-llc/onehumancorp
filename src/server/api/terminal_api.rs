@@ -40,8 +40,6 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
 #[derive(serde::Deserialize)]
 pub struct StartTerminalSessionRequest {
     pub device_id: String,
-    pub product_id: Option<String>,
-    pub quantity: Option<i32>,
 }
 
 #[derive(serde::Serialize)]
@@ -49,53 +47,24 @@ pub struct StartTerminalSessionResponse {
     pub session_id: String,
     pub success: bool,
     pub error_message: String,
-    pub lock_id: Option<String>,
 }
 
 pub async fn start_terminal_session_handler(
     _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
+    State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<StartTerminalSessionRequest>,
 ) -> Json<StartTerminalSessionResponse> {
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated: Missing tenant ID".to_string(), lock_id: None });
+                return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
             } else {
                 auth.org_id.clone()
             }
         },
-        None => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated".to_string(), lock_id: None })
+        None => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated".to_string() })
     };
-
-    let mut reserved_lock_id = None;
-
-    if let Some(product_id) = &req_data.product_id {
-        let quantity = req_data.quantity.unwrap_or(1);
-        let service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
-        match service.reserve_inventory(&tenant_id, product_id, quantity, 60).await {
-            Ok(result) => {
-                if !result.success {
-                    return Json(StartTerminalSessionResponse {
-                        session_id: "".to_string(),
-                        success: false,
-                        error_message: result.error_message,
-                        lock_id: None,
-                    });
-                }
-                reserved_lock_id = Some(result.lock_id);
-            },
-            Err(e) => {
-                return Json(StartTerminalSessionResponse {
-                    session_id: "".to_string(),
-                    success: false,
-                    error_message: e,
-                    lock_id: None,
-                });
-            }
-        }
-    }
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let pool = crate::db::get_pool();
@@ -118,7 +87,6 @@ pub async fn start_terminal_session_handler(
                 session_id: returned_id,
                 success: true,
                 error_message: "".to_string(),
-                lock_id: reserved_lock_id,
             })
         }
         Err(e) => {
@@ -127,7 +95,6 @@ pub async fn start_terminal_session_handler(
                 session_id: "".to_string(),
                 success: false,
                 error_message: e.to_string(),
-                lock_id: None,
             })
         }
     }
@@ -663,7 +630,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -703,7 +670,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_records_order() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

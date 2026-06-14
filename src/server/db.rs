@@ -1,10 +1,9 @@
-use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::fs::PermissionsExt;
+
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
-use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::env;
 use std::path::Path;
 use std::str::FromStr;
@@ -136,7 +135,8 @@ impl DB {
                             if let Err(e) = builder.create(parent) {
                                 // If directory already exists, ensure its permissions are 0700
                                 if e.kind() == std::io::ErrorKind::AlreadyExists {
-                                                                        if let Ok(metadata) = std::fs::metadata(parent) {
+                                    use std::os::unix::fs::PermissionsExt;
+                                    if let Ok(metadata) = std::fs::metadata(parent) {
                                         let mut perms = metadata.permissions();
                                         if perms.mode() & 0o777 != 0o700 {
                                             perms.set_mode(0o700);
@@ -165,7 +165,10 @@ impl DB {
                 #[cfg(unix)]
                 {
                     use std::fs::OpenOptions;
-                                                                                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    use std::os::unix::fs::PermissionsExt;
+
+                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
                             ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
                             tracing::error!("Security error: DB path is a symlink. Aborting.");
@@ -207,7 +210,9 @@ impl DB {
 
             #[cfg(unix)]
             {
-                                                                        if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
+                use std::os::unix::fs::OpenOptionsExt;
+                use std::os::unix::fs::PermissionsExt;
+                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
                     let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
                     if db_path.exists() {
                          let mut perms = std::fs::metadata(&db_path)?.permissions();
@@ -248,7 +253,8 @@ impl DB {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
-                                                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
                                 let perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
                                     panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
@@ -270,7 +276,8 @@ impl DB {
                     #[cfg(unix)]
                     {
                         use std::io::Write;
-                                                                        if let Ok(mut file) = std::fs::OpenOptions::new()
+                        use std::os::unix::fs::OpenOptionsExt;
+                        if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
                             .create_new(true)
                             .mode(0o600)
@@ -280,7 +287,8 @@ impl DB {
                         }
 
                         // Ensure permissions are strictly 0o600
-                                                if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                             if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 let _ = std::fs::set_permissions(&secret_path, perms);
@@ -307,8 +315,7 @@ impl DB {
             conn_opts = conn_opts.pragma("cipher_page_size", "4096");
             conn_opts = conn_opts.pragma("cipher_compatibility", "4");
 
-
-                let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(50)
+            let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -473,14 +480,11 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| format!("DB Error: {}", e))?;
-
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&mut *tx)
+                    .fetch_all(&self.pool)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -502,7 +506,7 @@ impl DB {
                 let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&mut *tx)
+                    .fetch_all(&self.pool)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -525,7 +529,7 @@ impl DB {
                 let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&mut *tx)
+                    .fetch_all(&self.pool)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -547,8 +551,6 @@ impl DB {
                         route: format!("/inbox/{}", id),
                     });
                 }
-
-                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
             }
         }
 
@@ -568,58 +570,46 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
-        let timeout_duration = std::time::Duration::from_secs(60);
+        loop {
+            match f().await {
+                Ok(val) => return Ok(val),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    let is_sqlite_lock = self.is_sqlite()
+                        && (err_str.contains("database is locked")
+                            || err_str.contains("sqlite_busy"));
+                    let is_postgres_lock = !self.is_sqlite()
+                        && (err_str.contains("serialization failure")
+                            || err_str.contains("deadlock detected")
+                            || err_str.contains("40001")
+                            || err_str.contains("could not obtain lock"));
 
-        let retry_loop = async {
-            loop {
-                match f().await {
-                    Ok(val) => return Ok::<T, E>(val),
-                    Err(err) => {
-                        let err_str = err.to_string().to_lowercase();
-                        let is_sqlite_lock = self.is_sqlite()
-                            && (err_str.contains("database is locked")
-                                || err_str.contains("sqlite_busy"));
-                        let is_postgres_lock = !self.is_sqlite()
-                            && (err_str.contains("serialization failure")
-                                || err_str.contains("deadlock detected")
-                                || err_str.contains("40001")
-                                || err_str.contains("could not obtain lock"));
-
-                        if is_sqlite_lock || is_postgres_lock {
-                            attempt += 1;
-                            if attempt >= max_attempts {
-                                let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                                    &self.pool, operation,
-                                )
-                                .await;
-                                return Err(E::from(format!(
-                                    "Database retry exhausted after {} attempts: {}",
-                                    max_attempts, err
-                                )));
-                            }
-                            if is_postgres_lock {
-                                tracing::warn!("postgres_skip_locked contention in {}", operation);
-                            } else {
-                                let _ = ::server_telemetry::record_sqlite_lock_contention(
-                                    &self.pool, operation,
-                                )
-                                .await;
-                            }
-                            tokio::time::sleep(backoff).await;
-                            backoff *= 2;
-                        } else {
-                            return Err(err);
+                    if is_sqlite_lock || is_postgres_lock {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                                &self.pool, operation,
+                            )
+                            .await;
+                            return Err(E::from(format!(
+                                "Database retry exhausted after {} attempts: {}",
+                                max_attempts, err
+                            )));
                         }
+                        if is_postgres_lock {
+                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+                        } else {
+                            let _ = ::server_telemetry::record_sqlite_lock_contention(
+                                &self.pool, operation,
+                            )
+                            .await;
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(err);
                     }
                 }
-            }
-        };
-
-        match tokio::time::timeout(timeout_duration, retry_loop).await {
-            Ok(result) => result,
-            Err(_) => {
-                tracing::error!("Database operation timed out after 60 seconds: {}", operation);
-                Err(E::from(format!("Database operation timed out after 60 seconds: {}", operation)))
             }
         }
     }
@@ -825,7 +815,6 @@ impl DB {
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
                         subdomain TEXT,
-                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -1823,7 +1812,8 @@ mod autodream_db_tests {
 mod security_tests_final {
     use super::*;
     use std::fs;
-        use std::sync::Mutex;
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::Mutex;
 
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -1865,7 +1855,9 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::fs::OpenOptions;
-                                                                                                            let file = OpenOptions::new()
+                            use std::os::unix::fs::OpenOptionsExt;
+                            use std::os::unix::fs::PermissionsExt;
+                            let file = OpenOptions::new()
                                 .read(true)
                                 .write(true)
                                 .create(true)
@@ -2118,7 +2110,7 @@ mod e2e_search_workspace_tests {
         let unique_tenant = format!("tenant_{}", uuid::Uuid::new_v4());
 
         // Setup SQLite Schema
-        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT, plan_tier TEXT DEFAULT 'free', has_claimed_trial_extension BOOLEAN DEFAULT FALSE)")
+        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");

@@ -112,9 +112,7 @@ pub async fn create_checkout_session_handler(
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let mut amount_usd = 0.0;
-    let _ = amount_usd;
     let mut item_name = "Checkout".to_string();
-    let _ = item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -252,7 +250,7 @@ pub async fn my_plan_handler(
 
     let base_bill = tier.base_price();
     let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
-    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + tracker.get_storage_cost_cents(storage_used_bytes);
+    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
     let next_bill_estimated = total_cost_cents as i32;
 
     let resp = MyPlanResponse {
@@ -365,9 +363,8 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let cost_per_gb = auditor.get_cost_per_gb_month();
-    let storage_cost_f64 = storage_gb * cost_per_gb;
+    let storage_cost_cents = ::server_pricing::calculator::calculate_storage_cost_cents(storage_bytes, &::server_pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+    let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
     let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
     let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
@@ -389,7 +386,7 @@ pub async fn cost_dashboard_handler(
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
         llm_cost: llm_cost_cents,
-        storage_cost: (storage_cost_f64 * 100.0).round() as i64,
+        storage_cost: storage_cost_cents,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
         compute_cost: (compute_cost_f64 * 100.0).round() as i64,

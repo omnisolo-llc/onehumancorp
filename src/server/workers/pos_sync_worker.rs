@@ -36,22 +36,11 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
-        let mutations_str = payload.get("payload").and_then(|v| v.as_str()).unwrap_or("[]");
-        let mutations: Vec<serde_json::Value> = serde_json::from_str(mutations_str).unwrap_or_default();
-
-        for mutation in mutations {
-            let product_id = mutation["product_id"].as_str().unwrap_or("");
-            if product_id.is_empty() { continue; }
-            let quantity_deducted = mutation.get("quantity").or(mutation.get("quantity_deducted")).and_then(|v| v.as_i64()).unwrap_or(1);
-            let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        if let Some(mutation) = payload.get("mutation") {
+            let product_id = mutation["product_id"].as_str().unwrap();
+            let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+            let amount_cents = mutation.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
             let customer_id = mutation.get("customer_id").and_then(|v| v.as_str());
-
-
-
-
-
-
-
 
             let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(product_id)
@@ -113,7 +102,7 @@ impl PosSyncWorker {
 
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
-                    let _ai_payload = serde_json::json!({
+                    let ai_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": quantity_deducted,
                         "actual_stock": stock,
@@ -199,8 +188,6 @@ impl PosSyncWorker {
                 if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
                     let order_id = uuid::Uuid::new_v4().to_string();
                     let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-
-
                     let total_amount = (amount_cents as f64) / 100.0;
                     let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
 
@@ -219,12 +206,9 @@ impl PosSyncWorker {
                         let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
                             Box::new(crate::orchestration::locks::StandaloneLock::new())
                         } else {
-                            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-                            if let Ok(redis_client) = redis::Client::open(redis_url) {
-                                Box::new(crate::orchestration::locks::RedisLock::new(redis_client))
-                            } else {
-                                Box::new(crate::orchestration::locks::StandaloneLock::new())
-                            }
+                            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+                            let client = redis::Client::open(redis_url).unwrap();
+                            Box::new(crate::orchestration::locks::RedisLock::new(client))
                         };
 
                         let _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
@@ -285,7 +269,7 @@ impl PosSyncWorker {
 
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
-                                let _ai_payload = serde_json::json!({
+                                let ai_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": qty,
                         "actual_stock": stock,
@@ -391,7 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_logic() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -454,7 +438,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

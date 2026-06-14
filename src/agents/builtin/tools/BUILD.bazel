@@ -5,10 +5,8 @@ rust_library(
     srcs = [
         "aider_pair_programming.rs",
         "agent_tool.rs",
-        "superpowers_tool.rs",
         "anthropic_memory.rs",
         "bash.rs",
-        "python.rs",
         "booking.rs",
         "checkout.rs",
         "quote.rs",

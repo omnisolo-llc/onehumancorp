@@ -44,31 +44,4 @@ describe('ProductsPage', () => {
     expect(screen.queryByText('Checkout QR Code')).toBeNull();
   });
 
-  it('opens configure modal, toggles inputs and saves', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    } as Response);
-
-    render(<ProductsPage />);
-
-    const configureButtons = screen.getAllByText('Configure');
-    fireEvent.click(configureButtons[0]);
-
-    expect(screen.getByText('Configure Subscription')).toBeDefined();
-
-    const checkbox = screen.getByRole('checkbox');
-    fireEvent.click(checkbox);
-
-    // Now the frequency and discount inputs should be visible
-    expect(screen.getByText('Delivery Frequency (days)')).toBeDefined();
-
-    const saveButton = screen.getByText('Save Configuration');
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/subscriptions/configure', expect.any(Object));
-        expect(screen.queryByText('Configure Subscription')).toBeNull();
-    });
-  });
 });

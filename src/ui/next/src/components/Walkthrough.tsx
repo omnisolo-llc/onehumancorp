@@ -35,28 +35,15 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         setTargetRect(targetElement.getBoundingClientRect());
       }, 300);
 
-      const updateRect = () => setTargetRect(targetElement.getBoundingClientRect());
-
-      // Use ResizeObserver for precise layout shifts instead of global window resize
-      const resizeObserver = new ResizeObserver(() => updateRect());
-      resizeObserver.observe(targetElement);
-      resizeObserver.observe(document.body);
-
-      // Use IntersectionObserver to handle scrolling/visibility
-      const intersectionObserver = new IntersectionObserver((entries) => {
-         if (entries[0].isIntersecting) updateRect();
-      }, { threshold: [0, 0.5, 1.0] });
-      intersectionObserver.observe(targetElement);
-
-      // We still need scroll for immediate updates during scroll events not caught by intersection
-      const handleScroll = () => updateRect();
+      // Also attach resize/scroll listeners for recalculation (simplified for this example)
+      const handleScroll = () => setTargetRect(targetElement.getBoundingClientRect());
       window.addEventListener('scroll', handleScroll, true);
+      window.addEventListener('resize', handleScroll);
 
       return () => {
         clearTimeout(timeoutId);
-        resizeObserver.disconnect();
-        intersectionObserver.disconnect();
         window.removeEventListener('scroll', handleScroll, true);
+        window.removeEventListener('resize', handleScroll);
       };
     } else {
       console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);

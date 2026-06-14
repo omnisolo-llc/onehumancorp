@@ -74,10 +74,7 @@ async fn get_draft(
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
     match agent.get_onboarding_state(&tid, &uid).await {
-        Ok(state) => {
-            let unwrapped_state = state.get("wizardState").unwrap_or(&state).clone();
-            Ok(Json(unwrapped_state))
-        },
+        Ok(state) => Ok(Json(state)),
         Err(_) => Ok(Json(serde_json::json!({}))), // fallback
     }
 }
@@ -99,9 +96,7 @@ async fn save_draft(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    let state_to_save = payload.get("wizardState").unwrap_or(&payload);
-
-    match agent.save_onboarding_state(&tid, &uid, step, state_to_save).await {
+    match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(e) => {
             tracing::error!("Failed to save onboarding draft: {}", e);
@@ -155,11 +150,7 @@ async fn get_state(
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
     match agent.get_onboarding_state(&tid, &uid).await {
-        Ok(state) => {
-            // Unwrap legacy `wizardState` wrapper if it exists for backward compatibility
-            let unwrapped_state = state.get("wizardState").unwrap_or(&state).clone();
-            Ok(Json(unwrapped_state))
-        },
+        Ok(state) => Ok(Json(state)),
         Err(e) => {
             tracing::error!("Failed to get onboarding state: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
@@ -184,9 +175,7 @@ async fn save_state(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    let state_to_save = payload.get("wizardState").unwrap_or(&payload);
-
-    match agent.save_onboarding_state(&tid, &uid, step, state_to_save).await {
+    match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
         Err(e) => {
             tracing::error!("Failed to save onboarding state: {}", e);

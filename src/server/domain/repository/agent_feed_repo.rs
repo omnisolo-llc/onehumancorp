@@ -120,37 +120,6 @@ impl AgentFeedRepository {
 
         Ok(rec)
     }
-
-    pub async fn update_action(&self, tenant_id: &str, id: &str, payload: serde_json::Value) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            r#"
-            UPDATE agent_feed_items
-            SET proposed_action = $1, updated_at = NOW()
-            WHERE tenant_id = $2 AND id = $3
-            "#
-        )
-        .bind(sqlx::types::Json(payload.clone()))
-        .bind(tenant_id)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
-
-        // Also try to update agent_approvals table if the item is from there
-        let _ = sqlx::query(
-            r#"
-            UPDATE agent_approvals
-            SET payload = $1, updated_at = NOW()
-            WHERE tenant_id = $2 AND id = $3
-            "#
-        )
-        .bind(sqlx::types::Json(payload))
-        .bind(tenant_id)
-        .bind(id)
-        .execute(&self.pool)
-        .await;
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]

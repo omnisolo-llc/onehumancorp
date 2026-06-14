@@ -57,7 +57,7 @@ test.describe('Viral Giveaway Loop', () => {
     const footerLink = publicPage.locator('a', { hasText: 'Powered by OHC' }).first();
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
-    expect(footerHref).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=');
+    expect(footerHref).toContain('/onboarding?ref=');
 
     // 7. Fill in an email and click enter
     const emailInput = publicPage.getByPlaceholder('Enter your email');

@@ -26,6 +26,7 @@ filegroup(
         [
             "src/**",
             "*.mjs",
+            "*.mts",
             "*.json",
             "*.ts",
             "*.png",
@@ -54,7 +55,7 @@ sh_test(
         "package.json",
         "package-lock.json",
         "tsconfig.json",
-        "vitest.config.ts",
+        "vitest.config.mts",
         "vitest.setup.ts",
         ":node_modules",
         "//deploy:hybrid_telemetry_dashboard_mirrors",

@@ -3,13 +3,13 @@ import { test, expect } from './fixtures';
 test.describe('Business Manager UI', () => {
   test('should display dashboard with nav', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
   });
 
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.locator('h1:has-text("Expert Center")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
@@ -31,17 +31,17 @@ test.describe('Business Manager UI', () => {
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     const link = page.getByRole('link', { name: 'Agents', exact: true });
     await expect(link).toBeVisible();
     await link.click();
     await page.waitForURL('**/agents**');
-    await expect(page.locator('h1:has-text("Expert Center")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should navigate to dashboard from nav', async ({ page }) => {
     await page.goto('/agents');
     await page.locator('header a[href="/dashboard"]').click();
-    await expect(page.locator('h2', { hasText: /Welcome back/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });

@@ -1,13 +1,18 @@
 import React from 'react';
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AnalyticsPage from './page';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 
 vi.mock('next/navigation', () => ({
   useRouter() {
     return {
       push: vi.fn(),
     };
+  },
+  usePathname() {
+    return '/analytics';
   },
 }));
 
@@ -30,7 +35,7 @@ describe('AnalyticsPage', () => {
   });
 
   it('renders basic analytics', () => {
-    render(<AnalyticsPage />);
+    render(<TooltipProvider><AnalyticsPage /></TooltipProvider>);
     expect(screen.getByText('Business Analytics 📊')).toBeInTheDocument();
     expect(screen.getByText('Total Revenue')).toBeInTheDocument();
     expect(screen.getByText('Active Customers')).toBeInTheDocument();
@@ -38,7 +43,7 @@ describe('AnalyticsPage', () => {
   });
 
   it('shows soft paywall when trying to unlock advanced insights', () => {
-    render(<AnalyticsPage />);
+    render(<TooltipProvider><AnalyticsPage /></TooltipProvider>);
 
     // Check that advanced section is locked
     expect(screen.getByText('Unlock Advanced Insights')).toBeInTheDocument();
@@ -52,7 +57,7 @@ describe('AnalyticsPage', () => {
   });
 
   it('grants pro status after sharing', async () => {
-    render(<AnalyticsPage />);
+    render(<TooltipProvider><AnalyticsPage /></TooltipProvider>);
 
     // Click to unlock
     fireEvent.click(screen.getByText('Unlock Now'));
@@ -62,8 +67,8 @@ describe('AnalyticsPage', () => {
     fireEvent.click(shareButton);
 
     expect(window.open).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent('http://localhost:3000/onboarding?ref=my-store')),
-        '_blank'
+      expect.stringContaining(encodeURIComponent('http://localhost:3000/onboarding?ref=my-store')),
+      '_blank'
     );
     expect(window.localStorage.setItem).toHaveBeenCalledWith('has_pro', 'true');
 

@@ -68,11 +68,11 @@ pub mod sqlite_memory;
 pub mod actor_model;
 pub mod agent_protocol;
 pub mod gpt_researcher;
-pub mod llm_condensation;
 pub mod marketplace;
 pub mod plan_and_execute;
 pub mod sona_patterns;
 pub mod swarm_topology;
+pub mod llm_condensation;
 pub mod visual_workflow;
 pub mod visual_workflow_client;
 
@@ -115,8 +115,8 @@ async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, S
         }
     };
 
-    use ohc_builtin_agent_tools::ToolExecutor;
     use ohc_builtin_agent_tools::pydantic::PydanticAdapter;
+    use ohc_builtin_agent_tools::ToolExecutor;
     let runner =
         std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
     let executor = ohc_builtin_agent_tools::workflow::WorkflowExecutor { runner };
@@ -384,6 +384,6 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-pub mod aider_repomap;
 pub mod jit_retrieval;
+pub mod aider_repomap;
 pub mod microagent;
