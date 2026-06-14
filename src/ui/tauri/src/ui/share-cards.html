@@ -245,6 +245,90 @@
       </div>
   </div>
 
-  <script src="ohc-help-widget.mjs"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'demo';
+
+        const storeNameInput = document.getElementById('storeName');
+        const taglineInput = document.getElementById('tagline');
+        const themeSelect = document.getElementById('theme');
+        const removeBrandingCheckbox = document.getElementById('removeBranding');
+
+        const previewCard = document.getElementById('previewCard');
+        const previewTitle = document.getElementById('previewTitle');
+        const previewTagline = document.getElementById('previewTagline');
+        const previewPoweredBy = document.getElementById('previewPoweredBy');
+        const previewLink = document.getElementById('previewLink');
+
+        const paywallModal = document.getElementById('paywallModal');
+        const closePaywall = document.getElementById('closePaywall');
+
+        const baseStoreLink = `https://ohc.app/store/${tenant}`;
+        previewLink.textContent = `ohc.app/store/${tenant}`;
+
+        function updatePreview() {
+            previewTitle.textContent = storeNameInput.value || "Your Store Name";
+            previewTagline.textContent = taglineInput.value || "Your amazing tagline goes here.";
+
+            if (themeSelect.value === 'dark') {
+                previewCard.classList.add('dark');
+            } else {
+                previewCard.classList.remove('dark');
+            }
+
+            const shareText = `Check out ${storeNameInput.value || 'my store'} on OHC! ${taglineInput.value || ''}\n\n${baseStoreLink}`;
+            document.getElementById('shareX').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+            document.getElementById('shareWA').href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            document.getElementById('shareFB').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(baseStoreLink)}&quote=${encodeURIComponent(shareText)}`;
+        }
+
+        storeNameInput.addEventListener('input', updatePreview);
+        taglineInput.addEventListener('input', updatePreview);
+        themeSelect.addEventListener('change', updatePreview);
+
+        removeBrandingCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                e.target.checked = false; // Revert immediately
+                paywallModal.style.display = 'flex';
+            }
+        });
+
+        closePaywall.addEventListener('click', () => {
+            paywallModal.style.display = 'none';
+        });
+
+        document.getElementById('copyLinkBtn').addEventListener('click', (e) => {
+            navigator.clipboard.writeText(baseStoreLink);
+            const originalText = e.target.textContent;
+            e.target.textContent = "Copied!";
+            setTimeout(() => { e.target.textContent = originalText; }, 2000);
+        });
+
+        window.claimTrial = async function() {
+            const text = `I just upgraded my store using @OneHumanCorp! Check it out: ${baseStoreLink}`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+            paywallModal.style.display = 'none';
+            removeBrandingCheckbox.checked = true;
+            previewPoweredBy.style.display = 'none';
+
+            try {
+                let url = '/api/v1/growth/trial-extension/claim';
+                if (window.__TAURI__) {
+                    url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+                }
+                await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tenant_id: tenant, source: "share_cards_paywall" })
+                });
+            } catch(e) {
+                console.error("Trial claim failed", e);
+            }
+        };
+
+        updatePreview();
+    });
+  </script>
+<script src="ohc-help-widget.mjs"></script>
 </body>
 </html>

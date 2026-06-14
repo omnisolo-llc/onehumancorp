@@ -221,6 +221,79 @@
     </div>
   </div>
 
-  <script src="ohc-help-widget.mjs"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const typeBtns = document.querySelectorAll('.type-btn:not(.theme-btn)');
+      const themeBtns = document.querySelectorAll('.theme-btn');
+      const tenantInput = document.getElementById('tenantId');
+      const copyBtn = document.getElementById('copyBtn');
+      const embedCodeEl = document.getElementById('embedCode');
+      const previewIframe = document.getElementById('previewIframe');
+      const previewPoweredBy = document.getElementById('previewPoweredBy');
+
+      let currentType = 'booking';
+      let currentTheme = 'light';
+
+      // Load tenant from localStorage if available
+      const localTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+      if (localTenant) {
+        tenantInput.value = localTenant;
+      }
+
+      function updateUI() {
+        const tenant = tenantInput.value.trim() || 'default-tenant';
+
+        // Update URL
+        const embedUrl = `${window.location.origin}/api/v1/growth/embed/widget?tenant_id=${encodeURIComponent(tenant)}&type=${currentType}&theme=${currentTheme}`;
+
+        // Update Iframe
+        previewIframe.src = embedUrl;
+
+        // Update Code Snippet
+        const snippet = `<div class="ohc-embed-container" style="width: 100%; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+  <iframe src="${embedUrl}" width="100%" height="400" style="border:none; border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"></iframe>
+  <a href="${window.location.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank" style="margin-top: 12px; font-size: 12px; color: #86868b; text-decoration: none; font-family: sans-serif; font-weight: 600;">⚡ Powered by OHC</a>
+</div>`;
+
+        embedCodeEl.textContent = snippet;
+
+        // Update Preview link
+        previewPoweredBy.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+      }
+
+      typeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          typeBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentType = btn.dataset.type;
+          updateUI();
+        });
+      });
+
+      themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          themeBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentTheme = btn.dataset.theme;
+          updateUI();
+        });
+      });
+
+      tenantInput.addEventListener('input', updateUI);
+
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCodeEl.textContent).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy Code';
+          }, 2000);
+        });
+      });
+
+      // Initial render
+      updateUI();
+    });
+  </script>
+<script src="ohc-help-widget.mjs"></script>
 </body>
 </html>
