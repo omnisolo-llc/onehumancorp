@@ -126,7 +126,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: public.ecr.aws/docker/library/redis:7
+    image: redis:7
     pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
@@ -153,7 +153,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg15
+    image: postgres:15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:

@@ -12,6 +12,6 @@ services:
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
-    image: public.ecr.aws/docker/library/redis:alpine
+    image: redis:alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
