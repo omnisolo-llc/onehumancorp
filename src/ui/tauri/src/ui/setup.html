@@ -16,11 +16,11 @@
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         text-align: center;
         max-width: 480px;
         width: 100%;
@@ -30,10 +30,10 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
       }
       h1 {
         margin-top: 0;
@@ -143,19 +143,19 @@
         }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         .glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         h1 {
           color: #F5F5F7;
@@ -556,6 +556,8 @@
             <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
             <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
             <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('FoodCart', event)" data-testid="persona-foodcart">I'm a Food Cart Operator</div>
+            <div class="persona-chip" onclick="applyPersona('Agency', event)" data-testid="persona-agency">I'm an Agency Principal</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -740,6 +742,20 @@
               state.assistantName = "Melody";
               state.assistantTone = "Friendly";
               state.first_offer = "1-Hour Guitar Lesson";
+          } else if (persona === 'FoodCart') {
+              state.work_context = 'Storefront';
+              state.categories = 'Other';
+              state.businessName = "Fatima's Flavors";
+              state.assistantName = "Spice";
+              state.assistantTone = "Friendly";
+              state.first_offer = "Daily Lunch Special";
+          } else if (persona === 'Agency') {
+              state.work_context = 'Agency';
+              state.categories = 'Design';
+              state.businessName = "Nora Studio";
+              state.assistantName = "Vision";
+              state.assistantTone = "Professional";
+              state.first_offer = "Standard Design Project";
           }
           populateForm();
           saveCurrentState();
@@ -1252,9 +1268,15 @@
 
           try {
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+              const userId = localStorage.getItem('user_id') || 'test-user';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-Tenant-ID': tenantId,
+                      'X-User-ID': userId
+                  },
                   body: JSON.stringify({ messages: chatHistory })
               });
 
@@ -1298,7 +1320,11 @@
 
                   const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': tenantIdStr,
+                          'X-User-ID': userIdStr
+                      },
                       body: JSON.stringify({
                           business_type: req.businessType,
                           company_name: req.companyName,
@@ -1315,7 +1341,9 @@
                           price_type: req.priceType,
                           location: req.location,
                           target_audience: req.targetAudience,
-                          initial_products: req.initialProducts
+                          initial_products: req.initialProducts,
+                          ai_agents: [],
+                          ai_auto_respond: true
                       })
                   });
 
@@ -1564,12 +1592,20 @@
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+                 const userId = localStorage.getItem('user_id') || 'test-user';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
                      headers: {
-                         'Content-Type': 'application/json'
+                         'Content-Type': 'application/json',
+                         'X-Tenant-ID': tenantId,
+                         'X-User-ID': userId
                      },
-                     body: JSON.stringify(req)
+                     body: JSON.stringify({
+                         ...req,
+                         ai_agents: state.aiAgents || [],
+                         ai_auto_respond: state.aiAutoRespond !== undefined ? state.aiAutoRespond : true
+                     })
                  }).then(response => {
                      if (response.ok) {
                          localStorage.setItem('onboardingState', JSON.stringify(state));
