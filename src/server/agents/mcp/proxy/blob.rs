@@ -15,7 +15,7 @@ pub struct LocalBlobProvider {
 impl LocalBlobProvider {
     pub fn new() -> Self {
         Self {
-            base_dir: "/var/tmp/ohc/blobs".to_string(),
+            base_dir: std::env::temp_dir().join("ohc/blobs").to_string_lossy().to_string(),
         }
     }
 
@@ -34,7 +34,7 @@ impl BlobProvider for LocalBlobProvider {
     fn read_blob<'a>(&'a self, path: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<String>> + Send + 'a>> {
         Box::pin(async move {
             let full_path = self.resolve_path(path)?;
-            fs::read_to_string(full_path).await
+            fs::read_to_string(&full_path).await
         })
     }
 
