@@ -153,7 +153,7 @@ function InviteAndEarnWidget() {
             id="dashboard-invite-btn"
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full min-h-[44px] min-w-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="w-full min-h-[44px] min-w-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             {loading ? 'Generating...' : 'Get My Invite Link'}
           </button>
@@ -475,7 +475,7 @@ export default function Dashboard() {
           Offline - changes saved locally
         </div>
         {isSyncing && (
-          <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
+          <div className="fixed bottom-4 right-4 bg-[#0f766e] text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -688,7 +688,7 @@ export default function Dashboard() {
                   navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
                   setActionMessage("Reward claimed. Invite link copied.");
                 }}
-                className="px-4 py-2 min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+                className="px-4 py-2 min-h-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-lg font-medium shadow-sm transition-colors"
               >
                 Share & Claim Reward
               </button>
