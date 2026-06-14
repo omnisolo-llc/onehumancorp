@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function CartRecoveryPage() {
   const router = useRouter();
@@ -14,10 +15,13 @@ export default function CartRecoveryPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
+  const [tenantId, setTenantId] = useState('my-store');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
+      const storedTenant = localStorage.getItem('tenant') || localStorage.getItem('tenant_id') || 'my-store';
+      setTenantId(storedTenant);
     }
     const fetchAbandonedCartsCount = async () => {
       try {
@@ -197,6 +201,8 @@ export default function CartRecoveryPage() {
           </section>
         </div>
       </main>
+
+      <PoweredByOHC tenantId={tenantId} />
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
