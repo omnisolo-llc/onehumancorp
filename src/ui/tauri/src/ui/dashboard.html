@@ -751,9 +751,10 @@
         </button>
         <div id="dashboard-invite-container" style="display: none; margin-top: 15px;">
           <input type="text" class="link-input" id="dashboard-invite-link" readonly value="" style="width: 100%;" />
-          <div class="action-buttons" style="margin-top: 10px;">
+          <div class="action-buttons" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">
             <button class="btn-secondary" id="dashboard-copy-btn" style="flex: 1;">Copy</button>
             <button class="btn-secondary" id="dashboard-share-x-btn" style="flex: 1; background-color: #1DA1F2; color: white;">Share to X</button>
+            <button class="btn-secondary" id="dashboard-share-device-btn" style="flex: 1; display: none;">Share via Device</button>
           </div>
         </div>
       </div>
@@ -2203,6 +2204,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const linkInput = document.getElementById('dashboard-invite-link');
     const copyBtn = document.getElementById('dashboard-copy-btn');
     const shareXBtn = document.getElementById('dashboard-share-x-btn');
+    const shareDeviceBtn = document.getElementById('dashboard-share-device-btn');
+
+    if(shareDeviceBtn && navigator.share) {
+        shareDeviceBtn.style.display = 'block';
+    }
 
     if(btn) {
         btn.addEventListener('click', async () => {
@@ -2250,6 +2256,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('milestone-container').style.display = 'none';
         });
     }
+
+    if(shareDeviceBtn && navigator.share) {
+        shareDeviceBtn.addEventListener('click', async () => {
+            try {
+                await navigator.share({
+                    title: 'Join me on OHC',
+                    text: 'I manage my business with OHC! Join using my invite link and get 1 month free:\n\n⚡ Powered by OHC',
+                    url: linkInput.value
+                });
+            } catch (err) {
+                console.error('Error sharing via device:', err);
+            }
+        });
+    }
+
 });
 </script>
 
