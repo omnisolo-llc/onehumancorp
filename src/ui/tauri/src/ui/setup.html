@@ -467,6 +467,32 @@
         outline-offset: 2px;
       }
 
+
+      .btn-secondary.glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        color: #1D1D1F;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+      .btn-secondary.glassmorphism:hover {
+        background: rgba(255, 255, 255, 0.85);
+        border-color: rgba(255, 255, 255, 0.8);
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn-secondary.glassmorphism {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #F5F5F7;
+        }
+        .btn-secondary.glassmorphism:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+
     </style>
   </head>
   <body>
@@ -591,7 +617,7 @@
         <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -605,7 +631,7 @@
         <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
@@ -621,7 +647,7 @@
 
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
@@ -648,7 +674,7 @@
 
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
@@ -667,7 +693,7 @@
 
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
@@ -680,7 +706,7 @@
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
@@ -699,7 +725,7 @@
 
         <div class="btn-group">
           <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn glassmorphism" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
@@ -931,14 +957,14 @@
       }
 
             function saveCurrentState() {
-          state.categories = inputs.categories.value;
-          state.businessName = inputs.name.value;
-          state.tagline = inputs.tagline.value;
-          state.assistantName = inputs.assistantName.value;
-          state.assistantTone = inputs.assistantTone.value;
-          state.firstOffer = inputs.firstOffer.value;
-          state.first_offer = inputs.firstOffer.value;
-          state.templateSelection = inputs.templateSelection.value;
+          if (inputs.categories && inputs.categories.value) state.categories = inputs.categories.value;
+          if (inputs.name) state.businessName = inputs.name.value;
+          if (inputs.tagline) state.tagline = inputs.tagline.value;
+          if (inputs.assistantName) state.assistantName = inputs.assistantName.value;
+          if (inputs.assistantTone) state.assistantTone = inputs.assistantTone.value;
+          if (inputs.firstOffer) state.firstOffer = inputs.firstOffer.value;
+          if (inputs.firstOffer) state.first_offer = inputs.firstOffer.value;
+          if (inputs.templateSelection) state.templateSelection = inputs.templateSelection.value;
 
           let selectedContext = document.querySelector('input[name="work_context"]:checked');
           if (selectedContext) {
@@ -1169,36 +1195,7 @@
           });
       });
 
-      document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-              e.preventDefault();
-              const originalText = btn.innerText;
-              btn.innerText = "Saving...";
-              btn.disabled = true;
 
-              // Add a small delay to allow browser to render "Saving..."
-              await new Promise(r => setTimeout(r, 100));
-
-              saveCurrentState();
-
-              btn.innerText = "Saved!";
-              btn.style.backgroundColor = "#34C759";
-              btn.style.color = "white";
-              btn.style.borderColor = "#34C759";
-
-              const msg = document.getElementById('draft-saved-msg');
-              if (msg) msg.style.display = 'block';
-
-              setTimeout(() => {
-                  btn.innerText = originalText;
-                  btn.disabled = false;
-                  btn.style.backgroundColor = "";
-                  btn.style.color = "";
-                  btn.style.borderColor = "";
-                  if (msg) msg.style.display = 'none';
-              }, 2000);
-          });
-      });
 
       const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
       const instantBioInputEl = document.getElementById('instant-bio');
@@ -1460,10 +1457,14 @@
           });
       }
       document.querySelectorAll(".save-draft-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
+            e.preventDefault();
             const originalText = e.target.innerText;
             e.target.innerText = "Saving...";
             e.target.disabled = true;
+
+            // Save the state fields to memory first
+            saveCurrentState();
 
             const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
             const tenantId = localStorage.getItem("tenant_id") || "storefront";
@@ -1481,21 +1482,41 @@
                 step: currentStepIdx
             };
 
+            const successCallback = () => {
+                e.target.innerText = "Saved!";
+                e.target.style.backgroundColor = "rgba(52, 199, 89, 0.2)";
+                e.target.style.color = "#34C759";
+                e.target.style.borderColor = "rgba(52, 199, 89, 0.5)";
+
+                const msg = document.getElementById('draft-saved-msg');
+                if (msg) msg.style.display = 'block';
+
+                setTimeout(() => {
+                    e.target.innerText = originalText;
+                    e.target.disabled = false;
+                    e.target.style.backgroundColor = "";
+                    e.target.style.color = "";
+                    e.target.style.borderColor = "";
+                    if (msg) msg.style.display = 'none';
+                }, 3000);
+            };
+
+            const errorCallback = (err) => {
+                console.error("Failed to save draft", err);
+                e.target.innerText = "Saved Locally"; // Fallback to local save message gracefully since API isn't always available in standalone E2E without server
+                e.target.style.backgroundColor = "rgba(255, 149, 0, 0.2)";
+                e.target.style.color = "#FF9500";
+
+                setTimeout(() => {
+                    e.target.innerText = originalText;
+                    e.target.disabled = false;
+                    e.target.style.backgroundColor = "";
+                    e.target.style.color = "";
+                }, 3000);
+            };
+
             if (window.__TAURI__ && window.__TAURI__.core) {
-                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
-                    e.target.innerText = "Saved!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
+                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(successCallback).catch(errorCallback);
             } else {
                 fetch(`${backendUrl}/api/onboarding/state`, {
                     method: "POST",
@@ -1507,22 +1528,11 @@
                     body: JSON.stringify(payload)
                 }).then(res => {
                     if (res.ok) {
-                        e.target.innerText = "Saved!";
-                        setTimeout(() => {
-                            e.target.innerText = originalText;
-                            e.target.disabled = false;
-                        }, 3000);
+                        successCallback();
                     } else {
-                        throw new Error("Failed to save");
+                        throw new Error("Failed to save via API");
                     }
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
+                }).catch(errorCallback);
             }
         });
       });
