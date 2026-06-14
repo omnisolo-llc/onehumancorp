@@ -345,6 +345,9 @@ pub struct Quote {
     pub customer_id: String,
     pub status: String,
     pub valid_until: Option<DateTime<Utc>>,
+    pub total_amount: Option<i64>,
+    pub required_deposit: Option<i64>,
+    pub checkout_url: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
