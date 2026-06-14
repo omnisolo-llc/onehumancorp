@@ -136,6 +136,7 @@ impl OnboardingAgent {
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
+            If an image URL is provided, imagine what products can be created from it and include them in the initial_products.
 
             Return ONLY a valid JSON object with fields:
             - business_name (string)

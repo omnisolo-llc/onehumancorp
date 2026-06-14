@@ -6,7 +6,10 @@ test.describe('Conversational Setup CUJ', () => {
 
   test.beforeEach(async ({ page }) => {
     // Intercept standard setup.html load to serve from filesystem for tests
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
       const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: content });
