@@ -301,6 +301,22 @@ async fn update_feed_item_state(
                     }
 
                     if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("instagram_dm") {
+                            if let Some(msg_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                                tracing::info!("Approved instagram_dm reply for message: {}", msg_id);
+                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'auto_replied' WHERE id = $1 AND tenant_id = $2")
+                                    .bind(msg_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied' WHERE id = $1 AND tenant_id = $2")
+                                    .bind(msg_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
                         if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
                             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                             // Real implementation would buffer post here to AYRSHARE.
