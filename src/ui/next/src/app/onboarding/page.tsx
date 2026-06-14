@@ -443,10 +443,10 @@ export default function OnboardingWizard() {
   const handleStartOnboarding = async () => {
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
-      errors.adminName = 'Admin Name is required';
+      errors.adminName = 'Owner Name is required';
     }
     if (!adminEmail.trim()) {
-      errors.adminEmail = 'Admin Email is required';
+      errors.adminEmail = 'Owner Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
       errors.adminEmail = 'Please enter a valid email address';
     }
@@ -1274,7 +1274,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
                   <div className="space-y-3 mb-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Owner Name</label>
                       <input
                         type="text"
 
@@ -1285,7 +1285,7 @@ export default function OnboardingWizard() {
                           const val = e.target.value;
                           setAdminName(val);
                           if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminName: 'Admin Name is required' }));
+                            setValidationErrors(prev => ({ ...prev, adminName: 'Owner Name is required' }));
                           } else {
                             setValidationErrors(prev => { const { adminName, ...rest } = prev; return rest; });
                           }
@@ -1296,7 +1296,7 @@ export default function OnboardingWizard() {
                       {validationErrors.adminName && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Owner Email</label>
                       <input
                         type="email"
 
@@ -1308,7 +1308,7 @@ export default function OnboardingWizard() {
                           const val = e.target.value;
                           setAdminEmail(val);
                           if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Owner Email is required' }));
                           } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
                             setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
                           } else {
@@ -1323,7 +1323,7 @@ export default function OnboardingWizard() {
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Owner Password</label>
                       <input
                         type="password"
                         enterKeyHint="done"
