@@ -1390,6 +1390,7 @@ function FeaturePanel({
             ['UI Settings', 'Adjust font size, language, generated-content markers, and filter handling.'],
             ['Compact Mode', 'Collapse decorative chat details and tool-call chrome for dense task work.'],
             ['Auto-install Low-risk Skills', 'Continue non-high-risk skill installs after security scan approval.'],
+            ['Observation Masking', 'Toggle JetBrains-style observation masking to prune large tool results and deeply nested JSON object fields.'],
             ['Prevent Sleep', 'Keep remote control and automation sessions running without the machine sleeping.'],
             ['Account Profile', 'Show avatar, account details, and OAuth sign-in providers from the sidebar.'],
             ['Version Information', 'Expose the current Agent parity/version build in the sidebar footer.'],
