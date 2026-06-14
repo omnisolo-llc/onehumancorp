@@ -21,13 +21,13 @@ test.describe('Distributed Inventory Sync via UI', () => {
     // This acquires the lock
     const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
         data: {
-          tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          tenant_id: 'e2e-tenant',
+          product_id: 'e2e-product-cake',
           quantity: 1,
           ttl_seconds: 15,
         },
         headers: {
-          'x-tenant-id': 'default_tenant',
+          'x-tenant-id': 'e2e-tenant',
         }
       });
       const onlineLockData = await onlineLockReq.json();
@@ -35,8 +35,8 @@ test.describe('Distributed Inventory Sync via UI', () => {
       expect(onlineLockData.success).toBeTruthy();
       const lockId = onlineLockData.lock_id;
 
-    // We now click "New Order" in the UI which also hits /reserve
-    await page.getByText('New Order').click();
+    // We now click "Quick Charge $50" in the UI which also hits /reserve
+    await page.getByText('Quick Charge $50').click();
 
     // We expect an optimistic lock failure indicating it is checked out by another customer
     await expect(page.getByText(/Failed to reserve:|Processing\/Reserving.../)).toBeVisible();
@@ -49,13 +49,13 @@ test.describe('Distributed Inventory Sync via UI', () => {
     // 3. We commit the background api checkout
     const commitReq = await request.post('/api/v1/payments/terminal/commit', {
         data: {
-          tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          tenant_id: 'e2e-tenant',
+          product_id: 'e2e-product-cake',
           quantity: 1,
           lock_id: lockId,
         },
         headers: {
-          'x-tenant-id': 'default_tenant',
+          'x-tenant-id': 'e2e-tenant',
         }
     });
 
@@ -79,19 +79,19 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
 
      // 3. Click new order which reserves the item
-     await page.getByText('New Order').click();
+     await page.getByText('Quick Charge $50').click();
      await expect(page.getByRole('status')).toHaveText(/New Order Total/);
 
      // 4. Concurrently simulate an online checkout
      const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
         data: {
-          tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          tenant_id: 'e2e-tenant',
+          product_id: 'e2e-product-cake',
           quantity: 1,
           ttl_seconds: 15,
         },
         headers: {
-          'x-tenant-id': 'default_tenant',
+          'x-tenant-id': 'e2e-tenant',
         }
       });
       const onlineLockData = await onlineLockReq.json();
@@ -104,11 +104,11 @@ test.describe('Distributed Inventory Sync via UI', () => {
         data: {
           tier: 'starter',
           is_subscription: false,
-          product_id: 'prod_123',
+          product_id: 'e2e-product-cake',
           quantity: 1,
         },
         headers: {
-          'x-tenant-id': 'default_tenant',
+          'x-tenant-id': 'e2e-tenant',
           // mock fake auth token or tenant_id handling is via x-tenant-id in e2e setup
         }
       });
@@ -118,11 +118,11 @@ test.describe('Distributed Inventory Sync via UI', () => {
 
   test('Persona: Operations Agent is alerted when inventory drops below threshold', async ({ request, page }) => {
     // Acquire lock and commit order to drop stock below threshold
-    const tenantId = 'tenant-worker-test-low';
+    const tenantId = 'tenant-terminal-test-low';
     const reserveReq = await request.post('/api/v1/payments/terminal/reserve', {
         data: {
           tenant_id: tenantId,
-          product_id: 'prod-worker-test-2',
+          product_id: 'prod-terminal-test-2',
           quantity: 2,
           ttl_seconds: 15,
         },
@@ -137,7 +137,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     const commitReq = await request.post('/api/v1/payments/terminal/commit', {
         data: {
           tenant_id: tenantId,
-          product_id: 'prod-worker-test-2',
+          product_id: 'prod-terminal-test-2',
           quantity: 2,
           lock_id: lockData.lock_id,
         },
@@ -166,7 +166,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
                   currency: 'USD',
                   payload: JSON.stringify({
                       mutation: {
-                          product_id: 'prod_123',
+                          product_id: 'e2e-product-cake',
                           quantity_deducted: 1,
                           amount: 1000,
                           transaction_id: 'tx_offline_123'

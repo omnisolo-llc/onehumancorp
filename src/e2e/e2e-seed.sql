@@ -534,3 +534,6 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO tenants (id, name, industry, plan_tier) VALUES ('tenant-terminal-test-low', 'Terminal Test Tenant Low', 'Retail', 'starter') ON CONFLICT DO NOTHING;
+INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-test-2', 'tenant-terminal-test-low', 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING;
