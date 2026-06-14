@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
 
 
 test.describe('Hyperlocal Lead Gen CUJ', () => {

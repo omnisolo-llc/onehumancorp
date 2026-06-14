@@ -18,6 +18,7 @@ where
 {
     Router::new()
         .route("/", post(create_quote))
+        .route("/intake", post(create_quote_intake))
         .route("/{id}", get(get_quote))
         .route("/{id}", put(update_quote))
         .route("/{id}/accept", post(accept_quote))
@@ -37,6 +38,14 @@ pub struct CreateQuoteRequest {
     pub required_deposit: Option<i64>,
     pub checkout_url: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateQuoteIntakeRequest {
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub description: String,
+    pub image_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -110,6 +119,125 @@ async fn create_quote(
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    (StatusCode::CREATED, Json(serde_json::json!({"id": quote_id.to_string()}))).into_response()
+}
+
+async fn create_quote_intake(
+    State(pool): State<PgPool>,
+    Json(payload): Json<CreateQuoteIntakeRequest>,
+) -> impl IntoResponse {
+    let quote_id = Uuid::new_v4();
+
+    let prompt = format!(
+        "You are a quoting agent. A customer requests an estimate for: '{}'. Image: {}. Please output a strict JSON object with keys: 'suggested_price' (number), 'scope' (string), 'suggested_time' (string), 'required_deposit' (number), and 'line_items' (array of objects with 'description' (string), 'unit_price_cents' (number), 'quantity' (number)). Do not use markdown blocks.",
+        payload.description, payload.image_url.unwrap_or_default()
+    );
+
+    let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
+        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        .as_deref()
+    {
+        Ok("minimax") => {
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+        }
+        _ => {
+            crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+        }
+    };
+
+    let mut total_amount = 0;
+    let mut required_deposit = 0;
+    let mut scope = "Service estimate".to_string();
+    let mut suggested_time = "TBD".to_string();
+    let mut line_items_data: Vec<QuoteLineItemRequest> = Vec::new();
+
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
+        if let Some(p) = parsed.get("suggested_price").and_then(|v| v.as_f64()) {
+            total_amount = (p * 100.0) as i64;
+        }
+        if let Some(d) = parsed.get("required_deposit").and_then(|v| v.as_f64()) {
+            required_deposit = (d * 100.0) as i64;
+        }
+        if let Some(s) = parsed.get("scope").and_then(|v| v.as_str()) {
+            scope = s.to_string();
+        }
+        if let Some(t) = parsed.get("suggested_time").and_then(|v| v.as_str()) {
+            suggested_time = t.to_string();
+        }
+        if let Some(items) = parsed.get("line_items").and_then(|v| v.as_array()) {
+            for item in items {
+                line_items_data.push(QuoteLineItemRequest {
+                    description: item.get("description").and_then(|v| v.as_str()).unwrap_or("Item").to_string(),
+                    unit_price_cents: item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0),
+                    quantity: item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32,
+                    is_optional: false,
+                });
+            }
+        }
+    }
+
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db error"}))).into_response(),
+    };
+
+    if let Err(e) = sqlx::query(
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+    )
+    .bind(quote_id)
+    .bind(&payload.tenant_id)
+    .bind(&payload.customer_id)
+    .bind(total_amount)
+    .bind(required_deposit)
+    .execute(&mut *tx)
+    .await {
+        tracing::error!("Failed to insert quote intake: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db insert failed"}))).into_response();
+    }
+
+    for item in line_items_data {
+        if let Err(e) = sqlx::query(
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, false, NOW(), NOW())"
+        )
+        .bind(Uuid::new_v4())
+        .bind(quote_id)
+        .bind(&item.description)
+        .bind(item.unit_price_cents)
+        .bind(item.quantity)
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to insert quote intake line item: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db insert line item failed"}))).into_response();
+        }
+    }
+
+    let payload_json = serde_json::json!({
+        "quote_id": quote_id.to_string(),
+        "feature_type": "quote_draft",
+        "customer_inquiry": payload.description,
+        "scope": scope,
+        "suggested_time": suggested_time,
+        "suggested_price": total_amount as f64 / 100.0,
+    });
+
+    if let Err(e) = sqlx::query(
+        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'sales', 'Draft Quote for Customer', 'PENDING', 'DraftForReview', $3, NOW(), NOW())"
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(&payload.tenant_id)
+    .bind(payload_json)
+    .execute(&mut *tx)
+    .await {
+        tracing::error!("Failed to insert quote intake agent approval: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db insert agent approval failed"}))).into_response();
+    }
+
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit quote intake tx: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db tx commit failed"}))).into_response();
     }
 
     (StatusCode::CREATED, Json(serde_json::json!({"id": quote_id.to_string()}))).into_response()
