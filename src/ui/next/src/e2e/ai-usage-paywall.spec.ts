@@ -9,8 +9,6 @@ test.describe('AI Usage Paywall Growth Loop', () => {
       window.localStorage.setItem('tenant', 'test-tenant');
     });
 
-    // Capture console output for debugging
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
     await page.goto('/ai-usage-paywall');
 
