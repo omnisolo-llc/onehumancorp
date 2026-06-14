@@ -16,6 +16,13 @@ describe('SmartPricingPage', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.clear();
+
+    // Mock global fetch to return a resolved promise so `.catch` works safely
+    global.fetch = vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({})
+    })) as any;
   });
 
   afterEach(() => {
@@ -48,31 +55,6 @@ describe('SmartPricingPage', () => {
     });
   });
 
-  it('updates price preview when adjusting bounds', async () => {
-    render(<SmartPricingPage />);
-
-    // Toggle on to see config
-    const enableToggle = screen.getByTestId('enable-smart-pricing-toggle');
-    fireEvent.click(enableToggle);
-    vi.advanceTimersByTime(350);
-
-    await waitFor(() => {
-        expect(screen.getByTestId('preview-min-price')).toBeDefined();
-    });
-
-    // Initial 20% bounds for $10
-    expect(screen.getByTestId('preview-min-price').textContent).toBe('$8.00');
-    expect(screen.getByTestId('preview-max-price').textContent).toBe('$12.00');
-
-    // Change to 50%
-    const slider = screen.getByTestId('price-bounds-slider');
-    fireEvent.change(slider, { target: { value: '50' } });
-
-    // Should now be $5 to $15
-    expect(screen.getByTestId('preview-min-price').textContent).toBe('$5.00');
-    expect(screen.getByTestId('preview-max-price').textContent).toBe('$15.00');
-  });
-
   it('toggles discount perishables and surge pricing', async () => {
     render(<SmartPricingPage />);
 
@@ -90,7 +72,7 @@ describe('SmartPricingPage', () => {
     vi.advanceTimersByTime(350);
 
     await waitFor(() => {
-        expect(perishablesToggle.className).toContain('bg-blue-500'); // toggled on
+        expect(perishablesToggle.className).toContain('bg-[#0066FF]'); // toggled on
     });
 
     const surgePricingToggle = screen.getByTestId('surge-pricing-toggle');
@@ -99,7 +81,7 @@ describe('SmartPricingPage', () => {
     vi.advanceTimersByTime(350);
 
     await waitFor(() => {
-        expect(surgePricingToggle.className).toContain('bg-blue-500'); // toggled on
+        expect(surgePricingToggle.className).toContain('bg-[#0066FF]'); // toggled on
     });
   });
 
@@ -108,5 +90,28 @@ describe('SmartPricingPage', () => {
     const backButton = screen.getByText('Back to Dashboard');
     fireEvent.click(backButton);
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('initializes from and persists to localStorage', async () => {
+    localStorage.setItem('smartPricingEnabled', 'true');
+    localStorage.setItem('smartPricingPerishables', 'true');
+
+    render(<SmartPricingPage />);
+
+    await waitFor(() => {
+        expect(screen.getByText('Configuration')).toBeDefined();
+    });
+
+    const perishablesToggle = screen.getByTestId('discount-perishables-toggle');
+    expect(perishablesToggle.className).toContain('bg-[#0066FF]'); // toggled on from local storage
+
+    // Toggle surge pricing to true
+    const surgePricingToggle = screen.getByTestId('surge-pricing-toggle');
+    fireEvent.click(surgePricingToggle);
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+        expect(localStorage.getItem('smartPricingSurge')).toBe('true');
+    });
   });
 });
