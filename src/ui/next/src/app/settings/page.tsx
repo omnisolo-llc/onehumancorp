@@ -196,17 +196,17 @@ export default function SettingsPage() {
   return (
     <AppShell title="Settings">
       <div className="mx-auto max-w-4xl space-y-8 font-inter">
-        <header className="mb-8 p-6 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-3xl border border-indigo-100/40 shadow-sm backdrop-blur-md">
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 tracking-tight">Workspace Settings</h1>
-          <p className="mt-2 text-sm text-gray-500">Manage integrations, local routing, communication rules, and system security.</p>
+        <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
+          <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and system security.</p>
         </header>
 
         {/* SMS Notifications Card */}
-        <section className="app-panel border border-indigo-100/80 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/70 backdrop-blur-lg">
-          <div className="app-panel-header border-b border-indigo-50 bg-indigo-50/30 px-6 py-4">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-indigo-950">SMS Notifications & Security</div>
-              <div className="text-xs text-indigo-600/80 mt-1">Get texts for critical events. Verify your phone number to enable.</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
           <div className="app-panel-body p-6 space-y-6">
@@ -220,22 +220,22 @@ export default function SettingsPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isVerified}
-                  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none disabled:bg-gray-50 disabled:text-gray-400"
                 />
                 {!isVerifying && !isVerified && (
                   <WithTooltip id="settings-verify-tooltip" defaultText="Verify your number to receive critical notifications.">
-                    <button onClick={handleVerify} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                    <button onClick={handleVerify} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
                       Verify Number
                     </button>
                   </WithTooltip>
                 )}
               </div>
 
-              {smsStatus && <p className="text-sm font-semibold text-indigo-600" role="status">⚡ {smsStatus}</p>}
+              {smsStatus && <p className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd]" role="status">⚡ {smsStatus}</p>}
 
               {isVerifying && !isVerified && (
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-4 max-w-md animate-fade-in">
-                  <p className="mb-3 text-xs font-semibold text-indigo-800">A 6-digit code has been sent. Enter it below:</p>
+                <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-4 max-w-md animate-fade-in">
+                  <p className="mb-3 text-xs font-semibold text-teal-800 dark:text-teal-200">A 6-digit code has been sent. Enter it below:</p>
                   <div className="flex gap-3">
                     <input
                       aria-label="Verification code"
@@ -243,10 +243,10 @@ export default function SettingsPage() {
                       placeholder="123456"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
-                      className="w-28 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-mono text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                      className="w-28 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-mono text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                     />
                     <WithTooltip id="settings-otp-tooltip" defaultText="Click to confirm the code sent to your phone.">
-                      <button onClick={handleConfirm} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs" type="button">
+                      <button onClick={handleConfirm} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs" type="button">
                         Confirm OTP
                       </button>
                     </WithTooltip>
@@ -262,35 +262,35 @@ export default function SettingsPage() {
                   ["failed_payment", "Failed Payments"],
                   ["new_order", "New Orders"],
                 ].map(([key, label]) => (
-                  <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isVerified ? 'border-gray-100 hover:border-indigo-200 bg-gray-50/30' : 'border-gray-100 opacity-60 cursor-not-allowed'}`}>
+                  <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isVerified ? 'border-gray-100 hover:border-teal-200 bg-gray-50/30' : 'border-gray-100 opacity-60 cursor-not-allowed'}`}>
                     <input
                       aria-label={label}
                       type="checkbox"
                       disabled={!isVerified}
                       checked={(preferences as any)[key]}
                       onChange={(e) => handlePreferenceChange(key, e.target.checked)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                      className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                     />
                     <span className={`text-sm font-medium ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-200 bg-gray-50/30 cursor-pointer">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
                     aria-label="Enable Email Notifications"
                     type="checkbox"
                     checked={(preferences as any)["email_notifications"] || false}
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
                   <span className="text-sm font-medium text-gray-800">Email Notifications</span>
                 </label>
-                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-indigo-200 bg-gray-50/30 cursor-pointer">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
                     aria-label="Enable Push Notifications"
                     type="checkbox"
                     checked={(preferences as any)["push_notifications"] || false}
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
                   <span className="text-sm font-medium text-gray-800">Push Notifications</span>
                 </label>
@@ -301,24 +301,24 @@ export default function SettingsPage() {
 
         {/* Local Delivery and Voice Receptionist side-by-side */}
         <section className="app-grid two gap-6">
-          <div className="app-panel border border-indigo-100/80 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/70 backdrop-blur-lg flex flex-col justify-between">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
             <div>
-              <div className="app-panel-header border-b border-indigo-50 bg-indigo-50/30 px-6 py-4">
+              <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-indigo-950">Local Delivery Setup</div>
-                  <div className="text-xs text-indigo-600/80 mt-1">Configure delivery radius and rates.</div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery Setup</div>
+                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure delivery radius and rates.</div>
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
                 <WithTooltip id="settings-delivery-tooltip" defaultText="Turn this on to offer local delivery to your customers.">
-                  <label className="flex items-center justify-between rounded-xl border border-indigo-50/60 p-4 text-sm font-medium text-indigo-950 cursor-pointer bg-indigo-50/20 hover:bg-indigo-50/40 transition-colors">
+                  <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
                     <span>Enable Local Delivery</span>
                     <input
                       aria-label="Enable Local Delivery"
                       type="checkbox"
                       checked={deliverySettings.delivery_enabled}
                       onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5 cursor-pointer"
+                      className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
                     />
                   </label>
                 </WithTooltip>
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                       value={deliverySettings.delivery_radius}
                       onChange={(e) => handleDeliverySettingChange('delivery_radius', parseFloat(e.target.value))}
                       disabled={!deliverySettings.delivery_enabled}
-                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                     />
                   </label>
                   <label className="block">
@@ -343,7 +343,7 @@ export default function SettingsPage() {
                       value={deliverySettings.delivery_fee}
                       onChange={(e) => handleDeliverySettingChange('delivery_fee', parseFloat(e.target.value))}
                       disabled={!deliverySettings.delivery_enabled}
-                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                     />
                   </label>
                 </div>
@@ -351,22 +351,22 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="app-panel border border-indigo-100/80 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/70 backdrop-blur-lg flex flex-col justify-between">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
             <div>
-              <div className="app-panel-header border-b border-indigo-50 bg-indigo-50/30 px-6 py-4">
+              <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-indigo-950">AI Voice Receptionist</div>
-                  <div className="text-xs text-indigo-600/80 mt-1">Let OHC handle your business calls.</div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">AI Voice Receptionist</div>
+                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OHC handle your business calls.</div>
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
-                <label className="flex items-center justify-between rounded-xl border border-indigo-50/60 p-4 text-sm font-medium text-indigo-950 cursor-pointer bg-indigo-50/20 hover:bg-indigo-50/40 transition-colors">
+                <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
                   <span>Enable AI Voice Receptionist</span>
                   <input
                     type="checkbox"
                     checked={voiceSettings.voice_receptionist_enabled}
                     onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5 cursor-pointer"
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
                   />
                 </label>
 
@@ -378,7 +378,7 @@ export default function SettingsPage() {
                         <select
                           value={voiceSettings.voice_receptionist_persona}
                           onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
-                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                         >
                           <option value="Friendly">Friendly & Casual</option>
                           <option value="Professional">Professional & Crisp</option>
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                             className="w-full rounded-xl border border-gray-200 bg-gray-55 px-4 py-2.5 text-sm text-gray-500 outline-none"
                           />
                           {!voiceSettings.voice_receptionist_number && (
-                            <button onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                            <button onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
                               Get Number
                             </button>
                           )}
@@ -412,11 +412,11 @@ export default function SettingsPage() {
         </section>
 
         {/* Agent Settings Card */}
-        <section className="app-panel border border-indigo-100/80 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/70 backdrop-blur-lg">
-          <div className="app-panel-header border-b border-indigo-50 bg-indigo-50/30 px-6 py-4">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-indigo-950">Agent Settings</div>
-              <div className="text-xs text-indigo-600/80 mt-1">Configure your AI agent's identity.</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Agent Settings</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure your AI agent's identity.</div>
             </div>
           </div>
           <div className="app-panel-body p-6">
@@ -426,7 +426,7 @@ export default function SettingsPage() {
                 type="text"
                 value={agentName}
                 onChange={(e) => handleAgentNameChange(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                 placeholder="Agent One"
               />
             </label>
@@ -434,18 +434,18 @@ export default function SettingsPage() {
         </section>
 
         {/* Change Password Card */}
-        <section className="app-panel border border-indigo-100/80 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl overflow-hidden bg-white/70 backdrop-blur-lg">
-          <div className="app-panel-header border-b border-indigo-50 bg-indigo-50/30 px-6 py-4">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-indigo-950">Security & Credentials</div>
-              <div className="text-xs text-indigo-600/80 mt-1">Update your account credentials regularly to keep data safe.</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Security & Credentials</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Update your account credentials regularly to keep data safe.</div>
             </div>
           </div>
           <div className="app-panel-body p-6 grid gap-4 max-w-md">
-            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none" />
-            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none" />
-            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none" />
-            <button onClick={() => router.push("/dashboard")} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs w-fit" type="button">
+            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <button onClick={() => router.push("/dashboard")} className="px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs w-fit" type="button">
               Save New Password
             </button>
           </div>
