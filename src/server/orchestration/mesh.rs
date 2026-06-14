@@ -149,7 +149,14 @@ impl TeammateMesh for CentrifugeNode {
         dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let mut retries = 0;
-        let mut backoff = 200;
+        let mut backoff = std::env::var("OHC_MESH_INITIAL_BACKOFF_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(200);
+        let max_backoff = std::env::var("OHC_MESH_MAX_BACKOFF_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(2000);
 
         loop {
             if retries > 10 {
@@ -176,7 +183,7 @@ impl TeammateMesh for CentrifugeNode {
             }
 
             retries += 1;
-            backoff = std::cmp::min(backoff * 2, 2000);
+            backoff = std::cmp::min(backoff * 2, max_backoff);
         }
     }
 

@@ -7,7 +7,18 @@ use sqlx::Row;
 use serde_json::json;
 use tokio::time::timeout;
 
-const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
+fn ai_agent_timeout() -> Duration {
+    crate::config::get().ai_agent_timeout_ms.map(Duration::from_millis).unwrap_or(Duration::from_secs(60))
+}
+
+fn ai_retry_backoff(attempts: u32) -> Duration {
+    if let Some(ms) = crate::config::get().ai_retry_backoff_ms {
+        return Duration::from_millis(ms);
+    }
+    Duration::from_secs(2u64.pow(attempts))
+}
+
+
 const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_RETRIES: u32 = 3;
 
@@ -154,7 +165,7 @@ impl OperationsWorker {
                         Err("AI call failed".to_string())
                     };
 
-                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                    match timeout(ai_agent_timeout(), ai_op).await {
                         Ok(Ok(content)) => {
                             if !content.is_empty() {
                                 drafted_msg = content;
@@ -163,7 +174,7 @@ impl OperationsWorker {
                         },
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }
@@ -388,7 +399,7 @@ impl OperationsWorker {
                                             Err("AI call failed".to_string())
                                         };
 
-                                        match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                        match timeout(ai_agent_timeout(), ai_op).await {
                                             Ok(Ok(content)) => {
                                                 drafted_msg = content;
                                                 break;
@@ -424,7 +435,7 @@ impl OperationsWorker {
                                                         }
                                                     }
                                                 }
-                                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                             }
                                         }
                                     }
@@ -790,7 +801,7 @@ impl CustomerSuccessWorker {
                         Err("AI call failed".to_string())
                     };
 
-                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                    match timeout(ai_agent_timeout(), ai_op).await {
                         Ok(Ok(content)) => {
                             drafted_msg = content;
                             break;
@@ -810,7 +821,7 @@ impl CustomerSuccessWorker {
                                 .execute(&db.pool)
                                 .await;
                             }
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }
@@ -827,7 +838,7 @@ impl CustomerSuccessWorker {
 
                     let mut attempts = 0;
                     while attempts < MAX_RETRIES {
-                        match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
+                        match timeout(ai_agent_timeout(), minimax.reason(&prompt)).await {
                             Ok(Ok(res)) => {
                                 if res.trim() == "CONFIDENT" {
                                     confidence = "CONFIDENT".to_string();
@@ -839,7 +850,7 @@ impl CustomerSuccessWorker {
                                 if attempts == MAX_RETRIES {
                                     final_status = "PAUSED";
                                 }
-                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                             }
                         }
                     }
@@ -1005,7 +1016,7 @@ let db_for_products = self.db.clone();
                                         Err("AI call failed".to_string())
                                     };
 
-                                    match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    match tokio::time::timeout(ai_agent_timeout(), ai_op).await {
                                         Ok(Ok(content)) => {
                                             drafted_msg = content;
                                             break;
@@ -1044,7 +1055,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                         }
                                     }
                                 }
@@ -1153,7 +1164,7 @@ let db_for_products = self.db.clone();
                                         Err("AI call failed".to_string())
                                     };
 
-                                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    match timeout(ai_agent_timeout(), ai_op).await {
                                         Ok(Ok(v)) => {
                                             resolved_payload = v;
                                             break;
@@ -1188,7 +1199,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                                         }
                                     }
                                 }
@@ -1376,7 +1387,7 @@ impl AdvisorWorker {
                             Err("Hub call failed".to_string())
                         };
 
-                        match tokio::time::timeout(AI_AGENT_TIMEOUT, hub_op).await {
+                        match tokio::time::timeout(ai_agent_timeout(), hub_op).await {
                             Ok(Ok(_)) => {
                                 break;
                             },
@@ -1410,7 +1421,7 @@ impl AdvisorWorker {
                                         }
                                     }
                                 }
-                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                             }
                         }
                     }
