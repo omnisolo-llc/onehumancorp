@@ -112,6 +112,21 @@ impl PosSyncWorker {
                     .bind(&ai_payload)
                     .execute(&mut *tx)
                     .await;
+
+                    // Update pos_terminal_sessions for conflict
+                    let client_id = payload.get("client_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let _ = sqlx::query(
+                        "UPDATE pos_terminal_sessions
+                         SET sync_status = 'CONFLICT',
+                             last_conflict_resolved_at = CURRENT_TIMESTAMP,
+                             pending_reconciliation = (COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb)
+                         WHERE tenant_id = $2 AND device_id = $3"
+                    )
+                    .bind(&ai_payload)
+                    .bind(&job.tenant_id)
+                    .bind(client_id)
+                    .execute(&mut *tx)
+                    .await;
                 }
 
                 let cache = crate::builder::edge::get_edge_cache();
@@ -245,6 +260,21 @@ impl PosSyncWorker {
                                 .bind(&notification_id)
                                 .bind(&job.tenant_id)
                                 .bind(&notification_payload)
+                                .execute(&mut *tx)
+                                .await;
+
+                                // Update pos_terminal_sessions for conflict
+                                let client_id = payload.get("client_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                                let _ = sqlx::query(
+                                    "UPDATE pos_terminal_sessions
+                                     SET sync_status = 'CONFLICT',
+                                         last_conflict_resolved_at = CURRENT_TIMESTAMP,
+                                         pending_reconciliation = (COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb)
+                                     WHERE tenant_id = $2 AND device_id = $3"
+                                )
+                                .bind(&ai_payload)
+                                .bind(&job.tenant_id)
+                                .bind(client_id)
                                 .execute(&mut *tx)
                                 .await;
                             }
