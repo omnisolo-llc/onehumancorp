@@ -40,7 +40,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -115,7 +115,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_kairos_transitions_total[5m])) by (mode)",
@@ -131,7 +131,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -207,7 +207,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(ohc_kairos_transition_duration_seconds_bucket[5m])) by (le, mode))",
@@ -223,7 +223,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -298,7 +298,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "sum(ohc_sub_agent_queue_length) by (mode)",
@@ -684,6 +684,67 @@
       "title": "Token Budget Alerts (last 1h)",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "id": 103,
+      "title": "Task Claim Contention Rate by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}} - Contention Rate",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)"
+      }
+    },
+    {
+      "id": 104,
+      "title": "AutoDream Memory Consolidation Throughput",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_autodream_consolidation_total[5m]))",
+          "legendFormat": "Consolidation Rate",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_autodream_sync_errors_total[5m])) by (error)",
+          "legendFormat": "Error - {{error}}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)"
+      }
     }
   ],
   "schemaVersion": 38,
