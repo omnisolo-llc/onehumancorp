@@ -368,7 +368,7 @@ mod tests {
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
@@ -379,7 +379,7 @@ mod tests {
     #[tokio::test]
     async fn test_power_sync_push() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
@@ -400,7 +400,7 @@ mod tests {
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await;
@@ -410,7 +410,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push_and_pull() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
         if !database_url.contains("test") {
             // Only run e2e flow if real test db is available. Dummy will fail.
             return;
@@ -460,7 +460,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
@@ -471,7 +471,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_escalation_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
@@ -481,7 +481,7 @@ mod tests {
     #[tokio::test]
     async fn test_vector_sync() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();

@@ -241,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -254,7 +254,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
