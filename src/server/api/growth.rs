@@ -2266,16 +2266,23 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let pool_clone = state.pool.clone();
-    let active_referrals_fut = async {
-        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
-            .fetch_one(&pool_clone)
-            .await
-            .unwrap_or(0)
-    };
+    let active_referrals_fut = tokio::spawn({
+        let pool_clone = state.pool.clone();
+        async move {
+            sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+                .fetch_one(&pool_clone)
+                .await
+                .unwrap_or(0)
+        }
+    });
 
-    let invites_count_fut = tracker.get_total_invites_count();
-    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+    let invites_count_fut = tokio::spawn(async move {
+        tracker.get_total_invites_count().await
+    });
+
+    let (active_referrals_join, invites_count_join) = tokio::join!(active_referrals_fut, invites_count_fut);
+    let active_referrals = active_referrals_join.unwrap_or(0);
+    let invites_count_res = invites_count_join.unwrap_or_else(|_| Err("Task joined failed".to_string()));
 
     match invites_count_res {
         Ok(total_invites) => {
