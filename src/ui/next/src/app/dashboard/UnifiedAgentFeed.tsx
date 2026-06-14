@@ -333,7 +333,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       };
 
       ws.onerror = (err) => {
-        console.error("Websocket error:", err);
+        if (process.env.NODE_ENV !== "test") { console.error("Websocket error:", err); }
       };
     };
 

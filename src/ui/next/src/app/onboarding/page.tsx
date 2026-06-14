@@ -330,8 +330,8 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
-      setStep(1); syncStateToBackend({ step: 1 });
-      setChatStep(3); syncStateToBackend({ chatStep: 3 });
+      setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 });
+
     } finally {
       setIsLoading(false);
     }
@@ -578,7 +578,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col gap-4 w-full">
                 <button
                   className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                  onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
+                  onClick={() => { setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 }); }}
                 >
                   Start My Business
                 </button>
@@ -873,7 +873,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
