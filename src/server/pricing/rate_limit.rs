@@ -30,7 +30,7 @@ impl PlanTier {
             }
 
         match self {
-            PlanTier::Free => Some(100),
+            PlanTier::Free => Some(500),
             PlanTier::Starter => Some(1000),
             PlanTier::Pro | PlanTier::Business => None, // Unlimited
         }
@@ -38,7 +38,7 @@ impl PlanTier {
 
     pub fn agent_action_limit(&self) -> Option<u32> {
         match self {
-            PlanTier::Free => Some(20),
+            PlanTier::Free => Some(100),
             PlanTier::Starter => Some(200),
             PlanTier::Pro | PlanTier::Business => None,
         }
@@ -57,7 +57,7 @@ impl PlanTier {
             }
 
         match self {
-            PlanTier::Free => Some(500),
+            PlanTier::Free => Some(1024), // 1GB
             PlanTier::Starter => Some(5120), // 5GB
             PlanTier::Pro => Some(51200),    // 50GB
             PlanTier::Business => Some(512000),      // 500GB
@@ -66,7 +66,7 @@ impl PlanTier {
 
     pub fn max_agents(&self) -> Option<usize> {
         match self {
-            PlanTier::Free => Some(1),
+            PlanTier::Free => Some(3),
             PlanTier::Starter => Some(3),
             PlanTier::Pro => Some(10),
             PlanTier::Business => None,
@@ -75,7 +75,7 @@ impl PlanTier {
 
     pub fn max_products(&self) -> Option<usize> {
         match self {
-            PlanTier::Free => Some(10),
+            PlanTier::Free => Some(50),
             PlanTier::Starter => Some(100),
             PlanTier::Pro | PlanTier::Business => None,
         }
@@ -92,7 +92,7 @@ impl PlanTier {
 
     pub fn get_prompt_cache_ttl(&self) -> std::time::Duration {
         match self {
-            PlanTier::Free => std::time::Duration::from_secs(60 * 60), // 1 hour
+            PlanTier::Free => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
             PlanTier::Starter => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
             PlanTier::Pro => std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 days
             PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
@@ -402,25 +402,25 @@ mod tests {
 
     #[test]
     fn test_plan_tier_limits() {
-        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(500));
         assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
         assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
         assert_eq!(PlanTier::Business.monthly_action_limit(), None);
 
-        assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
+        assert_eq!(PlanTier::Free.agent_action_limit(), Some(100));
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
 
-        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
+        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(1024));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5120));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(51200));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
-        assert_eq!(PlanTier::Free.max_agents(), Some(1));
+        assert_eq!(PlanTier::Free.max_agents(), Some(3));
         assert_eq!(PlanTier::Starter.max_agents(), Some(3));
         assert_eq!(PlanTier::Pro.max_agents(), Some(10));
         assert_eq!(PlanTier::Business.max_agents(), None);
 
-        assert_eq!(PlanTier::Free.max_products(), Some(10));
+        assert_eq!(PlanTier::Free.max_products(), Some(50));
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
@@ -488,15 +488,15 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
-                // Add 10 products
-                for _ in 0..10 {
+                // Add 50 products
+                for _ in 0..50 {
                     limiter.record_product_added(tenant_id).await.unwrap();
                 }
 
                 // Check quota now
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
+                assert!(status.soft_limit_reached); // Should be reached since we have 50 products (limit is 50)
             }
         }
     }
@@ -530,7 +530,7 @@ mod tests {
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
-                // Set tier to Free (500MB limit)
+                // Set tier to Free (1024MB limit)
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // Increment storage by a small amount (100MB)
@@ -539,12 +539,12 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
-                // Increment storage by an amount crossing the 500MB limit
-                let large_delta: i64 = 450 * 1024 * 1024;
+                // Increment storage by an amount crossing the 1024MB limit
+                let large_delta: i64 = 950 * 1024 * 1024;
                 let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // But flag is set
-                assert!(status.user_message.unwrap().contains("500MB storage"));
+                assert!(status.user_message.unwrap().contains("1024MB storage"));
             }
         }
     }
@@ -564,13 +564,15 @@ mod tests {
                 // Set tier to free
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
-                // Add 1 agent
-                limiter.record_agent_added(tenant_id).await.unwrap();
+                // Add 3 agents
+                for _ in 0..3 {
+                    limiter.record_agent_added(tenant_id).await.unwrap();
+                }
 
                 // Check quota now
                 let status = limiter.check_agent_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Limit is 1 for Free tier
+                assert!(status.soft_limit_reached); // Limit is 3 for Free tier
             }
         }
     }
@@ -621,7 +623,7 @@ mod tests {
 
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
-                for _ in 0..20 {
+                for _ in 0..100 {
                     let _ = limiter.record_action(tenant_id, agent_id).await;
                 }
                 let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
@@ -647,7 +649,7 @@ mod tests {
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // exceed limit
-                for _ in 0..100 {
+                for _ in 0..500 {
                     let _ = limiter.record_action(tenant_id, agent_id).await;
                 }
                 let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
