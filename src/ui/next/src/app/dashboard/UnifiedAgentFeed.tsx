@@ -675,7 +675,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -685,7 +685,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
-                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg  relative mt-2">
+                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 relative mt-2">
                             <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
@@ -794,24 +794,28 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </div>
                         </div>
                       ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).customer_inquiry || 'Client Inquiry'}</span>
+                        <div className="flex flex-col gap-3 p-4 rounded-xl glassmorphism border border-white/40 shadow-sm" data-testid="quote-draft-card">
+                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Scope:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).scope || (approval.proposed_action || approval.context_payload).service}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).suggested_time || 'TBD'}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Price:</span>
-                            <span className="font-semibold text-green-600 dark:text-green-400">
-                              ${Number((approval.proposed_action || approval.context_payload).suggested_price || (approval.proposed_action || approval.context_payload).price || 0).toFixed(2)}
-                            </span>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">Scope of Work:</span>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).scope || (approval.proposed_action || approval.context_payload).service}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">Suggested Time:</span>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).suggested_time || 'TBD'}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">Calculated Total:</span>
+                              <span className="font-semibold text-green-600 dark:text-green-400">
+                                ${Number((approval.proposed_action || approval.context_payload).suggested_price || (approval.proposed_action || approval.context_payload).price || 0).toFixed(2)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -1041,7 +1045,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
-                        data-testid="approve-send-proposal"
+                        data-testid="approve-quote-draft"
                       >
                         Approve & Send
                       </button>
