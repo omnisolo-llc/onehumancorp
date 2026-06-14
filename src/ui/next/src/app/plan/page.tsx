@@ -8,9 +8,9 @@ interface MyPlanData {
   current_plan: string;
   ai_actions_used: number;
   ai_actions_limit: number | null;
-  storage_used_mb: number;
-  storage_limit_mb: number | null;
-  estimated_next_bill_cents: number;
+  storage_used_bytes: number;
+  storage_limit_bytes: number | null;
+  next_bill_estimated: number;
 }
 
 export default function MyPlanPage() {
@@ -78,7 +78,7 @@ export default function MyPlanPage() {
                 </div>
                  <div className="p-4 bg-white/50 rounded-xl border border-gray-100 flex flex-col">
                      <h2 className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
-                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(data?.estimated_next_bill_cents || 0)}</p>
+                     <p className="text-2xl font-bold text-gray-900">{formatCurrency(data?.next_bill_estimated || 0)}</p>
                 </div>
             </div>
 
@@ -113,12 +113,12 @@ export default function MyPlanPage() {
                      <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-gray-900">Storage used</span>
                         <span className="text-sm text-gray-500">
-                             {data?.storage_used_mb || 0} MB / {data?.storage_limit_mb ? `${data.storage_limit_mb} MB` : 'Unlimited'}
+                             {data?.storage_used_bytes ? Math.round(data.storage_used_bytes / (1024 * 1024)) : 0} MB / {data?.storage_limit_bytes ? `${Math.round(data.storage_limit_bytes / (1024 * 1024))} MB` : 'Unlimited'}
                         </span>
                     </div>
-                    {data?.storage_limit_mb && (
+                    {data?.storage_limit_bytes && (
                         <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${Math.min(((data?.storage_used_mb || 0) / data.storage_limit_mb) * 100, 100)}%` }}></div>
+                            <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${Math.min(((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100, 100)}%` }}></div>
                         </div>
                     )}
                 </div>
