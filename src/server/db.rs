@@ -185,7 +185,7 @@ impl DB {
                     {
                         if let Ok(metadata) = file.metadata() {
                             let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
                                     tracing::error!(
@@ -216,7 +216,7 @@ impl DB {
                     let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
                     if db_path.exists() {
                          let mut perms = std::fs::metadata(&db_path)?.permissions();
-                         if perms.mode() & 0o777 != 0o600 {
+                         if (perms.mode() & 0o777) != 0o600 {
                              perms.set_mode(0o600);
                              std::fs::set_permissions(&db_path, perms)?;
                          }
@@ -228,7 +228,7 @@ impl DB {
                             .mode(0o600)
                             .open(&db_path)?;
                          let mut perms = file.metadata()?.permissions();
-                         if perms.mode() & 0o777 != 0o600 {
+                         if (perms.mode() & 0o777) != 0o600 {
                              perms.set_mode(0o600);
                              std::fs::set_permissions(&db_path, perms)?;
                          }
@@ -289,7 +289,7 @@ impl DB {
                         // Ensure permissions are strictly 0o600
                         use std::os::unix::fs::PermissionsExt;
                         if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 let _ = std::fs::set_permissions(&secret_path, perms);
                             }
@@ -1866,7 +1866,7 @@ mod security_tests_final {
                                 .expect("Database URL or operation failed in test");
                             let metadata = file.metadata().expect("Database URL or operation failed in test");
                             let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
+                            if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 file.set_permissions(perms).expect("Database URL or operation failed in test");
                             }

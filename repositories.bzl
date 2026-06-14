@@ -148,6 +148,7 @@ def go_repositories():
         importpath = "github.com/cncf/xds/go",
         sum = "h1:Rjjh4E6iCUSW3n8E14lM6j1D0aRzDtdGk1iZ/g78A58=",
         version = "v0.0.0-20230607035331-e9ce68804cb4",
+        urls = ["https://codeload.github.com/cncf/xds/tar.gz/e9ce68804cb4"],
     )
     go_repository(
         name = "com_github_coder_websocket",
