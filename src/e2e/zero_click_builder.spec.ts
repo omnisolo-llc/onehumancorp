@@ -5,16 +5,6 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Navigate to the new growth feature
     await loginAs(page, adminUser);
 
-    // We stub the network route here so the E2E test doesn't actually hit the LLM provider
-    await page.route('**/api/v1/growth/zero-click-builder/generate', async route => {
-      const json = {
-        name: 'Seattle Roasters',
-        url: 'https://seattle-roasters.ohc.app',
-        products_count: 8,
-      };
-      await route.fulfill({ json });
-    });
-
     await page.goto('/zero-click-builder');
 
     // Verify mobile-first layout
@@ -30,8 +20,9 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await expect(generateBtn).toBeDisabled();
 
-    // Fill in the prompt
-    await page.fill('textarea[id="prompt"]', 'I am a local coffee roaster in Seattle needing a storefront.');
+    // Fill in the prompt. By supplying Business Name explicitly, the LLM fallback mock in OnboardingAgent
+    // will pick it up deterministically.
+    await page.fill('textarea[id="prompt"]', 'Business Name: Seattle Roasters\nWhat we sell: I am a local coffee roaster in Seattle needing a storefront.');
 
     // The button should now be enabled
     await expect(generateBtn).toBeEnabled();

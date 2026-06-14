@@ -3,6 +3,8 @@
 
 use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
+use crate::services::onboarding::onboarding_agent::OnboardingAgent;
+use ::server_ohc::orchestration::StartOnboardingRequest;
 
 pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
@@ -348,8 +350,90 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/zero-click-builder/generate", post(handle_zero_click_builder_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/wrapped", get(handle_wrapped))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Deserialize)]
+pub struct ZeroClickRequest {
+    pub prompt: String,
+}
+
+#[derive(Serialize)]
+pub struct ZeroClickResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: usize,
+}
+
+async fn handle_zero_click_builder_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ZeroClickRequest>,
+) -> Result<Json<ZeroClickResponse>, StatusCode> {
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: state.pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    });
+    let agent = OnboardingAgent::new(db, state.hub.clone());
+
+    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+        tracing::error!("Failed to process zero-click intake: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let admin_email = if auth_info.agent_id.contains("@") {
+        auth_info.agent_id.clone()
+    } else {
+        format!("owner_{}@ohc.app", uuid::Uuid::new_v4().to_string().replace("-", "").chars().take(8).collect::<String>())
+    };
+
+    let start_req = StartOnboardingRequest {
+        business_type: intake_data.business_type.clone(),
+        company_name: intake_data.business_name.clone(),
+        company_description: "".to_string(),
+        selling_categories: intake_data.categories.clone(),
+        payment_pref: "card".to_string(),
+        admin_email: admin_email,
+        website_template: "modern".to_string(),
+        first_product_name: intake_data.initial_products.first().map(|p| p.name.clone()).unwrap_or_else(|| "First Service".to_string()),
+        first_product_price: intake_data.initial_products.first().map(|p| p.price.clone()).unwrap_or_else(|| "100".to_string()),
+        domain_choice: crate::utils::slug::slugify(&intake_data.business_name),
+        admin_name: "Owner".to_string(),
+        admin_password: "SecurePassword123!".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.clone().unwrap_or_default(),
+        target_audience: intake_data.target_audience.clone().unwrap_or_default(),
+        initial_products: intake_data.initial_products.iter().map(|p| {
+            ::server_ohc::orchestration::IntakeProductProto {
+                name: p.name.clone(),
+                price: p.price.clone(),
+                description: p.description.clone().unwrap_or_default(),
+                variants: p.variants.clone().unwrap_or_default().iter().map(|v| {
+                    ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: v.name.clone(),
+                        price_modifier: v.price_modifier.clone(),
+                    }
+                }).collect(),
+            }
+        }).collect(),
+        ai_agents: vec!["Promoter".to_string(), "Manager".to_string()],
+        ai_auto_respond: true,
+    };
+
+    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+        tracing::error!("Failed to start onboarding: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let url = format!("https://{}.ohc.app", crate::utils::slug::slugify(&intake_data.business_name));
+
+    Ok(Json(ZeroClickResponse {
+        name: intake_data.business_name,
+        url,
+        products_count: intake_data.initial_products.len(),
+    }))
 }
 
 #[derive(Debug, Serialize)]
