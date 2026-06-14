@@ -123,7 +123,7 @@ function GiveawayEnterContent() {
                 )}
 
                 <div className="mt-8">
-                  <a href={`/onboarding?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                  <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
                     ⚡ Powered by OHC
                   </a>
                 </div>
