@@ -54,7 +54,7 @@ export default function WebsiteBuilderPage() {
           'x-user-id': user
         },
         body: JSON.stringify({
-          wizardState: state
+          wizardState: state, step: state.wizardStep
         })
       });
 

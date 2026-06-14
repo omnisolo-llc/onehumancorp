@@ -14,7 +14,15 @@ export async function GET(request: Request) {
     });
 
     if (res.ok) {
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Failed to parse draft GET JSON:", e);
+        }
+      }
       return NextResponse.json(data);
     }
 
@@ -42,7 +50,16 @@ export async function POST(request: Request) {
     });
 
     if (res.ok) {
-      return new NextResponse(null, { status: 200 });
+      const text = await res.text();
+      let data = {};
+      if (text) {
+         try {
+           data = JSON.parse(text);
+         } catch (e) {
+           console.error("Failed to parse draft POST JSON:", e);
+         }
+      }
+      return NextResponse.json(data);
     }
 
     return new NextResponse(null, { status: 200 });
