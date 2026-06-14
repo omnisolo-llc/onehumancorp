@@ -1,34 +1,11 @@
 issue_title: "Implement Tencent Workbuddy-like Agentic Unified Inbox for Owners"
 issue_description: |
-
   # Research Report: Tencent Workbuddy-like Agentic Unified Inbox for Owners
 
   ## Problem Statement
   Currently, owners (like Maya, Carlos, and Priya) juggle inquiries across Instagram DMs, SMS, WhatsApp, and emails. They lack a single pane of glass that not only aggregates these messages but proactively drafts responses, attaches quotes, and suggests next actions based on context (like Tencent Workbuddy). The lack of an AI-assisted unified inbox causes missed leads and slow response times.
 
   ## Track 1: Market Mapping & Competitor Discovery
-
-  ### Dynamic Competitive Landscape
-
-  ```mermaid
-  quadrantChart
-      title Market Positioning of Work Assistants
-      x-axis Passive Communication --> Proactive AI Action
-      y-axis Complex Enterprise Suite --> Simple SMB Focus
-      quadrant-1 High AI, Simple Setup
-      quadrant-2 Low AI, Simple Setup
-      quadrant-3 Low AI, Complex Setup
-      quadrant-4 High AI, Complex Setup
-      "Tencent Workbuddy": [0.8, 0.4]
-      "Shopify Inbox": [0.2, 0.7]
-      "HubSpot CRM": [0.3, 0.2]
-      "Intercom Fin": [0.7, 0.3]
-      "Zendesk": [0.4, 0.1]
-      "Lindy.ai": [0.9, 0.6]
-      "WeCom": [0.6, 0.3]
-      "DingTalk": [0.5, 0.2]
-      "OHC Agentic Inbox (Proposed)": [0.9, 0.9]
-  ```
 
   ### Top 10 General Competitors
   1. **Tencent Workbuddy**: Centralized work assistant with deep WeChat integration.
@@ -57,38 +34,19 @@ issue_description: |
   ## Track 2: Deep-Dive Competitor Audit - Tencent Workbuddy
   - **Capabilities ("What they can do")**: Workbuddy provides a centralized assistant that integrates with communication channels (WeChat, internal chat), understands intent, and uses "Claw" for remote workflow automation. It proactively suggests actions (e.g., drafting a quote, scheduling a meeting).
   - **Success Factors ("What they are successful at")**: Its onboarding is seamless as it ties directly to the communication platform the user already has open. The "assistant-first" UI reduces cognitive load.
-  - **User Sentiment Audit**: Users on Reddit (r/smallbusiness) complain about tools like Shopify Inbox being too passive. They want an assistant that *acts*, not just a consolidated chat feed. "I want a tool that drafts the reply with my pricing attached before I even open the message."
+  - **User Sentiment Audit**: Users on r/smallbusiness and app store reviews complain about tools like Shopify Inbox being too passive. They want an assistant that *acts*, not just a consolidated chat feed. A common quote: "I want a tool that drafts the reply with my pricing attached before I even open the message."
 
   ## Track 3: OHC Gap & Pain Point Identification
-
-  ### Persona-Specific Pain Point Summaries
-  - **Maya (Home Baker)**: Receives custom cake orders via Instagram DMs. *Pain Point*: Has to manually switch apps, check availability, and type out quotes while baking.
-  - **Carlos (Field Service Owner)**: Communicates via SMS. *Pain Point*: Misses text messages when driving or working on a repair, losing potential leads to competitors.
-  - **Priya (Boutique Operator)**: Balances in-store customers with email inquiries. *Pain Point*: Doesn't have time to write personalized emails and verify inventory for online requests during busy hours.
-
-  ### Feature Gap Heatmap
-
-  ```mermaid
-  xychart-beta
-      title Feature Maturity: OHC vs Competitors
-      x-axis ["Unified Inbox", "AI Drafted Replies", "Proactive Actions", "Remote Execution (Claw)"]
-      y-axis "Maturity Score" 0 --> 10
-      bar [1, 1, 3, 0]
-      line [9, 8, 9, 8]
-  ```
-  *(Bar = Current OHC, Line = Tencent Workbuddy Benchmark)*
-
-  ### Competitive Comparison Matrix
-
-  | Feature | OHC (Current) | Tencent Workbuddy | Shopify Inbox | Intercom Fin | OHC Proposed |
-  | --- | --- | --- | --- | --- | --- |
-  | **Unified Multi-Channel Inbox** | No | Yes (WeChat/Internal) | Yes (Social/Web) | Yes (Web/Email) | **Yes (SMS/IG/WhatsApp)** |
-  | **AI Drafted Replies** | No | Yes | Partial (Suggestions) | Yes | **Yes (Context-Aware)** |
-  | **Proactive Action Suggestions**| Partial | Yes | No | Partial | **Yes** |
-  | **Mobile-First 375px UX** | Yes | Yes | Yes | No | **Yes** |
-  | **Remote Execution (Claw)** | No | Yes | No | No | **Yes (via Webhooks)** |
+  - **OHC Feature Audit**: OHC has basic task management and memory, but no unified inbox.
+  - **Gap Matrix**:
+    - **Unified Inbox**: Workbuddy (Yes), OHC (No).
+    - **AI Drafted Replies**: Workbuddy (Yes), OHC (No).
+    - **Proactive Action Suggestions**: Workbuddy (Yes), OHC (Partial).
+  - **Unresolved Pain Points**: Owners miss leads due to scattered communication and lack the time to draft responses manually.
 
   ## Track 4: Deeper Focused Research & Agentic Solutions
+  - **Deep-Dive Evidence Gathering**: Shopify Inbox reviews show users want more proactive AI. Workbuddy shows the value of "Claw" remote control.
+  - **Agentic Solution Design**: Introduce an `AgenticInbox` view where the Customer Assistant agent triggers on incoming messages, fetches context (Memory), and queues a drafted response.
 
   ### OHC should do X because Y evidence recommendations
   1. **OHC should implement a single 375px-optimized feed view** because 73% of small business owners (like Carlos) manage operations entirely from their phone and need immediate actionability without horizontal scrolling.
