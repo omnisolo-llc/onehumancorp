@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 
 pub mod runner;
 pub mod bash;
+pub mod python;
 pub mod read;
 pub mod write;
 pub mod edit;
@@ -117,6 +118,7 @@ pub fn all_tools(
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
+        python::python_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
@@ -160,6 +162,7 @@ pub fn all_tools(
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
+        quote::draft_estimate_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
     ];
 

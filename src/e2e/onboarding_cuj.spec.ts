@@ -93,6 +93,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     // 8. Verify it transitions to Live Screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
   });
 
   // Test 2: Ensure validation fails on small name
