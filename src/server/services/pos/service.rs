@@ -8,11 +8,13 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-pub struct MyPosService {}
+pub struct MyPosService {
+    pub redis_client: Option<redis::Client>,
+}
 
 impl MyPosService {
-    pub fn new(_db: Arc<crate::db::DB>) -> Self {
-        Self { }
+    pub fn new(_db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
+        Self { redis_client }
     }
 }
 
@@ -375,7 +377,7 @@ mod tests {
             store: DbStore::Postgres,
         });
 
-        let service = MyPosService::new(db.clone());
+        let service = MyPosService::new(db.clone(), None);
 
         let req = SyncOfflineTransactionsRequest {
             tenant_id: "test_tenant".to_string(),

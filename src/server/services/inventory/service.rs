@@ -313,7 +313,7 @@ impl InventoryService {
                     .unwrap_or(Some(product_id.to_string()))
                     .unwrap_or_else(|| product_id.to_string());
 
-                let message = if new_stock == 0 {
+                let _message = if new_stock == 0 {
                     format!("{} sold out. Would you like to draft a restock order?", product_title)
                 } else {
                     format!("Stock for {} has dropped to {}.", product_title, new_stock)
