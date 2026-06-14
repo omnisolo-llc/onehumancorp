@@ -106,9 +106,37 @@ export default function FeedPage() {
     }
   };
 
+  const getCardStyle = (source: string) => {
+    const src = (source || '').toLowerCase();
+    if (src.includes('operations')) {
+      return {
+        bg: 'bg-[#F0F5FF] dark:bg-[rgba(0,102,255,0.1)]',
+        border: 'border-[#0066FF]',
+        icon: '🛠️',
+      };
+    } else if (src.includes('marketing')) {
+      return {
+        bg: 'bg-[#FFF0F5] dark:bg-[rgba(255,59,48,0.1)]',
+        border: 'border-[#FF3B30]',
+        icon: '📢',
+      };
+    } else if (src.includes('advisory')) {
+      return {
+        bg: 'bg-[#F0FFF5] dark:bg-[rgba(52,199,89,0.1)]',
+        border: 'border-[#34C759]',
+        icon: '📊',
+      };
+    }
+    return {
+      bg: 'bg-[#F9FAFB] dark:bg-[rgba(255,255,255,0.05)]',
+      border: 'border-gray-200 dark:border-gray-800',
+      icon: '🤖',
+    };
+  };
+
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
-      <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
+      <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
@@ -139,16 +167,25 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const style = getCardStyle(item.event_source);
+
+            // Determine card type based on content
+            let cardType = 'Notification'; // Default
+            if (item.proposed_action) {
+               cardType = 'Approval Request';
+            } else if (item.context_payload?.weekly_health_report || item.event_source?.includes('summary')) {
+               cardType = 'Summary';
+            }
 
             return (
               <div
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 border-l-4 ${style.border} ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <span className="text-sm">{style.icon}</span>
                     {item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
@@ -157,31 +194,59 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {item.proposed_action?.title || 'Review Required'}
+                  {item.proposed_action?.title || item.context_payload?.message || item.context_payload?.customer_message || 'Review Required'}
                 </h3>
 
                 <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
-                  {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                  {item.proposed_action?.description || item.context_payload?.draft_reply || item.context_payload?.summary || 'A new update requires your attention.'}
                 </p>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : 'Approve'}
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
-                    data-testid="feed-dismiss-btn"
-                  >
-                    Dismiss
-                  </button>
-                </div>
+                {cardType === 'Approval Request' && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleAction(item.id, 'APPROVED')}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
+                      data-testid="feed-approve-btn"
+                    >
+                      {isProcessing ? 'Processing...' : 'Approve'}
+                    </button>
+                    <button
+                      onClick={() => handleAction(item.id, 'DISMISSED')}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] min-w-[44px] transition-colors border-0 cursor-pointer"
+                      data-testid="feed-dismiss-btn"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                {cardType === 'Notification' && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleAction(item.id, 'DISMISSED')}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] min-w-[44px] transition-colors border-0 cursor-pointer"
+                      data-testid="feed-dismiss-btn"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                {cardType === 'Summary' && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleAction(item.id, 'DISMISSED')}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
+                      data-testid="feed-dismiss-btn"
+                    >
+                      Got it
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
