@@ -204,7 +204,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             Share
           </a>
           <a
-            href={`/onboarding?ref=${props.tenantId || 'storefront'}-referral`}
+            href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${props.tenantId || 'storefront'}-referral`}
             className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
@@ -237,14 +237,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
-          href={`/onboarding?ref=${tenantId}&source=footer_widget`}
-          onClick={(e) => {
-            fetch('/api/v1/growth/referrals/click', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ referrer_id: tenantId, source: 'footer_widget' })
-            }).catch(err => console.error('Failed to track referral click:', err));
-          }}
+          href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=footer_widget`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
           <span className="font-inter">⚡ Powered by</span>

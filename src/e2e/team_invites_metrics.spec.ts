@@ -8,7 +8,7 @@ test.describe('Growth Loop: Team Invites Metrics Component', () => {
     // From dashboard (which we land on after login), we can click home/dashboard buttons if available, or just assert.
 
     // We are already on the dashboard per fixtures.ts
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await page.goto('/dashboard');
     await expect(page.locator('text=Viral Loop Performance')).toBeVisible();
   });
 

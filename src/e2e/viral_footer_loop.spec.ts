@@ -15,7 +15,7 @@ test.describe('Viral Footer Loop', () => {
 
     // Verify the link has the correct referral structure
     const href = await poweredByLink.getAttribute('href');
-    expect(href).toContain('/onboarding?ref=');
+    expect(href).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=');
     expect(href).toContain('source=footer_widget');
 
     // We can't always reliably catch the fetch in tests because preventDefault inside evaluate

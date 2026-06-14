@@ -112,7 +112,7 @@ function InvoiceContent() {
         <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
           <PoweredByOHC tenantId={tenant} />
           <Link
-            href={`/onboarding?ref=${tenant}&source=invoice_generator`}
+            href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}&source=invoice_generator`}
             target="_blank"
             className="inline-flex flex-col items-center gap-1 group mt-2"
           >
