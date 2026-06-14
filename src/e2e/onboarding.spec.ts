@@ -18,14 +18,14 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
     // Step 1: Business Name
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await expect(nameInput).toBeVisible();
     await expect(nameInput).toHaveClass(/min-h-\[44px\]/);
     await expect(nameInput).toHaveClass(/glassmorphism/);
@@ -34,8 +34,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await nameInput.fill("My Awesome E2E Business");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-    // Step 2: What do you sell?
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
+    // Step 2: Review Details
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
     const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
     await expect(sellInput).toBeVisible();
     await expect(sellInput).toHaveClass(/min-h-\[44px\]/);
@@ -122,12 +122,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await expect(nameInput).toBeVisible();
     const box = await nameInput.boundingBox();
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
@@ -139,7 +139,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -147,7 +147,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nextButton = page.getByRole('button', { name: 'Next', exact: true });
     await expect(nextButton).toBeDisabled();
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await nameInput.fill("ABC");
     await expect(nextButton).toBeEnabled();
   });
@@ -158,16 +158,16 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start My Business' });
+    const startButton = page.locator('button', { hasText: 'Next' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
 
-    const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
+    const nameInput = page.getByPlaceholder("Tell us about your business");
     await nameInput.fill("ABC");
     await nameInput.press('Enter');
 
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
   });
 
   // Test 5: Verify text area presence and styling
@@ -178,7 +178,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Need to trigger manual configuration
     // This is tested by injecting a state or clicking a manual setup link
-    // But since it's hidden under Start My Business, let's just make sure the component loads.
+    // But since it's hidden under Next, let's just make sure the component loads.
   });
 });
 
@@ -195,7 +195,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     await expect(bioInput).toBeVisible();
     await expect(bioInput).toHaveClass(/glassmorphism/);
 
@@ -227,7 +227,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
 
     await page.route('**/api/onboarding/**', route => route.abort('failed'));
@@ -274,7 +274,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
@@ -293,7 +293,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
     const box = await bioInput.boundingBox();
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
