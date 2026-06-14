@@ -50,10 +50,10 @@ function BookingForm() {
       if (data.deposit_stripe_link) {
         setCheckoutUrl(data.deposit_stripe_link);
       }
+      setSubmitted(true);
+    } else {
+        alert("Failed to reserve time slot. Please try again.");
     }
-
-    // In local dev/testing, we just simulate success if the fetch fails (due to no grpc backend in ui tests)
-    setSubmitted(true);
   };
 
   if (submitted) {
