@@ -176,25 +176,33 @@ impl DB {
                         }
                     }
 
-                    if let Ok(file) = OpenOptions::new()
+                    // Securely open or create the file with 0o600 permissions
+                    match OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create(true) // Use create(true) instead of create_new(true) to handle existing files but still apply mode if creating
+                        .create_new(true)
                         .mode(0o600)
                         .open(&db_path)
                     {
-                        if let Ok(metadata) = file.metadata() {
-                            let mut perms = metadata.permissions();
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!(
-                                        "Failed to securely update existing standalone database file permissions: {}",
-                                        e
-                                    );
-                                    return Err(e.into());
+                        Ok(_file) => {} // File created successfully with secure permissions
+                        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                            // File exists, ensure permissions are correct without TOCTOU vulnerability on creation
+                            if let Ok(file) = OpenOptions::new().read(true).write(true).open(&db_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let mut perms = metadata.permissions();
+                                    if (perms.mode() & 0o777) != 0o600 {
+                                        perms.set_mode(0o600);
+                                        if let Err(e) = file.set_permissions(perms) {
+                                            tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+                                            return Err(e.into());
+                                        }
+                                    }
                                 }
                             }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to securely create standalone database file: {}", e);
+                            return Err(e.into());
                         }
                     }
                 }
@@ -207,34 +215,6 @@ impl DB {
 
             let mut conn_opts =
                 SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
-
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                use std::os::unix::fs::PermissionsExt;
-                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
-                    let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
-                    if db_path.exists() {
-                         let mut perms = std::fs::metadata(&db_path)?.permissions();
-                         if (perms.mode() & 0o777) != 0o600 {
-                             perms.set_mode(0o600);
-                             std::fs::set_permissions(&db_path, perms)?;
-                         }
-                    } else if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                         let file = std::fs::OpenOptions::new()
-                            .read(true)
-                            .write(true)
-                            .create(true) // Strengthen: Use create(true) for atomic permissions if possible
-                            .mode(0o600)
-                            .open(&db_path)?;
-                         let mut perms = file.metadata()?.permissions();
-                         if (perms.mode() & 0o777) != 0o600 {
-                             perms.set_mode(0o600);
-                             std::fs::set_permissions(&db_path, perms)?;
-                         }
-                    }
-                }
-            }
 
 
             // sqlite-vec is optional at runtime. The memory repository probes for
