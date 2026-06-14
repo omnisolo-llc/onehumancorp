@@ -321,12 +321,6 @@ impl InventoryService {
 
                 let job_id = Uuid::new_v4().to_string();
 
-                let message = if new_stock == 0 {
-                    format!("{} sold out. Would you like to draft a restock order?", product_id)
-                } else {
-                    format!("Stock for product {} has dropped to {}.", product_id, new_stock)
-                };
-
                 let job_payload = serde_json::json!({
                     "product_id": product_id,
                     "product_title": product_title,

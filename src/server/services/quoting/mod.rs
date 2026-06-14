@@ -203,7 +203,9 @@ async fn approve_quote(
         &format!("Quote {}", id),
         &quote.customer_id.to_string(),
         amount_usd,
-        false
+        false,
+        Some(&tenant_id_val),
+        None
     ).await {
         Ok(url) => url,
         Err(e) => {
@@ -211,8 +213,7 @@ async fn approve_quote(
             return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-
-    let updated_quote = sqlx::query_as::<_, Quote>(
+    let updated_quote: Quote = sqlx::query_as(
         "UPDATE quotes SET checkout_url = $1 WHERE id = $2 RETURNING *"
     )
     .bind(&checkout_url)
@@ -223,8 +224,6 @@ async fn approve_quote(
         tracing::error!("Failed to update quote with checkout url: {}", e);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
-
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
     Ok(Json(updated_quote))
 }
