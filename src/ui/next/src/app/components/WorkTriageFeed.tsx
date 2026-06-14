@@ -62,7 +62,7 @@ export function WorkTriageFeed({ items, loading, error, onDecision }: { items: T
   }
 
   return (
-    <div className="w-full max-w-[375px] sm:max-w-full mx-auto" data-testid="work-triage-feed">
+    <div className="w-full max-w-[375px] sm:max-w-full mx-auto overflow-hidden" data-testid="work-triage-feed">
       {items.filter(item => item.source === "Proactive Context Agent").map((item) => (
         <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden" data-testid={`triage-card-${item.id}`}>
           <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>

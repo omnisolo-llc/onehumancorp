@@ -41,6 +41,9 @@ test.describe('Agentic Unified Intake & Action Feed', () => {
       // Click approve
       const approveBtn = feedCard.getByTestId('feed-approve-btn');
       await expect(approveBtn).toBeVisible();
+      const box = await approveBtn.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.width).toBeGreaterThanOrEqual(44);
       await approveBtn.click();
     }
   });

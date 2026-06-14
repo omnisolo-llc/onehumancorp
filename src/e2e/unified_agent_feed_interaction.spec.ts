@@ -24,6 +24,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     // In case there are no items to approve, we will skip the rest of the assertions safely.
     // In a real E2E environment we would seed this, but this guarantees the script runs.
     if (await approveBtn.isVisible()) {
+        // Verify touch target size
+        const box = await approveBtn.boundingBox();
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+        expect(box?.width).toBeGreaterThanOrEqual(44);
+
         // 2. Expand card to see details
         await editBtn.click();
         const detailsPre = page.locator('pre').first();
@@ -54,6 +59,10 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
 
     if (isVisible) {
+      const box = await approveBtn.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+
       // Go offline
       await context.setOffline(true);
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
@@ -86,6 +95,9 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const card = page.getByTestId('agent-feed-card').first();
     if (await card.isVisible()) {
         const approveBtn = card.locator('button', { hasText: 'Approve' });
+        const box = await approveBtn.boundingBox();
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+        expect(box?.width).toBeGreaterThanOrEqual(44);
         await approveBtn.click();
         await expect(card).not.toBeVisible({ timeout: 5000 });
     }
@@ -99,6 +111,9 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const card = page.getByTestId('agent-feed-card').first();
     if (await card.isVisible()) {
         const dismissBtn = card.locator('button', { hasText: 'Dismiss' });
+        const box = await dismissBtn.boundingBox();
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+        expect(box?.width).toBeGreaterThanOrEqual(44);
         await dismissBtn.click();
         await expect(card).not.toBeVisible({ timeout: 5000 });
     }
