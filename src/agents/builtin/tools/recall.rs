@@ -1,25 +1,27 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 use dashmap::DashMap;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+// Pydantic-first tool schema validation: RecallArgs
+#[derive(Deserialize)]
+struct RecallArgs {
+    tool_call_id: String,
+}
 
 pub struct RecallObservationExecutor {
     pub observation_store: Arc<DashMap<String, String>>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for RecallObservationExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let tool_call_id = args["tool_call_id"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("recall_observation: tool_call_id is required".to_string()))?;
+impl PydanticToolExecutor<RecallArgs> for RecallObservationExecutor {
+    async fn execute_typed(&self, args: RecallArgs) -> Result<String, ToolError> {
+        let tool_call_id = args.tool_call_id;
 
-        match self.observation_store.get(tool_call_id) {
+        match self.observation_store.get(&tool_call_id) {
             Some(content) => Ok(content.clone()),
             None => Err(ToolError::LlmRecoverable(format!("recall_observation: Tool call ID '{}' not found in observation store. It may have expired or was never stored.", tool_call_id))),
         }
@@ -43,7 +45,7 @@ pub fn recall_observation_tool(observation_store: Arc<DashMap<String, String>>) 
             },
             "required": ["tool_call_id"]
         }),
-        execute: Arc::new(RecallObservationExecutor { observation_store }),
+        execute: Arc::new(PydanticAdapter::new(RecallObservationExecutor { observation_store })),
     }
 }
 
@@ -57,24 +59,20 @@ mod tests {
         let store = Arc::new(DashMap::new());
         store.insert("tool_1".to_string(), "original_content".to_string());
 
-        let executor = RecallObservationExecutor {
-            observation_store: store,
-        };
+        let tool = recall_observation_tool(store);
 
         let args = json!({ "tool_call_id": "tool_1" });
-        let result = executor.execute(args).await.unwrap();
+        let result = tool.execute.execute(args).await.unwrap();
         assert_eq!(result, "original_content");
     }
 
     #[tokio::test]
     async fn test_recall_executor_not_found() {
         let store = Arc::new(DashMap::new());
-        let executor = RecallObservationExecutor {
-            observation_store: store,
-        };
+        let tool = recall_observation_tool(store);
 
         let args = json!({ "tool_call_id": "missing_id" });
-        let result = executor.execute(args).await;
+        let result = tool.execute.execute(args).await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -86,17 +84,17 @@ mod tests {
     #[tokio::test]
     async fn test_recall_executor_missing_arg() {
         let store = Arc::new(DashMap::new());
-        let executor = RecallObservationExecutor {
-            observation_store: store,
-        };
+        let tool = recall_observation_tool(store);
 
         let args = json!({});
-        let result = executor.execute(args).await;
+        let result = tool.execute.execute(args).await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("tool_call_id is required")),
-            _ => panic!("Expected LlmRecoverable error for missing argument"),
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            }
+            _ => panic!("Expected Pydantic-first validation error"),
         }
     }
 }
