@@ -3251,13 +3251,43 @@ pub async fn update_ui_triage_action_handler(
 }
 
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct UiDashboardMetrics {
-    active_customers: i64,
-    pending_orders: i64,
-    total_sales: f64,
-    total_campaigns_sent: i64,
-    auto_replied: i64,
+    pub active_customers: i64,
+    pub pending_orders: i64,
+    pub total_sales: f64,
+    pub total_campaigns_sent: i64,
+    pub auto_replied: i64,
+}
+
+pub(crate) async fn fetch_dashboard_feeds_parallel(db: std::sync::Arc<crate::db::DB>, tenant_id: String, mobile_optimized: bool) -> (
+    Result<UiDashboardMetrics, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+) {
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
+    );
+
+    (
+        metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)),
+        orders_res.unwrap_or_else(|_| Ok(vec![])),
+        messages_res.unwrap_or_else(|_| Ok(vec![])),
+        triage_res.unwrap_or_else(|_| Ok(vec![])),
+        approvals_res.unwrap_or_else(|_| Ok(vec![])),
+        agent_feed_res.unwrap_or_else(|_| Ok(vec![])),
+        priority_tasks_res.unwrap_or_else(|_| Ok(vec![]))
+    )
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
@@ -3958,22 +3988,14 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
-            );
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = fetch_dashboard_feeds_parallel(db_bg.clone(), t_bg.clone(), mobile_optimized).await;
 
-            let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut orders = orders_res.unwrap_or_default();
+            let mut inbox = messages_res.unwrap_or_default();
+            let mut triage = triage_res.unwrap_or_default();
+            let mut approvals = approvals_res.unwrap_or_default();
+            let mut agent_feed = agent_feed_res.unwrap_or_default();
+            let priority_tasks = priority_tasks_res.unwrap_or_default();
 
             if mobile_optimized {
                 for order in orders.iter_mut() {
@@ -4006,7 +4028,7 @@ async fn ui_dashboard_unified_feed_handler(
             }
 
             let result = serde_json::json!({
-                "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
+                "metrics": metrics_res.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
                 "triage": triage,
