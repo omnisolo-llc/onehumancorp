@@ -5543,6 +5543,10 @@ async fn create_ui_bom_item_handler(
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
                         tracing::error!("failed to cleanup stagnant missions: {}", e);
                     }
+                    let job_queue = crate::orchestration::queue::OHCJobQueue::new(hub_for_sched.pool.clone());
+                    if let Err(e) = job_queue.cleanup_stale_jobs().await {
+                        tracing::error!("failed to cleanup stale ohc jobs: {}", e);
+                    }
                 }
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();
