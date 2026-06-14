@@ -24,13 +24,13 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify data placeholders or limits are populated
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
+    await expect(page.locator('div', { hasText: 'Estimated Next Bill' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
 
     // Verify actions

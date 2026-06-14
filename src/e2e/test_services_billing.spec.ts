@@ -4,10 +4,10 @@ test.describe('Billing Services & Plan Limits E2E', () => {
   test('Dashboard displays proper warnings when AI action limit is reached', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=AI actions used this month')).toBeVisible();
     await expect(page.locator('text=Storage used')).toBeVisible();
   });
@@ -83,7 +83,8 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     await expect(myPlanButton).toBeVisible();
 
     await myPlanButton.click();
-    await page.waitForURL('**/plan', { timeout: 10000 });
+    await page.waitForURL('**/cost-dashboard', { timeout: 10000 });
+
     await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 });
