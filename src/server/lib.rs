@@ -155,7 +155,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
     m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
     m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
-    m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
+    m.insert("help-center-nav-btn".to_string(), "Visit the Help Center for guides, tutorials, and support.".to_string());
     m.insert("search-input".to_string(), "Search our knowledge base for help articles.".to_string());
     m.insert("nav-store".to_string(), "Your Storefront. This is where you manage what you sell.".to_string());
     m.insert("nav-agents".to_string(), "AI Helpers. These are your digital employees.".to_string());
@@ -169,8 +169,8 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
     m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
-    m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
-    m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
+    m.insert("pos-walkthrough-btn".to_string(), "Learn how to accept payments and manage your POS.".to_string());
+    m.insert("assistant-walkthrough-btn".to_string(), "Discover how to chat and automate tasks with your AI Assistant.".to_string());
     m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
     m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
     m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
@@ -3111,6 +3111,118 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                    } else if action_type == "Draft Quote" {
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = customer_id {
+                            let total_amount = json_payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let required_deposit = json_payload.get("required_deposit").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let checkout_url = format!("https://checkout.ohc.local/{}", uuid::Uuid::new_v4());
+                            let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+                            )
+                            .bind(&quote_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(total_amount)
+                            .bind(required_deposit)
+                            .bind(&checkout_url)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert quote for triage item {}: {:?}", payload.triage_item_id, e);
+                            }
+
+                            // Reply to customer message
+                            let reply_content = json_payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Here is your quote.");
+                            let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                            let _ = sqlx::query(
+                                "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                            )
+                            .bind(&new_msg_id)
+                            .bind(&tenant_id)
+                            .bind("Triage Action")
+                            .bind(reply_content)
+                            .bind("")
+                            .bind("sent")
+                            .execute(&mut *tx)
+                            .await;
+                        } else {
+                            tracing::warn!("Could not extract a customer_id for Draft Quote action payload: {}", action_payload);
+                        }
+                    } else if action_type == "Draft Booking" {
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = customer_id {
+                            let product_id = json_payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+
+                            let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                            let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                            let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                            let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                            let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
+                            )
+                            .bind(&booking_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&product_id)
+                            .bind(start_time)
+                            .bind(end_time)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert drafted booking for triage item {}: {:?}", payload.triage_item_id, e);
+                            }
+
+                            // Reply to customer message
+                            let reply_content = json_payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("I've drafted a booking for you.");
+                            let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                            let _ = sqlx::query(
+                                "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                            )
+                            .bind(&new_msg_id)
+                            .bind(&tenant_id)
+                            .bind("Triage Action")
+                            .bind(reply_content)
+                            .bind("")
+                            .bind("sent")
+                            .execute(&mut *tx)
+                            .await;
+                        } else {
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                        }
                     } else if action_type == "SocialPostDraft" {
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
@@ -3251,13 +3363,43 @@ pub async fn update_ui_triage_action_handler(
 }
 
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct UiDashboardMetrics {
-    active_customers: i64,
-    pending_orders: i64,
-    total_sales: f64,
-    total_campaigns_sent: i64,
-    auto_replied: i64,
+    pub active_customers: i64,
+    pub pending_orders: i64,
+    pub total_sales: f64,
+    pub total_campaigns_sent: i64,
+    pub auto_replied: i64,
+}
+
+pub(crate) async fn fetch_dashboard_feeds_parallel(db: std::sync::Arc<crate::db::DB>, tenant_id: String, mobile_optimized: bool) -> (
+    Result<UiDashboardMetrics, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+    Result<Vec<serde_json::Value>, sqlx::Error>,
+) {
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
+    );
+
+    (
+        metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)),
+        orders_res.unwrap_or_else(|_| Ok(vec![])),
+        messages_res.unwrap_or_else(|_| Ok(vec![])),
+        triage_res.unwrap_or_else(|_| Ok(vec![])),
+        approvals_res.unwrap_or_else(|_| Ok(vec![])),
+        agent_feed_res.unwrap_or_else(|_| Ok(vec![])),
+        priority_tasks_res.unwrap_or_else(|_| Ok(vec![]))
+    )
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
@@ -3958,22 +4100,14 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
-            );
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = fetch_dashboard_feeds_parallel(db_bg.clone(), t_bg.clone(), mobile_optimized).await;
 
-            let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut orders = orders_res.unwrap_or_default();
+            let mut inbox = messages_res.unwrap_or_default();
+            let mut triage = triage_res.unwrap_or_default();
+            let mut approvals = approvals_res.unwrap_or_default();
+            let mut agent_feed = agent_feed_res.unwrap_or_default();
+            let priority_tasks = priority_tasks_res.unwrap_or_default();
 
             if mobile_optimized {
                 for order in orders.iter_mut() {
@@ -4006,7 +4140,7 @@ async fn ui_dashboard_unified_feed_handler(
             }
 
             let result = serde_json::json!({
-                "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
+                "metrics": metrics_res.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
                 "triage": triage,

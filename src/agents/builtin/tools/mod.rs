@@ -160,6 +160,7 @@ pub fn all_tools(
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
+        quote::draft_estimate_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
     ];
 
