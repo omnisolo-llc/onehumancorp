@@ -112,9 +112,7 @@ pub async fn create_checkout_session_handler(
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let mut amount_usd = 0.0;
-    let _ = amount_usd;
     let mut item_name = "Checkout".to_string();
-    let _ = item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -252,7 +250,7 @@ pub async fn my_plan_handler(
 
     let base_bill = tier.base_price();
     let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
-    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + tracker.get_storage_cost_cents(storage_used_bytes);
+    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
     let next_bill_estimated = total_cost_cents as i32;
 
     let resp = MyPlanResponse {

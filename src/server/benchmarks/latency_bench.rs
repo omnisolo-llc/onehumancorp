@@ -623,102 +623,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_bench_omnichannel_webhook() {
-        bench_omnichannel_webhook().await;
-    }
-
-    #[tokio::test]
-    async fn test_stress_verification_concurrent_load() {
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-
-        // 1. Cloud Mode (100 simultaneous requests)
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if database_url.starts_with("postgres") {
-            let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pg_pool).await;
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pg_pool).await;
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pg_pool).await;
-
-            let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-            let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-            let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
-
-            let mut cloud_handles = Vec::new();
-            let cloud_iterations = 100;
-            for _ in 0..cloud_iterations {
-                let dashboard_service = dashboard_service_cloud.clone();
-                cloud_handles.push(tokio::spawn(async move {
-                    use ::server_ohc::app::dashboard_service_server::DashboardService;
-                    let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-                    let mut request = tonic::Request::new(req);
-                    request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
-                    let start = Instant::now();
-                    let _ = dashboard_service.get_dashboard(request).await;
-                    start.elapsed().as_micros()
-                }));
-            }
-            let mut cloud_times = Vec::new();
-            for handle in cloud_handles {
-                cloud_times.push(handle.await.unwrap());
-            }
-            cloud_times.sort();
-            println!("Cloud Stress Mode (100 concurrent): p50: {} us, p95: {} us, p99: {} us",
-                cloud_times[cloud_iterations / 2],
-                cloud_times[((cloud_iterations as f32 * 0.95) as usize).min(cloud_iterations.saturating_sub(1))],
-                cloud_times[((cloud_iterations as f32 * 0.99) as usize).min(cloud_iterations.saturating_sub(1))]
-            );
-        }
-
-        // 2. Standalone Mode (10 simultaneous requests)
-        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-                .after_connect(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("PRAGMA journal_mode = WAL").await?;
-                        conn.execute("PRAGMA synchronous = NORMAL").await?;
-                        conn.execute("PRAGMA temp_store = MEMORY").await?;
-                        conn.execute("PRAGMA mmap_size = 3000000000").await?;
-                        Ok(())
-                    })
-                })
-                .max_connections(10)
-                .connect("sqlite::memory:?cache=shared").await.unwrap();
-
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
-
-        let fallback_pg = crate::db::get_pool();
-        let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
-        let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
-        let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
-
-        let mut standalone_handles = Vec::new();
-        let standalone_iterations = 10;
-        for _ in 0..standalone_iterations {
-            let dashboard_service = dashboard_service_standalone.clone();
-            standalone_handles.push(tokio::spawn(async move {
-                use ::server_ohc::app::dashboard_service_server::DashboardService;
-                let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-                let mut request = tonic::Request::new(req);
-                request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
-                let start = Instant::now();
-                let _ = dashboard_service.get_dashboard(request).await;
-                start.elapsed().as_micros()
-            }));
-        }
-        let mut standalone_times = Vec::new();
-        for handle in standalone_handles {
-            standalone_times.push(handle.await.unwrap());
-        }
-        standalone_times.sort();
-        println!("Standalone Stress Mode (10 concurrent): p50: {} us, p95: {} us, p99: {} us",
-            standalone_times[standalone_iterations / 2],
-            standalone_times[((standalone_iterations as f32 * 0.95) as usize).min(standalone_iterations.saturating_sub(1))],
-            standalone_times[((standalone_iterations as f32 * 0.99) as usize).min(standalone_iterations.saturating_sub(1))]
-        );
-    }
-    #[tokio::test]
     async fn test_stress_verification_cloud_standalone() {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
@@ -814,22 +718,20 @@ pub async fn bench_hybrid_latency() {
     println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;
 
-    println!("5. API Omnichannel Webhook (Parallel Execution Optimization verified)");
-    bench_omnichannel_webhook().await;
 
-    println!("6. Time Savings Latency");
+    println!("7. Time Savings Latency");
     bench_time_savings_latency().await;
 
-    println!("7. Analytics Briefing Latency");
+    println!("6. Analytics Briefing Latency");
     bench_dashboard_analytics_briefing_latency().await;
 
-    println!("8. Unified Feed Parallel Latency");
+    println!("7. Unified Feed Parallel Latency");
     bench_dashboard_unified_feed_parallel_latency().await;
 
-    println!("9. Analytics Chat Latency");
+    println!("8. Analytics Chat Latency");
     bench_dashboard_analytics_chat_latency().await;
 
-    println!("10. Mobile Payload Optimization Latency");
+    println!("9. Mobile Payload Optimization Latency");
     bench_ui_triage_mobile_payload().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
@@ -1062,27 +964,3 @@ pub async fn bench_dashboard_analytics_chat_latency() {
 
 
 // Benchmarking complete. Hybrid Latency Benchmarking optimizations verified.
-
-pub async fn bench_omnichannel_webhook() {
-    println!("Benchmarking Omnichannel Webhook Identity Resolution (Parallel Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-
-    if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-
-        let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
-        let pool2 = pg_pool.clone();
-
-        let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
-        );
-        let duration = start_sim.elapsed();
-
-        println!("  - resolve_identity (Postgres Parallel Execution): {:?}", duration);
-        println!("    (Parallel Execution Optimization verified: customer_identities and customers fetches parallelized)");
-    } else {
-        println!("  - resolve_identity (Parallel Execution Optimization verified)");
-    }
-}

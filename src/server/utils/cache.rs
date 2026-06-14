@@ -156,6 +156,7 @@ where
                 }
             } else {
                 if local.len() >= self.max_local_capacity {
+                    sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
                     if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
                         local.remove(&least_accessed_key);
                         removed_keys.push(least_accessed_key);

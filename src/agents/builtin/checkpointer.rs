@@ -192,36 +192,24 @@ impl CheckpointSaver for GitCheckpointer {
         if scratchpad_path.exists() {
             if let Ok(content) = tokio::fs::read_to_string(&scratchpad_path).await {
                 // Try parsing as RalphProgress
-                if let Ok(mut ralph_prog) =
-                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
-                {
-                    ralph_prog
-                        .notes
-                        .push(format!("Checkpoint {}", checkpoint.checkpoint_id));
+                if let Ok(mut ralph_prog) = serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content) {
+                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint.checkpoint_id));
                     scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
                 } else {
                     // Try parsing as generic JSON to preserve unknown fields
-                    if let Ok(mut generic_json) =
-                        serde_json::from_str::<serde_json::Value>(&content)
-                    {
+                    if let Ok(mut generic_json) = serde_json::from_str::<serde_json::Value>(&content) {
                         if let Some(obj) = generic_json.as_object_mut() {
-                            obj.insert(
-                                "current_objective".to_string(),
-                                serde_json::Value::String(format!(
-                                    "Checkpoint {}",
-                                    checkpoint.checkpoint_id
-                                )),
-                            );
+                            obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint.checkpoint_id)));
                         }
                         scratchpad_json_val = generic_json;
                     }
                 }
             }
         } else {
-            // Create a new ProgressFile but set objective
-            let mut pf = ProgressFile::default();
-            pf.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
+             // Create a new ProgressFile but set objective
+             let mut pf = ProgressFile::default();
+             pf.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
+             scratchpad_json_val = serde_json::to_value(&pf).unwrap();
         }
 
         let scratchpad_json =
@@ -864,10 +852,12 @@ mod tests {
         let scratchpad_path = saver.scratchpad_file_path(thread_id);
         let initial_progress = crate::ralph_loop::RalphProgress {
             task_description: "Build a web server".to_string(),
-            features: vec![crate::ralph_loop::Feature {
-                name: "Step 1".to_string(),
-                status: "completed".to_string(),
-            }],
+            features: vec![
+                crate::ralph_loop::Feature {
+                    name: "Step 1".to_string(),
+                    status: "completed".to_string(),
+                },
+            ],
             current_feature_index: 1,
             notes: vec!["Initialized".to_string()],
             is_complete: false,
@@ -915,11 +905,7 @@ mod tests {
             "current_objective": "old_obj"
         });
 
-        std::fs::write(
-            &scratchpad_path,
-            serde_json::to_string(&initial_json).unwrap(),
-        )
-        .unwrap();
+        std::fs::write(&scratchpad_path, serde_json::to_string(&initial_json).unwrap()).unwrap();
 
         let cp1 = Checkpoint {
             thread_id: thread_id.to_string(),

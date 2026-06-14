@@ -1,29 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function CustomerReferralProgram() {
+export default function CustomerReferralProgramPage() {
   const router = useRouter();
   const [giveAmount, setGiveAmount] = useState('10');
   const [getAmount, setGetAmount] = useState('10');
-  const [embedCode, setEmbedCode] = useState('');
+  const [tenant, setTenant] = useState('my-store');
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [tenant, setTenant] = useState('maya-cakes');
 
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|; )ohc_tenant=([^;]*)/);
-    if (match) {
-      setTenant(match[1]);
-    }
+    const tid = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store') : 'my-store';
+    setTenant(tid);
   }, []);
 
+  const embedUrl = `https://ohc.app/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}`;
+
+  const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`;
+
   const handleGenerate = () => {
-    const code = `<iframe src="https://ohc.app/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${giveAmount}&get=${getAmount}" width="100%" height="400" frameborder="0" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);"></iframe>`;
-    setEmbedCode(code);
     setShowModal(true);
-    setCopied(false);
   };
 
   const handleCopy = () => {
@@ -33,17 +31,10 @@ export default function CustomerReferralProgram() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#000000] p-6 relative">
-      {/* Decorative Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto relative z-10">
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="mb-8 flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 md:p-8 font-inter">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={() => router.back()} className="mb-6 flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Back to Dashboard
         </button>
 

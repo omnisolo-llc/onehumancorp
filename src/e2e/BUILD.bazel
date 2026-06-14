@@ -4,7 +4,6 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
-    "//src/e2e:ui/zero_click_builder.spec.ts",
 
     "//src/ui/next:src/e2e/ai-usage-paywall.spec.ts",
     "//src/ui/next:src/e2e/morning-briefing.spec.ts",
@@ -38,7 +37,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/pos-inventory-sync.spec.ts",
     "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
 
-
+    "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
     "//src/ui/next:src/e2e/triage_ui.spec.ts",
 
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",

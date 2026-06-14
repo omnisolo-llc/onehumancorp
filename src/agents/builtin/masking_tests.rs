@@ -237,7 +237,7 @@ fn test_json_fallback_bug() {
         previous_response_id: None,
     }];
 
-    let masker = JetBrainsObservationMasker::new(0, 150, 20);
+    let masker = JetBrainsObservationMasker::new(0, 10, 20);
     masker.apply_masking(&mut messages);
 
     let result = &messages[0].tool_results[0].content;

@@ -98,7 +98,12 @@ impl BookingService {
 
         // Dummy booking time slot - e.g., tomorrow at 10 AM
         let now = Utc::now();
-        let start_time = now + chrono::Duration::days(1);
+        let start_time = (now + chrono::Duration::days(1))
+            .with_hour(10)
+            .and_then(|t| t.with_minute(0))
+            .and_then(|t| t.with_second(0))
+            .and_then(|t| t.with_nanosecond(0))
+            .unwrap_or(now + chrono::Duration::days(1));
         let end_time = start_time + chrono::Duration::hours(1);
 
         // Apply Dynamic Pricing (Yield Management)
@@ -1506,20 +1511,14 @@ impl BookingEngineService for NativeBookingService {
 
         crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut total_calc = 0;
-        for item in &req.line_items {
-            total_calc += item.unit_price_cents * item.quantity as i64;
-        }
-
         sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit, total_amount) VALUES ($1, $2, $3, $4, $5, $6)"
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit) VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&quote_id)
         .bind(&tenant_id)
         .bind(uuid::Uuid::parse_str(&req.customer_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
         .bind("DRAFT")
         .bind(req.required_deposit)
-        .bind(total_calc)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;

@@ -330,7 +330,7 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(database_url).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);

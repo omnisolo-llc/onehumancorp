@@ -295,7 +295,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       {/* Persistent Footer Growth Loop */}
       <footer className="mt-12 py-8 border-t border-gray-200 text-center">
-          <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+          <a href="/onboarding" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
               <span className="text-base">⚡</span> Powered by OHC
           </a>
       </footer>

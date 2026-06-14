@@ -119,28 +119,11 @@ impl InvoiceService for InvoiceServiceImpl {
 
         use sqlx::Row;
 
-        let p1 = pool.clone();
-        let p2 = pool.clone();
-        let inv_id1 = req.invoice_id.clone();
-        let inv_id2 = req.invoice_id.clone();
-
-        let (row_res, items_rows_res) = tokio::join!(
-            tokio::spawn(async move {
-                sqlx::query("SELECT * FROM invoices WHERE id = $1")
-                    .bind(&inv_id1)
-                    .fetch_one(&p1)
-                    .await
-            }),
-            tokio::spawn(async move {
-                sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
-                    .bind(&inv_id2)
-                    .fetch_all(&p2)
-                    .await
-            })
-        );
-
-        let row = row_res.unwrap().map_err(|e| Status::internal(e.to_string()))?;
-        let _items_rows = items_rows_res.unwrap().map_err(|e| Status::internal(e.to_string()))?;
+        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
+            .bind(&req.invoice_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
             .bind(&req.invoice_id)
@@ -261,28 +244,11 @@ impl InvoiceService for InvoiceServiceImpl {
 
         use sqlx::Row;
 
-        let p1 = pool.clone();
-        let p2 = pool.clone();
-        let inv_id1 = req.invoice_id.clone();
-        let inv_id2 = req.invoice_id.clone();
-
-        let (row_res, items_rows_res) = tokio::join!(
-            tokio::spawn(async move {
-                sqlx::query("SELECT * FROM invoices WHERE id = $1")
-                    .bind(&inv_id1)
-                    .fetch_one(&p1)
-                    .await
-            }),
-            tokio::spawn(async move {
-                sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
-                    .bind(&inv_id2)
-                    .fetch_all(&p2)
-                    .await
-            })
-        );
-
-        let row = row_res.unwrap().map_err(|e| Status::internal(e.to_string()))?;
-        let _items_rows = items_rows_res.unwrap().map_err(|e| Status::internal(e.to_string()))?;
+        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
+            .bind(&req.invoice_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
             .bind(&req.invoice_id)

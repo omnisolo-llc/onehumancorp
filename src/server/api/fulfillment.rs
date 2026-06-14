@@ -354,10 +354,7 @@ async fn doordash_webhook(
         .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
     {
         Some(id) if !id.trim().is_empty() => id,
-        _ => ::server_common::auth_utils::get_default_tenant(),
-    };
-    if tenant_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response();
+        _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
     match persist_doordash_tracking_update(&state.pool, &tenant_id, &update).await {

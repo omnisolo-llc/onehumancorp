@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useOnboardingStore } from './store';
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save' | 'sparkles';
 
@@ -42,6 +43,7 @@ function generateSubdomain(name: string): string {
 }
 
 export default function OnboardingWizard() {
+  const router = useRouter();
   const {
     step, setStep,
     chatStep, setChatStep,
@@ -140,6 +142,22 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
+
+  const handleSkipSetup = () => {
+    setError('');
+    setValidationError('');
+    localStorage.setItem('has_onboarded', 'true');
+    syncStateToBackend({ skipped: true });
+    router.push('/dashboard');
+  };
+
+  const handleBackToIntro = () => {
+    setError('');
+    setValidationError('');
+    setValidationErrors({});
+    setStep(0);
+    syncStateToBackend({ step: 0 });
+  };
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -330,8 +348,8 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
-      setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 });
-
+      setStep(1); syncStateToBackend({ step: 1 });
+      setChatStep(3); syncStateToBackend({ chatStep: 3 });
     } finally {
       setIsLoading(false);
     }
@@ -492,15 +510,7 @@ export default function OnboardingWizard() {
           location: location || '',
           target_audience: targetAudience || '',
           ai_agents: aiAgents,
-          ai_auto_respond: aiAutoRespond,
-          initial_products: (() => {
-            try {
-              return JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('onboarding_initial_products') || '[]' : '[]');
-            } catch (e) {
-              console.error('Failed to parse onboarding_initial_products', e);
-              return [];
-            }
-          })()
+          ai_auto_respond: aiAutoRespond
         })
       });
 
@@ -532,6 +542,8 @@ export default function OnboardingWizard() {
 
   if (!isLoaded) return null;
 
+  const showIntroBack = step === 1 && chatStep === 1;
+
   // Progress percentage calculation
   const getProgress = () => {
     // There are 5 steps, let's make it a more gradual fill
@@ -550,11 +562,25 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
+    <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
       <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
-          <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
-          <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
+          <div className="setup-header-main">
+            {showIntroBack ? (
+              <button type="button" onClick={handleBackToIntro} className="setup-nav-button">
+                Back
+              </button>
+            ) : (
+              <span className="setup-nav-spacer" aria-hidden="true"></span>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
+              <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
+            </div>
+            <button type="button" onClick={handleSkipSetup} className="setup-nav-button">
+              Skip setup
+            </button>
+          </div>
         </div>
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
@@ -586,16 +612,10 @@ export default function OnboardingWizard() {
               <div className="flex flex-col gap-4 w-full">
                 <button
                   className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                  onClick={() => { setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 }); }}
+                  onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
-              </div>
-
-              <div className="mt-8">
-                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=website-builder" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
-                  ⚡ Powered by OHC
-                </a>
               </div>
             </div>
           )}
@@ -881,7 +901,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); setChatStep(1); syncStateToBackend({ step: 1, chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -1236,16 +1256,16 @@ export default function OnboardingWizard() {
                 </div>
 
                 <a
-                  href="/assistant"
+                  href="/dashboard"
                   className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  <IconLabel icon="sparkles">Open Assistant</IconLabel>
+                  <IconLabel icon="sparkles">Open Dashboard</IconLabel>
                 </a>
                 <a
-                  href="/website-builder"
+                  href="/builder"
                   className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  <IconLabel icon="eye">Storefront Builder</IconLabel>
+                  <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>
               </div>
             </div>

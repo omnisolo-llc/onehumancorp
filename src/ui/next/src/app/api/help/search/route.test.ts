@@ -24,15 +24,16 @@ describe('/api/help/search GET', () => {
     expect(data).toEqual(mockArticles);
   });
 
-  it('returns backend error if backend fails', async () => {
+  it('returns fallback search on backend error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
     });
     const request = new NextRequest('http://localhost:3000/api/help/search?q=adding');
     const response = await GET(request);
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.error).toBe("Failed to fetch help search from backend");
+    expect(data.length).toBe(1);
+    expect(data[0].id).toEqual("add-products");
   });
 });

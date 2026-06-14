@@ -5,8 +5,6 @@ import { useState, useRef } from 'react';
 export function VoiceAssistantFAB() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [transcription, setTranscription] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
@@ -63,9 +61,6 @@ export function VoiceAssistantFAB() {
       }
 
       const result = await response.json();
-      setTranscription(result.transcription);
-      setIsSuccess(true);
-      setTimeout(() => setIsSuccess(false), 5000);
 
       // In a real implementation, this would trigger a refetch of the Agent Feed
       // For now, we can dispatch a custom event to notify UnifiedAgentFeed
@@ -82,22 +77,15 @@ export function VoiceAssistantFAB() {
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-center gap-2">
       {isListening && (
         <div className="px-4 py-2 bg-indigo-600/90 text-white rounded-full text-sm font-medium animate-pulse shadow-lg backdrop-blur-md border border-indigo-400/30">
-          Listening...
+          Listening... Release to send
         </div>
       )}
 
       {isProcessing && (
         <div className="px-4 py-2 bg-gray-800/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-md border border-gray-600/30">
-          Thinking...
+          Processing command...
         </div>
       )}
-      {isSuccess && (
-        <div className="px-4 py-2 bg-green-600/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-md border border-green-500/30 flex flex-col items-center">
-          <span>Action Prepared!</span>
-          <span className="text-xs opacity-80">{transcription}</span>
-        </div>
-      )}
-
 
       <button
         onMouseDown={startListening}
@@ -111,7 +99,7 @@ export function VoiceAssistantFAB() {
             ? 'bg-red-500 scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
             : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-xl bg-opacity-80'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-        aria-label="Voice Assistant"
+        aria-label="Voice Command Assistant"
         title="Hold to speak to your assistant"
       >
         <span className="text-white drop-shadow-md">

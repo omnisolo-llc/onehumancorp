@@ -111,14 +111,10 @@ impl UserRepository for PgUserRepository {
             set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         }
 
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         // Parse roles from JSON string
@@ -163,14 +159,10 @@ impl UserRepository for PgUserRepository {
             set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         }
 
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(username).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -214,14 +206,10 @@ impl UserRepository for PgUserRepository {
             set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         }
 
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(email).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -265,14 +253,10 @@ impl UserRepository for PgUserRepository {
             set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         }
 
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(sub).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -452,7 +436,7 @@ impl UserRepository for PgUserRepository {
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
-            ON CONFLICT (jti, tenant_id) DO NOTHING
+            ON CONFLICT (jti) DO NOTHING
             "#
         )
         .bind(jti)

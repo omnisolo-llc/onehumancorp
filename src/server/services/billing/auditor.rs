@@ -131,13 +131,7 @@ impl CostAuditor {
 
         let mut tenant_tokens = self.tenant_tokens.lock().unwrap();
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
-        let previous_tenant_tokens = *current_tenant_tokens;
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
-
-        // Add per-tenant token anomaly detection here
-        if previous_tenant_tokens <= 50000 && *current_tenant_tokens > 50000 {
-            tracing::warn!("Anomaly detected: High token usage for tenant {} ({} tokens)", event.tenant_id, *current_tenant_tokens);
-        }
 
         let mut tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
         let current_tenant_cached_tokens = tenant_cached_tokens.entry(event.tenant_id.clone()).or_insert(0);

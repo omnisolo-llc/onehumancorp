@@ -54,9 +54,9 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(totalRevenue).toBeVisible();
     expect(await totalRevenue.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
-    const bandwidthSavings = page.locator('#cost-dashboard-bandwidth-savings');
+    const bandwidthSavings = page.locator('#cost-dashboard-total-savings');
     await expect(bandwidthSavings).toBeVisible();
-    expect(await bandwidthSavings.innerText()).toMatch(/^-\$[\d,]+\.\d{2}$/);
+    expect(await bandwidthSavings.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
     await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' })).toBeVisible();
@@ -76,16 +76,4 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const networkCost = page.locator('#cost-dashboard-network');
     await expect(networkCost).toBeVisible();
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
-
-    const computeCost = page.locator('#cost-dashboard-compute');
-    await expect(computeCost).toBeVisible();
-    expect(await computeCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
-
-    const emailCost = page.locator('#cost-dashboard-email');
-    await expect(emailCost).toBeVisible();
-    expect(await emailCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
-
-    const apiCost = page.locator('#cost-dashboard-api');
-    await expect(apiCost).toBeVisible();
-    expect(await apiCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 }

@@ -14,18 +14,17 @@ impl ToolGater {
     ) -> Result<(), ToolError> {
         // OpenAI Guardrail: Check Tool Guardrail registry
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_tool(tc)
-        {
-            if e.contains("Stage 3 (Confirmation)")
-                || e.contains("requires explicit user confirmation")
-            {
-                return Err(ToolError::UserFixable(format!(
-                    "Tool Guardrail tripped: {}",
-                    e
-                )));
+            && let Err(e) = guardrails.check_tool(tc) {
+                if e.contains("Stage 3 (Confirmation)")
+                    || e.contains("requires explicit user confirmation")
+                {
+                    return Err(ToolError::UserFixable(format!(
+                        "Tool Guardrail tripped: {}",
+                        e
+                    )));
+                }
+                return Err(ToolError::Fatal(format!("Tool Guardrail tripped: {}", e)));
             }
-            return Err(ToolError::Fatal(format!("Tool Guardrail tripped: {}", e)));
-        }
 
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
@@ -36,13 +35,12 @@ impl ToolGater {
 
         // Stage 2: Permission check before each tool call
         if let Some(allowed) = &cfg.allowed_tools
-            && !allowed.contains(&tc.name)
-        {
-            return Err(ToolError::Fatal(format!(
-                "Tool '{}' is not in the allowed list.",
-                tc.name
-            )));
-        }
+            && !allowed.contains(&tc.name) {
+                return Err(ToolError::Fatal(format!(
+                    "Tool '{}' is not in the allowed list.",
+                    tc.name
+                )));
+            }
 
         // Stage 3: Explicit user confirmation for high-risk operations
         // Handled via the 5-point HumanInLoopSpectrum
@@ -124,9 +122,7 @@ mod tests {
         impl ToolGuardrail for MockConfirmationGuardrail {
             fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
                 if tc.name == "forbidden_tool" {
-                    return Err(
-                        "Stage 3 (Confirmation) requires explicit user confirmation".to_string()
-                    );
+                    return Err("Stage 3 (Confirmation) requires explicit user confirmation".to_string());
                 }
                 Ok(())
             }

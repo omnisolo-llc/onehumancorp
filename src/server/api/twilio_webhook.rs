@@ -80,27 +80,23 @@ pub async fn twilio_webhook_post_handler(
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, NOW())"
+                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
                 )
                 .bind(&inbox_id)
                 .bind(&tenant_id)
                 .bind(&source)
                 .bind(&text)
-                .bind(&text)
-                .bind(&sender_id)
                 .execute(pool)
                 .await.map(|_| ())
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
                 )
                 .bind(&inbox_id)
                 .bind(&tenant_id)
                 .bind(&source)
                 .bind(&text)
-                .bind(&text)
-                .bind(&sender_id)
                 .execute(sqlite_pool)
                 .await.map(|_| ())
             }
@@ -110,48 +106,15 @@ pub async fn twilio_webhook_post_handler(
             tracing::error!("Failed to insert inbox message: {}", e);
         }
 
-        let job_id = Uuid::new_v4().to_string();
-        let payload = serde_json::json!({
-            "message_id": inbox_id,
-            "source": source,
-            "content": text,
-            "sender_id": sender_id
-        });
-
-        let enqueue_result = match &state.db.store {
-            crate::db::DbStore::Postgres => {
-                sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
-                    .bind(&job_id)
-                    .bind(&tenant_id)
-                    .bind(payload.to_string())
-                    .execute(pool)
-                    .await
-                    .map(|_| ())
-            },
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
-                    .bind(&job_id)
-                    .bind(&tenant_id)
-                    .bind(payload.to_string())
-                    .execute(sqlite_pool)
-                    .await
-                    .map(|_| ())
-            }
-        };
-
-        if let Err(e) = enqueue_result {
-            tracing::error!("Failed to enqueue message_triage job: {}", e);
-        }
-
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
-            event_type: "tenant.omnichannel.message.received".to_string(),
+            event_type: "tenant.message.received".to_string(),
             payload: serde_json::json!({
                 "source": source,
-                "content": text,
+                "message": text,
                 "sender_id": sender_id.replace("whatsapp:", ""),
-                "message_id": inbox_id,
+                "inbox_message_id": inbox_id,
             }),
         };
 

@@ -33,66 +33,49 @@ pub struct AppState {
 pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> Option<String> {
     let pool = &db.pool;
 
-    // Parallel Execution Optimization: Fetch from both tables concurrently
-    let t_id1 = tenant_id.to_string();
-    let chan = channel.to_string();
-    let s_id1 = sender_id.to_string();
-
-    let t_id2 = tenant_id.to_string();
-    let s_id2 = sender_id.to_string();
-
-    let (identity_res, potential_res) = match &db.store {
+    // 1. Check if identity exists in customer_identities
+    let existing_identity: Option<String> = match &db.store {
         crate::db::DbStore::Postgres => {
-            let pool1 = pool.clone();
-            let pool2 = pool.clone();
-            tokio::join!(
-                tokio::spawn(async move {
-                    sqlx::query_scalar::<_, String>("SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND channel = $2 AND channel_identity = $3")
-                        .bind(t_id1)
-                        .bind(chan)
-                        .bind(s_id1)
-                        .fetch_optional(&pool1)
-                        .await.ok().flatten()
-                }),
-                tokio::spawn(async move {
-                    sqlx::query_scalar::<_, String>("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
-                        .bind(t_id2)
-                        .bind(s_id2)
-                        .fetch_optional(&pool2)
-                        .await.ok().flatten()
-                })
-            )
+            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND channel = $2 AND channel_identity = $3")
+                .bind(tenant_id)
+                .bind(channel)
+                .bind(sender_id)
+                .fetch_optional(pool)
+                .await.ok().flatten()
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let pool1 = sqlite_pool.clone();
-            let pool2 = sqlite_pool.clone();
-            tokio::join!(
-                tokio::spawn(async move {
-                    sqlx::query_scalar::<_, String>("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
-                        .bind(t_id1)
-                        .bind(chan)
-                        .bind(s_id1)
-                        .fetch_optional(&pool1)
-                        .await.ok().flatten()
-                }),
-                tokio::spawn(async move {
-                    sqlx::query_scalar::<_, String>("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
-                        .bind(t_id2)
-                        .bind(&s_id2)
-                        .bind(&s_id2)
-                        .fetch_optional(&pool2)
-                        .await.ok().flatten()
-                })
-            )
+            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
+                .bind(tenant_id)
+                .bind(channel)
+                .bind(sender_id)
+                .fetch_optional(sqlite_pool)
+                .await.ok().flatten()
         }
     };
-
-    let existing_identity = identity_res.unwrap_or(None);
-    let potential_customer_id = potential_res.unwrap_or(None);
 
     if let Some(id) = existing_identity {
         return Some(id);
     }
+
+    // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
+    // Assume sender_id might be a phone number or email depending on channel
+    let potential_customer_id: Option<String> = match &db.store {
+        crate::db::DbStore::Postgres => {
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
+                .bind(tenant_id)
+                .bind(sender_id)
+                .fetch_optional(pool)
+                .await.ok().flatten()
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
+                .bind(tenant_id)
+                .bind(sender_id)
+                .bind(sender_id)
+                .fetch_optional(sqlite_pool)
+                .await.ok().flatten()
+        }
+    };
 
     if let Some(id) = potential_customer_id {
         // Cache this new identity link
@@ -148,7 +131,7 @@ pub async fn handle_omnichannel_webhook(
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, $7, NOW())"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, '', 'unread', $6, NOW())"
             )
             .bind(&inbox_id)
             .bind(tenant_id)
@@ -156,13 +139,12 @@ pub async fn handle_omnichannel_webhook(
             .bind(message)
             .bind(message)
             .bind(sender_id)
-            .bind(customer_id.as_deref())
             .execute(&state.db.pool)
             .await.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(tenant_id)
@@ -170,7 +152,6 @@ pub async fn handle_omnichannel_webhook(
             .bind(message)
             .bind(message)
             .bind(sender_id)
-            .bind(customer_id.as_deref())
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
@@ -190,7 +171,7 @@ pub async fn handle_omnichannel_webhook(
         "sender_id": sender_id
     });
 
-    if let Some(ref c_id) = customer_id {
+    if let Some(c_id) = &customer_id {
         payload_json["customer_id"] = serde_json::json!(c_id);
     }
 

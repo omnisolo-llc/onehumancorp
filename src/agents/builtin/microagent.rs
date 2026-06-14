@@ -29,10 +29,7 @@ impl MicroAgentRegistry {
     }
 
     /// Loads MicroAgents from a `.openhands/microagents` or similar directory.
-    pub fn load_from_dir(
-        &mut self,
-        dir: impl AsRef<Path>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn load_from_dir(&mut self, dir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let dir = dir.as_ref();
         if !dir.exists() || !dir.is_dir() {
             return Ok(());
@@ -41,10 +38,7 @@ impl MicroAgentRegistry {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file()
-                && (path.extension().and_then(|e| e.to_str()) == Some("yaml")
-                    || path.extension().and_then(|e| e.to_str()) == Some("json"))
-            {
+            if path.is_file() && (path.extension().and_then(|e| e.to_str()) == Some("yaml") || path.extension().and_then(|e| e.to_str()) == Some("json")) {
                 let content = fs::read_to_string(&path)?;
                 if let Ok(agent) = serde_json::from_str::<MicroAgent>(&content) {
                     self.agents.push(agent);
@@ -53,51 +47,15 @@ impl MicroAgentRegistry {
         }
         Ok(())
     }
-    /// Loads Superpowers skills from markdown files (obra/superpowers format)
-    pub fn load_superpowers_from_dir(&mut self, dir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let dir = dir.as_ref();
-        if !dir.exists() || !dir.is_dir() {
-            return Ok(());
-        }
-
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                let skill_md = path.join("SKILL.md");
-                if skill_md.exists() {
-                    let content = fs::read_to_string(&skill_md)?;
-                    // Simple parsing: extract name from frontmatter or first H1
-                    let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                    let trigger1 = format!("superpowers:{} ", name);
-                    let trigger2 = format!("superpowers:{}", name);
-                    self.agents.push(MicroAgent {
-                        name: trigger2.clone(),
-                        description: None,
-                        triggers: vec![trigger1, trigger2],
-                        instructions: content,
-                    });
-                }
-            }
-        }
-        Ok(())
-    }
-
 
     /// Returns the concatenated instructions for all MicroAgents whose triggers match the given context.
     pub fn get_active_instructions(&self, context: &str) -> String {
         let mut active_instructions = Vec::new();
 
         for agent in &self.agents {
-            let matches = agent
-                .triggers
-                .iter()
-                .any(|trigger| context.contains(trigger));
+            let matches = agent.triggers.iter().any(|trigger| context.contains(trigger));
             if matches {
-                active_instructions.push(format!(
-                    "--- MicroAgent: {} ---\n{}",
-                    agent.name, agent.instructions
-                ));
+                active_instructions.push(format!("--- MicroAgent: {} ---\n{}", agent.name, agent.instructions));
             }
         }
 

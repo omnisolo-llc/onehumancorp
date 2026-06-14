@@ -202,7 +202,7 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect_lazy("postgres://127.0.0.1:1/dummy")
+                .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
@@ -301,7 +301,7 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect_lazy("postgres://127.0.0.1:1/dummy")
+                .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
@@ -444,7 +444,7 @@ mod tests {
                         Ok(true)
                     })
                 })
-                .connect_lazy("postgres://127.0.0.1:1/dummy")
+                .connect_lazy("postgres://localhost/dummy")
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
@@ -525,7 +525,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -582,7 +582,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -616,7 +616,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 

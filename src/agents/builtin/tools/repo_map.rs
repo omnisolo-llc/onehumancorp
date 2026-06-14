@@ -163,7 +163,7 @@ impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
              return Err(ToolError::LlmRecoverable(format!("Path does not exist: {}", abs_target.display())));
         }
 
-        let max_depth_copy = max_depth; let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth_copy))
+        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth))
             .await
             .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
             .map_err(|e| ToolError::Transient(e.to_string()))?;

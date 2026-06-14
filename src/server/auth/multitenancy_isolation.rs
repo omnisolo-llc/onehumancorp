@@ -87,7 +87,7 @@ async fn test_revoke_token_tenant_isolation() {
 
     // Insert an already expired token for the OTHER tenant using raw query
     let expired_time = chrono::Utc::now() - chrono::Duration::hours(1);
-    let _ = sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3) ON CONFLICT (jti, tenant_id) DO NOTHING")
+    let _ = sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3) ON CONFLICT (jti) DO NOTHING")
         .bind("other_tenant_expired_token")
         .bind(expired_time)
         .bind(other_tenant)

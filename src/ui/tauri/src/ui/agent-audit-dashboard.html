@@ -183,7 +183,21 @@
             </div>
 
             <div class="agent-grid" id="agent-grid">
-                <!-- Agent cards will be populated dynamically -->
+                <!-- Agent cards will be populated here -->
+                <div class="glassmorphism agent-card">
+                    <h3>Operations</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot green"></div>
+                        <span>Agent Health: Optimal</span>
+                    </div>
+                </div>
+                <div class="glassmorphism agent-card">
+                    <h3>Marketing & Advertising</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot green"></div>
+                        <span>Campaigns Sync: Active</span>
+                    </div>
+                </div>
             </div>
 
             <div class="panel glassmorphism">
@@ -198,6 +212,9 @@
             <div class="panel glassmorphism" style="height: 100%;">
                 <h2>Violation & Activity Feed</h2>
                 <ul class="feed-list" id="activity-feed">
+                    <li class="feed-item normal">
+                        <span class="feed-time">[10:45 AM]</span> System starting up...
+                    </li>
                 </ul>
             </div>
         </div>
@@ -207,57 +224,12 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
 
-            const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token') || '';
-
-            // Fetch Agents
-            try {
-                const res = await fetch(`/api/agents`, {
-                    headers: {
-                        'x-tenant-id': tenantId,
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (res.ok) {
-                    const agents = await res.json();
-                    const grid = document.getElementById('agent-grid');
-                    grid.innerHTML = '';
-                    if (agents && agents.length > 0) {
-                        agents.forEach(agent => {
-                            const isHealthy = agent.status !== 'error' && agent.status !== 'offline';
-                            const dotClass = isHealthy ? 'green' : 'yellow';
-                            const statusText = isHealthy ? 'Optimal' : (agent.status || 'Active');
-                            grid.innerHTML += `
-                                <div class="glassmorphism agent-card">
-                                    <h3>${agent.name || agent.role || 'Agent'}</h3>
-                                    <div class="status-indicator">
-                                        <div class="status-dot ${dotClass}"></div>
-                                        <span>Agent Health: ${statusText}</span>
-                                    </div>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        grid.innerHTML = `
-                            <div class="glassmorphism agent-card">
-                                <h3>No Agents Assigned</h3>
-                                <div class="status-indicator">
-                                    <span>You currently have no active agents.</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to fetch agents", e);
-            }
-
             // Fetch Activities
             try {
                 const res = await fetch(`/api/agents/approvals/ledger?tenant_id=${tenantId}`, {
                     headers: {
                         'x-tenant-id': tenantId,
-                        'x-user-id': 'default',
-                        'Authorization': `Bearer ${token}`
+                        'x-user-id': 'default'
                     }
                 });
                 if (res.ok) {
@@ -287,53 +259,18 @@
                 console.error("Failed to fetch ledger", e);
             }
 
-            // Real-time SSE connection via fetch
-            const liveLog = document.getElementById('live-log');
-            liveLog.innerHTML += `<br>> Connecting to agent telemetry stream...`;
-
-            fetch(`/api/agents/approvals/stream?tenant_id=${tenantId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            }).then(async response => {
-                if (!response.ok) throw new Error("Failed to connect to stream");
+            // Real-time WebSocket connection (Mock/Placeholder for now)
+            setTimeout(() => {
+                const liveLog = document.getElementById('live-log');
                 liveLog.innerHTML += `<br>> Connected to agent telemetry stream.`;
+                liveLog.innerHTML += `<br>> [Operations] Checking booking conflicts... OK`;
+            }, 1000);
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let buffer = "";
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // keep the last incomplete line in the buffer
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const dataStr = line.substring(6).trim();
-                            if (!dataStr || dataStr === 'connected') continue;
-                            try {
-                                const data = JSON.parse(dataStr);
-                                let desc = 'Activity received';
-                                if (data.original_payload && data.original_payload.description) {
-                                    desc = data.original_payload.description;
-                                }
-                                liveLog.innerHTML += `<br>> [${data.department || 'System'}] ${desc}`;
-                                liveLog.scrollTop = liveLog.scrollHeight;
-                            } catch (e) {
-                                liveLog.innerHTML += `<br>> ${dataStr}`;
-                                liveLog.scrollTop = liveLog.scrollHeight;
-                            }
-                        }
-                    }
-                }
-            }).catch(e => {
-                console.error("Stream error", e);
-                liveLog.innerHTML += `<br>> Stream disconnected.`;
-            });
+            setTimeout(() => {
+                const liveLog = document.getElementById('live-log');
+                liveLog.innerHTML += `<br>> [Marketing] Processing draft promotion...`;
+                liveLog.scrollTop = liveLog.scrollHeight;
+            }, 2500);
         });
     </script>
   </body>

@@ -78,7 +78,7 @@ pub async fn offline_sync_handler(
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
-            let query = "SELECT inventory_count, available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
@@ -88,18 +88,15 @@ pub async fn offline_sync_handler(
             match current_stock {
                 Ok(Some(row)) => {
                     let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                    let available_stock: i32 = sqlx::Row::try_get(&row, "available_quantity").unwrap_or(stock);
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
-                    let new_available_stock = std::cmp::max(0, available_stock - mutation.quantity_deducted);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = $2 WHERE id = $3 AND tenant_id = $4")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
-                        .bind(new_available_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
                         .execute(&mut *db_tx)
@@ -174,31 +171,6 @@ pub async fn offline_sync_handler(
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
 
-                    // Enqueue a SyncEvent:JobCompleted representation into department_tasks
-                    // so OperationsWorker AI can draft invoices/follow-ups
-                    let sync_event_payload = serde_json::json!({
-                        "id": uuid::Uuid::new_v4().to_string(),
-                        "tenant_id": tenant_id_clone,
-                        "batch_id": mutation.transaction_id,
-                        "action_type": "JobCompleted",
-                        "payload": {
-                            "product_id": mutation.product_id,
-                            "quantity_deducted": mutation.quantity_deducted,
-                            "transaction_id": mutation.transaction_id
-                        },
-                        "synced_at_ms": chrono::Utc::now().timestamp_millis()
-                    });
-
-                    let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'SyncEvent:JobCompleted', $3::jsonb, 'PENDING')"
-                    )
-                    .bind(uuid::Uuid::new_v4().to_string())
-                    .bind(&tenant_id_clone)
-                    .bind(sync_event_payload.to_string())
-                    .execute(&mut *db_tx)
-                    .await;
-
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
@@ -244,7 +216,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
+        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -257,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

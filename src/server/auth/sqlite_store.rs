@@ -85,14 +85,10 @@ impl UserRepository for SqliteUserRepository {
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -127,14 +123,10 @@ impl UserRepository for SqliteUserRepository {
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(username).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(username).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -169,14 +161,10 @@ impl UserRepository for SqliteUserRepository {
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(email).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(email).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -211,14 +199,10 @@ impl UserRepository for SqliteUserRepository {
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
-            sqlx::query(query).bind(sub).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
+        let row = if should_bypass {
+            sqlx::query(query).bind(sub).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
-        };
-        let row = match row_opt {
-            Some(r) => r,
-            None => return Err("user not found".to_string()),
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -374,7 +358,7 @@ impl UserRepository for SqliteUserRepository {
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
-            ON CONFLICT (jti, tenant_id) DO NOTHING
+            ON CONFLICT (jti) DO NOTHING
             "#
         )
         .bind(jti)
@@ -475,10 +459,9 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS revoked_tokens (
-                jti TEXT,
+                jti TEXT PRIMARY KEY,
                 tenant_id TEXT,
-                expires_at TIMESTAMPTZ,
-                PRIMARY KEY (jti, tenant_id)
+                expires_at TIMESTAMPTZ
             )"
         )
         .execute(&pool)

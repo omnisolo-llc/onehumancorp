@@ -17,7 +17,7 @@ mod parity_tests {
 
         // Run migrations/schema setup for SQLite
         let db = DB {
-            pool: PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap(),
+            pool: PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();

@@ -58,6 +58,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
 
         // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
+        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
         let mut text_to_parse = completion.trim();
 
         if let Some(start) = text_to_parse.find("```json") {

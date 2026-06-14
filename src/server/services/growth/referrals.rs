@@ -42,25 +42,11 @@ impl ReferralTracker {
         code
     }
 
-    pub fn seed_referral_mapping(&self, code: &str, user_id: &str) {
-        if self.code_to_user.read().unwrap().get(code).is_none() {
-            self.code_to_user.write().unwrap().insert(code.to_string(), user_id.to_string());
-        }
-    }
-
-    pub fn record_referral(&self, code: &str, user_id: Option<&str>) -> bool {
-        let actual_user_id = {
-            let code_to_user = self.code_to_user.read().unwrap();
-            code_to_user.get(code).cloned()
-        }.or_else(|| user_id.map(|s| s.to_string()));
-
-        if let Some(uid) = actual_user_id {
-            if self.code_to_user.read().unwrap().get(code).is_none() {
-                self.code_to_user.write().unwrap().insert(code.to_string(), uid.clone());
-            }
-
+    pub fn record_referral(&self, code: &str) -> bool {
+        let code_to_user = self.code_to_user.read().unwrap();
+        if let Some(user_id) = code_to_user.get(code) {
             let mut user_referrals = self.user_referrals.write().unwrap();
-            let current = user_referrals.entry(uid.clone()).or_insert(0);
+            let current = user_referrals.entry(user_id.clone()).or_insert(0);
             *current += 1;
 
             let mut total_referrals = self.total_referrals.write().unwrap();
@@ -72,19 +58,11 @@ impl ReferralTracker {
         }
     }
 
-    pub fn record_referral_with_channel(&self, code: &str, channel: &str, user_id: Option<&str>) -> bool {
-        let actual_user_id = {
-            let code_to_user = self.code_to_user.read().unwrap();
-            code_to_user.get(code).cloned()
-        }.or_else(|| user_id.map(|s| s.to_string()));
-
-        if let Some(uid) = actual_user_id {
-            if self.code_to_user.read().unwrap().get(code).is_none() {
-                self.code_to_user.write().unwrap().insert(code.to_string(), uid.clone());
-            }
-
+    pub fn record_referral_with_channel(&self, code: &str, channel: &str) -> bool {
+        let code_to_user = self.code_to_user.read().unwrap();
+        if let Some(user_id) = code_to_user.get(code) {
             let mut user_referrals = self.user_referrals.write().unwrap();
-            let current = user_referrals.entry(uid.clone()).or_insert(0);
+            let current = user_referrals.entry(user_id.clone()).or_insert(0);
             *current += 1;
 
             let mut total_referrals = self.total_referrals.write().unwrap();
@@ -178,15 +156,13 @@ mod tests {
         let code2 = tracker.generate_referral_code("user1");
         assert_eq!(code, code2);
         
-        assert!(tracker.record_referral(&code, None));
+        assert!(tracker.record_referral(&code));
         assert_eq!(tracker.get_user_referrals("user1"), 1);
         assert_eq!(tracker.get_total_referrals(), 1);
         
-        assert!(!tracker.record_referral("invalid_code", None));
-        assert!(tracker.record_referral("invalid_code_with_user", Some("user2")));
-        assert_eq!(tracker.get_user_referrals("user2"), 1);
+        assert!(!tracker.record_referral("invalid_code"));
         
-        assert!(tracker.record_referral_with_channel(&code, "twitter", None));
+        assert!(tracker.record_referral_with_channel(&code, "twitter"));
         assert_eq!(tracker.get_user_referrals("user1"), 2);
         
         let stats = tracker.get_channel_stats();

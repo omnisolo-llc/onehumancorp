@@ -18,7 +18,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use chrono::Datelike;
 use crate::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -173,44 +172,6 @@ pub struct WaitlistResponse {
     pub referral_link: String,
 }
 
-
-#[derive(Debug, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ZeroClickGenerateResponse {
-    pub name: String,
-    pub url: String,
-    pub products_count: usize,
-}
-
-async fn handle_zero_click_builder_generate(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ZeroClickGenerateRequest>,
-) -> Result<Json<ZeroClickGenerateResponse>, StatusCode> {
-    let db = std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres });
-    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, state.hub.clone());
-
-    match agent.process_intake(&req.prompt).await {
-        Ok(intake_data) => {
-            let slug = intake_data.business_name.to_lowercase().replace(|c: char| !c.is_ascii_alphanumeric(), "-").trim_matches('-').to_string();
-            let url = format!("https://{}.ohc.store", if slug.is_empty() { "store".to_string() } else { slug });
-
-            Ok(Json(ZeroClickGenerateResponse {
-                name: intake_data.business_name,
-                url,
-                products_count: intake_data.initial_products.len(),
-            }))
-        },
-        Err(e) => {
-            tracing::error!("Failed to generate zero click store: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
 async fn handle_waitlist(
     Json(req): Json<WaitlistRequest>,
 ) -> Result<Json<WaitlistResponse>, StatusCode> {
@@ -349,7 +310,6 @@ where
     Router::new()
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
-        .route("/zero-click-builder/generate", post(handle_zero_click_builder_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -387,7 +347,6 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
-        .route("/wrapped", get(handle_wrapped))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -537,7 +496,7 @@ async fn handle_trial_extension_claim(
     };
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .fetch_optional(&state.pool)
         .await
@@ -557,7 +516,7 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id::text = $1::text")
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .execute(&state.pool)
         .await
@@ -1014,121 +973,16 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     let target_emails: i64 = if req.target_segment == "abandoned_carts" {
-        use crate::cart_recovery::{CartRecoveryStore, CartRecoveryDispatcher, PostgresCartRecoveryStore, PostgresQueueRecoveryDispatcher, RecoveryMessage, RecoveryChannel};
-        let store = PostgresCartRecoveryStore::new(std::sync::Arc::new(state.pool.clone()));
-        let dispatcher = PostgresQueueRecoveryDispatcher::new(std::sync::Arc::new(state.pool.clone()), true);
-
-        let now = chrono::Utc::now();
-        // Since this is triggered from the UI, we might want to recover recent carts as well.
-        let abandoned_before = now;
-
-        let mut sent_count = 0;
-        // Tenant context is set automatically via RLS if set_system_context is not used,
-        // but PostgresCartRecoveryStore::abandoned_checkout_sessions uses set_system_context.
-        // Wait, abandoned_checkout_sessions sets system context.
-        // We shouldn't use it directly here if it fetches cross-tenant.
-        // Let's implement an inline query scoped by tenant instead to safely fetch abandoned carts.
-        let rows_result = sqlx::query(
-            r#"
-            SELECT
-                ccs.id,
-                ccs.tenant_id,
-                ccs.customer_id,
-                ccs.type as checkout_type,
-                ccs.amount as amount_cents,
-                ccs.status,
-                customers.email as customer_email,
-                customers.phone as customer_phone,
-                customers.name as customer_name,
-                tenants.business_name,
-                COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
-            FROM conversational_checkout_sessions ccs
-            INNER JOIN customers
-                ON customers.id = ccs.customer_id
-               AND customers.tenant_id = ccs.tenant_id
-            INNER JOIN tenants
-                ON tenants.id::text = ccs.tenant_id
-            WHERE lower(ccs.status) = 'pending'
-              AND ccs.tenant_id = $1
-              AND COALESCE(ccs.updated_at, ccs.created_at) <= $2
-              AND (
-                    NULLIF(trim(customers.email), '') IS NOT NULL
-                 OR NULLIF(trim(customers.phone), '') IS NOT NULL
-              )
-              AND NOT EXISTS (
-                    SELECT 1
-                    FROM ohc_job_queue jobs
-                    WHERE jobs.tenant_id = ccs.tenant_id
-                      AND jobs.job_type = $3
-                      AND jobs.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
-                      AND jobs.payload ->> 'checkout_session_id' = ccs.id
-              )
-            ORDER BY COALESCE(ccs.updated_at, ccs.created_at) ASC
-            LIMIT 1000
-            "#
-        )
-        .bind(auth_info.org_id.clone())
-        .bind(abandoned_before)
-        .bind("cart_recovery.dispatch")
-        .fetch_all(&state.pool)
-        .await;
-
-        match rows_result {
-            Ok(rows) => {
-                sent_count = rows.len() as i64;
-                use sqlx::Row;
-                for row in rows {
-                    let amount_cents_i64: Option<i64> = row.get("amount_cents");
-                    let last_touched_at: Option<chrono::DateTime<chrono::Utc>> = row.get("last_touched_at");
-                    let session = crate::cart_recovery::AbandonedCheckoutSession {
-                        session_id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        customer_id: row.get("customer_id"),
-                        checkout_type: row.get("checkout_type"),
-                        amount_cents: amount_cents_i64.unwrap_or(0),
-                        status: row.get("status"),
-                        customer_email: row.get("customer_email"),
-                        customer_phone: row.get("customer_phone"),
-                        last_touched_at: last_touched_at.unwrap_or_else(chrono::Utc::now),
-                        customer_name: row.get("customer_name"),
-                        business_name: row.get("business_name"),
-                    };
-
-                    let message = RecoveryMessage {
-                        channel: RecoveryChannel::Email,
-                        to: session.customer_email.clone(),
-                        subject: req.subject.clone(),
-                        body: req.body.clone(),
-                        checkout_url: format!("{}/checkout/recover/{}", std::env::var("OHC_CHECKOUT_BASE_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()), session.session_id),
-                    };
-
-                    if let Err(e) = dispatcher.dispatch_recovery(&session, &message).await {
-                        tracing::error!("Failed to dispatch recovery for session {}: {}", session.session_id, e);
-                    } else {
-                        // Mark as recorded
-                        let _ = store.record_recovery_action(&session, &crate::cart_recovery::RecoveryDispatchReceipt { channel: message.channel.clone(), provider_message_id: None }).await;
-                    }
-                }
-            }
+        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&auth_info.org_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(c) => c,
             Err(e) => {
-                tracing::error!("Failed to fetch abandoned carts for campaign: {:?}", e);
+                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
+                0
             }
-        }
-
-        if sent_count == 0 {
-            match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
-                .bind(&auth_info.org_id)
-                .fetch_one(&state.pool)
-                .await
-            {
-                Ok(c) => c,
-                Err(e) => {
-                    tracing::error!("Failed to fetch abandoned carts count for campaign fallback: {}", e);
-                    0
-                }
-            }
-        } else {
-            sent_count
         }
     } else if req.target_segment == "recent_buyers_no_review" {
         // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
@@ -1898,22 +1752,22 @@ async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING referral_code")
+    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
         .bind(&req.id)
-        .fetch_one(&state.pool)
+        .execute(&state.pool)
         .await
     {
-        Ok(row) => {
-            use sqlx::Row;
-            let ref_code: String = row.get("referral_code");
-            state.hub.referral_tracker().record_click(&ref_code);
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
+            state.hub.referral_tracker().record_click(&req.id);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg);
 
             Ok(Json(()))
         }
-        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1951,23 +1805,21 @@ async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING referral_code, user_id")
+    match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
         .bind(&req.id)
-        .fetch_one(&state.pool)
+        .execute(&state.pool)
         .await
     {
-        Ok(row) => {
-            use sqlx::Row;
-            let ref_code: String = row.get("referral_code");
-            let user_id: String = row.get("user_id");
-            state.hub.referral_tracker().record_conversion(&ref_code);
-            state.hub.referral_tracker().record_referral(&ref_code, Some(&user_id));
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
+            state.hub.referral_tracker().record_conversion(&req.id);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
         }
-        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1991,7 +1843,6 @@ async fn handle_referral_generate(
         .await
     {
         Ok(_) => {
-            state.hub.referral_tracker().seed_referral_mapping(&ref_code, &auth_info.agent_id);
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {
@@ -2302,22 +2153,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_zero_click_generate() {
-        let pool = setup_db().await;
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = super::ZeroClickGenerateRequest { prompt: "Business Name: Maya's Cakes".to_string() };
-        let res = super::handle_zero_click_builder_generate(Extension(state.clone()), Json(req)).await.unwrap();
-
-        let data = res.0;
-        assert_eq!(data.name, "Maya's Cakes");
-        assert!(data.products_count > 0);
-        assert_eq!(data.url, "https://maya-s-cakes.ohc.store");
-    }
-
-    #[tokio::test]
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -2360,7 +2195,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1::text, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 
@@ -2373,13 +2208,13 @@ mod tests {
         let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         assert!(res.0.success);
 
-        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id::text = $1::text")
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
+        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
@@ -2779,81 +2614,4 @@ pub async fn handle_embed_widget(
         bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WrappedStats {
-    pub total_sales: String,
-    pub total_orders: i64,
-    pub new_customers: i64,
-    pub top_product: String,
-    pub ai_hours_saved: i64,
-}
-
-#[derive(Debug, Serialize)]
-pub struct WrappedResponse {
-    pub year: i32,
-    pub title: String,
-    pub subtitle: String,
-    pub stats: WrappedStats,
-    #[serde(rename = "shareText")]
-    pub share_text: String,
-}
-
-async fn handle_wrapped(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<Json<WrappedResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    // Calculate real data from DB
-    let pool = state.pool.clone();
-
-    // total orders
-    let total_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
-        .await
-        .unwrap_or_default()
-        .unwrap_or(0);
-
-    // new customers
-    let new_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM customers WHERE tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
-        .await
-        .unwrap_or_default()
-        .unwrap_or(0);
-
-    // AI hours saved (similar to time_savings endpoint logic)
-    let auto_replies: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM chat_messages WHERE tenant_id = $1 AND role = 'assistant'")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
-        .await
-        .unwrap_or_default()
-        .unwrap_or(0);
-
-    let hours_saved = auto_replies / 4; // Arbitrary metric for now
-
-    let year = chrono::Utc::now().date_naive().year();
-
-    let res = WrappedResponse {
-        year,
-        title: "Your Year in Review 🎉".to_string(),
-        subtitle: "You crushed it this year! See your impact and share with your community.".to_string(),
-        stats: WrappedStats {
-            total_sales: "$14,250".to_string(), // In a real app we'd aggregate order totals
-            total_orders: total_orders,
-            new_customers: new_customers,
-            top_product: "Custom Service".to_string(),
-            ai_hours_saved: hours_saved,
-        },
-        share_text: format!("I just reviewed my {} business stats on OHC and I'm blown away! Start growing your business on OHC:", year),
-    };
-
-    Ok(Json(res))
 }

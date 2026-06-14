@@ -227,7 +227,7 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
-            _ => Err(Status::not_found(format!("tool {} not found", req.tool_id)))
+            _ => Err(Status::not_found(format!("tool {} not implemented", req.tool_id)))
         }
     }
 

@@ -30,7 +30,7 @@ impl PlannerAgent {
 
         let req = ChatRequest {
             model: self.model.clone(),
-            system: ::server_pricing::compression::reduce_tokens(system_prompt),
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(topic)],
             tools: vec![],
             max_tokens: 2000,
@@ -80,7 +80,7 @@ impl ExecutionAgent {
 
         let req = ChatRequest {
             model: self.model.clone(),
-            system: ::server_pricing::compression::reduce_tokens(system_prompt),
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(&user_prompt)],
             tools: vec![],
             max_tokens: 4000,

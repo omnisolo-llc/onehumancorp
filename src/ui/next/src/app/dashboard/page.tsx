@@ -16,7 +16,6 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
-import { WrappedWidget } from "./WrappedWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -500,7 +499,6 @@ export default function Dashboard() {
         </div>
 
         <div className="order-last md:order-first">
-          <WrappedWidget />
           <SuccessMilestoneAlert />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
@@ -602,16 +600,16 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[8px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-[12px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm">
-                ✨
+              <div className="w-11 h-11 rounded-[8px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
+                <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Open WorkBuddy Assistant</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Your AI workspace for managing tasks, messages, scheduling, and operations.</p>
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Assistant Tasks</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
-              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+              <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
               </div>
             </div>
@@ -700,7 +698,7 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
-              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/unified-feed`.</p>
+              <p className="app-list-subtitle">Live performance, orders, and inbox activity.</p>
             </div>
             <Link href="/business-analytics" className="app-button min-h-[44px]">Business Analytics</Link>
           </div>
