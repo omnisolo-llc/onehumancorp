@@ -29,4 +29,3 @@ pub mod tasks_db;
 pub mod tasks_db_test;
 pub mod router;
 pub mod minimax_swarm;
-pub mod unified_orchestrator;

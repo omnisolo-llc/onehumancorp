@@ -41,7 +41,6 @@ message Quote {
   int64 total_amount = 4;
   int64 required_deposit = 5;
   int64 expires_at_unix = 6;
-  string checkout_url = 7;
 }
 
 message Invoice {
@@ -307,15 +306,12 @@ message SyncOfflineTransactionsResponse {
 message StartTerminalSessionRequest {
   string tenant_id = 1;
   string device_id = 2;
-  optional string product_id = 3;
-  optional int32 quantity = 4;
 }
 
 message StartTerminalSessionResponse {
   string session_id = 1;
   bool success = 2;
   string error_message = 3;
-  optional string lock_id = 4;
 }
 
 message UpdateTerminalSessionStatusRequest {

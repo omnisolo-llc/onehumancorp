@@ -6,7 +6,6 @@ use tokio::sync::RwLock;
 
 pub mod runner;
 pub mod bash;
-pub mod python;
 pub mod read;
 pub mod write;
 pub mod edit;
@@ -20,7 +19,6 @@ pub mod toolsearch;
 pub mod task;
 pub mod booking;
 pub mod agent_tool;
-pub mod superpowers_tool;
 pub mod sleep;
 pub mod marketing;
 pub mod finance;
@@ -119,7 +117,6 @@ pub fn all_tools(
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
-        python::python_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
@@ -146,7 +143,6 @@ pub fn all_tools(
         task::task_update_tool(task_store.clone()),
         agent_tool::agent_stop_tool(),
         agent_tool::agent_status_tool(),
-        superpowers_tool::superpowers_skill_tool(),
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
@@ -164,7 +160,6 @@ pub fn all_tools(
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
-        quote::draft_estimate_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
     ];
 

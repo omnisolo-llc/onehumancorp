@@ -66,8 +66,8 @@ export default function AiUsagePaywallPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter">
-        <p className="text-gray-500 font-medium">Loading AI Usage...</p>
+      <div className="app-panel">
+        <div className="app-empty">Loading AI usage...</div>
       </div>
     );
   }
@@ -84,90 +84,91 @@ export default function AiUsagePaywallPage() {
   const isLimitReached = departments.some(d => d.soft_limit_reached) || (totalLimit > 0 && totalUsed >= totalLimit);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-inter p-6 flex flex-col items-center">
-      <div className="w-full max-w-2xl mt-12 mb-8 text-center">
-        <div className="inline-flex items-center justify-center p-3 bg-blue-100 text-blue-600 rounded-full mb-6 shadow-sm">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-        </div>
-        <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">AI Agent Usage</h1>
-        <p className="text-gray-500 text-lg">Monitor your AI automation and unlock unlimited capabilities.</p>
-      </div>
-
-      <div className="w-full max-w-2xl p-8 rounded-[24px] bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-xl mb-8 relative overflow-hidden">
-        {/* Glow effect */}
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-400/20 rounded-full blur-[80px] pointer-events-none"></div>
-
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 relative z-10">
+    <div className="app-grid">
+      <section className="app-panel">
+        <div className="app-panel-header">
           <div>
-            <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">{currentPlan} Plan</span>
-            <h2 className="text-4xl font-black text-gray-900 font-outfit mt-1">
-              {totalUsed} <span className="text-xl text-gray-500 font-medium">/ {totalLimit > 0 ? totalLimit : 'Unlimited'} actions</span>
-            </h2>
+            <div className="app-panel-title">Plan Usage</div>
+            <div className="app-list-subtitle">Monitor AI actions across active departments.</div>
           </div>
-          <div className="w-full md:w-1/2">
-             <div className="flex justify-between text-sm font-medium mb-2">
-                <span className="text-gray-600">Capacity</span>
-                <span className={isLimitReached ? "text-red-600" : "text-gray-900"}>{overallPercent}%</span>
-             </div>
-             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                <div
-                  className={`h-full rounded-full transition-all duration-1000 ${isLimitReached ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
-                  style={{ width: `${overallPercent}%` }}
-                ></div>
-             </div>
-          </div>
+          <span className={`app-badge ${isLimitReached ? 'bad' : 'good'}`}>{currentPlan} Plan</span>
         </div>
+        <div className="app-panel-body">
+          <div className="app-grid two">
+            <div className="app-card p-4">
+              <div className="app-metric-label">Actions Used</div>
+              <div className="app-metric-value">
+                {totalUsed}
+                <span className="ml-2 text-base font-semibold text-gray-500">/ {totalLimit > 0 ? totalLimit : 'Unlimited'}</span>
+              </div>
+              <div className="app-metric-note">Current billing period</div>
+            </div>
 
-        {departments.length > 0 && (
-          <div className="space-y-4 mb-8 border-t border-gray-100 pt-6 relative z-10">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Breakdown by Department</h3>
-            {departments.map((dept) => (
-              <div key={dept.id} className="flex justify-between items-center p-4 bg-white/80 rounded-xl shadow-sm border border-gray-50">
-                <div className="flex items-center gap-3">
-                   <div className={`w-2 h-2 rounded-full ${dept.soft_limit_reached ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                   <div>
-                     <p className="font-semibold text-gray-900 capitalize">{dept.department_type}</p>
-                     <p className="text-xs text-gray-500">{dept.agent_id.replace(/_/g, ' ')}</p>
-                   </div>
+            <div className="app-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="app-metric-label">Capacity</div>
+                  <div className={`mt-2 text-xl font-bold ${isLimitReached ? 'text-red-700' : 'text-gray-900'}`}>{overallPercent}%</div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">{dept.actions_used} <span className="text-gray-400 font-normal">/ {dept.action_limit || '∞'}</span></p>
-                  {dept.soft_limit_reached && <p className="text-xs text-red-500 font-medium mt-1">Limit reached</p>}
+                <div className="w-2/3">
+                  <div className="h-2 w-full overflow-hidden rounded-md bg-gray-100">
+                    <div
+                      className={`h-full rounded-md transition-all duration-700 ${isLimitReached ? 'bg-red-500' : 'bg-[#0f766e]'}`}
+                      style={{ width: `${overallPercent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            ))}
+              <div className="app-metric-note">Limits apply only to capped departments.</div>
+            </div>
           </div>
-        )}
+        </div>
+      </section>
 
-        <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-          <button
-            onClick={handleUpgrade}
-            className="flex-1 py-4 px-6 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-colors shadow-lg hover:shadow-xl active:scale-[0.98] flex justify-center items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+      <section className="app-panel">
+        <div className="app-panel-header">
+          <div>
+            <div className="app-panel-title">Department Breakdown</div>
+            <div className="app-list-subtitle">Usage by department and assigned agent.</div>
+          </div>
+        </div>
+        <div className="app-list">
+          {departments.length === 0 ? (
+            <div className="app-empty">No department usage recorded for this period.</div>
+          ) : departments.map((dept) => (
+            <div key={dept.id} className="app-list-item">
+              <div>
+                <div className="app-list-title capitalize">{dept.department_type}</div>
+                <div className="app-list-subtitle">{dept.agent_id.replace(/_/g, ' ')}</div>
+              </div>
+              <div className="text-right">
+                <div className="app-list-title">{dept.actions_used} / {dept.action_limit || 'Unlimited'}</div>
+                {dept.soft_limit_reached && <div className="app-list-subtitle text-red-600">Limit reached</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="app-panel">
+        <div className="app-panel-header">
+          <div>
+            <div className="app-panel-title">Plan Actions</div>
+            <div className="app-list-subtitle">Upgrade capacity or share your referral link.</div>
+          </div>
+        </div>
+        <div className="app-panel-body flex flex-col gap-3 sm:flex-row">
+          <button onClick={handleUpgrade} className="app-button primary" type="button">
             Upgrade to Pro
           </button>
-          <button
-            onClick={handleShareOnX}
-            className="flex-1 py-4 px-6 bg-[#1DA1F2]/10 text-[#1DA1F2] rounded-xl font-bold hover:bg-[#1DA1F2]/20 transition-colors border border-[#1DA1F2]/20 active:scale-[0.98] flex justify-center items-center gap-2 group"
-          >
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+          <button onClick={handleShareOnX} className="app-button" type="button">
             Share to get 10 free tasks
           </button>
+          <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${refLink}`} target="_blank" rel="noopener noreferrer" className="app-button">
+            Referral Link
+          </a>
         </div>
-      </div>
-
-      <div className="mt-4 text-center">
-        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${refLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
-          ⚡ Powered by OHC
-        </a>
-      </div>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;900&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}} />
+      </section>
     </div>
   );
 }

@@ -194,41 +194,41 @@ body {
 }
 
 .app-card {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
   .app-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
 .app-panel {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {
   .app-panel {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -580,39 +580,74 @@ body {
 }
 
 .glassmorphism {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
 }
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
+    border-radius: 8px;
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
   }
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
 }
 
 @media (prefers-color-scheme: dark) {
   .glass-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
+}
+
+.app-shell .app-card,
+.app-shell .app-panel,
+.app-shell .glassmorphism,
+.app-shell .glass-card,
+.app-shell [class*="rounded-[12px]"],
+.app-shell [class*="rounded-[16px]"],
+.app-shell [class*="rounded-[24px]"],
+.app-shell [class*="rounded-xl"],
+.app-shell [class*="rounded-2xl"] {
+  border-radius: 8px !important;
+}
+
+.app-shell [class*="bg-gradient"] {
+  background-image: none !important;
+}
+
+.app-shell [class*="shadow-lg"],
+.app-shell [class*="shadow-xl"],
+.app-shell [class*="shadow-2xl"] {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.app-shell [class*="blur-["] {
+  display: none !important;
+}
+
+.app-shell .app-main > [class*="min-h-screen"],
+.app-shell .app-main [class*="min-h-screen"] {
+  min-height: 0 !important;
+}
+
+.app-shell .app-main [class*="bg-gray-50"] {
+  background-color: transparent !important;
 }
 
 input[type="text"],
@@ -653,5 +688,324 @@ button {
     -webkit-backdrop-filter: blur(30px) saturate(210%);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Onboarding setup surface.
+   This route uses many Tailwind utility strings, but the deployed CSS can miss
+   some of them. Keep the critical layout and controls explicit and scoped. */
+.setup-page {
+  min-height: calc(100vh - 132px);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  color: #18212f;
+}
+
+.setup-page #setup-screen {
+  width: min(100%, 980px);
+  min-height: min(640px, calc(100vh - 164px));
+  max-height: calc(100vh - 164px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+}
+
+.setup-page #setup-screen > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 28px 18px;
+  text-align: center;
+  border-bottom: 1px solid #e6ebf1;
+}
+
+.setup-page #setup-screen .setup-header-main {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) auto minmax(92px, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.setup-page #setup-screen .setup-header-main > div {
+  text-align: center;
+}
+
+.setup-page #setup-screen .setup-nav-button {
+  width: fit-content;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #d8e0ea;
+  border-radius: 999px;
+  background: #f7f9fb !important;
+  color: #526070;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.setup-page #setup-screen .setup-nav-button:last-child {
+  justify-self: end;
+}
+
+.setup-page #setup-screen .setup-nav-button:hover {
+  border-color: #b7c3d1;
+  color: #18212f;
+}
+
+.setup-page #setup-screen .setup-nav-spacer {
+  width: 92px;
+  height: 32px;
+}
+
+.setup-page #setup-screen > div:first-child h1 {
+  margin: 0;
+  color: #18212f;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 760;
+}
+
+.setup-page #setup-screen > div:first-child p {
+  margin: 6px 0 0;
+  color: #6b7788;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.setup-page #setup-screen > div:nth-child(2) {
+  height: 6px;
+  width: 100%;
+  background: #e6ebf1;
+  overflow: hidden;
+}
+
+.setup-page #setup-screen > div:nth-child(2) > div {
+  height: 100%;
+  background: #1f6feb;
+  box-shadow: none;
+}
+
+.setup-page #setup-screen > div:nth-child(3) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 34px 42px;
+}
+
+.setup-page #setup-screen .animate-fade-in {
+  width: min(100%, 640px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.setup-page #setup-screen .w-16.h-16,
+.setup-page #setup-screen .w-20.h-20,
+.setup-page #setup-screen .w-24.h-24 {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  margin: 0 0 8px;
+  border: 1px solid #cfe0ff;
+  border-radius: 8px;
+  background: #eef5ff;
+  color: #1f6feb;
+}
+
+.setup-page #setup-screen .w-8.h-8,
+.setup-page #setup-screen .w-10.h-10 {
+  width: 28px;
+  height: 28px;
+}
+
+.setup-page #setup-screen h2 {
+  margin: 0;
+  max-width: 680px;
+  color: #18212f;
+  font-size: 30px;
+  line-height: 1.12;
+  font-weight: 760;
+  text-align: left;
+}
+
+.setup-page #setup-screen p {
+  color: #526070;
+  line-height: 1.55;
+}
+
+.setup-page #setup-screen h2 + p,
+.setup-page #setup-screen .flex.items-start p,
+.setup-page #setup-screen .flex.items-center p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.setup-page #setup-screen button,
+.setup-page #setup-screen a {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.setup-page #setup-screen button {
+  min-height: 44px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.setup-page #setup-screen button[class*="bg-[#0066FF]"] {
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px solid #165fd8;
+  background: #1f6feb !important;
+  color: #ffffff !important;
+  font-weight: 760;
+  box-shadow: 0 8px 20px rgba(31, 111, 235, 0.18);
+}
+
+.setup-page #setup-screen button[class*="bg-[#0066FF]"]:hover {
+  background: #165fd8 !important;
+}
+
+.setup-page #setup-screen button[class*="bg-[#0066FF]"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.setup-page #setup-screen button[class*="glassmorphism"][class*="border-[#0066FF]"] {
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px solid #b7cae8;
+  background: #f7faff !important;
+  color: #1f5fbf !important;
+  font-weight: 760;
+  box-shadow: none;
+}
+
+.setup-page #setup-screen button[class*="text-[#0066FF]"],
+.setup-page #setup-screen button.self-start {
+  width: auto;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  color: #1f5fbf !important;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.setup-page #setup-screen input,
+.setup-page #setup-screen textarea,
+.setup-page #setup-screen select {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #18212f;
+  font: inherit;
+  box-shadow: none;
+  outline: none;
+}
+
+.setup-page #setup-screen textarea {
+  min-height: 128px;
+  resize: vertical;
+}
+
+.setup-page #setup-screen input:focus,
+.setup-page #setup-screen textarea:focus,
+.setup-page #setup-screen select:focus {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.14);
+}
+
+.setup-page #setup-screen label {
+  color: #526070;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.setup-page #setup-screen [class*="grid"][class*="cols-2"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[8px]"] {
+  padding: 12px;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.setup-page #setup-screen [class*="cursor-pointer"][class*="bg-[#0066FF]"] {
+  border-color: #1f6feb;
+  background: #eef5ff !important;
+  color: #1f5fbf !important;
+}
+
+@media (max-width: 720px) {
+  .setup-page {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .setup-page #setup-screen {
+    width: 100%;
+    min-height: 100vh;
+    max-height: none;
+    border-width: 0;
+    border-radius: 0;
+  }
+
+  .setup-page #setup-screen > div:first-child {
+    padding: 18px 18px 14px;
+  }
+
+  .setup-page #setup-screen .setup-header-main {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .setup-page #setup-screen .setup-header-main > div {
+    text-align: left;
+  }
+
+  .setup-page #setup-screen .setup-nav-button {
+    padding: 6px 8px;
+  }
+
+  .setup-page #setup-screen .setup-nav-spacer {
+    display: none;
+  }
+
+  .setup-page #setup-screen > div:nth-child(3) {
+    padding: 24px 18px 28px;
+  }
+
+  .setup-page #setup-screen h2 {
+    font-size: 26px;
+  }
+
+  .setup-page #setup-screen [class*="grid"][class*="cols-2"] {
+    grid-template-columns: 1fr;
   }
 }

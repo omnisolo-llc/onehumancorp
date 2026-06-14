@@ -1789,12 +1789,3 @@ message SemanticRoutingResponse {
   string target_department = 2;
   float confidence_score = 3;
 }
-
-message SyncEvent {
-  string id = 1;
-  string tenant_id = 2;
-  string batch_id = 3;
-  string action_type = 4;
-  string payload = 5;
-  int64 synced_at = 6;
-}

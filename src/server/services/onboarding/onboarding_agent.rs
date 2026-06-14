@@ -171,26 +171,9 @@ Your response:",
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
-                let mut mock_name = "Mock Business".to_string();
-                let mut mock_type = "Mock Type".to_string();
-
-                for line in input.lines() {
-                    if line.starts_with("Business Name: ") {
-                        mock_name = line.trim_start_matches("Business Name: ").trim().to_string();
-                    } else if line.starts_with("What we sell: ") {
-                        let desc = line.trim_start_matches("What we sell: ").trim();
-                        if desc.chars().count() > 30 {
-                            let truncated: String = desc.chars().take(27).collect();
-                            mock_type = format!("{}...", truncated);
-                        } else {
-                            mock_type = desc.to_string();
-                        }
-                    }
-                }
-
                 return Ok(IntakeData {
-                    business_name: mock_name,
-                    business_type: mock_type,
+                    business_name: "Mock Business".to_string(),
+                    business_type: "Mock Type".to_string(),
                     categories: vec!["physical".to_string()],
                     initial_products: vec![
                         IntakeProduct {
@@ -724,17 +707,7 @@ Your response:",
                 ("Consultation", "1-hour professional consultation", 10000, "booking"),
                 ("Service Call", "On-site service visit", 7500, "booking"),
             ],
-            "Food Cart" | "Food Truck" => vec![
-                ("Daily Special", "Our featured dish of the day", 1200, "physical"),
-                ("Signature Beverage", "Refreshing house-made drink", 450, "physical"),
-                ("Side Dish", "The perfect accompaniment to any meal", 350, "physical"),
-            ],
-            "Agency" | "Studio" => vec![
-                ("Project Deposit", "Initial payment to start your project", 50000, "physical"),
-                ("Consultation Phase", "Deep dive into your project requirements", 15000, "booking"),
-                ("Retainer Month", "Ongoing support and development", 200000, "subscriptions"),
-            ],
-            "Plumbing" => vec![
+                        "Plumbing" => vec![
                 ("Premium Plumbing Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Plumbing Service", "Essential services to get you started", 9999, "booking"),
                 ("Plumbing Consultation", "Expert advice and planning", 4999, "booking"),
@@ -1356,6 +1329,13 @@ Your response:",
                 ("Distillery Consultation", "Expert advice and planning", 4999, "booking"),
                 ("Distillery Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Distillery Starter Kit", "Everything you need in one bundle", 12000, "physical"),
+            ],
+            "Food Truck" => vec![
+                ("Premium Food Truck Package", "Comprehensive service for your needs", 19999, "booking"),
+                ("Basic Food Truck Service", "Essential services to get you started", 9999, "booking"),
+                ("Food Truck Consultation", "Expert advice and planning", 4999, "booking"),
+                ("Food Truck Assessment", "Initial evaluation and report", 7500, "booking"),
+                ("Food Truck Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
             "Pop-up Restaurant" => vec![
                 ("Premium Pop-up Restaurant Package", "Comprehensive service for your needs", 19999, "booking"),
@@ -2812,8 +2792,6 @@ pub fn onboarding_feature_state(
 ) -> serde_json::Value {
     let has_services = business_type == "Service Business"
         || business_type == "Service"
-        || business_type == "Agency"
-        || business_type == "Studio"
         || req.selling_categories.iter().any(|category| category == "services");
     let has_products = req
         .selling_categories
@@ -2822,8 +2800,6 @@ pub fn onboarding_feature_state(
         || !req.first_product_name.trim().is_empty();
     let has_food = business_type == "Restaurant / Food"
         || business_type == "Food Cart"
-        || business_type == "Bakery"
-        || business_type == "Home Baker"
         || req.selling_categories.iter().any(|category| category == "food");
 
     let mut flags = serde_json::Map::new();
@@ -3270,21 +3246,5 @@ mod tests {
             .bind(org_id2)
             .fetch_all(&db.pool).await.unwrap();
         assert!(products2.iter().any(|p| p.get::<String, _>("name") == "Standard Repair Visit"));
-
-        // Test Food Cart
-        let org_id3 = "test-org-foodcart";
-        agent.generate_initial_products(org_id3, "Food Cart").await.unwrap();
-        let products3 = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
-            .bind(org_id3)
-            .fetch_all(&db.pool).await.unwrap();
-        assert!(products3.iter().any(|p| p.get::<String, _>("name") == "Daily Special"));
-
-        // Test Agency
-        let org_id4 = "test-org-agency";
-        agent.generate_initial_products(org_id4, "Agency").await.unwrap();
-        let products4 = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
-            .bind(org_id4)
-            .fetch_all(&db.pool).await.unwrap();
-        assert!(products4.iter().any(|p| p.get::<String, _>("name") == "Project Deposit"));
     }
 }

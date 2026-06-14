@@ -26,12 +26,7 @@ impl RepoMap {
         Ok(result)
     }
 
-    fn walk_dir(
-        &self,
-        dir: &Path,
-        prefix: &str,
-        output: &mut String,
-    ) -> Result<(), std::io::Error> {
+    fn walk_dir(&self, dir: &Path, prefix: &str, output: &mut String) -> Result<(), std::io::Error> {
         if !dir.is_dir() {
             return Ok(());
         }

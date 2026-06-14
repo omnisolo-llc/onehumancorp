@@ -5558,7 +5558,6 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
- "libsqlite3-sys",
  "ohc_builtin_agent",
  "once_cell",
  "opentelemetry",

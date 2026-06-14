@@ -515,7 +515,7 @@ mod tests {
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -665,7 +665,7 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://127.0.0.1:1/dummy")
+            .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
         let sip_db = SipDB::new(pool, "test_org".to_string());
@@ -770,7 +770,7 @@ mod tests {
         let dummy_pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://127.0.0.1:1/dummy")
+            .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
         let sip_db_dummy = SipDB::new(dummy_pool, "test_org".to_string());

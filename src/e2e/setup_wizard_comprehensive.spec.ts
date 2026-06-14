@@ -98,6 +98,6 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/onboarding');
     const poweredLink = page.getByRole('link', { name: /Powered by OHC/i });
     await expect(poweredLink).toBeVisible();
-    await expect(poweredLink).toHaveAttribute('href', '/api/v1/growth/referrals/click?target=/onboarding&ref=website-builder');
+    await expect(poweredLink).toHaveAttribute('href', '/onboarding?ref=website-builder');
   });
 });

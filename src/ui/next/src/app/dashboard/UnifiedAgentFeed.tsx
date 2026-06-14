@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
-import { WorkTriageFeed } from "../components/WorkTriageFeed";
 
 type TriageItem = {
   id: string;
@@ -334,7 +333,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       };
 
       ws.onerror = (err) => {
-        if (process.env.NODE_ENV !== "test") { console.error("Websocket error:", err); }
+        console.error("Websocket error:", err);
       };
     };
 
@@ -478,11 +477,139 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <WorkTriageFeed items={triageItems} loading={triageLoading} error={triageError} onDecision={handleTriageDecision} />
+            {triageError && (
+              <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
+                {triageError}
+              </div>
+            )}
+
+            {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                      <span className="text-2xl">✨</span> Needs Attention Today
+                    </h2>
+                    <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "High"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve & Execute
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {item.source || "Triage Action"}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
+                  <span className="text-xs text-gray-500 font-inter">Just now</span>
+                </div>
+                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
+                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
+                </h3>
+              </div>
+            </div>
+
+            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
+                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
+                </div>
+                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
+                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
+                </h3>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                <button
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                >
+                  Approve
+                </button>
+                <button
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
+                >
+                  Edit
+                </button>
+                <button
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
+                >
+                  Deny
+                </button>
+              </div>
+            </div>
+
+            {(loading || triageLoading) && (
+              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
+                Loading Agent Proposals...
+              </div>
+            )}
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] shadow-sm bg-white/40 dark:bg-black/40 backdrop-blur-md opacity-90 text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up, Maya!</h3>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
@@ -532,19 +659,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="instagram-dm-card">
-                          <div className="flex items-center gap-2 text-[#0066FF] dark:text-[#0071E3] font-semibold text-sm">
+                          <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
-                            Omnichannel Intake
+                            Instagram DM
                           </div>
-                          <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] font-medium p-3 bg-[rgba(0,0,0,0.05)] dark:bg-[rgba(255,255,255,0.05)] rounded-md border border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)] break-words">
-                            "{(approval.proposed_action || approval.context_payload).customer_message}"
+                          <div className="text-xs text-gray-500 font-medium">
+                            Customer: {(approval.proposed_action || approval.context_payload).customer_message}
                           </div>
-                          <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] italic bg-[#0066FF]/10 dark:bg-[#0071E3]/20 border border-[#0066FF]/20 dark:border-[#0071E3]/30 p-3 rounded-md break-words relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-[#0066FF] dark:bg-[#0071E3]"></div>
-                            <span className="font-semibold text-[#0066FF] dark:text-[#0071E3] block mb-1">Draft Reply:</span>
-                            {(approval.proposed_action || approval.context_payload).draft_reply}
+                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
+                            Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
                           </div>
                         </div>
                       )}
@@ -571,7 +696,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="draft-quote-card">
+                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -689,36 +814,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">{(approval.proposed_action || approval.context_payload).generated_response}</span>
                           </div>
                         </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" ? (
-                    <div className="flex flex-col gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="approve-instagram-dm"
-                      >
-                        Approve & Send
-                      </button>
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => {}}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit Draft"
-                          data-testid="edit-instagram-dm"
-                        >
-                          Edit Draft
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Ask Agent to Adjust"
-                          data-testid="reject-instagram-dm"
-                        >
-                          Ask Agent to Adjust
-                        </button>
-                      </div>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400">Context:</span>
@@ -960,35 +1056,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" ? (
-                    <div className="flex flex-col gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="approve-instagram-dm"
-                      >
-                        Approve & Send
-                      </button>
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => {}}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit Draft"
-                          data-testid="edit-instagram-dm"
-                        >
-                          Edit Draft
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Ask Agent to Adjust"
-                          data-testid="reject-instagram-dm"
-                        >
-                          Ask Agent to Adjust
-                        </button>
-                      </div>
-                    </div>
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
                     <>
                       <button
@@ -1040,7 +1107,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         <button
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Dismiss proposal"
+                          aria-label="Reject proposal"
                           data-testid="reject-proposal"
                         >
                           Deny
@@ -1068,7 +1135,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 w-full max-w-full">
+            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
             {activities.map((activity) => (
               <div
                 key={activity.id}
@@ -1096,27 +1163,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       if (p?.original_payload?.proposed_content?.includes("System is paused")) {
                           return p.original_payload.proposed_content;
                       }
-                      if (p?.proposed_action?.proposed_content?.includes("System is paused")) {
-                          return p.proposed_action.proposed_content;
-                      }
-                      if (typeof p?.proposed_action === 'string' && p.proposed_action.includes("System is paused")) {
-                          return p.proposed_action;
-                      }
-                      if (p?.payload?.proposed_content?.includes("System is paused")) {
-                          return p.payload.proposed_content;
-                      }
-                      if (typeof p?.payload === 'string' && p.payload.includes("System is paused")) {
-                          try {
-                            const inner = JSON.parse(p.payload);
-                            if (inner?.proposed_content?.includes("System is paused")) {
-                                return inner.proposed_content;
-                            }
-                          } catch(e) {}
-                      }
-                      if (p?.proposed_content?.includes("System is paused")) {
-                          return p.proposed_content;
-                      }
-                      return p?.original_payload?.description || p?.context_payload?.description || 'Action completed';
+                      return p?.original_payload?.description || 'Action completed';
                     } catch (e) {
                       return 'Action completed';
                     }

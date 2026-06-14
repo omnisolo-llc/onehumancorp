@@ -234,8 +234,8 @@ mod tests {
             false, // is_read_only = false
             false, // is_high_risk = false
             &HumanInLoopSpectrum::Supervisory,
-            0.9,                                 // high confidence
-            0.5,                                 // low threshold
+            0.9, // high confidence
+            0.5, // low threshold
             &PermissionArchitecture::Permissive, // NOT Restrictive -> fallback to Autonomous OK
             &[],
             &[],
