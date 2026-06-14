@@ -633,6 +633,7 @@ export default function OnboardingWizard() {
 
                         autoCapitalize="words"
                         autoComplete="organization"
+                        enterKeyHint="next"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -764,6 +765,7 @@ export default function OnboardingWizard() {
                         autoFocus
 
                         autoCapitalize="words"
+                        enterKeyHint="next"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
@@ -830,6 +832,7 @@ export default function OnboardingWizard() {
                         autoFocus
 
                         autoCapitalize="words"
+                        enterKeyHint="next"
                         value={targetAudience}
                         onChange={(e) => setTargetAudience(e.target.value)}
                         onKeyDown={(e) => {
@@ -1077,6 +1080,7 @@ export default function OnboardingWizard() {
 
                         autoCapitalize="words"
                         autoComplete="name"
+                        enterKeyHint="next"
                         value={adminName}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1100,6 +1104,8 @@ export default function OnboardingWizard() {
                         autoCapitalize="none"
 
                         autoComplete="email"
+                        enterKeyHint="next"
+                        inputMode="email"
                         value={adminEmail}
                         onChange={(e) => {
                           const val = e.target.value;
