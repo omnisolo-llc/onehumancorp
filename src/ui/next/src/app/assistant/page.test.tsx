@@ -422,7 +422,7 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getByText('List mode')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
-  expect(screen.getByText('Prefer concise technical summaries with citations.')).toBeDefined();
+  await waitFor(() => expect(screen.getByText('Consolidated Memory')).toBeDefined());
   expect(screen.getByText('Import Memory')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Skills' }));

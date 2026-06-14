@@ -78,14 +78,23 @@ pub struct CentrifugeNode {
     transport: Arc<dyn MeshTransport>,
     publish_counter: Counter<u64>,
     receive_counter: Counter<u64>,
+    timeout: Option<std::time::Duration>,
 }
 
 impl CentrifugeNode {
     pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
+        Self::new_internal(transport, None)
+    }
+
+    pub fn new_with_timeout_val(transport: Arc<dyn MeshTransport>, timeout: std::time::Duration) -> Self {
+        Self::new_internal(transport, Some(timeout))
+    }
+
+    fn new_internal(transport: Arc<dyn MeshTransport>, timeout: Option<std::time::Duration>) -> Self {
         let meter = global::meter("ohc.orchestration.mesh");
         let publish_counter = meter.u64_counter("mesh.messages.published").build();
         let receive_counter = meter.u64_counter("mesh.messages.received").build();
-        Self { transport, publish_counter, receive_counter }
+        Self { transport, publish_counter, receive_counter, timeout }
     }
 }
 
@@ -117,7 +126,14 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        self.transport.acquire_lock(resource, owner, ttl_seconds).await
+        if let Some(t) = self.timeout {
+            match tokio::time::timeout(t, self.transport.acquire_lock(resource, owner, ttl_seconds)).await {
+                Ok(res) => res,
+                Err(_) => Err("Timeout acquiring lock".to_string()),
+            }
+        } else {
+            self.transport.acquire_lock(resource, owner, ttl_seconds).await
+        }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
