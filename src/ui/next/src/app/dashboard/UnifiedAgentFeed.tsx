@@ -698,7 +698,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
