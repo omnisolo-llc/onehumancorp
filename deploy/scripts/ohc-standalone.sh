@@ -108,6 +108,7 @@ fi
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes
 function cleanup {
+  sync
   echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
   # Terminate child processes gracefully
   kill -TERM $APP_PID $SERVER_PID $PRUNE_PID 2>/dev/null || true

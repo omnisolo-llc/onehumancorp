@@ -34,6 +34,6 @@ describe('/api/help/search GET', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data.length).toBe(1);
-    expect(data[0].id).toEqual("add-products");
+    expect(data[0].id).toEqual("my-store");
   });
 });
