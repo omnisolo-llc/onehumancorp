@@ -42,6 +42,7 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
+pub mod llm_judge;
 pub mod marketplace;
 pub mod marketplace_tool;
 pub mod expert_team_tool;
@@ -164,7 +165,13 @@ pub fn all_tools(
         quote::generate_quote_tool(),
         quote::draft_estimate_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
-    ];
+
+];
+
+    if let Some(llm) = llm.clone() {
+        tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
+    }
+
 
     if let Some(env) = native_env {
         tools.push(native_state::native_memory_stash_tool(env));
