@@ -41,6 +41,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+      ports:
+        - protocol: TCP
+          port: 8081
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
@@ -151,6 +158,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+      ports:
+        - protocol: TCP
+          port: 8081
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
@@ -219,6 +233,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+      ports:
+        - protocol: TCP
+          port: 8081
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
@@ -284,6 +305,13 @@ spec:
             matchLabels:
               app: spire-agent
   egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+      ports:
+        - protocol: TCP
+          port: 8081
     - to:
         - namespaceSelector:
             matchLabels:
