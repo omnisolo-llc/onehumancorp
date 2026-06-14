@@ -96,5 +96,6 @@ define_playwright_tests(
 sh_test(
     name = "verify_artifacts_test",
     srcs = ["verify_artifacts.sh"],
+    data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )
