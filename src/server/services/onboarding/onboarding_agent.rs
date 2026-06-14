@@ -707,7 +707,7 @@ Your response:",
                 ("Consultation", "1-hour professional consultation", 10000, "booking"),
                 ("Service Call", "On-site service visit", 7500, "booking"),
             ],
-            "Food Cart" | "Food Truck" => vec![
+            "Food Cart" => vec![
                 ("Daily Special", "Our featured dish of the day", 1200, "physical"),
                 ("Signature Beverage", "Refreshing house-made drink", 450, "physical"),
                 ("Side Dish", "The perfect accompaniment to any meal", 350, "physical"),

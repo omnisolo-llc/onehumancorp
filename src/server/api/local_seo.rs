@@ -254,24 +254,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect_google_business() {
-        unsafe {
-            std::env::set_var("GOOGLE_BUSINESS_CLIENT_ID", "client-123.apps.googleusercontent.com");
-            std::env::set_var("GOOGLE_BUSINESS_REDIRECT_URI", "https://ohc.example/oauth/google-business/callback");
-        }
-
-        let claims = mock_claims();
-        let Json(response) = connect_google_business(Extension(claims)).await;
-        let redirect_url = response["redirect_url"].as_str().unwrap();
-        assert_eq!(response["status"], "success");
-        assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
-        assert!(redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback"));
-        assert!(redirect_url.contains("state=tenant123"));
-        assert!(!redirect_url.contains("MOCK"));
-
-        unsafe {
-            std::env::remove_var("GOOGLE_BUSINESS_CLIENT_ID");
-            std::env::remove_var("GOOGLE_BUSINESS_REDIRECT_URI");
-        }
+        temp_env::async_with_vars([
+            ("GOOGLE_BUSINESS_CLIENT_ID", Some("client-123.apps.googleusercontent.com")),
+            ("GOOGLE_BUSINESS_REDIRECT_URI", Some("https://ohc.example/oauth/google-business/callback")),
+        ], async {
+            let claims = mock_claims();
+            let Json(response) = connect_google_business(Extension(claims)).await;
+            let redirect_url = response["redirect_url"].as_str().unwrap();
+            assert_eq!(response["status"], "success");
+            assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
+            assert!(redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback"));
+            assert!(redirect_url.contains("state=tenant123"));
+            assert!(!redirect_url.contains("MOCK"));
+        }).await;
     }
 
     #[tokio::test]

@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
-        unsafe { std::env::set_var("OHC_LLM_MODEL", "gpt-4o"); } // 5.00 per 1M tokens
+        temp_env::with_var("OHC_LLM_MODEL", Some("gpt-4o"), || { // 5.00 per 1M tokens
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 1_000_000);
 
@@ -209,6 +209,7 @@ mod tests {
         assert_eq!(response.unwrap().text, "Paris");
         // 1,000,000 tokens * 5.00 / 1M = 5.0 dollars = 500 cents
         assert_eq!(cost, 500);
+        });
     }
 
     #[test]

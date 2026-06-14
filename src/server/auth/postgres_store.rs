@@ -507,21 +507,16 @@ mod security_tests {
         // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
 
         // Cloud multitenant mode should NOT allow bypassing.
-        let old_val = std::env::var("OHC_MULTITENANT").ok();
-        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
-        let is_multitenant = is_multitenant_mode();
-        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+            let is_multitenant = is_multitenant_mode();
+            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
-        // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+            // Ensure the condition strictly evaluates to false when multitenant is true.
+            assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
-        let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err(), "Must reject system id");
-        if let Some(ref val) = old_val {
-            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
-        } else {
-            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
-        }
+            let res = repo.get_by_id("dummy_id", "system").await;
+            assert!(res.is_err(), "Must reject system id");
+        }).await;
     }
 
     #[tokio::test]
