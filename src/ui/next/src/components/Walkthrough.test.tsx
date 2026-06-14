@@ -4,6 +4,21 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { InteractiveWalkthrough } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+
+class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.ResizeObserver = ResizeObserver;
+
+class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.IntersectionObserver = IntersectionObserver;
+
 describe('Walkthrough Component', () => {
   let mockGetElementById: any;
 
