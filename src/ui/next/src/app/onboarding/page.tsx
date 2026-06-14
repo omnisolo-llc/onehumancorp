@@ -677,7 +677,7 @@ export default function OnboardingWizard() {
                     if (error) setError('');
                   }}
                   className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
-                  placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+                  placeholder="e.g. I run a local bakery"
                   rows={6}
                 />
                 <input

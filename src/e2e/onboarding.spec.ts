@@ -220,7 +220,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery");
     await bioInput.fill("Test business description.");
 
     const imageUrlInput = page.locator('#instant-image-url');
@@ -240,7 +240,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery");
     await bioInput.fill("Test business description without image.");
 
     const imageUrlInput = page.locator('#instant-image-url');
