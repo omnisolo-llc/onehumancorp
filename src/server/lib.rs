@@ -2844,6 +2844,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
         orchestrator: dept_orchestrator.clone(),
     };
+    let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .with_state(twilio_webhook_state);
+
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
@@ -5682,6 +5691,7 @@ async fn create_ui_bom_item_handler(
             sub_agents: std::collections::HashMap::new(),
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
+        .merge(twilio_webhook_router)
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)

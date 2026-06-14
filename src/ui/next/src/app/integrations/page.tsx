@@ -14,7 +14,7 @@ export default function Integrations() {
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
+    { id: "twilio", name: "Twilio WhatsApp", category: "social", status: "disconnected", icon: "💬", description: "Connect Twilio WhatsApp for Work Triage and Customer Assistant." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant." },
@@ -49,8 +49,8 @@ export default function Integrations() {
       return;
     }
     if (id === 'twilio') {
-      setShowTwilioModal(true);
-      setStatusMessage("Choose Twilio channels to finish connecting.");
+      setShowWhatsAppModal(true);
+      setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
       return;
     }
     if (id === 'whatsapp') {
@@ -85,7 +85,7 @@ export default function Integrations() {
       integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
     ));
     setShowTwilioModal(false);
-    setStatusMessage("Twilio Conversations connected.");
+    setStatusMessage("Twilio WhatsApp connected.");
     router.push('/inbox');
   };
 
@@ -148,9 +148,9 @@ export default function Integrations() {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio Conversations</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio WhatsApp</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Select the channels you want to route into your central inbox. You can update this later without losing message history.
+              Connect your WhatsApp business number via Twilio to route incoming messages into Work Triage.
             </p>
 
             <div className="space-y-4 mb-6">
