@@ -381,8 +381,10 @@ export default function OnboardingWizard() {
         setLocation(intakeData.location || "");
         setTargetAudience(intakeData.target_audience || "");
 
-        // Let the normal handleStartOnboarding function take over if admin details are missing
-        if (!adminEmail.trim() || !adminPassword.trim()) {
+        // Let the normal handleStartOnboarding function take over if admin details are missing or invalid
+        const isEmailValid = adminEmail.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
+        const isPasswordValid = adminPassword.trim() && adminPassword.length >= 8 && /\d/.test(adminPassword);
+        if (!isEmailValid || !isPasswordValid) {
           setStep(3); syncStateToBackend({ step: 3 });
           setIsLoading(false);
           return;
@@ -728,7 +730,9 @@ export default function OnboardingWizard() {
                         setFirstProductName(inferredProductName);
                         setFirstProductPrice(inferredProductPrice);
 
-                        if (!adminEmail.trim() || !adminPassword.trim()) {
+                        const isEmailValidFast = adminEmail.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
+                        const isPasswordValidFast = adminPassword.trim() && adminPassword.length >= 8 && /\d/.test(adminPassword);
+                        if (!isEmailValidFast || !isPasswordValidFast) {
                           setStep(3); syncStateToBackend({ step: 3 });
                           setIsLoading(false);
                           return;
