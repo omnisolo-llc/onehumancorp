@@ -53,7 +53,7 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
@@ -64,12 +64,12 @@ impl StripeClient {
                 let api_key = std::env::var("RAZORPAY_API_KEY").unwrap_or_default();
                 let api_secret = std::env::var("RAZORPAY_API_SECRET").unwrap_or_default();
                 let rzp_client = RazorpayClient::new(api_key, api_secret);
-                return rzp_client.create_checkout_preference(_price_id, customer_id).await;
+                return rzp_client.create_checkout_preference(price_id_or_name, customer_id).await;
             },
             PaymentMethod::MercadoPago => {
                 if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
                     let mp_client = MercadoPagoClient::new(token);
-                    return mp_client.create_checkout_preference(_price_id, customer_id).await;
+                    return mp_client.create_checkout_preference(price_id_or_name, customer_id).await;
                 } else {
                     return Err("Mercado Pago access token is required".to_string());
                 }
@@ -106,7 +106,8 @@ impl StripeClient {
             form.insert("mode".to_string(), "payment".to_string());
         }
         form.insert("line_items[0][price_data][currency]".to_string(), "usd".to_string());
-        form.insert("line_items[0][price_data][product_data][name]".to_string(), "Checkout".to_string());
+        let display_name = if price_id_or_name.trim().is_empty() { "Checkout".to_string() } else { price_id_or_name.to_string() };
+        form.insert("line_items[0][price_data][product_data][name]".to_string(), display_name);
         form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());
         form.insert("line_items[0][quantity]".to_string(), "1".to_string());
         form.insert("client_reference_id".to_string(), customer_id.to_string());

@@ -85,7 +85,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 
 #[derive(serde::Deserialize)]
 pub struct CreateCheckoutSessionRequest {
-    pub tier: String,
+    pub tier: Option<String>,
     pub is_subscription: Option<bool>,
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
@@ -111,12 +111,34 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let amount_usd = match req.tier.to_lowercase().as_str() {
-        "starter" => 29.0,
-        "pro" => 79.0,
-        "business" => 299.0,
-        _ => return Err(StatusCode::BAD_REQUEST),
-    };
+    let mut amount_usd = 0.0;
+    let mut item_name = "Checkout".to_string();
+
+    if let Some(tier) = &req.tier {
+        amount_usd = match tier.to_lowercase().as_str() {
+            "starter" => 29.0,
+            "pro" => 79.0,
+            "business" => 299.0,
+            _ => return Err(StatusCode::BAD_REQUEST),
+        };
+        item_name = tier.clone();
+    } else if let Some(product_id) = &req.product_id {
+        let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let row = sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(product_id)
+            .bind(&tenant_id)
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
+        use sqlx::Row;
+        let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
+        let title: String = row.try_get("title").unwrap_or_else(|_| "Product".to_string());
+        let quantity = req.quantity.unwrap_or(1);
+        amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
+        item_name = title;
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     let mut acquired_lock_id = "".to_string();
     if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
@@ -139,7 +161,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
@@ -154,7 +176,8 @@ pub async fn create_checkout_session_handler(
         }
     } else {
         // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        let fallback_tier = req.tier.clone().unwrap_or_else(|| "product".to_string());
+        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", fallback_tier, tenant_id) }))
     }
 }
 
@@ -622,13 +645,13 @@ mod department_tier_usage_tests {
     async fn test_create_checkout_session_inventory_lock() {
         // Just verify struct layout and compile.
         let req = CreateCheckoutSessionRequest {
-            tier: "starter".to_string(),
+            tier: Some("starter".to_string()),
             is_subscription: Some(false),
             product_id: Some("prod_123".to_string()),
             quantity: Some(1),
             ttl_seconds: Some(300),
         };
-        assert_eq!(req.tier, "starter");
+        assert_eq!(req.tier.unwrap(), "starter");
         assert_eq!(req.product_id.unwrap(), "prod_123");
     }
 
