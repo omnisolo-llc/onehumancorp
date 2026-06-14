@@ -58,7 +58,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -81,7 +81,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload, event_type FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -124,6 +124,57 @@ impl OperationsWorker {
         let processed = task.is_some();
         if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
+
+            if event_type == "SyncEvent:JobCompleted" {
+                let transaction_id = payload.get("payload").and_then(|v| v.get("transaction_id")).and_then(|v| v.as_str()).unwrap_or("unknown");
+                let product_id = payload.get("payload").and_then(|v| v.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                let title = format!("Offline Job Synced: Transaction {}", transaction_id);
+                let description = format!("Transaction {} for product {} was just synced from an offline device. Shall I draft the invoice/receipt for this offline job?", transaction_id, product_id);
+
+                let drafted_msg = format!("Your receipt for transaction {} regarding product {} is attached.", transaction_id, product_id);
+
+                let task_id = Uuid::new_v4().to_string();
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(&db.pool)
+                        .await;
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    }
+                }
+
+                let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&id)
+                    .execute(&db.pool)
+                    .await;
+
+                return Ok(true);
+            }
 
             if event_type == "InventoryConflictEvent" {
                 let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
