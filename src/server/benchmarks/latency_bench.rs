@@ -643,7 +643,7 @@ mod tests {
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -655,12 +655,12 @@ mod tests {
     async fn test_chaos_degradation_network() {
         let start = std::time::Instant::now();
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
-        let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
-            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(50), async {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             "data"
         }).await;
         assert!(result.is_err());
-        assert!(start.elapsed() < std::time::Duration::from_millis(2500));
+        assert!(start.elapsed() < std::time::Duration::from_millis(200));
     }
 
 
