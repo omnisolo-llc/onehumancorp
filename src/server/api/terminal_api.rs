@@ -70,8 +70,8 @@ pub async fn start_terminal_session_handler(
     let pool = crate::db::get_pool();
 
     let res = sqlx::query(
-        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, sync_status, pending_reconciliation)
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'SYNCED', '[]'::jsonb)
          ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
     )
     .bind(&session_id)
@@ -341,8 +341,8 @@ pub async fn sync_offline_transactions_handler(
     // Update pos_terminal_sessions
     let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let _ = sqlx::query(
-        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, sync_status, pending_reconciliation)
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, 'SYNCED', '[]'::jsonb)
          ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
     )
     .bind(&session_id)
@@ -585,8 +585,8 @@ pub async fn create_payment_intent_handler(
                 let pool = crate::db::get_pool();
                 let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
                 let _ = sqlx::query(
-                    "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-                     VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+                    "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, sync_status, pending_reconciliation)
+                     VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'SYNCED', '[]'::jsonb)
                      ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'"
                 )
                 .bind(uuid::Uuid::new_v4().to_string())

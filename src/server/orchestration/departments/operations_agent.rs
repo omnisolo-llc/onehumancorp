@@ -49,16 +49,29 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let mut action_payload = event.payload.clone();
+
         let action_description = match event.event_type.as_str() {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                format!("Draft a restock order for product {} due to low stock", product_id)
+                let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or(product_id);
+
+                if let Some(obj) = action_payload.as_object_mut() {
+                    obj.insert("feature_type".to_string(), serde_json::Value::String("low_stock_notification".to_string()));
+                }
+
+                if event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(1) <= 0 {
+                    format!("{} sold out. Would you like to draft a restock order?", product_name)
+                } else {
+                    format!("Draft a restock order for product {} due to low stock", product_name)
+                }
             },
             "InventoryConflictEvent" => {
-                // If it's the specific test/simulation message from offline_sync, we forward it exactly.
-                // Otherwise we would use an LLM here to evaluate if we should cancel or draft a restock,
-                // but since the framework expects a very specific Action Card payload, we use this matching payload.
+                if let Some(obj) = action_payload.as_object_mut() {
+                    obj.insert("feature_type".to_string(), serde_json::Value::String("inventory_conflict_resolution".to_string()));
+                }
+
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
@@ -95,7 +108,7 @@ impl Department for OperationsAgent {
             action_description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            action_payload,
         ).await?;
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {

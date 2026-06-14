@@ -305,9 +305,17 @@ impl InventoryService {
                 .await;
 
             if new_stock <= 5 {
+                let product_name: Option<String> = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+
                 let job_id = Uuid::new_v4().to_string();
                 let job_payload = serde_json::json!({
                     "product_id": product_id,
+                    "product_name": product_name.unwrap_or_else(|| product_id.to_string()),
                     "remaining_stock": new_stock,
                     "threshold": 5,
                     "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)

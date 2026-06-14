@@ -46,8 +46,8 @@ impl PosService for MyPosService {
 
         let session_id = req.session_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let _ = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, sync_status, pending_reconciliation)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, 'SYNCED', '[]'::jsonb)
              ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
         )
         .bind(&session_id)
@@ -178,8 +178,8 @@ impl PosService for MyPosService {
         let pool = crate::db::get_pool();
 
         let res = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, sync_status, pending_reconciliation)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'SYNCED', '[]'::jsonb)
              ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
         )
         .bind(&session_id)
