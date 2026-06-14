@@ -1228,10 +1228,10 @@ export default function OnboardingWizard() {
                   <IconLabel icon="sparkles">Open Assistant</IconLabel>
                 </a>
                 <a
-                  href="/builder"
+                  href="/website-builder"
                   className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  <IconLabel icon="eye">Preview Storefront</IconLabel>
+                  <IconLabel icon="eye">Storefront Builder</IconLabel>
                 </a>
               </div>
             </div>
