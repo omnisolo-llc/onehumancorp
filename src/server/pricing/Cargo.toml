@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+uuid = { version = "1", features = ["v4", "serde"] }
 server_harness = { path = "../harness" }
 opentelemetry = "0.27"
 serde = { workspace = true }
