@@ -492,13 +492,14 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6">
-          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+
+      <div className="flex flex-col w-full">
+        <div className="w-full mb-6">
           <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
         </div>
 
-        <div className="order-last md:order-first">
+        {/* Secondary information below the feed */}
+        <div className="w-full hidden md:block">
           <SuccessMilestoneAlert />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
@@ -508,6 +509,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />

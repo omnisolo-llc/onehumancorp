@@ -17,19 +17,35 @@ type TriageItem = {
   created_at: string;
 };
 
-type AgentFeedItem = {
+
+export type ActionCardContext = {
+  summary: string;
+  customer_message?: string;
+  description?: string;
+  [key: string]: any;
+};
+
+export type ActionCardProposal = {
+  title: string;
+  description: string;
+  action_type?: string;
+  [key: string]: any;
+};
+
+export type ActionCard = {
   id: string;
   tenant_id: string;
   event_source: string;
-  context_payload: any;
-  proposed_action: any;
+  context_payload: ActionCardContext;
+  proposed_action: ActionCardProposal;
   lifecycle_state: string;
   created_at: string;
   updated_at: string;
 };
 
+
 type ApprovalsResponse = {
-  pending_approvals: AgentFeedItem[];
+  pending_approvals: ActionCard[];
   next_cursor?: string | null;
 };
 
@@ -61,7 +77,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [triageLoading, setTriageLoading] = useState(true);
   const [triageError, setTriageError] = useState("");
 
-  const [items, setItems] = useState<AgentFeedItem[]>([]);
+  const [items, setItems] = useState<ActionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
@@ -276,7 +292,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           }
 
           // Depending on your message structure from agent-feed:
-          // The redis pub/sub payload is currently just the AgentFeedItem JSON.
+          // The redis pub/sub payload is currently just the ActionCard JSON.
           const item = data;
 
           if (!item?.id) return;

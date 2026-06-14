@@ -3,19 +3,35 @@
 import React, { useEffect, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 
-interface FeedItem {
+
+export type ActionCardContext = {
+  summary: string;
+  customer_message?: string;
+  description?: string;
+  [key: string]: any;
+};
+
+export type ActionCardProposal = {
+  title: string;
+  description: string;
+  action_type?: string;
+  [key: string]: any;
+};
+
+export type ActionCard = {
   id: string;
   tenant_id: string;
   event_source: string;
-  context_payload?: any;
-  proposed_action?: any;
+  context_payload?: ActionCardContext;
+  proposed_action?: ActionCardProposal;
   lifecycle_state: string;
   created_at: string;
   updated_at: string;
-}
+};
+
 
 export default function FeedPage() {
-  const [items, setItems] = useState<FeedItem[]>([]);
+  const [items, setItems] = useState<ActionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
