@@ -25,6 +25,9 @@ pub struct Quote {
     pub customer_id: Uuid,
     pub status: String,
     pub valid_until: Option<DateTime<Utc>>,
+    pub total_amount: Option<i64>,
+    pub required_deposit: Option<i64>,
+    pub checkout_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -173,18 +176,55 @@ async fn approve_quote(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
-    let quote = sqlx::query_as::<_, Quote>(
+    let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let quote_opt = sqlx::query_as::<_, Quote>(
         "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *"
     )
     .bind(id)
-    .fetch_optional(&pool)
+    .fetch_optional(&mut *tx)
     .await
-    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Failed to update quote status: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    // Integrate Stripe deposit logic here...
+    let quote = match quote_opt {
+        Some(q) => q,
+        None => return Err(axum::http::StatusCode::NOT_FOUND),
+    };
 
-    match quote {
-        Some(q) => Ok(Json(q)),
-        None => Err(axum::http::StatusCode::NOT_FOUND),
-    }
+    let amount_usd = (quote.total_amount.unwrap_or(0) as f64) / 100.0;
+
+    let stripe_api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_api_key);
+
+    let checkout_url = match stripe_client.create_checkout_session(
+        &format!("Quote {}", id),
+        &quote.customer_id.to_string(),
+        amount_usd,
+        false
+    ).await {
+        Ok(url) => url,
+        Err(e) => {
+            tracing::error!("Stripe integration failed: {}", e);
+            return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let updated_quote = sqlx::query_as::<_, Quote>(
+        "UPDATE quotes SET checkout_url = $1 WHERE id = $2 RETURNING *"
+    )
+    .bind(&checkout_url)
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to update quote with checkout url: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(updated_quote))
 }
