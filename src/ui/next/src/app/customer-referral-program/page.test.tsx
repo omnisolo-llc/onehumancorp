@@ -81,4 +81,51 @@ describe('CustomerReferralProgramPage', () => {
     });
     // Check navigation
   });
+
+  it('shows soft paywall when trying to remove branding without pro', async () => {
+    const localStorageMock = {
+      getItem: vi.fn().mockReturnValue('false'),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+    });
+
+    render(<CustomerReferralProgramPage />);
+    const toggle = screen.getByLabelText(/Remove "Powered by OHC" branding/i);
+
+    await act(async () => {
+        fireEvent.click(toggle);
+    });
+
+    expect(screen.getAllByText('Upgrade to Pro')[0]).toBeDefined();
+    expect(screen.getByText('Make the Customer Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeDefined();
+  });
+
+  it('allows removing branding when has pro', async () => {
+    const localStorageMock = {
+      getItem: vi.fn((key) => key === 'has_pro' ? 'true' : 'test-tenant'),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+    });
+
+    render(<CustomerReferralProgramPage />);
+    const toggle = screen.getByLabelText(/Remove "Powered by OHC" branding/i);
+
+    await act(async () => {
+        fireEvent.click(toggle);
+    });
+
+    expect(screen.queryByText('Make the Customer Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeNull();
+
+    const generateBtn = screen.getByText('Generate Widget Embed');
+    await act(async () => {
+        fireEvent.click(generateBtn);
+    });
+
+    const codePreview = screen.getByText(/branding=false/i);
+    expect(codePreview).toBeDefined();
+    expect(screen.queryByText(/⚡ Powered by OHC/)).toBeNull();
+  });
 });

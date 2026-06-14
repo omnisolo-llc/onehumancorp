@@ -11,16 +11,22 @@ export default function CustomerReferralProgram() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('maya-cakes');
+  const [hasPro, setHasPro] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|; )ohc_tenant=([^;]*)/);
     if (match) {
       setTenant(match[1]);
     }
+    if (typeof localStorage !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
   }, []);
 
   const handleGenerate = () => {
-    const code = `<iframe src="https://ohc.app/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${giveAmount}&get=${getAmount}" width="100%" height="400" frameborder="0" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);"></iframe>`;
+    const code = `<iframe src="https://ohc.app/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${giveAmount}&get=${getAmount}${removeBranding ? '&branding=false' : ''}" width="100%" height="400" frameborder="0" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);"></iframe>` + (!removeBranding ? `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>` : '');
     setEmbedCode(code);
     setShowModal(true);
     setCopied(false);
@@ -93,6 +99,26 @@ export default function CustomerReferralProgram() {
                 </div>
 
                 <div className="pt-4">
+                  <div className="flex items-center gap-3 py-2">
+                    <input
+                      type="checkbox"
+                      id="remove-branding"
+                      checked={removeBranding}
+                      onChange={(e) => {
+                        if (e.target.checked && !hasPro) {
+                          setShowSoftPaywall(true);
+                          setRemoveBranding(false);
+                        } else {
+                          setRemoveBranding(e.target.checked);
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <label htmlFor="remove-branding" className="text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer">
+                      Remove "Powered by OHC" branding {hasPro ? '' : '(Pro)'}
+                    </label>
+                  </div>
+
                   <button
                     onClick={handleGenerate}
                     className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
@@ -176,6 +202,33 @@ export default function CustomerReferralProgram() {
               <span className="text-xl">ℹ️</span>
               <p className="text-sm">The <strong>Powered by OHC</strong> badge helps us grow the community. If a new business owner signs up through your widget, you earn $50 in platform credits!</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSoftPaywall && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowSoftPaywall(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+              ✨
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Make the Customer Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+            </p>
+
+            <button
+              onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
+              className="w-full py-4 rounded-[8px] min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-emerald-600 hover:bg-emerald-700"
+            >
+              Upgrade to Pro
+            </button>
+            <button
+              onClick={() => setShowSoftPaywall(false)}
+              className="w-full py-4 rounded-[8px] min-h-[44px] min-w-[44px] font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all"
+            >
+              Maybe Later
+            </button>
           </div>
         </div>
       )}
