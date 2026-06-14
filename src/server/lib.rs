@@ -4101,14 +4101,24 @@ async fn ui_dashboard_unified_feed_handler(
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     // Check cache
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+    // Parallel Execution Optimization
+    // To avoid waiting sequentially for cache THEN supply (on hit),
+    // we fetch them concurrently. However, on cache miss we avoid making a duplicate
+    // supply query by checking the cache condition first and only fetching supply
+    // when we know we need it, or we fetch it simultaneously with the parallel feeds.
+
+    let cache_opt = cache.get_with_swr(&cache_key).await;
+
+    if let Some((cached, is_stale)) = cache_opt {
+        // Since we have a cache hit, we fetch supply now
+        let supply_data = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
+
         if !is_stale {
             // Supply should not be cached because it changes continuously (inventory counts),
-            // so we fetch supply and merge it on cache hit.
-            let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
+            // so we merge it on cache hit.
             let mut final_cached = cached.clone();
             if let Some(obj) = final_cached.as_object_mut() {
-                obj.insert("supply".to_string(), supply_res);
+                obj.insert("supply".to_string(), supply_data);
             }
             return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
         }
@@ -4170,24 +4180,19 @@ async fn ui_dashboard_unified_feed_handler(
             }
         });
 
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
         if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_res);
+            obj.insert("supply".to_string(), supply_data);
         }
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
-    let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-        load_ui_dashboard_metrics(&db, &tenant_id),
-        load_ui_orders_from_db(&db, &tenant_id, mobile_optimized),
-        load_ui_inbox_from_db(&db, &tenant_id, mobile_optimized),
-        load_ui_supply_from_db(&db, &tenant_id, mobile_optimized),
-        load_ui_triage_from_db(&db, &tenant_id, mobile_optimized),
-        load_ui_agent_approvals_from_db(&db, &tenant_id),
-        load_ui_agent_feed_from_db(&db, &tenant_id),
-        load_ui_priority_tasks_from_db(&db, &tenant_id, mobile_optimized)
+    // Cache miss: execute supply fetch parallel to the other dashboard feeds!
+    let (dashboard_feeds, supply_res) = tokio::join!(
+        fetch_dashboard_feeds_parallel(db.clone(), tenant_id.clone(), mobile_optimized),
+        load_ui_supply_from_db(&db, &tenant_id, mobile_optimized)
     );
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = dashboard_feeds;
 
     let mut orders = orders_res.unwrap_or_else(|_| vec![]);
     let mut inbox = messages_res.unwrap_or_else(|_| vec![]);
