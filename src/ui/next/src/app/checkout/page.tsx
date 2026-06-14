@@ -112,6 +112,12 @@ function CheckoutContent() {
           quantity: tier ? undefined : quantity
         }),
       });
+      if (response.status === 409) {
+        setCheckoutStatus("Item just sold out.");
+        setIsProcessing(false);
+        return;
+      }
+
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
         throw new Error(data.message || data.error || "Failed to create checkout session");
