@@ -372,3 +372,36 @@ pub struct LedgerEntry {
     pub reference_id: String,
     pub created_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow, Clone)]
+pub struct AgenticIntakeFlow {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub required_fields: serde_json::Value,
+    pub initial_prompt: String,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow, Clone)]
+pub struct IntakeSession {
+    pub id: String,
+    pub tenant_id: String,
+    pub flow_id: String,
+    pub customer_info: serde_json::Value,
+    pub collected_data: serde_json::Value,
+    pub status: String,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow, Clone)]
+pub struct IntakeMessage {
+    pub id: String,
+    pub tenant_id: String,
+    pub session_id: String,
+    pub role: String,
+    pub content: String,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
