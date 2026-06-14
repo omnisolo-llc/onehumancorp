@@ -226,45 +226,51 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         )));
                     }
 
-                    // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
-                    if !msg.tool_calls.is_empty() {
-                        current_req.messages.push(msg.clone());
-                        let detailed_error = if parse_error_msg.contains("Validation Error") {
-                            parse_error_msg.clone()
-                        } else {
-                            crate::types::format_pydantic_error_string(&parse_error_msg, None, None)
-                        };
-                        let tool_results = msg
-                            .tool_calls
-                            .iter()
-                            .map(|tc| crate::types::ToolResult {
-                                tool_call_id: tc.id.clone(),
-                                content: String::new(),
-                                error: detailed_error.clone(),
-                            })
-                            .collect();
-
-                        current_req.messages.push(Message {
-                            role: crate::types::Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results,
-                            response_id: None,
-                            previous_response_id: msg.response_id.clone(),
-                        });
-                    } else {
-                        current_req.messages.push(msg.clone());
-                        let error_context = format!(
-                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
-                            msg.content, parse_error_msg
-                        );
-                        let mut error_msg = Message::user(error_context);
-                        error_msg.previous_response_id = msg.response_id.clone();
-                        current_req.messages.push(error_msg);
-                    }
+                    self.handle_parse_error(&mut current_req, msg, parse_error_msg);
                     attempt += 1;
                 }
             }
+        }
+    }
+
+    fn handle_parse_error(&self, current_req: &mut ChatRequest, msg: &Message, parse_error_msg: String) {
+        // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
+        if !msg.tool_calls.is_empty() {
+            current_req.messages.push(msg.clone());
+            let detailed_error = if parse_error_msg.contains("Validation Error (Pydantic-first tool schema)") {
+                parse_error_msg.clone()
+            } else if parse_error_msg.contains("Validation Error") {
+                format!("Validation Error (Pydantic-first tool schema): {}", parse_error_msg)
+            } else {
+                crate::types::format_pydantic_error_string(&parse_error_msg, None, None)
+            };
+            let tool_results = msg
+                .tool_calls
+                .iter()
+                .map(|tc| crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: String::new(),
+                    error: detailed_error.clone(),
+                })
+                .collect();
+
+            current_req.messages.push(Message {
+                role: crate::types::Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results,
+                response_id: None,
+                previous_response_id: msg.response_id.clone(),
+            });
+        } else {
+            current_req.messages.push(msg.clone());
+            let error_context = format!(
+                "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
+                msg.content, parse_error_msg
+            );
+            let mut error_msg = Message::user(error_context);
+            error_msg.previous_response_id = msg.response_id.clone();
+            current_req.messages.push(error_msg);
         }
     }
 }
