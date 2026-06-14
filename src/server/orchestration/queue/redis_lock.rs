@@ -4,7 +4,6 @@ use redis::AsyncCommands;
 
 pub struct RedisLock {
     client: redis::Client,
-    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl RedisLock {
@@ -12,15 +11,11 @@ impl RedisLock {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         Ok(Self {
             client,
-            connection: tokio::sync::OnceCell::new(),
         })
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_tokio_connection().await
-        }).await.map_err(|e| e.to_string())?;
-        Ok(conn.clone())
+        self.client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())
     }
 
     pub async fn acquire_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, ttl_secs: u64) -> Result<Option<String>, String> {
