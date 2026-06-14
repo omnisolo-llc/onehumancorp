@@ -241,7 +241,8 @@ impl Department for MarketingAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
-            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let site_id_val = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+            let site_id = site_id_val.as_str();
             let payload = serde_json::json!({
                 "site_id": site_id,
             });
@@ -266,6 +267,25 @@ impl Department for MarketingAgent {
                     }
                 });
             }
+
+            let cache = crate::builder::edge::get_edge_cache();
+            let tenant_id_str2 = event.tenant_id.clone();
+            let site_id_str2 = site_id.to_string();
+            let pool2 = self.orchestrator()?.db().pool.clone();
+            let cache_manager = crate::services::cache_manager::CacheManager::new(cache.clone());
+
+            tokio::spawn(async move {
+                if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str2) {
+                    if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str2) {
+                        // The regenerate_cache already generates the proper HTML and pushes it.
+                        // But per requirements, let's also ensure CacheManager is utilized to push static content.
+                        let (html, tags) = crate::builder::edge::regenerate_cache(pool2, tenant_id, s_id, format!("edge_site_{}_{}", tenant_id, s_id), cache).await.unwrap_or_default();
+                        if !html.is_empty() {
+                            cache_manager.push_static_content(&tenant_id.to_string(), &s_id.to_string(), html, tags).await;
+                        }
+                    }
+                }
+            });
 
             return self.orchestrator()?.execute_action(
                 DepartmentType::Marketing,
