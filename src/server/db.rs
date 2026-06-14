@@ -480,11 +480,14 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| format!("DB Error: {}", e))?;
+
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -506,7 +509,7 @@ impl DB {
                 let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -529,7 +532,7 @@ impl DB {
                 let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -551,6 +554,8 @@ impl DB {
                         route: format!("/inbox/{}", id),
                     });
                 }
+
+                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
             }
         }
 
@@ -570,46 +575,58 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
-        loop {
-            match f().await {
-                Ok(val) => return Ok(val),
-                Err(err) => {
-                    let err_str = err.to_string().to_lowercase();
-                    let is_sqlite_lock = self.is_sqlite()
-                        && (err_str.contains("database is locked")
-                            || err_str.contains("sqlite_busy"));
-                    let is_postgres_lock = !self.is_sqlite()
-                        && (err_str.contains("serialization failure")
-                            || err_str.contains("deadlock detected")
-                            || err_str.contains("40001")
-                            || err_str.contains("could not obtain lock"));
+        let timeout_duration = std::time::Duration::from_secs(60);
 
-                    if is_sqlite_lock || is_postgres_lock {
-                        attempt += 1;
-                        if attempt >= max_attempts {
-                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                                &self.pool, operation,
-                            )
-                            .await;
-                            return Err(E::from(format!(
-                                "Database retry exhausted after {} attempts: {}",
-                                max_attempts, err
-                            )));
-                        }
-                        if is_postgres_lock {
-                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+        let retry_loop = async {
+            loop {
+                match f().await {
+                    Ok(val) => return Ok::<T, E>(val),
+                    Err(err) => {
+                        let err_str = err.to_string().to_lowercase();
+                        let is_sqlite_lock = self.is_sqlite()
+                            && (err_str.contains("database is locked")
+                                || err_str.contains("sqlite_busy"));
+                        let is_postgres_lock = !self.is_sqlite()
+                            && (err_str.contains("serialization failure")
+                                || err_str.contains("deadlock detected")
+                                || err_str.contains("40001")
+                                || err_str.contains("could not obtain lock"));
+
+                        if is_sqlite_lock || is_postgres_lock {
+                            attempt += 1;
+                            if attempt >= max_attempts {
+                                let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                                return Err(E::from(format!(
+                                    "Database retry exhausted after {} attempts: {}",
+                                    max_attempts, err
+                                )));
+                            }
+                            if is_postgres_lock {
+                                tracing::warn!("postgres_skip_locked contention in {}", operation);
+                            } else {
+                                let _ = ::server_telemetry::record_sqlite_lock_contention(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                            }
+                            tokio::time::sleep(backoff).await;
+                            backoff *= 2;
                         } else {
-                            let _ = ::server_telemetry::record_sqlite_lock_contention(
-                                &self.pool, operation,
-                            )
-                            .await;
+                            return Err(err);
                         }
-                        tokio::time::sleep(backoff).await;
-                        backoff *= 2;
-                    } else {
-                        return Err(err);
                     }
                 }
+            }
+        };
+
+        match tokio::time::timeout(timeout_duration, retry_loop).await {
+            Ok(result) => result,
+            Err(_) => {
+                tracing::error!("Database operation timed out after 60 seconds: {}", operation);
+                Err(E::from(format!("Database operation timed out after 60 seconds: {}", operation)))
             }
         }
     }
@@ -815,6 +832,7 @@ impl DB {
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
                         subdomain TEXT,
+                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -2110,7 +2128,7 @@ mod e2e_search_workspace_tests {
         let unique_tenant = format!("tenant_{}", uuid::Uuid::new_v4());
 
         // Setup SQLite Schema
-        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY)")
+        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT, plan_tier TEXT DEFAULT 'free', has_claimed_trial_extension BOOLEAN DEFAULT FALSE)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");

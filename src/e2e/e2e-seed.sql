@@ -362,10 +362,10 @@ ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 COMMIT;
 
 -- Triage seed data
-INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status)
 VALUES
-  ('triage-test-1', 'e2e-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
-  ('triage-test-2', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+  ('triage-test-1', 'e2e-tenant', 'maya_bakes', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
+  ('triage-test-2', 'e2e-tenant', 'whatsapp_user', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
@@ -534,3 +534,16 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+VALUES
+  ('triage-test-3', 'e2e-tenant', 'Email', 'High', 'Customer wants a quote for plumbing fix', 'pending'),
+  ('triage-test-4', 'e2e-tenant', 'Web Form', 'Medium', 'Customer wants to book a time slot', 'pending')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
+VALUES
+  ('action-test-3', 'triage-test-3', 'e2e-tenant', 'Draft Quote', '{"customer_id": "cust-e2e-1", "suggested_price": 150.0, "required_deposit": 50.0, "generated_response": "Here is the quote for plumbing fix."}'),
+  ('action-test-4', 'triage-test-4', 'e2e-tenant', 'Draft Booking', '{"customer_id": "cust-e2e-1", "product_id": "prod-plumbing-fix", "start_time": "2030-01-01T10:00:00Z", "end_time": "2030-01-01T11:00:00Z", "generated_response": "I have drafted a booking for you."}')
+ON CONFLICT (id) DO NOTHING;
+ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tool_integrations ENABLE ROW LEVEL SECURITY;

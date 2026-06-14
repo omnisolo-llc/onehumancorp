@@ -39,6 +39,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -72,6 +74,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -106,6 +110,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -139,6 +145,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     expect(storedTenantId).not.toBeNull();
   });
@@ -279,10 +287,12 @@ test.describe('OnboardingWizard CUJ', () => {
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Storefront Builder/i })).toBeVisible();
   });
 });
 
@@ -298,7 +308,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Intercept the API route to fail
     await context.route('/api/onboarding/intake', route => route.abort('failed'));
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Should display a real error message, not mock data
     await expect(page.getByText(/Failed to launch. Please try again./i)).toBeVisible();

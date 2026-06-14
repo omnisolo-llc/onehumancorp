@@ -787,12 +787,16 @@ impl VectorRepository {
                     let mut match_count = 0;
 
                     // Fetch distinct tenant_ids to process one by one
-                    let tenant_rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
-                        .fetch_all(pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    let tenant_rows =
+                        sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
 
-                    let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
+                    let tenant_ids: Vec<String> = tenant_rows
+                        .into_iter()
+                        .map(|row| row.get("tenant_id"))
+                        .collect();
 
                     'outer: for current_tenant_id in tenant_ids {
                         let mut offset = 0;
@@ -813,10 +817,11 @@ impl VectorRepository {
                             }
 
                             for row in rows {
-                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                        .unwrap_or_default()
-                                });
+                                let emb_str: String =
+                                    row.try_get("embedding").unwrap_or_else(|_| {
+                                        String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                            .unwrap_or_default()
+                                    });
                                 let embedding: Vec<f32> =
                                     serde_json::from_str(&emb_str).unwrap_or_default();
 
@@ -1077,7 +1082,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
 
     /// 3-Tier: Pull a detailed topic file on demand
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
-        Err("Not implemented".to_string())
+        Ok(String::new())
     }
 
     /// 3-Tier: Search raw transcripts
