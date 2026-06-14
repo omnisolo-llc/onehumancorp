@@ -33,59 +33,85 @@ pub struct AppState {
 pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> Option<String> {
     let pool = &db.pool;
 
-    // 1. Check if identity exists in customer_identities
-    let existing_identity: Option<String> = match &db.store {
+    // Parallel Execution Optimization: Fetch from both tables concurrently
+    let t_id1 = tenant_id.to_string();
+    let chan = channel.to_string();
+    let s_id1 = sender_id.to_string();
+
+    let t_id2 = tenant_id.to_string();
+    let s_id2 = sender_id.to_string();
+
+    let (identity_res, potential_res) = match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND channel = $2 AND channel_identity = $3")
-                .bind(tenant_id)
-                .bind(channel)
-                .bind(sender_id)
-                .fetch_optional(pool)
-                .await.ok().flatten()
+            let pool1 = pool.clone();
+            let pool2 = pool.clone();
+            let s_id2_clone1 = s_id2.clone();
+            let s_id2_clone2 = s_id2.clone();
+            let s_id2_clone3 = s_id2.clone();
+            tokio::join!(
+                tokio::spawn(async move {
+                    sqlx::query_scalar::<_, String>("SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND channel = $2 AND channel_identity = $3")
+                        .bind(t_id1)
+                        .bind(chan)
+                        .bind(s_id1)
+                        .fetch_optional(&pool1)
+                        .await.ok().flatten()
+                }),
+                tokio::spawn(async move {
+                    sqlx::query_scalar::<_, String>(
+                        "SELECT id FROM customers \
+                         WHERE tenant_id = $1 AND (phone = $2 OR email = $3 OR preferences->>'instagram_handle' = $4 OR preferences->>'whatsapp_number' = $5) \
+                         LIMIT 1"
+                    )
+                        .bind(t_id2)
+                        .bind(s_id2)
+                        .bind(s_id2_clone1)
+                        .bind(s_id2_clone2)
+                        .bind(s_id2_clone3)
+                        .fetch_optional(&pool2)
+                        .await.ok().flatten()
+                })
+            )
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
-                .bind(tenant_id)
-                .bind(channel)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
+            let pool1 = sqlite_pool.clone();
+            let pool2 = sqlite_pool.clone();
+            let s_id2_clone1 = s_id2.clone();
+            let s_id2_clone2 = s_id2.clone();
+            let s_id2_clone3 = s_id2.clone();
+            tokio::join!(
+                tokio::spawn(async move {
+                    sqlx::query_scalar::<_, String>("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
+                        .bind(t_id1)
+                        .bind(chan)
+                        .bind(s_id1)
+                        .fetch_optional(&pool1)
+                        .await.ok().flatten()
+                }),
+                tokio::spawn(async move {
+                    sqlx::query_scalar::<_, String>(
+                        "SELECT id FROM customers \
+                         WHERE tenant_id = ? AND (phone = ? OR email = ? OR json_extract(preferences, '$.instagram_handle') = ? OR json_extract(preferences, '$.whatsapp_number') = ?) \
+                         LIMIT 1"
+                    )
+                        .bind(t_id2)
+                        .bind(s_id2)
+                        .bind(s_id2_clone1)
+                        .bind(s_id2_clone2)
+                        .bind(s_id2_clone3)
+                        .fetch_optional(&pool2)
+                        .await.ok().flatten()
+                })
+            )
         }
     };
+
+    let existing_identity = identity_res.unwrap_or(None);
+    let potential_customer_id = potential_res.unwrap_or(None);
 
     if let Some(id) = existing_identity {
         return Some(id);
     }
-
-    // 2. If not found, try to resolve by phone, email, or metadata in customers table (basic resolution)
-    // Assume sender_id might be a phone number, email, or social handle depending on channel
-    let potential_customer_id: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => {
-             sqlx::query_scalar(
-                "SELECT id FROM customers \
-                 WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR preferences->>'instagram_handle' = $2 OR preferences->>'whatsapp_number' = $2) \
-                 LIMIT 1"
-             )
-                .bind(tenant_id)
-                .bind(sender_id)
-                .fetch_optional(pool)
-                .await.ok().flatten()
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-             sqlx::query_scalar(
-                "SELECT id FROM customers \
-                 WHERE tenant_id = ? AND (phone = ? OR email = ? OR json_extract(preferences, '$.instagram_handle') = ? OR json_extract(preferences, '$.whatsapp_number') = ?) \
-                 LIMIT 1"
-             )
-                .bind(tenant_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
-        }
-    };
 
     if let Some(id) = potential_customer_id {
         // Cache this new identity link
@@ -245,7 +271,8 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 email TEXT,
-                phone TEXT
+                phone TEXT,
+                preferences TEXT DEFAULT '{}'
             );
             CREATE TABLE customer_identities (
                 id TEXT PRIMARY KEY,
