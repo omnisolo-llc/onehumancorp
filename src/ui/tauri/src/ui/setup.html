@@ -52,7 +52,7 @@
         min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -61,16 +61,16 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism {
-        border-radius: 8px;
+        border-radius: 16px;
       }
       input.glassmorphism {
-        border-radius: 8px;
+        border-radius: 16px;
       }
       select, textarea, input {
-        border-radius: 8px;
+        border-radius: 16px;
       }
       select, textarea, input {
-        border-radius: 8px;
+        border-radius: 16px;
       }
       input:focus {
         outline: none;
@@ -84,7 +84,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px !important;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -251,7 +251,7 @@
         min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -527,10 +527,10 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" inputmode="url" autocomplete="off" enterkeyhint="next" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" inputmode="url" autocomplete="off" enterkeyhint="next" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 16px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" autocomplete="off" enterkeyhint="send" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" autocomplete="off" enterkeyhint="send" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 16px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 16px;">Send</button>
             </div>
         </div>
       </div>
@@ -1955,8 +1955,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
             <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 16px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 16px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
         </div>
 
 <div id="ohc-help-input-area">
@@ -2143,7 +2143,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.className = 'ohc-walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -2402,7 +2402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tour-card {
             padding: 16px;
             border: 1px solid rgba(226, 232, 240, 0.5);
-            border-radius: 8px;
+            border-radius: 16px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: background 0.2s;
@@ -2472,7 +2472,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 16px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
@@ -2661,7 +2661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.className = 'ohc-walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
