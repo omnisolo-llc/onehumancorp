@@ -78,6 +78,7 @@ pub mod visual_workflow_client;
 
 pub mod agentic_seek;
 pub mod pi;
+pub mod crewai;
 pub mod ruflo_plugins;
 pub mod tool_executor_engine;
 
