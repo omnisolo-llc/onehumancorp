@@ -6,6 +6,8 @@ import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
 import { VoiceAssistant } from "../components/VoiceAssistant";
+import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
+import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 
 export const metadata: Metadata = {
@@ -32,6 +34,8 @@ export default function RootLayout({
               <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
               <VoiceAssistant />
+              <NetworkStatusIndicator />
+              <SyncManagerInitializer />
             </WalkthroughProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>
