@@ -362,10 +362,10 @@ ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 COMMIT;
 
 -- Triage seed data
-INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status)
 VALUES
-  ('triage-test-1', 'e2e-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
-  ('triage-test-2', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+  ('triage-test-1', 'e2e-tenant', 'maya_bakes', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
+  ('triage-test-2', 'e2e-tenant', 'whatsapp_user', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
