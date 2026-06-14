@@ -170,6 +170,16 @@ impl InventoryService {
             let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| format!("Redis conn failed: {}", e))?;
 
+            let script = redis::Script::new(
+                r#"
+                if redis.call("get", KEYS[1]) == ARGV[1] then
+                    return redis.call("del", KEYS[1])
+                else
+                    return 0
+                end
+                "#,
+            );
+
             let current_lock_id: Option<String> = redis::cmd("GET")
                 .arg(&lock_key)
                 .query_async(&mut conn)
@@ -188,7 +198,8 @@ impl InventoryService {
             let pool = crate::db::get_pool();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
+                    // Update available_quantity only by the amount actually deducted from locked_quantity
+                    let _ = sqlx::query("UPDATE products SET available_quantity = available_quantity + LEAST(locked_quantity, $1), locked_quantity = GREATEST(0, locked_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                         .bind(quantity)
                         .bind(product_id)
                         .bind(tenant_id)
@@ -198,9 +209,10 @@ impl InventoryService {
                 }
             }
 
-            let _: () = redis::cmd("DEL")
-                .arg(&lock_key)
-                .query_async(&mut conn)
+            let _: () = script
+                .key(&lock_key)
+                .arg(lock_id)
+                .invoke_async(&mut conn)
                 .await
                 .unwrap_or(());
         }
@@ -254,7 +266,7 @@ impl InventoryService {
             .map_err(|e| e.to_string())?;
 
         // Try to commit from locked quantity first
-        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
+        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), locked_quantity = GREATEST(0, locked_quantity - $1) WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
             .bind(tenant_id)
@@ -264,7 +276,7 @@ impl InventoryService {
 
         let update_result = if update_result.is_none() {
             // Fallback: If not enough locked quantity, deduct from available quantity directly (e.g. offline POS sync or direct commit without reserve)
-            sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
+            sqlx::query_scalar("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
             .bind(tenant_id)
