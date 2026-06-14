@@ -255,41 +255,8 @@ export default function Dashboard() {
     };
 
     const handleSync = async () => {
-      if (!navigator.onLine) return;
-      try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
-        if (!Array.isArray(queue) || queue.length === 0) return;
-
-        setIsSyncing(true);
-        setSyncErrorCount(0);
-
-        const res = await fetch("/api/v1/sync/offline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mutations: queue }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.failed_count && data.failed_count > 0) {
-            setSyncErrorCount(data.failed_count);
-          }
-
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
-        }
-      } catch (e) {
-        console.error("Sync failed", e);
-      } finally {
-        setIsSyncing(false);
-      }
+      // Handled globally by SyncManager
+      updateOfflineStatus();
     };
 
     async function loadDashboard() {
@@ -375,9 +342,9 @@ export default function Dashboard() {
     loadDashboard();
     handleSync();
     window.addEventListener("online", updateOfflineStatus);
-    window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
 
 
 

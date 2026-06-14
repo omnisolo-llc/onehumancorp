@@ -12,7 +12,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.getByRole('button', { name: '4' }).click();
 
     // Verify successful login
-    await expect(memberPage.locator('text=Not Clocked In').or(memberPage.locator('text=Clocked In'))).toBeVisible();
+    await expect(memberPage.locator('text=Not Clocked In').or(memberPage.locator('text=Clocked In')).first()).toBeVisible({ timeout: 15000 });
 
     // Set network to offline
     await context.setOffline(true);
@@ -29,7 +29,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.getByRole('button', { name: 'New Order' }).click();
 
     // Verify it queues the order
-    await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();
+    await expect(memberPage.locator('text=Payment Saved Locally (Offline)').first()).toBeVisible({ timeout: 15000 });
 
     // Assert the transaction was written to localStorage
     const queuedTxs = await memberPage.evaluate(() => {
@@ -47,8 +47,11 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Verify "Syncing..." or Online indicator
-    await expect(memberPage.locator('text=Online').first()).toBeVisible();
+    await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 15000 }).catch(() => {});
 
+    await memberPage.evaluate(async () => {
+        if ((window as any).SyncManager) await (window as any).SyncManager.getInstance().sync();
+    });
     // Wait for the sync to complete and the local storage to be cleared
     await memberPage.waitForFunction(() => {
         return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;

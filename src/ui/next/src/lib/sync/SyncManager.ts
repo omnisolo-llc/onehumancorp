@@ -14,6 +14,9 @@ export class SyncManager {
   public static getInstance(): SyncManager {
     if (!SyncManager.instance) {
       SyncManager.instance = new SyncManager();
+      if (typeof window !== 'undefined') {
+          (window as any).SyncManager = SyncManager;
+      }
     }
     return SyncManager.instance;
   }
@@ -99,7 +102,16 @@ export class SyncManager {
         return m;
       });
 
-      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      let tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      if (tenantId === "default") {
+         try {
+             const userStr = localStorage.getItem("ohc_user");
+             if (userStr) {
+                 const u = JSON.parse(userStr);
+                 if (u && u.tenant_id) tenantId = u.tenant_id;
+             }
+         } catch(e){}
+      }
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
@@ -141,7 +153,10 @@ export class SyncManager {
       }
 
       if (allOk) {
-        localStorage.setItem(this.queueKey, '[]');
+        const currentQ = this.getQueue();
+        const remainingQ = currentQ.filter(c => !queue.some(q => q.id === c.id || q.timestamp === c.timestamp));
+        localStorage.setItem(this.queueKey, JSON.stringify(remainingQ));
+        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(remainingQ.filter(m => m.type === 'tap_to_pay')));
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
       }

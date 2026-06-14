@@ -20,13 +20,20 @@ const OfflineStore = {
   clearEvents: () => localStorage.setItem('ohc_offline_events', '[]'),
 
   getPosTransactions: () => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'),
-  setPosTransactions: (transactions: any[]) => localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions)),
+  setPosTransactions: (transactions: any[]) => {
+    localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('ohc_queue_updated'));
+  },
   addPosTransaction: (tx: any) => {
     const transactions = OfflineStore.getPosTransactions();
     transactions.push(tx);
     localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('ohc_queue_updated'));
   },
-  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
+  clearPosTransactions: () => {
+    localStorage.setItem('ohc_offline_pos_tx', '[]');
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('ohc_queue_updated'));
+  }
 };
 
 interface Product {

@@ -29,6 +29,7 @@ test.describe('Unified Agent Feed Offline Mode', () => {
     expect(response.ok()).toBeTruthy();
 
     // Wait for the proposal to show up
+    await page.waitForTimeout(5000); // Give AI time to process backend task
     await page.reload();
     await expect(page.locator('text=Action Needed').first()).toBeVisible({ timeout: 25000 });
 
