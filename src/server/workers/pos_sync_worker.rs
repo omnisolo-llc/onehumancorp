@@ -102,7 +102,7 @@ impl PosSyncWorker {
 
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
-                    let ai_payload = serde_json::json!({
+                    let _ai_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": quantity_deducted,
                         "actual_stock": stock,
@@ -269,7 +269,7 @@ impl PosSyncWorker {
 
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
-                                let ai_payload = serde_json::json!({
+                                let _ai_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": qty,
                         "actual_stock": stock,
