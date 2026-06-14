@@ -82,11 +82,18 @@ impl PosSyncWorker {
                         .map_err(|e| e.to_string())?;
 
                     let job_id = uuid::Uuid::new_v4().to_string();
+
+                    let message = if new_stock == 0 {
+                        format!("{} sold out. Would you like to draft a restock order?", product_id)
+                    } else {
+                        format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                    };
+
                     let job_payload = serde_json::json!({
                         "product_id": product_id,
                         "remaining_stock": new_stock,
                         "threshold": 5,
-                        "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                        "message": message
                     }).to_string();
                     sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
@@ -198,11 +205,18 @@ impl PosSyncWorker {
                                     .map_err(|e| e.to_string())?;
 
                                 let job_id = uuid::Uuid::new_v4().to_string();
+
+                                let message = if new_stock == 0 {
+                                    format!("{} sold out. Would you like to draft a restock order?", product_id)
+                                } else {
+                                    format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                                };
+
                                 let job_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "remaining_stock": new_stock,
                                     "threshold": 5,
-                                    "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                                    "message": message
                                 }).to_string();
                                 sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                                     .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
