@@ -3516,41 +3516,8 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     }
 }
 
-async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
-    let limit = 20i64;
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
-                .bind(tenant_id)
-                .bind(limit)
-                .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<serde_json::Value>, _>("payload")
-                })).collect())
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
-                .bind(tenant_id)
-                .bind(limit)
-                .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                })).collect())
-        }
-    }
+async fn load_ui_agent_approvals_from_db(_db: &crate::db::DB, _tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    Ok(vec![])
 }
 
 async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
@@ -3971,7 +3938,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
             );
 
-            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut pending_approvals: Vec<serde_json::Value> = vec![];
             let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             if mobile_optimized {
@@ -3988,9 +3955,11 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 }
             }
 
+            let mut agent_feed = load_ui_agent_feed_from_db(&db, &t).await.unwrap_or_else(|_| vec![]);
             let result = serde_json::json!({
-                "pending_approvals": pending_approvals,
-                "entries": entries
+                "pending_approvals": [],
+                "entries": entries,
+                "agent_feed": agent_feed
             });
             if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
@@ -4004,7 +3973,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
     );
 
-    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let mut pending_approvals: Vec<serde_json::Value> = vec![];
     let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
     if mobile_optimized {
@@ -4021,9 +3990,11 @@ async fn ui_dashboard_unified_agent_feed_handler(
         }
     }
 
+    let mut agent_feed = load_ui_agent_feed_from_db(db, &tenant_id).await.unwrap_or_else(|_| vec![]);
     let result = serde_json::json!({
-        "pending_approvals": pending_approvals,
-        "entries": entries
+        "pending_approvals": [],
+        "entries": entries,
+        "agent_feed": agent_feed
     });
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
@@ -4142,7 +4113,6 @@ async fn list_ui_bookings_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -4301,12 +4271,12 @@ async fn list_ui_bookings_handler(
     }
 }
 
+use sqlx::Row;
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 

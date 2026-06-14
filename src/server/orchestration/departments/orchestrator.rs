@@ -241,8 +241,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES ($1, $2, $3, $4, 'PAUSED', 'LOW', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                         VALUES ($1, $2, $3, jsonb_build_object('description', $4), $5, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -270,8 +270,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES (?, ?, ?, ?, 'PAUSED', 'LOW', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                         VALUES (?, ?, ?, json_object('description', ?), ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -376,14 +376,12 @@ impl DepartmentOrchestrator {
                         };
 
                         let _ = sqlx::query(
-                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, jsonb_build_object('description', $4), $5, 'PENDING_APPROVAL', $6, $7)"
                         )
                         .bind(&req.id)
                         .bind(&req.tenant_id)
                         .bind(req.department.to_string())
                         .bind(&req.description)
-                        .bind(status_str)
-                        .bind(req.action_risk.to_string())
                         .bind(&payload_str)
                         .bind(now)
                         .bind(now)
@@ -418,17 +416,15 @@ impl DepartmentOrchestrator {
                 };
 
                 let _ = sqlx::query(
-                    "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, json_object('description', ?), ?, 'PENDING_APPROVAL', ?, ?)"
                 )
                 .bind(&req.id)
                 .bind(&req.tenant_id)
                 .bind(req.department.to_string())
                 .bind(&req.description)
-                .bind(status_str)
-                .bind(req.action_risk.to_string())
-                .bind(&payload_str)
-                .bind(now)
-                .bind(now)
+                        .bind(&payload_str)
+                        .bind(now)
+                        .bind(now)
                 .execute(pool)
                 .await;
 
@@ -481,14 +477,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') AND id > $2 ORDER BY id ASC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -538,14 +534,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -638,14 +634,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') AND id < $2 ORDER BY id DESC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -695,14 +691,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'LOW' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -762,7 +758,7 @@ impl DepartmentOrchestrator {
             DbStore::Postgres => {
                 let row = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
-                        let updated = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
+                        let updated = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = CASE WHEN $1 = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN $1 = 'REJECTED' THEN 'DISMISSED' ELSE $1 END, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING event_source as department, proposed_action as payload")
                             .bind(new_status)
                             .bind(now)
                             .bind(request_id)
@@ -801,7 +797,9 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
+                let row = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = CASE WHEN ? = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN ? = 'REJECTED' THEN 'DISMISSED' ELSE ? END, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING event_source as department, proposed_action as payload")
+                    .bind(new_status)
+                    .bind(new_status)
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)

@@ -273,16 +273,7 @@ async fn update_feed_item_state(
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
-            // Trigger legacy execution by synchronizing the agent_approvals table
-            if payload.state == "APPROVED" || payload.state == "REJECTED" || payload.state == "DISMISSED" {
-                let legacy_status = if payload.state == "APPROVED" { "APPROVED" } else { "REJECTED" };
-                let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(legacy_status)
-                    .bind(&id)
-                    .bind(&tenant_id)
-                    .execute(&pool)
-                    .await;
-            }
+            // Legacy synchronizing to agent_approvals has been removed per research report.
 
             // Handle incident resolution execution
             if payload.state == "APPROVED" {

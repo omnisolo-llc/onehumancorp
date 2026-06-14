@@ -1394,14 +1394,14 @@
         triageSection.style.display = 'block';
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = Array.isArray(data) ? data : (data.items || []);
+          agentFeedItems = data.agent_feed || [];
           renderTriageItems(agentFeedItems);
         } catch (err) {
           console.error("Agent Feed load error:", err);
@@ -1410,31 +1410,39 @@
       }
 
 
+
       function renderTriageItems(items) {
         if (currentTriageTab === 'proposals') {
-          // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
-          const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
+          const proposals = items.filter(i => i.lifecycle_state === 'PENDING_APPROVAL');
           if (proposals.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
             return;
           }
           triageQueue.innerHTML = proposals.map(item => {
-            const actionType = item.action_type || item.proposed_action?.action_type;
-            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
-            const isDraft = item.proposed_action?.context?.weekly_health_report === true;
+            let parsedPayload = {};
+            let proposedAction = {};
+            try {
+              if (typeof item.context_payload === 'string') {
+                parsedPayload = JSON.parse(item.context_payload);
+              } else {
+                parsedPayload = item.context_payload || {};
+              }
+              if (typeof item.proposed_action === 'string') {
+                proposedAction = JSON.parse(item.proposed_action);
+              } else {
+                proposedAction = item.proposed_action || {};
+              }
+            } catch(e) {}
+
+            const description = parsedPayload.description || 'Agent proposed an action.';
+            const isDraft = proposedAction?.context?.weekly_health_report === true;
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
-            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
-              let payload = item.proposed_action || item.context_payload || {};
-              if (typeof item.action_payload === 'string') {
-                  try { payload = JSON.parse(item.action_payload); } catch(e){}
-              } else if (item.action_payload) {
-                  payload = item.action_payload;
-              }
-              const clientName = payload.client_name || 'Client';
-              const price = payload.suggested_price || 0;
-              const scope = payload.scope || '';
+            if (item.event_source === 'quote_draft' || parsedPayload.feature_type === 'quote_draft' || proposedAction.feature_type === 'quote_draft') {
+              const clientName = proposedAction.client_name || parsedPayload.client_name || 'Client';
+              const price = proposedAction.suggested_price || parsedPayload.suggested_price || 0;
+              const scope = proposedAction.scope || parsedPayload.scope || '';
               return `
                 <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}">
                   <div class="triage-header">
@@ -1445,19 +1453,16 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; flex: 1;">Approve & Send Proposal</button>
+                    <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; flex: 1;">Approve & Send Proposal</button>
                     <button class="triage-btn-dismiss" data-testid="edit-proposal" onclick="window.location.href='quote.html?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Dismiss</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Dismiss</button>
                   </div>
                 </div>
               `;
             }
 
-
-
-          if (actionType === 'SocialPostDraft') {
-            let parsedPayload = item.proposed_action || {};
-            return `
+            if (item.event_source === 'SocialPostDraft' || parsedPayload.action_type === 'SocialPostDraft' || proposedAction.action_type === 'SocialPostDraft') {
+              return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
@@ -1466,34 +1471,33 @@
                   <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
-                  ${item.context_payload?.description || 'New product detected! Schedule a post to drive sales?'}
+                  ${description || 'New product detected! Schedule a post to drive sales?'}
                 </div>
                 <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333;">
-                  <strong>Instagram:</strong> ${parsedPayload.instagram || ''}<br/>
-                  <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
+                  <strong>Instagram:</strong> ${proposedAction.instagram || ''}<br/>
+                  <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${proposedAction.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
-            `;
-          }
+              `;
+            }
 
-          if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
-            let parsedPayload = item.context_payload || {};
-            let proposedAction = item.proposed_action || {};
             let draftReply = proposedAction.draft_reply || parsedPayload.draft_reply || '';
-            return `
+
+            if (item.event_source === 'instagram_dm') {
+              return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                     <span style="font-size: 18px;">💬</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Instagram DM</strong>
                   </div>
-                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'Action Needed'}</div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 500; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
-                  "${parsedPayload.customer_message || 'New message'}"
+                  "${parsedPayload.customer_message || description}"
                 </div>
                 <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
                   <div style="font-size: 10px; font-weight: 700; color: #0066FF; text-transform: uppercase; margin-bottom: 4px;">Draft Reply</div>
@@ -1504,49 +1508,21 @@
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
                 </div>
               </div>
-            `;
-          }
+              `;
+            }
 
-          if (item.action_type === 'SocialPostDraft') {
-            let parsedPayload = {};
-            try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
-                <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
-                  <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
-                </div>
-                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
-                  ${item.context || 'New product detected! Schedule a post to drive sales?'}
-                </div>
-                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333;">
-                  <strong>Instagram:</strong> ${parsedPayload.instagram || ''}<br/>
-                  <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
-                </div>
-                <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
-                </div>
-              </div>
-            `;
-          }
-
-          return `
             <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
               <div class="triage-header">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
                 <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
               <div class="triage-controls" style="margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', 'APPROVED')">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
               </div>
-
-                </div>
-              </div>
+            </div>
             `;
           }).join('');
         } else {
@@ -1593,29 +1569,19 @@
         if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
-          let url = `/api/ui/triage/action`;
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const url = `/api/agents/feed/${id}/state?tenant_id=${encodeURIComponent(tenantId)}`;
 
-          let bodyPayload;
-          let method = 'POST';
-
-          // Check if it's the old agent-feed enum format or boolean for triage action
-          if (typeof state === 'boolean') {
-             bodyPayload = { triage_item_id: id, approved: state };
-          } else {
-             bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
-          }
-
-          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: method,
+          const res = await fetch(url, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' },
-            body: JSON.stringify(bodyPayload)
+            body: JSON.stringify({ state: state })
           });
 
           if (!res.ok) throw new Error("Update failed");
 
           window.showStatus('Approving...', true);
-          window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
+          window.showStatus(state === 'APPROVED' ? 'Approved!' : 'Dismissed.', true);
           loadTriage();
         } catch (err) {
           console.error(err);
@@ -1623,7 +1589,6 @@
           alert('Failed to update agent feed action.');
         }
       };
-
       // Load on start
       setTimeout(loadTriage, 500);
 

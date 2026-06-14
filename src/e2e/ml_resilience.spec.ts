@@ -4,8 +4,8 @@ test('AI Agent Paused state appears when LLM API fails', async ({ page, request 
     await request.post("/api/e2e/setup", {
       data: {
         query: `
-          INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-          VALUES ('e2e-paused-task-1', 'e2e-tenant', 'business_advisory', 'AI Agent Paused: The Advisor', 'PAUSED', 'LOW', '{"proposed_content": "System is paused. Please manually check business performance."}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+          VALUES ('e2e-paused-task-1', 'e2e-tenant', 'business_advisory', '{\"description\": \"AI Agent Paused: The Advisor\"}', '{"proposed_content": "System is paused. Please manually check business performance."}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT DO NOTHING;
         `,
       },
