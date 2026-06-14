@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
+// No utils available, we will just use page directly
 
 
 test.describe('Assistant Page', () => {
   test('navigates to assistant and verifies authentic state', async ({ page }) => {
-    await adminPage({ page }, async ({ page }) => {
       await page.goto('/assistant');
 
       // Verify the page shell and layout
@@ -19,14 +19,13 @@ test.describe('Assistant Page', () => {
       await page.getByRole('button', { name: 'Start Task' }).click();
 
       // The new task should appear
-      await expect(page.getByText('Build a test report')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Build a test report' })).toBeVisible();
 
       // Check results panel logic
       await expect(page.getByRole('heading', { name: 'Results Panel' })).toBeVisible();
 
       // Check a panel (e.g., Remote Control)
-      await page.getByRole('button', { name: 'Remote Control' }).click();
+      await page.getByRole('button', { name: 'Remote Control', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Remote Control' })).toBeVisible();
-    });
   });
 });

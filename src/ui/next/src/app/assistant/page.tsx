@@ -44,13 +44,12 @@ type AssistantTask = {
   model: string;
   provider: string;
   permissionProfile: PermissionProfile;
-  riskSummary: string[];
-  artifacts: AssistantArtifact[];
-  changes: AssistantChange[];
-  messages: AssistantMessage[];
-  actions?: AssistantAction[];
   createdAt?: string;
   updatedAt?: string;
+  messages: AssistantMessage[];
+  artifacts: AssistantArtifact[];
+  changes: AssistantChange[];
+  actions?: AssistantAction[];
 };
 
 type AssistantCapabilities = {
@@ -70,9 +69,9 @@ type AssistantCapabilities = {
   taskBarComponents?: string[];
   conversationToolbar?: string[];
   resultPreviewTypes?: string[];
-  paritySummary?: { total: number; implemented: number; remaining: number };
   parityCategories?: string[];
   parityHighlights?: string[];
+  paritySummary?: { total: number; implemented: number; remaining: number };
 };
 
 type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'parity' | 'permissions' | 'models' | 'system' | 'billing';
@@ -80,7 +79,7 @@ type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
 const defaultCapabilities: AssistantCapabilities = {
-  resultTabs,
+  resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot'],
   outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
   workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
@@ -123,36 +122,6 @@ const defaultCapabilities: AssistantCapabilities = {
   ],
   parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates', 'Task search box', 'User-level MCP config', 'Mini app voice input', 'Permission risk boundary', 'Clipboard screenshot paste', 'Hook event family', '/doctor environment check', 'User settings.json', 'TaskOutput retrieval', 'Project subagent directory', 'Camera attachment', 'Shared link expiry', 'Official connector roster', 'Custom protocol toggle', 'Prevent sleep', 'Cancel sharing', 'Unarchive task', 'Featured skills roster', 'Google Calendar connector', 'Official practice case library', 'Platform-specific Claw setup guides', 'Desktop platform support matrix', 'New task bar anatomy', 'Conversation top toolbar', 'Privacy retention matrix', 'AI training opt-out'],
 };
-
-const fallbackTasks: AssistantTask[] = [
-  {
-    id: 'fallback-task',
-    title: 'Create a personal briefing',
-    workspace: 'Personal OS',
-    status: 'running',
-    currentStep: 'Ready to plan',
-    mode: 'Ask',
-    model: 'Auto',
-    provider: 'Auto',
-    permissionProfile: 'Guarded',
-    riskSummary: ['Guarded mode is active'],
-    artifacts: [],
-    changes: [],
-    messages: [
-      {
-        id: 'fallback-message',
-        role: 'assistant',
-        content: 'Agent is ready.',
-      },
-    ],
-    actions: [
-      { id: 'fallback-action-stop', label: 'Stop', kind: 'control', approvalRequired: false },
-      { id: 'fallback-action-preview', label: 'Open Preview', kind: 'preview', approvalRequired: false },
-      { id: 'fallback-action-run', label: 'Run Locally', kind: 'execute', approvalRequired: true },
-    ],
-  },
-];
-
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -304,7 +273,7 @@ export default function AssistantPage() {
         const response = await fetch('/api/assistant/tasks');
         if (!response.ok) throw new Error('Assistant tasks unavailable');
         const data = await response.json();
-        const loadedTasks: AssistantTask[] = data.tasks?.length ? data.tasks : fallbackTasks;
+        const loadedTasks: AssistantTask[] = data.tasks || [];
         if (!mounted) return;
         setCapabilities(data.capabilities || defaultCapabilities);
         setTasks(loadedTasks);
@@ -445,24 +414,21 @@ export default function AssistantPage() {
       setActionNotice('No active task to perform action on');
       return;
     }
-    const artifact = activeTask.artifacts?.[0];
-    if (action.startsWith('Share') && artifact) {
+    if (action.startsWith('Share')) {
       const target = action.replace('Share to ', '').replace('Share Link', 'Share Link');
       await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
-        artifactId: artifact.id,
         target,
       }, `${action} queued`);
       return;
     }
-    if (action === 'Open External Preview' && artifact) {
+    if (action === 'Open External Preview') {
       await runApiAction('/api/assistant/previews', 'PATCH', {
         action: 'open_external',
-        artifactId: artifact.id,
-      }, 'Preview opened externally');
+              }, 'Preview opened externally');
       return;
     }
-    if (action.startsWith('Export ') && artifact) {
+    if (action.startsWith('Export ')) {
       await runApiAction('/api/assistant/artifacts', 'POST', {
         taskId: activeTask.id,
         outputFormat: action.replace('Export ', ''),
@@ -505,11 +471,10 @@ export default function AssistantPage() {
         action: 'collapse_all',
       }, 'Workspaces collapsed');
     } else if (action === 'copy_share_link' && activeTask) {
-      const artifact = activeTask.artifacts?.[0];
-      if (!artifact) throw new Error('No artifact available to share');
+      // if (!artifact) throw new Error('No artifact available to share');
       const data = await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
-        artifactId: artifact.id,
+        artifactId: 'default',
         target: 'Share Link',
       }, 'Share link created');
       if (data?.share?.id) {
@@ -519,19 +484,17 @@ export default function AssistantPage() {
         }, 'Share link copied');
       }
     } else if (action === 'download_shared_file' && activeTask) {
-      const artifact = activeTask.artifacts?.[0];
-      if (!artifact) throw new Error('No artifact available to download');
+      // if (!artifact) throw new Error('No artifact available to download');
       await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
-        artifactId: artifact.id,
+        artifactId: 'default',
         target: 'Download',
       }, 'Download prepared');
     } else if (action === 'cancel_sharing' && activeTask) {
-      const artifact = activeTask.artifacts?.[0];
-      if (!artifact) throw new Error('No artifact available to revoke');
+      // if (!artifact) throw new Error('No artifact available to revoke');
       const data = await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
-        artifactId: artifact.id,
+        artifactId: 'default',
         target: 'Share Link',
       }, 'Share link staged');
       if (data?.share?.id) {
