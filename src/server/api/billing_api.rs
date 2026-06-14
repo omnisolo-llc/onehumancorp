@@ -111,17 +111,17 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let mut amount_usd = 0.0;
-    let mut item_name = "Checkout".to_string();
+    let mut _amount_usd = 0.0;
+    let mut _item_name = "Checkout".to_string();
 
     if let Some(tier) = &req.tier {
-        amount_usd = match tier.to_lowercase().as_str() {
+        _amount_usd = match tier.to_lowercase().as_str() {
             "starter" => 29.0,
             "pro" => 79.0,
             "business" => 299.0,
             _ => return Err(StatusCode::BAD_REQUEST),
         };
-        item_name = tier.clone();
+        _item_name = tier.clone();
     } else if let Some(product_id) = &req.product_id {
         let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let row = sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
@@ -134,8 +134,8 @@ pub async fn create_checkout_session_handler(
         let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
         let title: String = row.try_get("title").unwrap_or_else(|_| "Product".to_string());
         let quantity = req.quantity.unwrap_or(1);
-        amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
-        item_name = title;
+        _amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
+        _item_name = title;
     } else {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -161,7 +161,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
+        match client.create_checkout_session(&_item_name, &tenant_id, _amount_usd, req.is_subscription.unwrap_or(false)).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
