@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,7 +6,15 @@
     <title>OHC Setup</title>
     <style>
       body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
@@ -58,28 +66,36 @@
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
       }
-      select.glassmorphism, textarea.glassmorphism {
+      select.glassmorphism,
+      textarea.glassmorphism {
         border-radius: 8px;
       }
       input.glassmorphism {
         border-radius: 8px;
       }
-      select, textarea, input {
+      select,
+      textarea,
+      input {
         border-radius: 8px;
       }
-      select, textarea, input {
+      select,
+      textarea,
+      input {
         border-radius: 8px;
       }
       input:focus {
         outline: none;
-        border-color: #0066FF;
+        border-color: #0066ff;
         background: rgba(255, 255, 255, 0.8);
         box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
       }
       button {
-        background-color: #0066FF;
+        background-color: #0066ff;
         color: white;
         border: none;
         padding: 14px 24px;
@@ -100,7 +116,7 @@
       }
 
       .error-msg {
-        color: #FF3B30;
+        color: #ff3b30;
         font-size: 12px;
         margin-top: -15px;
         margin-bottom: 15px;
@@ -108,27 +124,49 @@
         text-align: left;
       }
 
-      .text-\[\#FF3B30\] { color: #FF3B30 !important; }
-      .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
-      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px !important; padding: 10px !important; }
+      .text-\[\#FF3B30\] {
+        color: #ff3b30 !important;
+      }
+      .border-\[\#FF3B30\] {
+        border-color: #ff3b30 !important;
+      }
+      .border-\[\#FF3B30\]\/30 {
+        border-color: rgba(255, 59, 48, 0.3) !important;
+        border-width: 1px !important;
+        border-style: solid !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+      }
 
       @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
       }
       .animate-shake {
         animation: shake 0.2s ease-in-out 0s 2;
       }
 
       @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
       .spinner {
         display: inline-block;
         width: 16px;
-        min-height: 44px; height: auto;
+        min-height: 44px;
+        height: auto;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -158,22 +196,21 @@
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         h1 {
-          color: #F5F5F7;
+          color: #f5f5f7;
         }
         p {
-          color: #A1A1A6;
+          color: #a1a1a6;
         }
         input {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
+          color: #f5f5f7;
         }
         input:focus {
-          border-color: #0066FF;
+          border-color: #0066ff;
           background: rgba(255, 255, 255, 0.15);
         }
       }
-
 
       .stepper {
         display: flex;
@@ -182,7 +219,7 @@
         position: relative;
       }
       .stepper::before {
-        content: '';
+        content: "";
         position: absolute;
         top: 50%;
         left: 0;
@@ -194,7 +231,8 @@
       }
       .step-indicator {
         width: 12px;
-        min-height: 44px; height: auto;
+        min-height: 44px;
+        height: auto;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
@@ -211,14 +249,14 @@
       }
 
       .step-indicator.active {
-        background: #0066FF;
-        border-color: #0066FF;
+        background: #0066ff;
+        border-color: #0066ff;
         transform: scale(1.3);
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
       .step-indicator.completed {
-        background: #0066FF;
-        border-color: #0066FF;
+        background: #0066ff;
+        border-color: #0066ff;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -240,11 +278,18 @@
         display: block;
       }
       @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      select, textarea {
+      select,
+      textarea {
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
@@ -255,14 +300,26 @@
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
       }
-      select:focus, textarea:focus {
+      select:focus,
+      textarea:focus {
         outline: none;
-        border-color: #0066FF;
+        border-color: #0066ff;
         background: rgba(255, 255, 255, 0.8);
         box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
       }
@@ -285,13 +342,16 @@
         min-height: 44px !important;
         border-radius: 16px;
         cursor: pointer;
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
       }
       .radio-option:hover {
         background: rgba(255, 255, 255, 0.7);
       }
       .radio-option.selected {
-        border-color: #0066FF;
+        border-color: #0066ff;
         background: rgba(0, 102, 255, 0.1);
       }
       .radio-option input[type="radio"] {
@@ -341,7 +401,7 @@
         align-items: center;
         border-radius: 20px;
         background: rgba(0, 102, 255, 0.1);
-        color: #0066FF;
+        color: #0066ff;
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
@@ -352,7 +412,7 @@
         background: rgba(0, 102, 255, 0.2);
       }
       .persona-chip.selected {
-        background: #0066FF;
+        background: #0066ff;
         color: white;
       }
 
@@ -367,17 +427,19 @@
         text-align: left;
         margin-bottom: 20px;
         color: #1d1d1f;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       }
 
       @media (prefers-color-scheme: dark) {
-        select, textarea {
+        select,
+        textarea {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
+          color: #f5f5f7;
         }
-        select:focus, textarea:focus {
-          border-color: #0066FF;
+        select:focus,
+        textarea:focus {
+          border-color: #0066ff;
           background: rgba(255, 255, 255, 0.15);
         }
         .radio-option {
@@ -388,23 +450,23 @@
           background: rgba(255, 255, 255, 0.15);
         }
         .radio-option.selected {
-          border-color: #0066FF;
+          border-color: #0066ff;
           background: rgba(0, 102, 255, 0.2);
         }
         .radio-label {
-          color: #F5F5F7;
+          color: #f5f5f7;
         }
         .btn-secondary {
           border-color: rgba(255, 255, 255, 0.2);
-          color: #A1A1A6;
+          color: #a1a1a6;
         }
         .btn-secondary:hover {
           background-color: rgba(255, 255, 255, 0.1);
-          color: #F5F5F7;
+          color: #f5f5f7;
         }
         .chat-bubble {
           background: rgba(255, 255, 255, 0.1);
-          color: #F5F5F7;
+          color: #f5f5f7;
           border-color: rgba(255, 255, 255, 0.1);
         }
       }
@@ -416,35 +478,43 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option, .persona-chip {
+        input,
+        select,
+        textarea,
+        button,
+        .radio-option,
+        .persona-chip {
           min-height: 44px !important;
         }
       }
 
-            @media (max-width: 375px) {
+      @media (max-width: 375px) {
         .stepper {
           gap: 4px;
         }
         .step-indicator {
           width: 8px;
-          min-height: 44px; height: auto;
+          min-height: 44px;
+          height: auto;
         }
         .step-indicator.active {
           transform: scale(1.2);
         }
         .container {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        text-align: center;
-        max-width: 480px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
-      }
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          padding: 40px;
+          border-radius: 16px;
+          box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          text-align: center;
+          max-width: 480px;
+          width: 100%;
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          box-sizing: border-box;
+        }
         .radio-option {
           padding: 8px 12px;
           font-size: 14px;
@@ -461,81 +531,256 @@
         }
       }
 
-
       *:focus-visible {
-        outline: 3px solid #0066FF;
+        outline: 3px solid #0066ff;
         outline-offset: 2px;
       }
-
     </style>
   </head>
   <body>
-        <div class="container glassmorphism" id="form-container">
-
-
+    <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
       <div class="step active" id="step-initial">
-        <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
-          <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <div
+          style="
+            width: 64px;
+            height: 64px;
+            background: rgba(0, 102, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+          "
+        >
+          <svg
+            style="width: 32px; height: 32px; color: #0066ff"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
           </svg>
         </div>
         <h1>10-Minute Setup Wizard</h1>
-        <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
+        <p>
+          Zero tech skills needed. We do the heavy lifting. Review and add any
+          extra details to help our AI generate the perfect store.
+        </p>
 
-        <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
+        <div class="btn-group" style="margin-top: 32px">
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-context"
+          >
+            Start My Business
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-instant')"
+          >
+            Instant Build
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-chat')"
+            style="margin-top: 10px"
+          >
+            Conversational Setup
+          </button>
         </div>
       </div>
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        <button
+          onclick="goToStep('step-initial')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            box-shadow: none;
+            width: auto;
+            font-size: 14px;
+            min-height: 44px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          <svg
+            style="width: 16px; height: auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
+        <textarea
+          id="instant-bio"
+          data-testid="instant-bio"
+          class="glassmorphism"
+          placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+          rows="6"
+          style="resize: none"
+        ></textarea>
+        <div
+          id="instant-error"
+          class="error-msg"
+          aria-live="polite"
+          style="margin-bottom: 20px"
+        ></div>
 
-        <div class="btn-group" style="margin-top: 24px;">
-          <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
+        <div class="btn-group" style="margin-top: 24px">
+          <button
+            id="generate-storefront-btn"
+            data-testid="generate-storefront-btn"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
         </div>
       </div>
-
-
 
       <div class="step" id="step-loading">
         <h1>Building Your Business...</h1>
         <p>Please wait while we set up your workspace.</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+        <div
+          class="spinner"
+          style="margin: 0 auto; width: 40px; height: 40px"
+        ></div>
       </div>
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        <button
+          onclick="goToStep('step-initial')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            box-shadow: none;
+            width: auto;
+            font-size: 14px;
+            min-height: 44px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          <svg
+            style="width: 16px; height: auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
         </button>
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
 
-        <div id="chat-messages" class="glassmorphism" style="text-align: left;">
-            <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
+        <div id="chat-messages" class="glassmorphism" style="text-align: left">
+          <div style="margin-bottom: 10px; color: #333">
+            <strong>Assistant:</strong> What do you do? (e.g. I make custom
+            vegan cakes in Austin)
+          </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" inputmode="url" autocomplete="off" enterkeyhint="next" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" autocomplete="off" enterkeyhint="send" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
-            </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <input
+            type="url"
+            id="chat-image-url"
+            inputmode="url"
+            autocomplete="off"
+            enterkeyhint="next"
+            data-testid="chat-image-url"
+            class="glassmorphism"
+            placeholder="Image URL (Optional)"
+            style="
+              margin-bottom: 0;
+              width: 100%;
+              min-height: 44px;
+              border-radius: 8px;
+            "
+          />
+          <div style="display: flex; gap: 10px">
+            <input
+              type="text"
+              id="chat-input"
+              autocomplete="off"
+              enterkeyhint="send"
+              data-testid="chat-input"
+              class="glassmorphism"
+              placeholder="Type a message..."
+              style="
+                margin-bottom: 0;
+                flex-grow: 1;
+                min-height: 44px;
+                border-radius: 8px;
+              "
+            />
+            <button
+              id="chat-send-btn"
+              data-testid="chat-send-btn"
+              style="
+                width: auto;
+                min-height: 44px;
+                min-width: 44px;
+                border-radius: 8px;
+              "
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
+      <div
+        class="stepper"
+        id="stepper-indicator"
+        style="display: none"
+        role="progressbar"
+        aria-label="Setup progress"
+        aria-valuemin="0"
+        aria-valuemax="7"
+      >
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -544,7 +789,17 @@
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
-      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
+      <div
+        id="draft-saved-msg"
+        style="
+          display: none;
+          color: #34c759;
+          font-weight: bold;
+          margin-bottom: 15px;
+        "
+      >
+        Draft Saved!
+      </div>
 
       <!-- Step 1: Work Context -->
       <div class="step" id="step-context">
@@ -552,12 +807,48 @@
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker', event)" data-testid="persona-baker">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
-            <div class="persona-chip" onclick="applyPersona('FoodCart', event)" data-testid="persona-foodcart">I'm a Food Cart Operator</div>
-            <div class="persona-chip" onclick="applyPersona('Agency', event)" data-testid="persona-agency">I'm an Agency Principal</div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Baker', event)"
+            data-testid="persona-baker"
+          >
+            I'm a Baker
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Handyman', event)"
+            data-testid="persona-handyman"
+          >
+            I'm a Handyman
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Boutique', event)"
+            data-testid="persona-boutique"
+          >
+            I'm a Boutique Owner
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Tutor', event)"
+            data-testid="persona-tutor"
+          >
+            I'm a Tutor
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('FoodCart', event)"
+            data-testid="persona-foodcart"
+          >
+            I'm a Food Cart Operator
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Agency', event)"
+            data-testid="persona-agency"
+          >
+            I'm an Agency Principal
+          </div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -590,10 +881,24 @@
             </div>
           </label>
         </div>
-        <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
+        <div id="context-error" class="error-msg" aria-live="polite">
+          Please select an option.
+        </div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-categories"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
         </div>
       </div>
 
@@ -601,14 +906,38 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" data-testid="business-categories" class="glassmorphism">
+        <select
+          id="business-categories"
+          data-testid="business-categories"
+          class="glassmorphism"
+        >
           <option value="" disabled selected>Select a category...</option>
         </select>
-        <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
+        <div id="categories-error" class="error-msg" aria-live="polite">
+          Please enter a category.
+        </div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-name"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-context"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -616,15 +945,51 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" enterkeyhint="next" />
-        <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
+        <input
+          type="text"
+          id="business-name"
+          data-testid="business-name"
+          class="glassmorphism"
+          placeholder="e.g. Maya's Bakery"
+          autocomplete="organization"
+          enterkeyhint="next"
+        />
+        <div id="name-error" class="error-msg" aria-live="polite">
+          Business Name must be at least 3 characters.
+        </div>
 
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" autocomplete="off" enterkeyhint="next" />
+        <input
+          type="text"
+          id="business-tagline"
+          data-testid="business-tagline"
+          class="glassmorphism"
+          placeholder="Tagline (optional)"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-assistant"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-categories"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -634,43 +999,116 @@
         <p>Give your AI assistant a name and tone.</p>
 
         <div class="chat-bubble" id="assistant-intro">
-            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
+          "Hi! I'll be your partner in growing this business. What should I call
+          myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" autocomplete="off" enterkeyhint="next" />
-        <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
+        <input
+          type="text"
+          id="assistant-name"
+          data-testid="assistant-name"
+          class="glassmorphism"
+          placeholder="e.g. Jarvis"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="assistant-name-error" class="error-msg" aria-live="polite">
+          Please enter a name for your assistant.
+        </div>
 
-        <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism">
+        <select
+          id="assistant-tone"
+          data-testid="assistant-tone"
+          class="glassmorphism"
+        >
           <option value="" disabled selected>Select a tone</option>
           <option value="Professional">Professional</option>
           <option value="Friendly">Friendly</option>
           <option value="Concise">Concise</option>
         </select>
-        <div id="tone-error" class="error-msg" aria-live="polite">Please select a tone.</div>
+        <div id="tone-error" class="error-msg" aria-live="polite">
+          Please select a tone.
+        </div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-admin"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-name"
+          >
+            Back
+          </button>
         </div>
       </div>
-
 
       <!-- Step 5: Admin Setup -->
       <div class="step" id="step-admin">
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
-        <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
+        <input
+          type="email"
+          id="admin-email"
+          data-testid="admin-email"
+          class="glassmorphism"
+          placeholder="admin@mybusiness.com"
+          inputmode="email"
+          autocomplete="email"
+          enterkeyhint="next"
+        />
+        <div id="email-error" class="error-msg" aria-live="polite">
+          Please enter a valid email address.
+        </div>
 
-        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" />
-        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
+        <input
+          type="password"
+          id="admin-password"
+          data-testid="admin-password"
+          class="glassmorphism"
+          placeholder="Password (min 8 chars)"
+          autocomplete="new-password"
+          enterkeyhint="next"
+        />
+        <div id="password-error" class="error-msg" aria-live="polite">
+          Password must be at least 8 characters.
+        </div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-offer"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-assistant"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -678,12 +1116,40 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" autocomplete="off" enterkeyhint="next" />
-        <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
+        <input
+          type="text"
+          id="first-offer"
+          data-testid="first-offer"
+          class="glassmorphism"
+          placeholder="e.g. Custom Birthday Cake"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="offer-error" class="error-msg" aria-live="polite">
+          Please enter an offer.
+        </div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-template"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-admin"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -691,956 +1157,1207 @@
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
-        <select id="template-selection" data-testid="template-selection" class="glassmorphism">
+        <select
+          id="template-selection"
+          data-testid="template-selection"
+          class="glassmorphism"
+        >
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
           <option value="Classic">Classic</option>
           <option value="Playful">Playful</option>
         </select>
-        <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
+        <div id="template-error" class="error-msg" aria-live="polite">
+          Please select a template.
+        </div>
 
         <div class="btn-group">
           <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            data-testid="prev-step-btn"
+            data-prev="step-offer"
+          >
+            Back
+          </button>
         </div>
       </div>
-
     </div>
     <script>
-      const container = document.getElementById('form-container');
+      const container = document.getElementById("form-container");
 
       function applyPersona(persona, event) {
-          document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
-          event.target.classList.add('selected');
+        document
+          .querySelectorAll(".persona-chip")
+          .forEach((el) => el.classList.remove("selected"));
+        event.target.classList.add("selected");
 
-          if (persona === 'Baker') {
-              state.work_context = 'Storefront';
-              state.categories = 'Bakery';
-              state.businessName = "Maya's Bakery";
-              state.assistantName = "Cookie";
-              state.assistantTone = "Friendly";
-              state.first_offer = "Custom Birthday Cake";
-          } else if (persona === 'Handyman') {
-              state.work_context = 'Local Service';
-              state.categories = 'Handyman';
-              state.businessName = "Carlos Repairs";
-              state.assistantName = "Tools";
-              state.assistantTone = "Concise";
-              state.first_offer = "Standard Repair Visit";
-          } else if (persona === 'Boutique') {
-              state.work_context = 'Storefront';
-              state.categories = 'Boutique';
-              state.businessName = "Priya's Boutique";
-              state.assistantName = "Style";
-              state.assistantTone = "Professional";
-              state.first_offer = "Signature Dress";
-          } else if (persona === 'Tutor') {
-              state.work_context = 'Online Creator';
-              state.categories = 'Tutoring';
-              state.businessName = "Leo's Music";
-              state.assistantName = "Melody";
-              state.assistantTone = "Friendly";
-              state.first_offer = "1-Hour Guitar Lesson";
-          } else if (persona === 'FoodCart') {
-              state.work_context = 'Storefront';
-              state.categories = 'Other';
-              state.businessName = "Fatima's Flavors";
-              state.assistantName = "Spice";
-              state.assistantTone = "Friendly";
-              state.first_offer = "Daily Lunch Special";
-          } else if (persona === 'Agency') {
-              state.work_context = 'Agency';
-              state.categories = 'Design';
-              state.businessName = "Nora Studio";
-              state.assistantName = "Vision";
-              state.assistantTone = "Professional";
-              state.first_offer = "Standard Design Project";
-          }
-          populateForm();
-          saveCurrentState();
+        if (persona === "Baker") {
+          state.work_context = "Storefront";
+          state.categories = "Bakery";
+          state.businessName = "Maya's Bakery";
+          state.assistantName = "Cookie";
+          state.assistantTone = "Friendly";
+          state.first_offer = "Custom Birthday Cake";
+        } else if (persona === "Handyman") {
+          state.work_context = "Local Service";
+          state.categories = "Handyman";
+          state.businessName = "Carlos Repairs";
+          state.assistantName = "Tools";
+          state.assistantTone = "Concise";
+          state.first_offer = "Standard Repair Visit";
+        } else if (persona === "Boutique") {
+          state.work_context = "Storefront";
+          state.categories = "Boutique";
+          state.businessName = "Priya's Boutique";
+          state.assistantName = "Style";
+          state.assistantTone = "Professional";
+          state.first_offer = "Signature Dress";
+        } else if (persona === "Tutor") {
+          state.work_context = "Online Creator";
+          state.categories = "Tutoring";
+          state.businessName = "Leo's Music";
+          state.assistantName = "Melody";
+          state.assistantTone = "Friendly";
+          state.first_offer = "1-Hour Guitar Lesson";
+        } else if (persona === "FoodCart") {
+          state.work_context = "Storefront";
+          state.categories = "Other";
+          state.businessName = "Fatima's Flavors";
+          state.assistantName = "Spice";
+          state.assistantTone = "Friendly";
+          state.first_offer = "Daily Lunch Special";
+        } else if (persona === "Agency") {
+          state.work_context = "Agency";
+          state.categories = "Design";
+          state.businessName = "Nora Studio";
+          state.assistantName = "Vision";
+          state.assistantTone = "Professional";
+          state.first_offer = "Standard Design Project";
+        }
+        populateForm();
+        saveCurrentState();
 
-          // Flash feedback
-          const chip = event.target;
-          const originalText = chip.innerText;
-          chip.innerText = "Applied!";
-          setTimeout(() => { chip.innerText = originalText; }, 1000);
+        // Flash feedback
+        const chip = event.target;
+        const originalText = chip.innerText;
+        chip.innerText = "Applied!";
+        setTimeout(() => {
+          chip.innerText = originalText;
+        }, 1000);
       }
 
-      const finishBtn = document.getElementById('finish-btn');
+      const finishBtn = document.getElementById("finish-btn");
 
       const inputs = {
-          context: document.querySelectorAll('input[name="work_context"]'),
-          categories: document.getElementById('business-categories'),
-          name: document.getElementById('business-name'),
-          tagline: document.getElementById('business-tagline'),
-          assistantName: document.getElementById('assistant-name'),
-          assistantTone: document.getElementById('assistant-tone'),
-          adminEmail: document.getElementById('admin-email'),
-          adminPassword: document.getElementById('admin-password'),
-          firstOffer: document.getElementById('first-offer'),
-          templateSelection: document.getElementById('template-selection')
+        context: document.querySelectorAll('input[name="work_context"]'),
+        categories: document.getElementById("business-categories"),
+        name: document.getElementById("business-name"),
+        tagline: document.getElementById("business-tagline"),
+        assistantName: document.getElementById("assistant-name"),
+        assistantTone: document.getElementById("assistant-tone"),
+        adminEmail: document.getElementById("admin-email"),
+        adminPassword: document.getElementById("admin-password"),
+        firstOffer: document.getElementById("first-offer"),
+        templateSelection: document.getElementById("template-selection"),
       };
 
       const errors = {
-          context: document.getElementById('context-error'),
-          categories: document.getElementById('categories-error'),
-          name: document.getElementById('name-error'),
-          assistantName: document.getElementById('assistant-name-error'),
-          assistantTone: document.getElementById('tone-error'),
-          adminEmail: document.getElementById('email-error'),
-          adminPassword: document.getElementById('password-error'),
-          firstOffer: document.getElementById('offer-error'),
-          templateSelection: document.getElementById('template-error')
+        context: document.getElementById("context-error"),
+        categories: document.getElementById("categories-error"),
+        name: document.getElementById("name-error"),
+        assistantName: document.getElementById("assistant-name-error"),
+        assistantTone: document.getElementById("tone-error"),
+        adminEmail: document.getElementById("email-error"),
+        adminPassword: document.getElementById("password-error"),
+        firstOffer: document.getElementById("offer-error"),
+        templateSelection: document.getElementById("template-error"),
       };
 
       let state = {
-          businessName: '',
-          assistantName: '',
-          assistantTone: '',
-          work_context: '',
-          categories: '',
-          tagline: '',
-          first_offer: '',
-          templateSelection: ''
+        businessName: "",
+        assistantName: "",
+        assistantTone: "",
+        work_context: "",
+        categories: "",
+        tagline: "",
+        first_offer: "",
+        templateSelection: "",
       };
 
       // Handle radio buttons selection visual state
-      inputs.context.forEach(radio => {
-          radio.addEventListener('change', (e) => {
-              document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-              e.target.closest('.radio-option').classList.add('selected');
-              errors.context.style.display = 'none';
-          });
+      inputs.context.forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          document
+            .querySelectorAll(".radio-option")
+            .forEach((el) => el.classList.remove("selected"));
+          e.target.closest(".radio-option").classList.add("selected");
+          errors.context.style.display = "none";
+        });
       });
 
-            function resumeStep() {
-          if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-              if (state.step < steps.length) {
-                  goToStep(steps[state.step]);
-                  return true;
-              }
+      function resumeStep() {
+        if (state.step !== undefined && state.step > 0) {
+          const steps = [
+            "step-context",
+            "step-categories",
+            "step-name",
+            "step-assistant",
+            "step-admin",
+            "step-offer",
+            "step-template",
+          ];
+          if (state.step < steps.length) {
+            goToStep(steps[state.step]);
+            return true;
           }
-          return false;
+        }
+        return false;
       }
 
       // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
-          if (backendState) {
-            state = { ...state, ...backendState };
-            populateForm();
-            resumeStep();
-          }
-        }).catch(console.error);
+      const loadStateAndResume = async () => {
+        let loadedState = {};
 
-      } else {
-        const stored = localStorage.getItem('onboardingState');
+        // Always try to load local first for speed
+        const stored = localStorage.getItem("onboardingState");
         if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
-          populateForm();
-          resumeStep();
+          try {
+            loadedState = JSON.parse(stored);
+          } catch (e) {
+            console.warn("Failed to parse local state", e);
+          }
         }
 
-        // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-
-        fetch(`${backendUrl}/api/onboarding/state`, {
-            method: 'GET',
-            headers: {
-                'X-Tenant-ID': tenantId,
-                'X-User-ID': userId
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            const backendState = await window.__TAURI__.core.invoke(
+              "get_onboarding_state",
+            );
+            if (backendState && Object.keys(backendState).length > 0) {
+              loadedState = { ...loadedState, ...backendState };
             }
-        })
-        .then(res => res.json())
-        .then(apiState => {
-            if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState.wizardState || apiState) };
-                localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
-                populateForm();
-                resumeStep();
+          } catch (err) {
+            console.error("Failed to load tauri backend state:", err);
+          }
+        } else {
+          // Fetch from API to support cross-device resume
+          const backendUrl =
+            window.location.origin.includes("localhost") ||
+            window.location.protocol === "file:"
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "storefront";
+          const userId = localStorage.getItem("user_id") || "test-user";
+
+          try {
+            const res = await fetch(`${backendUrl}/api/onboarding/state`, {
+              method: "GET",
+              headers: {
+                "X-Tenant-ID": tenantId,
+                "X-User-ID": userId,
+              },
+            });
+            if (res.ok) {
+              const apiState = await res.json();
+              if (apiState && Object.keys(apiState).length > 0) {
+                loadedState = {
+                  ...loadedState,
+                  ...(apiState.wizardState || apiState),
+                };
+                // Sync cross-device state down to local
+                localStorage.setItem(
+                  "onboardingState",
+                  JSON.stringify(loadedState),
+                );
+              }
             }
-        })
-        .catch(err => console.error('Failed to load cross-device state:', err));
-      }
-
-
-      if (!resumeStep()) {
-          goToStep('step-initial');
-      }
-
-            // Clear name error on typing if valid
-      inputs.name.addEventListener('input', () => {
-          if (inputs.name.value.trim().length >= 3) {
-              errors.name.style.display = 'none';
-              inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          } catch (err) {
+            console.error("Failed to load cross-device state:", err);
           }
+        }
+
+        if (Object.keys(loadedState).length > 0) {
+          state = { ...state, ...loadedState };
+          if (
+            loadedState.instantBio &&
+            document.getElementById("instant-bio")
+          ) {
+            document.getElementById("instant-bio").value =
+              loadedState.instantBio;
+            if (document.getElementById("generate-storefront-btn")) {
+              document.getElementById("generate-storefront-btn").disabled =
+                false;
+            }
+          }
+          populateForm();
+        }
+
+        if (!resumeStep()) {
+          goToStep("step-initial");
+        }
+      };
+
+      loadStateAndResume();
+
+      // Clear name error on typing if valid
+      inputs.name.addEventListener("input", () => {
+        if (inputs.name.value.trim().length >= 3) {
+          errors.name.style.display = "none";
+          inputs.name.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        }
       });
 
-      inputs.adminEmail.addEventListener('input', () => {
-          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
-              errors.adminEmail.style.display = 'none';
-              inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
+      inputs.adminEmail.addEventListener("input", () => {
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
+          errors.adminEmail.style.display = "none";
+          inputs.adminEmail.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        }
       });
 
-      inputs.adminPassword.addEventListener('input', () => {
-          if (inputs.adminPassword.value.trim().length >= 8) {
-              errors.adminPassword.style.display = 'none';
-              inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
+      inputs.adminPassword.addEventListener("input", () => {
+        if (inputs.adminPassword.value.trim().length >= 8) {
+          errors.adminPassword.style.display = "none";
+          inputs.adminPassword.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        }
       });
 
-      inputs.assistantName.addEventListener('input', () => {
-          if (inputs.assistantName.value.trim().length > 0) {
-              errors.assistantName.style.display = 'none';
-              inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
+      inputs.assistantName.addEventListener("input", () => {
+        if (inputs.assistantName.value.trim().length > 0) {
+          errors.assistantName.style.display = "none";
+          inputs.assistantName.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        }
       });
 
-      inputs.firstOffer.addEventListener('input', () => {
-          if (inputs.firstOffer.value.trim().length > 0) {
-              errors.firstOffer.style.display = 'none';
-              inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
+      inputs.firstOffer.addEventListener("input", () => {
+        if (inputs.firstOffer.value.trim().length > 0) {
+          errors.firstOffer.style.display = "none";
+          inputs.firstOffer.style.borderColor = "rgba(255, 255, 255, 0.5)";
+        }
       });
-
 
       function populateForm() {
-          if (state.businessName) inputs.name.value = state.businessName;
-          if (state.tagline) inputs.tagline.value = state.tagline;
+        if (state.businessName) inputs.name.value = state.businessName;
+        if (state.tagline) inputs.tagline.value = state.tagline;
 
-          state.work_context = state.work_context || state.workContext;
-          if (state.work_context) {
-              populateCategories();
+        state.work_context = state.work_context || state.workContext;
+        if (state.work_context) {
+          populateCategories();
+        }
+        if (state.categories) inputs.categories.value = state.categories;
+
+        if (state.assistantName)
+          inputs.assistantName.value = state.assistantName;
+        if (state.assistantTone)
+          inputs.assistantTone.value = state.assistantTone;
+        if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
+        if (state.adminPassword)
+          inputs.adminPassword.value = state.adminPassword;
+        state.firstOffer = state.firstOffer || state.first_offer;
+        if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+        if (state.templateSelection)
+          inputs.templateSelection.value = state.templateSelection;
+
+        const contextVal = state.work_context;
+        if (contextVal) {
+          inputs.context.forEach((r) => {
+            if (r.value === contextVal) {
+              r.checked = true;
+              document
+                .querySelectorAll(".radio-option")
+                .forEach((el) => el.classList.remove("selected"));
+              r.closest(".radio-option").classList.add("selected");
+            }
+          });
+        }
+
+        if (state.step !== undefined && state.step > 0) {
+          const steps = [
+            "step-context",
+            "step-categories",
+            "step-name",
+            "step-assistant",
+            "step-admin",
+            "step-offer",
+            "step-template",
+          ];
+          if (state.step < steps.length) {
+            goToStep(steps[state.step]);
           }
-          if (state.categories) inputs.categories.value = state.categories;
-
-          if (state.assistantName) inputs.assistantName.value = state.assistantName;
-          if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
-          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
-          state.firstOffer = state.firstOffer || state.first_offer;
-          if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
-          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
-
-          const contextVal = state.work_context;
-          if (contextVal) {
-              inputs.context.forEach(r => {
-                  if (r.value === contextVal) {
-                      r.checked = true;
-                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-                      r.closest('.radio-option').classList.add('selected');
-                  }
-              });
-          }
-
-          if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-              if (state.step < steps.length) {
-                  goToStep(steps[state.step]);
-              }
-          }
+        }
       }
 
-            function saveCurrentState() {
-          state.categories = inputs.categories.value;
-          state.businessName = inputs.name.value;
-          state.tagline = inputs.tagline.value;
-          state.assistantName = inputs.assistantName.value;
-          state.assistantTone = inputs.assistantTone.value;
-          state.firstOffer = inputs.firstOffer.value;
-          state.first_offer = inputs.firstOffer.value;
-          state.templateSelection = inputs.templateSelection.value;
+      function saveCurrentState() {
+        state.categories = inputs.categories.value;
+        state.businessName = inputs.name.value;
+        state.tagline = inputs.tagline.value;
+        state.assistantName = inputs.assistantName.value;
+        state.assistantTone = inputs.assistantTone.value;
+        state.firstOffer = inputs.firstOffer.value;
+        state.first_offer = inputs.firstOffer.value;
+        state.templateSelection = inputs.templateSelection.value;
 
-          let selectedContext = document.querySelector('input[name="work_context"]:checked');
-          if (selectedContext) {
-              state.work_context = selectedContext.value;
-              state.workContext = selectedContext.value;
-          }
+        let selectedContext = document.querySelector(
+          'input[name="work_context"]:checked',
+        );
+        if (selectedContext) {
+          state.work_context = selectedContext.value;
+          state.workContext = selectedContext.value;
+        }
 
-          // Increment step if we are moving forward
+        // Increment step if we are moving forward
 
-          let stepNumber = 0;
-          const activeStep = document.querySelector('.step.active');
-          if (activeStep) {
-              if (activeStep.id === 'step-context') stepNumber = 0;
-              if (activeStep.id === 'step-categories') stepNumber = 1;
-              if (activeStep.id === 'step-name') stepNumber = 2;
-              if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-admin') stepNumber = 4;
-              if (activeStep.id === 'step-offer') stepNumber = 5;
-              if (activeStep.id === 'step-template') stepNumber = 6;
-          }
-          state.step = stepNumber;
+        let stepNumber = 0;
+        const activeStep = document.querySelector(".step.active");
+        if (activeStep) {
+          if (activeStep.id === "step-context") stepNumber = 0;
+          if (activeStep.id === "step-categories") stepNumber = 1;
+          if (activeStep.id === "step-name") stepNumber = 2;
+          if (activeStep.id === "step-assistant") stepNumber = 3;
+          if (activeStep.id === "step-admin") stepNumber = 4;
+          if (activeStep.id === "step-offer") stepNumber = 5;
+          if (activeStep.id === "step-template") stepNumber = 6;
+        }
+        state.step = stepNumber;
 
-          if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
-          } else {
-              localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-              const userId = localStorage.getItem('user_id') || 'test-user';
-              fetch(`${backendUrl}/api/onboarding/state`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-                  body: JSON.stringify({ wizardState: state })
-              }).catch(console.error);
-          }
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          window.__TAURI__.core
+            .invoke("save_onboarding_state", { state })
+            .catch(console.error);
+        } else {
+          localStorage.setItem("onboardingState", JSON.stringify(state));
+          const backendUrl =
+            window.location.origin.includes("localhost") ||
+            window.location.protocol === "file:"
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "storefront";
+          const userId = localStorage.getItem("user_id") || "test-user";
+          fetch(`${backendUrl}/api/onboarding/state`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Tenant-ID": tenantId,
+              "X-User-ID": userId,
+            },
+            body: JSON.stringify({ wizardState: state }),
+          }).catch(console.error);
+        }
       }
 
       function validateStep(stepId) {
-          let isValid = true;
+        let isValid = true;
 
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
-              return true;
-          }
+        if (
+          stepId === "step-initial" ||
+          stepId === "step-instant" ||
+          stepId === "step-chat"
+        ) {
+          return true;
+        }
 
-          if (stepId === 'step-context') {
-              const selected = document.querySelector('input[name="work_context"]:checked');
-              if (!selected) {
-                  errors.context.style.display = 'block';
-                  isValid = false;
-              } else {
-                  state.work_context = selected.value;
-              }
+        if (stepId === "step-context") {
+          const selected = document.querySelector(
+            'input[name="work_context"]:checked',
+          );
+          if (!selected) {
+            errors.context.style.display = "block";
+            isValid = false;
+          } else {
+            state.work_context = selected.value;
           }
-          else if (stepId === 'step-categories') {
-              if (inputs.categories.value.trim() === '') {
-                  errors.categories.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.categories.style.display = 'none';
-                  state.categories = inputs.categories.value.trim();
-              }
+        } else if (stepId === "step-categories") {
+          if (inputs.categories.value.trim() === "") {
+            errors.categories.style.display = "block";
+            isValid = false;
+          } else {
+            errors.categories.style.display = "none";
+            state.categories = inputs.categories.value.trim();
           }
-          else if (stepId === 'step-name') {
-              if (inputs.name.value.trim().length < 3) {
-                  errors.name.style.display = 'block';
-                  inputs.name.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.name.style.display = 'none';
-                  inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.businessName = inputs.name.value.trim();
-                  state.tagline = inputs.tagline.value.trim();
-              }
+        } else if (stepId === "step-name") {
+          if (inputs.name.value.trim().length < 3) {
+            errors.name.style.display = "block";
+            inputs.name.style.borderColor = "#FF3B30";
+            isValid = false;
+          } else {
+            errors.name.style.display = "none";
+            inputs.name.style.borderColor = "rgba(255, 255, 255, 0.5)";
+            state.businessName = inputs.name.value.trim();
+            state.tagline = inputs.tagline.value.trim();
           }
-          else if (stepId === 'step-assistant') {
-              if (inputs.assistantName.value.trim() === '') {
-                  errors.assistantName.style.display = 'block'; inputs.assistantName.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.assistantName.style.display = 'none'; inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.assistantName = inputs.assistantName.value.trim();
-              }
-
-              if (!inputs.assistantTone.value) {
-                  errors.assistantTone.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.assistantTone.style.display = 'none';
-                  state.assistantTone = inputs.assistantTone.value;
-              }
-          }
-          else if (stepId === 'step-admin') {
-              const emailVal = inputs.adminEmail.value.trim();
-              const passVal = inputs.adminPassword.value.trim();
-              let stepValid = true;
-
-              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                  errors.adminEmail.style.display = 'block';
-                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required' : 'Please enter a valid email address.';
-                  inputs.adminEmail.style.borderColor = '#FF3B30';
-                  stepValid = false;
-              } else {
-                  errors.adminEmail.style.display = 'none';
-                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-              }
-
-              if (passVal.length < 8 || !/\d/.test(passVal)) {
-                  errors.adminPassword.style.display = 'block';
-                  errors.adminPassword.innerText = passVal === '' ? 'Password is required' : 'Password must be at least 8 characters and contain a number';
-                  inputs.adminPassword.style.borderColor = '#FF3B30';
-                  stepValid = false;
-              } else {
-                  errors.adminPassword.style.display = 'none';
-                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-              }
-
-              if (stepValid) {
-                  state.adminEmail = emailVal;
-                  state.adminPassword = passVal;
-              } else {
-                  isValid = false;
-              }
-          }
-          else if (stepId === 'step-offer') {
-              if (inputs.firstOffer.value.trim() === '') {
-                  errors.firstOffer.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.firstOffer.style.display = 'none';
-                  state.first_offer = inputs.firstOffer.value.trim();
-              }
-          }
-          else if (stepId === 'step-template') {
-              if (inputs.templateSelection.value === '') {
-                  errors.templateSelection.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.templateSelection.style.display = 'none';
-                  state.templateSelection = inputs.templateSelection.value;
-              }
+        } else if (stepId === "step-assistant") {
+          if (inputs.assistantName.value.trim() === "") {
+            errors.assistantName.style.display = "block";
+            inputs.assistantName.style.borderColor = "#FF3B30";
+            isValid = false;
+          } else {
+            errors.assistantName.style.display = "none";
+            inputs.assistantName.style.borderColor = "rgba(255, 255, 255, 0.5)";
+            state.assistantName = inputs.assistantName.value.trim();
           }
 
-          if (!isValid) {
-              container.classList.remove('animate-shake');
-              void container.offsetWidth; // trigger reflow
-              container.classList.add('animate-shake');
+          if (!inputs.assistantTone.value) {
+            errors.assistantTone.style.display = "block";
+            isValid = false;
+          } else {
+            errors.assistantTone.style.display = "none";
+            state.assistantTone = inputs.assistantTone.value;
+          }
+        } else if (stepId === "step-admin") {
+          const emailVal = inputs.adminEmail.value.trim();
+          const passVal = inputs.adminPassword.value.trim();
+          let stepValid = true;
+
+          if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+            errors.adminEmail.style.display = "block";
+            errors.adminEmail.innerText =
+              emailVal === ""
+                ? "Admin Email is required"
+                : "Please enter a valid email address.";
+            inputs.adminEmail.style.borderColor = "#FF3B30";
+            stepValid = false;
+          } else {
+            errors.adminEmail.style.display = "none";
+            inputs.adminEmail.style.borderColor = "rgba(255, 255, 255, 0.5)";
           }
 
-          return isValid;
+          if (passVal.length < 8 || !/\d/.test(passVal)) {
+            errors.adminPassword.style.display = "block";
+            errors.adminPassword.innerText =
+              passVal === ""
+                ? "Password is required"
+                : "Password must be at least 8 characters and contain a number";
+            inputs.adminPassword.style.borderColor = "#FF3B30";
+            stepValid = false;
+          } else {
+            errors.adminPassword.style.display = "none";
+            inputs.adminPassword.style.borderColor = "rgba(255, 255, 255, 0.5)";
+          }
+
+          if (stepValid) {
+            state.adminEmail = emailVal;
+            state.adminPassword = passVal;
+          } else {
+            isValid = false;
+          }
+        } else if (stepId === "step-offer") {
+          if (inputs.firstOffer.value.trim() === "") {
+            errors.firstOffer.style.display = "block";
+            isValid = false;
+          } else {
+            errors.firstOffer.style.display = "none";
+            state.first_offer = inputs.firstOffer.value.trim();
+          }
+        } else if (stepId === "step-template") {
+          if (inputs.templateSelection.value === "") {
+            errors.templateSelection.style.display = "block";
+            isValid = false;
+          } else {
+            errors.templateSelection.style.display = "none";
+            state.templateSelection = inputs.templateSelection.value;
+          }
+        }
+
+        if (!isValid) {
+          container.classList.remove("animate-shake");
+          void container.offsetWidth; // trigger reflow
+          container.classList.add("animate-shake");
+        }
+
+        return isValid;
       }
 
-
       function updateStepper(stepId) {
-          const stepperIndicator = document.getElementById('stepper-indicator');
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
-              if (stepperIndicator) stepperIndicator.style.display = 'none';
-          } else {
-              if (stepperIndicator) stepperIndicator.style.display = 'flex';
-          }
+        const stepperIndicator = document.getElementById("stepper-indicator");
+        if (
+          stepId === "step-initial" ||
+          stepId === "step-instant" ||
+          stepId === "step-chat"
+        ) {
+          if (stepperIndicator) stepperIndicator.style.display = "none";
+        } else {
+          if (stepperIndicator) stepperIndicator.style.display = "flex";
+        }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-          const currentIndex = steps.indexOf(stepId);
-          if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
+        const steps = [
+          "step-context",
+          "step-categories",
+          "step-name",
+          "step-assistant",
+          "step-admin",
+          "step-offer",
+          "step-template",
+        ];
+        const currentIndex = steps.indexOf(stepId);
+        if (stepperIndicator)
+          stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
 
-          document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-              if (index < currentIndex) {
-                  indicator.classList.add('completed');
-                  indicator.classList.remove('active');
-              } else if (index === currentIndex) {
-                  indicator.classList.add('active');
-                  indicator.classList.remove('completed');
-              } else {
-                  indicator.classList.remove('active');
-                  indicator.classList.remove('completed');
-              }
+        document
+          .querySelectorAll(".step-indicator")
+          .forEach((indicator, index) => {
+            if (index < currentIndex) {
+              indicator.classList.add("completed");
+              indicator.classList.remove("active");
+            } else if (index === currentIndex) {
+              indicator.classList.add("active");
+              indicator.classList.remove("completed");
+            } else {
+              indicator.classList.remove("active");
+              indicator.classList.remove("completed");
+            }
           });
       }
 
       const categoriesMap = {
-          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
-          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
-          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
+        "Local Service": [
+          "Plumbing",
+          "Electrical",
+          "Cleaning",
+          "Landscaping",
+          "HVAC",
+          "Pest Control",
+          "Handyman",
+          "Other",
+        ],
+        Storefront: [
+          "Bakery",
+          "Cafe",
+          "Restaurant",
+          "Retail",
+          "Salon",
+          "Spa",
+          "Gym",
+          "Boutique",
+          "Other",
+        ],
+        "Online Creator": [
+          "Tutoring",
+          "Consulting",
+          "Digital Art",
+          "Software",
+          "Writing",
+          "Video Creation",
+          "Music",
+          "Other",
+        ],
+        Agency: [
+          "Marketing",
+          "Design",
+          "Development",
+          "Consulting",
+          "Advertising",
+          "PR",
+          "Other",
+        ],
       };
 
       function populateCategories() {
-          const context = state.work_context;
-          const cats = categoriesMap[context] || ['Other'];
-          inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
-          cats.forEach(c => {
-              const opt = document.createElement('option');
-              opt.value = c;
-              opt.textContent = c;
-              inputs.categories.appendChild(opt);
-          });
-          if (state.categories && cats.includes(state.categories)) {
-              inputs.categories.value = state.categories;
-          } else {
-              inputs.categories.value = "";
-          }
+        const context = state.work_context;
+        const cats = categoriesMap[context] || ["Other"];
+        inputs.categories.innerHTML =
+          '<option value="" disabled selected>Select a category...</option>';
+        cats.forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          inputs.categories.appendChild(opt);
+        });
+        if (state.categories && cats.includes(state.categories)) {
+          inputs.categories.value = state.categories;
+        } else {
+          inputs.categories.value = "";
+        }
       }
 
       function goToStep(stepId) {
-          if (stepId === 'step-categories') {
-              populateCategories();
-          }
-          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-          document.getElementById(stepId).classList.add('active');
-          updateStepper(stepId);
+        if (stepId === "step-categories") {
+          populateCategories();
+        }
+        document
+          .querySelectorAll(".step")
+          .forEach((el) => el.classList.remove("active"));
+        document.getElementById(stepId).classList.add("active");
+        updateStepper(stepId);
       }
 
-      document.querySelectorAll('.next-step-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              const currentStep = e.target.closest('.step').id;
-              const nextStepId = e.target.getAttribute('data-next');
-              if (validateStep(currentStep)) {
-                  goToStep(nextStepId);
-                  saveCurrentState();
-              }
-          });
-      });
-
-      document.querySelectorAll('.prev-step-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              const prevStepId = e.target.getAttribute('data-prev');
-              goToStep(prevStepId);
-              saveCurrentState();
-          });
-      });
-
-      document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-              e.preventDefault();
-              const originalText = btn.innerText;
-              btn.innerText = "Saving...";
-              btn.disabled = true;
-
-              // Add a small delay to allow browser to render "Saving..."
-              await new Promise(r => setTimeout(r, 100));
-
-              saveCurrentState();
-
-              btn.innerText = "Saved!";
-              btn.style.backgroundColor = "#34C759";
-              btn.style.color = "white";
-              btn.style.borderColor = "#34C759";
-
-              const msg = document.getElementById('draft-saved-msg');
-              if (msg) msg.style.display = 'block';
-
-              setTimeout(() => {
-                  btn.innerText = originalText;
-                  btn.disabled = false;
-                  btn.style.backgroundColor = "";
-                  btn.style.color = "";
-                  btn.style.borderColor = "";
-                  if (msg) msg.style.display = 'none';
-              }, 2000);
-          });
-      });
-
-      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
-      const instantBioInputEl = document.getElementById('instant-bio');
-      const instantErrorEl = document.getElementById('instant-error');
-
-      if (instantBioInputEl) {
-          // Initialize disabled state
-          if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
-              generateStorefrontBtn.disabled = true;
-          }
-          instantBioInputEl.addEventListener('input', () => {
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
-              if (instantErrorEl) {
-                  instantErrorEl.style.display = 'none';
-                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              }
-              if (generateStorefrontBtn) {
-                  generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
-              }
-          });
-      }
-
-
-      // Chat logic
-      const chatInputEl = document.getElementById('chat-input');
-      const chatSendBtn = document.getElementById('chat-send-btn');
-      const chatMessagesEl = document.getElementById('chat-messages');
-      let chatHistory = [];
-
-      async function sendChatMessage() {
-          const text = chatInputEl.value.trim();
-          const chatImageEl = document.getElementById('chat-image-url');
-          const imageUrl = chatImageEl ? chatImageEl.value.trim() : '';
-          if (!text && !imageUrl) return;
-
-          // Append user message
-          let displayMsg = text;
-          if (imageUrl) displayMsg += `<br><span style="font-size: 12px; color: #666;">[Attached Image: ${imageUrl}]</span>`;
-
-          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${displayMsg}</div>`;
-          chatInputEl.value = '';
-          if (chatImageEl) chatImageEl.value = '';
-
-          let msgObj = { role: 'user', content: text };
-          if (imageUrl) msgObj.image_url = imageUrl;
-
-          chatHistory.push(msgObj);
-          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-          chatSendBtn.disabled = true;
-
-          try {
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-              const userId = localStorage.getItem('user_id') || 'test-user';
-              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'X-Tenant-ID': tenantId,
-                      'X-User-ID': userId
-                  },
-                  body: JSON.stringify({ messages: chatHistory })
-              });
-
-              if (!res.ok) throw new Error('Chat request failed');
-              const data = await res.json();
-
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
-              chatHistory.push({ role: 'assistant', content: data.reply });
-              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-              if (data.is_complete && data.intake_data) {
-                  const intakeData = data.intake_data;
-                  const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: chatHistory.map(m => m.content).join(" "),
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
-                      location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || []
-                  };
-
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                      return;
-                  }
-
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
-
-                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'X-Tenant-ID': tenantIdStr,
-                          'X-User-ID': userIdStr
-                      },
-                      body: JSON.stringify({
-                          business_type: req.businessType,
-                          company_name: req.companyName,
-                          company_description: req.companyDescription,
-                          selling_categories: req.sellingCategories,
-                          payment_pref: req.paymentPref,
-                          admin_email: req.adminEmail,
-                          website_template: req.websiteTemplate,
-                          first_product_name: req.firstProductName,
-                          first_product_price: req.firstProductPrice,
-                          domain_choice: req.domainChoice,
-                          admin_name: req.adminName,
-                          admin_password: req.adminPassword,
-                          price_type: req.priceType,
-                          location: req.location,
-                          target_audience: req.targetAudience,
-                          initial_products: req.initialProducts,
-                          ai_agents: [],
-                          ai_auto_respond: true
-                      })
-                  });
-
-                  if (startRes.ok) {
-                      const startData = await startRes.json();
-                      if (startData.organization_id) {
-                          localStorage.setItem('tenant_id', startData.organization_id);
-                          localStorage.setItem('tenant', startData.organization_id);
-                      }
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  }
-              }
-          } catch (e) {
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
-          } finally {
-              chatSendBtn.disabled = false;
-          }
-      }
-
-      if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
-      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
-
-      if (generateStorefrontBtn) {
-          generateStorefrontBtn.addEventListener('click', async () => {
-              const bioInput = instantBioInputEl.value;
-              if (!bioInput.trim()) {
-                  instantErrorEl.innerText = "Please tell us about your business.";
-                  instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
-                  return;
-              }
-
-              instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
-              generateStorefrontBtn.disabled = true;
-              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
-
-              try {
-                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
-
-                  let intakeData = null;
-
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
-                  } else {
-                     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
-                         method: 'POST',
-                         headers: {
-                             'Content-Type': 'application/json',
-                             'X-Tenant-ID': tenantIdStr,
-                             'X-User-ID': userIdStr
-                         },
-                         body: JSON.stringify({ description: bioInput })
-                     });
-                     if (!res.ok) {
-                         const errData = await res.json().catch(()=>({}));
-                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
-                     }
-                     intakeData = await res.json();
-                  }
-
-                  const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: bioInput,
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
-                      location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || []
-                  };
-
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                      await window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  } else {
-                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'X-Tenant-ID': tenantIdStr,
-                              'X-User-ID': userIdStr
-                          },
-                          body: JSON.stringify({
-                              business_type: req.businessType,
-                              company_name: req.companyName,
-                              company_description: req.companyDescription,
-                              selling_categories: req.sellingCategories,
-                              payment_pref: req.paymentPref,
-                              admin_email: req.adminEmail,
-                              website_template: req.websiteTemplate,
-                              first_product_name: req.firstProductName,
-                              first_product_price: req.firstProductPrice,
-                              domain_choice: req.domainChoice,
-                              admin_name: req.adminName,
-                              admin_password: req.adminPassword,
-                              price_type: req.priceType,
-                              location: req.location,
-                              target_audience: req.targetAudience,
-                              initial_products: req.initialProducts
-                          })
-                      });
-
-                      if (!startRes.ok) {
-                          const errData = await startRes.json().catch(()=>({}));
-                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
-                      }
-
-                      const startData = await startRes.json();
-                      if (startData.organization_id) {
-                          localStorage.setItem('tenant_id', startData.organization_id);
-                          localStorage.setItem('tenant', startData.organization_id);
-                      }
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  }
-
-              } catch (err) {
-                  console.error(err);
-                  const errorMsg = err.message || "Network Error: Failed to fetch";
-                  instantErrorEl.innerText = errorMsg;
-                  instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
-                  generateStorefrontBtn.disabled = false;
-                  generateStorefrontBtn.innerText = "Next";
-              }
-          });
-      }
-      document.querySelectorAll(".save-draft-btn").forEach(btn => {
+      document.querySelectorAll(".next-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
-            const originalText = e.target.innerText;
-            e.target.innerText = "Saving...";
-            e.target.disabled = true;
-
-            const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
-            const tenantId = localStorage.getItem("tenant_id") || "storefront";
-            const userId = localStorage.getItem("user_id") || "test-user";
-
-            const currentStepEl = document.querySelector(".step.active");
-            let currentStepIdx = 0;
-            if (currentStepEl) {
-                const steps = Array.from(document.querySelectorAll(".step"));
-                currentStepIdx = steps.indexOf(currentStepEl);
-            }
-
-            const payload = {
-                wizardState: state,
-                step: currentStepIdx
-            };
-
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
-                    e.target.innerText = "Saved!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
-            } else {
-                fetch(`${backendUrl}/api/onboarding/state`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Tenant-ID": tenantId,
-                        "X-User-ID": userId
-                    },
-                    body: JSON.stringify(payload)
-                }).then(res => {
-                    if (res.ok) {
-                        e.target.innerText = "Saved!";
-                        setTimeout(() => {
-                            e.target.innerText = originalText;
-                            e.target.disabled = false;
-                        }, 3000);
-                    } else {
-                        throw new Error("Failed to save");
-                    }
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
-            }
+          const currentStep = e.target.closest(".step").id;
+          const nextStepId = e.target.getAttribute("data-next");
+          if (validateStep(currentStep)) {
+            goToStep(nextStepId);
+            saveCurrentState();
+          }
         });
       });
 
+      document.querySelectorAll(".prev-step-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const prevStepId = e.target.getAttribute("data-prev");
+          goToStep(prevStepId);
+          saveCurrentState();
+        });
+      });
+
+      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const originalText = btn.innerText;
+          btn.innerText = "Saving...";
+          btn.disabled = true;
+
+          // Add a small delay to allow browser to render "Saving..."
+          await new Promise((r) => setTimeout(r, 100));
+
+          saveCurrentState();
+
+          btn.innerText = "Saved!";
+          btn.style.backgroundColor = "#34C759";
+          btn.style.color = "white";
+          btn.style.borderColor = "#34C759";
+
+          const msg = document.getElementById("draft-saved-msg");
+          if (msg) msg.style.display = "block";
+
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.backgroundColor = "";
+            btn.style.color = "";
+            btn.style.borderColor = "";
+            if (msg) msg.style.display = "none";
+          }, 2000);
+        });
+      });
+
+      const generateStorefrontBtn = document.getElementById(
+        "generate-storefront-btn",
+      );
+      const instantBioInputEl = document.getElementById("instant-bio");
+      const instantErrorEl = document.getElementById("instant-error");
+
+      if (instantBioInputEl) {
+        // Initialize disabled state
+        if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
+          generateStorefrontBtn.disabled = true;
+        }
+        instantBioInputEl.addEventListener("input", () => {
+          instantBioInputEl.classList.remove("border-[#FF3B30]");
+          if (instantErrorEl) {
+            instantErrorEl.style.display = "none";
+            instantErrorEl.classList.remove(
+              "text-[#FF3B30]",
+              "border-[#FF3B30]/30",
+              "animate-shake",
+            );
+          }
+          if (generateStorefrontBtn) {
+            generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
+          }
+        });
+      }
+
+      // Chat logic
+      const chatInputEl = document.getElementById("chat-input");
+      const chatSendBtn = document.getElementById("chat-send-btn");
+      const chatMessagesEl = document.getElementById("chat-messages");
+      let chatHistory = [];
+
+      async function sendChatMessage() {
+        const text = chatInputEl.value.trim();
+        const chatImageEl = document.getElementById("chat-image-url");
+        const imageUrl = chatImageEl ? chatImageEl.value.trim() : "";
+        if (!text && !imageUrl) return;
+
+        // Append user message
+        let displayMsg = text;
+        if (imageUrl)
+          displayMsg += `<br><span style="font-size: 12px; color: #666;">[Attached Image: ${imageUrl}]</span>`;
+
+        chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${displayMsg}</div>`;
+        chatInputEl.value = "";
+        if (chatImageEl) chatImageEl.value = "";
+
+        let msgObj = { role: "user", content: text };
+        if (imageUrl) msgObj.image_url = imageUrl;
+
+        chatHistory.push(msgObj);
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+        chatSendBtn.disabled = true;
+
+        try {
+          const backendUrl =
+            window.location.origin.includes("localhost") ||
+            window.location.protocol === "file:"
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "storefront";
+          const userId = localStorage.getItem("user_id") || "test-user";
+          const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Tenant-ID": tenantId,
+              "X-User-ID": userId,
+            },
+            body: JSON.stringify({ messages: chatHistory }),
+          });
+
+          if (!res.ok) throw new Error("Chat request failed");
+          const data = await res.json();
+
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
+          chatHistory.push({ role: "assistant", content: data.reply });
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+          if (data.is_complete && data.intake_data) {
+            const intakeData = data.intake_data;
+            const req = {
+              companyName: intakeData.business_name || "My Business",
+              businessType: intakeData.business_type || "Online Store",
+              companyDescription: chatHistory.map((m) => m.content).join(" "),
+              sellingCategories: intakeData.categories || ["physical"],
+              paymentPref: "online",
+              adminEmail: "admin@mybusiness.com",
+              adminName: "Admin",
+              adminPassword: "password",
+              websiteTemplate: "auto",
+              firstProductName:
+                intakeData.initial_products?.[0]?.name || "First Product",
+              firstProductPrice:
+                intakeData.initial_products?.[0]?.price || "0.00",
+              domainChoice: "subdomain",
+              priceType: "fixed",
+              location: intakeData.location || "Local",
+              targetAudience: intakeData.target_audience || "General",
+              initialProducts: intakeData.initial_products || [],
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              await goToStep("step-loading");
+              window.__TAURI__.core.invoke("start_onboarding", { req });
+              localStorage.setItem("has_onboarded", "true");
+              window.location.href = "success.html";
+              return;
+            }
+
+            const tenantIdStr =
+              localStorage.getItem("tenant_id") ||
+              localStorage.getItem("tenant") ||
+              "storefront";
+            const userIdStr = localStorage.getItem("user_id") || "test-user";
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Tenant-ID": tenantIdStr,
+                "X-User-ID": userIdStr,
+              },
+              body: JSON.stringify({
+                business_type: req.businessType,
+                company_name: req.companyName,
+                company_description: req.companyDescription,
+                selling_categories: req.sellingCategories,
+                payment_pref: req.paymentPref,
+                admin_email: req.adminEmail,
+                website_template: req.websiteTemplate,
+                first_product_name: req.firstProductName,
+                first_product_price: req.firstProductPrice,
+                domain_choice: req.domainChoice,
+                admin_name: req.adminName,
+                admin_password: req.adminPassword,
+                price_type: req.priceType,
+                location: req.location,
+                target_audience: req.targetAudience,
+                initial_products: req.initialProducts,
+                ai_agents: [],
+                ai_auto_respond: true,
+              }),
+            });
+
+            if (startRes.ok) {
+              const startData = await startRes.json();
+              if (startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+              localStorage.setItem("has_onboarded", "true");
+              window.location.href = "success.html";
+            }
+          }
+        } catch (e) {
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+        } finally {
+          chatSendBtn.disabled = false;
+        }
+      }
+
+      if (chatSendBtn) {
+        chatSendBtn.addEventListener("click", sendChatMessage);
+      }
+      if (chatInputEl) {
+        chatInputEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") sendChatMessage();
+        });
+      }
+
+      if (generateStorefrontBtn) {
+        generateStorefrontBtn.addEventListener("click", async () => {
+          const bioInput = instantBioInputEl.value;
+          if (!bioInput.trim()) {
+            instantErrorEl.innerText = "Please tell us about your business.";
+            instantErrorEl.style.display = "block";
+            instantErrorEl.classList.add(
+              "text-[#FF3B30]",
+              "border-[#FF3B30]/30",
+              "animate-shake",
+            );
+            instantBioInputEl.classList.add("border-[#FF3B30]");
+            return;
+          }
+
+          instantErrorEl.style.display = "none";
+          instantErrorEl.classList.remove(
+            "text-[#FF3B30]",
+            "border-[#FF3B30]/30",
+            "animate-shake",
+          );
+          instantBioInputEl.classList.remove("border-[#FF3B30]");
+          generateStorefrontBtn.disabled = true;
+          generateStorefrontBtn.innerHTML =
+            '<div class="spinner"></div>Building Your Business...';
+
+          try {
+            const backendUrl =
+              window.location.origin.includes("localhost") ||
+              window.location.protocol === "file:"
+                ? "http://127.0.0.1:18789"
+                : "";
+            const tenantIdStr =
+              localStorage.getItem("tenant_id") ||
+              localStorage.getItem("tenant") ||
+              "storefront";
+            const userIdStr = localStorage.getItem("user_id") || "test-user";
+
+            let intakeData = null;
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              intakeData = await window.__TAURI__.core.invoke(
+                "process_intake",
+                { input: bioInput },
+              );
+            } else {
+              const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": tenantIdStr,
+                  "X-User-ID": userIdStr,
+                },
+                body: JSON.stringify({ description: bioInput }),
+              });
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(
+                  errData.error ||
+                    errData.message ||
+                    "Failed to analyze business details",
+                );
+              }
+              intakeData = await res.json();
+            }
+
+            const req = {
+              companyName: intakeData.business_name || "My Business",
+              businessType: intakeData.business_type || "Online Store",
+              companyDescription: bioInput,
+              sellingCategories: intakeData.categories || ["physical"],
+              paymentPref: "online",
+              adminEmail: "admin@mybusiness.com",
+              adminName: "Admin",
+              adminPassword: "password",
+              websiteTemplate: "auto",
+              firstProductName:
+                intakeData.initial_products?.[0]?.name || "First Product",
+              firstProductPrice:
+                intakeData.initial_products?.[0]?.price || "0.00",
+              domainChoice: "subdomain",
+              priceType: "fixed",
+              location: intakeData.location || "Local",
+              targetAudience: intakeData.target_audience || "General",
+              initialProducts: intakeData.initial_products || [],
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              await window.__TAURI__.core.invoke("start_onboarding", { req });
+              localStorage.setItem("has_onboarded", "true");
+              window.location.href = "success.html";
+            } else {
+              const startRes = await fetch(
+                `${backendUrl}/api/onboarding/start`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-Tenant-ID": tenantIdStr,
+                    "X-User-ID": userIdStr,
+                  },
+                  body: JSON.stringify({
+                    business_type: req.businessType,
+                    company_name: req.companyName,
+                    company_description: req.companyDescription,
+                    selling_categories: req.sellingCategories,
+                    payment_pref: req.paymentPref,
+                    admin_email: req.adminEmail,
+                    website_template: req.websiteTemplate,
+                    first_product_name: req.firstProductName,
+                    first_product_price: req.firstProductPrice,
+                    domain_choice: req.domainChoice,
+                    admin_name: req.adminName,
+                    admin_password: req.adminPassword,
+                    price_type: req.priceType,
+                    location: req.location,
+                    target_audience: req.targetAudience,
+                    initial_products: req.initialProducts,
+                  }),
+                },
+              );
+
+              if (!startRes.ok) {
+                const errData = await startRes.json().catch(() => ({}));
+                throw new Error(
+                  errData.error ||
+                    errData.message ||
+                    "Failed to start onboarding",
+                );
+              }
+
+              const startData = await startRes.json();
+              if (startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+              localStorage.setItem("has_onboarded", "true");
+
+              // Also save state to draft
+              await fetch(`${backendUrl}/api/onboarding/state`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": startData.organization_id || tenantIdStr,
+                  "X-User-ID": userIdStr,
+                },
+                body: JSON.stringify({ step: 6, ...req }),
+              }).catch((e) => console.warn("Failed to persist state draft", e));
+
+              window.location.href = "success.html";
+            }
+          } catch (err) {
+            console.error(err);
+            const errorMsg = err.message || "Network Error: Failed to fetch";
+            instantErrorEl.innerText = errorMsg;
+            instantErrorEl.style.display = "block";
+            instantErrorEl.classList.add(
+              "text-[#FF3B30]",
+              "border-[#FF3B30]/30",
+            );
+            instantBioInputEl.classList.add("border-[#FF3B30]");
+            generateStorefrontBtn.disabled = false;
+            generateStorefrontBtn.innerText = "Next";
+          }
+        });
+      }
+      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const originalText = e.target.innerText;
+          e.target.innerText = "Saving...";
+          e.target.disabled = true;
+
+          const backendUrl =
+            window.location.origin.includes("localhost") ||
+            window.location.protocol === "file:"
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "storefront";
+          const userId = localStorage.getItem("user_id") || "test-user";
+
+          const currentStepEl = document.querySelector(".step.active");
+          let currentStepIdx = 0;
+          if (currentStepEl) {
+            const steps = Array.from(document.querySelectorAll(".step"));
+            currentStepIdx = steps.indexOf(currentStepEl);
+          }
+
+          const payload = {
+            wizardState: state,
+            step: currentStepIdx,
+            instantBio: document.getElementById("instant-bio")?.value || "",
+          };
+
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core
+              .invoke("save_onboarding_state", { state: payload })
+              .then(() => {
+                e.target.innerText = "Saved!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              })
+              .catch((err) => {
+                console.error("Failed to save draft", err);
+                e.target.innerText = "Error!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              });
+          } else {
+            fetch(`${backendUrl}/api/onboarding/state`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Tenant-ID": tenantId,
+                "X-User-ID": userId,
+              },
+              body: JSON.stringify(payload),
+            })
+              .then((res) => {
+                if (res.ok) {
+                  e.target.innerText = "Saved!";
+                  setTimeout(() => {
+                    e.target.innerText = originalText;
+                    e.target.disabled = false;
+                  }, 3000);
+                } else {
+                  throw new Error("Failed to save");
+                }
+              })
+              .catch((err) => {
+                console.error("Failed to save draft", err);
+                e.target.innerText = "Error!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              });
+          }
+        });
+      });
 
       if (finishBtn) {
-        finishBtn.addEventListener('click', () => {
-           if (validateStep('step-template')) {
-               const req = {
-                   business_type: state.workContext || state.work_context || "Local Service",
-                   company_name: state.businessName,
-                   company_description: state.tagline || "",
-                   selling_categories: state.categories ? [state.categories] : [],
-                   payment_pref: "online",
-                   admin_email: state.adminEmail || "admin@mybusiness.com",
-                   admin_name: state.assistantName || "Admin",
-                   admin_password: state.adminPassword || "password",
-                   website_template: state.templateSelection || "Modern",
-                   first_product_name: state.firstOffer || "First Offer",
-                   first_product_price: "0.00",
-                   domain_choice: "subdomain",
-                   price_type: "fixed",
-                   location: "Local",
-                   target_audience: "General"
-               };
+        finishBtn.addEventListener("click", () => {
+          if (validateStep("step-template")) {
+            const req = {
+              business_type:
+                state.workContext || state.work_context || "Local Service",
+              company_name: state.businessName,
+              company_description: state.tagline || "",
+              selling_categories: state.categories ? [state.categories] : [],
+              payment_pref: "online",
+              admin_email: state.adminEmail || "admin@mybusiness.com",
+              admin_name: state.assistantName || "Admin",
+              admin_password: state.adminPassword || "password",
+              website_template: state.templateSelection || "Modern",
+              first_product_name: state.firstOffer || "First Offer",
+              first_product_price: "0.00",
+              domain_choice: "subdomain",
+              price_type: "fixed",
+              location: "Local",
+              target_audience: "General",
+            };
 
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 finishBtn.disabled = true;
-                 goToStep('step-loading');
-                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
-                   window.location.href = "success.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   goToStep('step-template');
-                   finishBtn.disabled = false;
-                   finishBtn.innerText = "Launch Store";
-                 });
-               } else {
-                 finishBtn.disabled = true;
-                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-                 const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-                 const userId = localStorage.getItem('user_id') || 'test-user';
-                 fetch(`${backendUrl}/api/onboarding/start`, {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json',
-                         'X-Tenant-ID': tenantId,
-                         'X-User-ID': userId
-                     },
-                     body: JSON.stringify({
-                         ...req,
-                         ai_agents: state.aiAgents || [],
-                         ai_auto_respond: state.aiAutoRespond !== undefined ? state.aiAutoRespond : true
-                     })
-                 }).then(response => {
-                     if (response.ok) {
-                         localStorage.setItem('onboardingState', JSON.stringify(state));
-                         window.location.href = "success.html";
-                     } else {
-                         throw new Error('Failed to start onboarding');
-                     }
-                 }).catch((err) => {
-                     console.error(err);
-                     goToStep('step-template');
-                     finishBtn.disabled = false;
-                     finishBtn.innerText = "Launch Store";
-                 });
-               }
-           }
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              finishBtn.disabled = true;
+              goToStep("step-loading");
+              window.__TAURI__.core
+                .invoke("start_onboarding", { req })
+                .then(() => {
+                  window.location.href = "success.html";
+                })
+                .catch((err) => {
+                  console.error(err);
+                  goToStep("step-template");
+                  finishBtn.disabled = false;
+                  finishBtn.innerText = "Launch Store";
+                });
+            } else {
+              finishBtn.disabled = true;
+              finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+              const backendUrl =
+                window.location.origin.includes("localhost") ||
+                window.location.protocol === "file:"
+                  ? "http://127.0.0.1:18789"
+                  : "";
+              const tenantId =
+                localStorage.getItem("tenant_id") || "storefront";
+              const userId = localStorage.getItem("user_id") || "test-user";
+              fetch(`${backendUrl}/api/onboarding/start`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": tenantId,
+                  "X-User-ID": userId,
+                },
+                body: JSON.stringify({
+                  ...req,
+                  ai_agents: state.aiAgents || [],
+                  ai_auto_respond:
+                    state.aiAutoRespond !== undefined
+                      ? state.aiAutoRespond
+                      : true,
+                }),
+              })
+                .then((response) => {
+                  if (response.ok) {
+                    localStorage.setItem(
+                      "onboardingState",
+                      JSON.stringify(state),
+                    );
+                    window.location.href = "success.html";
+                  } else {
+                    throw new Error("Failed to start onboarding");
+                  }
+                })
+                .catch((err) => {
+                  console.error(err);
+                  goToStep("step-template");
+                  finishBtn.disabled = false;
+                  finishBtn.innerText = "Launch Store";
+                });
+            }
+          }
         });
       }
 
       // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
-          input.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const step = e.target.closest('.step');
-                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
-                  if (nextBtn) nextBtn.click();
-              }
-          });
+      document.querySelectorAll('input[type="text"]').forEach((input) => {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const step = e.target.closest(".step");
+            const nextBtn =
+              step.querySelector(".next-step-btn") ||
+              step.querySelector("#finish-btn");
+            if (nextBtn) nextBtn.click();
+          }
+        });
       });
     </script>
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
-    const style = document.createElement('style');
-    style.textContent = `
+      document.addEventListener("DOMContentLoaded", () => {
+        // Inject tooltip CSS
+        const style = document.createElement("style");
+        style.textContent = `
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
@@ -1674,103 +2391,127 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    let hideTimeout;
-
-    function showTooltip(e, text) {
-        clearTimeout(hideTimeout);
-        tooltipEl.textContent = text;
-
-        const targetRect = e.target.getBoundingClientRect();
-
-        // Position below the element by default
-        let top = targetRect.bottom + 10;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        // Adjust if it goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
         }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+        let hideTimeout;
+
+        function showTooltip(e, text) {
+          clearTimeout(hideTimeout);
+          tooltipEl.textContent = text;
+
+          const targetRect = e.target.getBoundingClientRect();
+
+          // Position below the element by default
+          let top = targetRect.bottom + 10;
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+
+          // Adjust if it goes off screen
+          if (left < 10) left = 10;
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+          }
+
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
             // Position above if it doesn't fit below
             top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
         }
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
-            tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
-    }
-
-    // Desktop hover
-    document.addEventListener('mouseover', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        function hideTooltip() {
+          hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove("visible");
+          }, 100); // slight delay to prevent flicker
         }
-    });
 
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+        // Desktop hover
+        document.addEventListener("mouseover", (e) => {
+          const t = e.target;
+          const target =
+            t && typeof t.closest === "function"
+              ? t.closest("[data-tooltip]")
+              : null;
+          if (target) {
+            showTooltip(
+              e,
+              (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) ||
+                target.getAttribute("data-tooltip"),
+            );
+          }
+        });
+
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target;
+          if (
+            target &&
+            typeof target.closest === "function" &&
+            target.closest("[data-tooltip]")
+          ) {
             hideTooltip();
-        }
-    });
+          }
+        });
 
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
+        // Mobile long press (contextmenu) or touchstart
+        let touchTimeout;
+        document.addEventListener("touchstart", (e) => {
+          const t = e.target;
+          const target =
+            t && typeof t.closest === "function"
+              ? t.closest("[data-tooltip]")
+              : null;
+          if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+              showTooltip(
+                e,
+                (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) ||
+                  target.getAttribute("data-tooltip"),
+              );
             }, 500); // 500ms long press
-        }
-    });
+          }
+        });
 
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
+        document.addEventListener("touchend", () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+        });
 
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
-
-</script>
+        document.addEventListener("touchmove", () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+        });
+      });
+    </script>
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject chat CSS
-    const style = document.createElement('style');
-    style.textContent = `
+      document.addEventListener("DOMContentLoaded", () => {
+        // Inject chat CSS
+        const style = document.createElement("style");
+        style.textContent = `
         #ohc-help-btn {
             position: fixed;
             bottom: 20px;
@@ -1931,18 +2672,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    // Inject HTML
-    const btn = document.createElement('button');
-    btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-    document.body.appendChild(btn);
+        // Inject HTML
+        const btn = document.createElement("button");
+        btn.id = "ohc-help-btn";
+        btn.setAttribute("aria-label", "Open help chat");
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        document.body.appendChild(btn);
 
-    const overlay = document.createElement('div');
-    overlay.id = 'ohc-help-chat-overlay';
-    overlay.innerHTML = `
+        const overlay = document.createElement("div");
+        overlay.id = "ohc-help-chat-overlay";
+        overlay.innerHTML = `
         <div id="ohc-help-chat-header">
             <h3>Ask AI Help</h3>
             <button id="ohc-help-close" aria-label="Close help chat">
@@ -1966,267 +2707,299 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
     `;
-    document.body.appendChild(overlay);
+        document.body.appendChild(overlay);
 
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
-    const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
+        const closeBtn = document.getElementById("ohc-help-close");
+        const messages = document.getElementById("ohc-help-messages");
+        const input = document.getElementById("ohc-help-input");
+        const sendBtn = document.getElementById("ohc-help-send");
 
-    btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
-    });
+        btn.addEventListener("click", () => {
+          overlay.style.display = "flex";
+          input.focus();
+        });
 
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
+        closeBtn.addEventListener("click", () => {
+          overlay.style.display = "none";
+        });
 
         async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
+          const text = input.value.trim();
+          if (!text) return;
 
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
+          // Add user msg
+          const uMsg = document.createElement("div");
+          uMsg.className = "msg msg-user";
+          uMsg.textContent = text;
+          messages.appendChild(uMsg);
+          input.value = "";
+          messages.scrollTop = messages.scrollHeight;
 
-        try {
-            let url = '/api/chat';
+          try {
+            let url = "/api/chat";
             if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/chat';
+              url = "http://127.0.0.1:18789/api/chat";
             }
             const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message: text }),
             });
             const data = await response.json();
 
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
+            const aiMsg = document.createElement("div");
+            aiMsg.className = "msg msg-ai";
             if (data.link && data.link.url) {
-                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+              aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
             } else {
-                aiMsg.textContent = data.reply;
+              aiMsg.textContent = data.reply;
             }
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
-        } catch (e) {
+          } catch (e) {
             console.error(e);
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            const aiMsg = document.createElement("div");
+            aiMsg.className = "msg msg-ai";
+            aiMsg.textContent =
+              "Sorry, there was an error connecting to the help assistant.";
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
+          }
         }
-    }
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-});
-
-</script>
-
-
-
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+        sendBtn.addEventListener("click", sendMessage);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") sendMessage();
         });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
+      });
+    </script>
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+    <style>
+      .ohc-tooltip {
+        position: fixed;
+        background: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: Outfit, sans-serif;
+        z-index: 100000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 250px;
+        line-height: 1.4;
+      }
+      .ohc-tooltip.visible {
+        opacity: 1;
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
+        }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
 
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
+        function showTooltip(e, text) {
+          if (!text) return;
+          tooltipEl.textContent = text;
+          const targetRect = e.target.closest("[id]")
+            ? e.target.closest("[id]").getBoundingClientRect()
+            : e.target.getBoundingClientRect();
 
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+          let top = targetRect.bottom + 10;
+
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
             left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
+          } else if (left < 10) {
             left = 10;
-        }
+          }
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
             top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
         }
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
+        function hideTooltip() {
+          tooltipEl.classList.remove("visible");
+        }
 
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        document.addEventListener("mouseover", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
-        }
-    });
+          }
+        });
 
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
             hideTooltip();
-        }
-    });
-});
-</script>
+          }
+        });
+      });
+    </script>
 
+    <script>
+      function initWalkthrough() {
+        window.startWalkthrough = function (steps) {
+          if (!steps || steps.length === 0) return;
 
-<script>
-function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
+          let currentStep = 0;
 
-        let currentStep = 0;
+          // Create overlay
+          const overlay = document.createElement("div");
+          overlay.className = "ohc-walkthrough-overlay fixed z-[90]";
+          overlay.style.cssText =
+            "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;";
+          document.body.appendChild(overlay);
 
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
+          // Create bubble
+          const bubble = document.createElement("div");
+          bubble.className = "ohc-walkthrough-bubble";
+          bubble.setAttribute("role", "dialog");
+          bubble.style.cssText =
+            "position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
+          document.body.appendChild(bubble);
 
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.className = 'ohc-walkthrough-bubble';
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
-
-        function renderStep() {
+          function renderStep() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-            });
+            document
+              .querySelectorAll(
+                ".walkthrough-highlight, .ohc-walkthrough-highlight",
+              )
+              .forEach((el) => {
+                el.classList.remove(
+                  "walkthrough-highlight",
+                  "ohc-walkthrough-highlight",
+                );
+                el.style.position = "";
+                el.style.zIndex = "";
+                el.style.background = "";
+              });
 
             // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+            const target =
+              document.getElementById(step.targetId) ||
+              document.querySelector(step.targetId);
 
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
                     <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
-                }
+            document.getElementById("wt-close").onclick = closeWalkthrough;
+            if (document.getElementById("wt-prev"))
+              document.getElementById("wt-prev").onclick = () => {
+                currentStep--;
+                renderStep();
+              };
+            document.getElementById("wt-next").onclick = () => {
+              if (currentStep === steps.length - 1) {
+                closeWalkthrough();
+              } else {
+                currentStep++;
+                renderStep();
+              }
             };
 
             if (target) {
-                target.classList.add('walkthrough-highlight');
-                target.style.position = 'relative';
-                target.style.zIndex = '99999';
-                target.style.background = 'white'; // Make it pop
+              target.classList.add("walkthrough-highlight");
+              target.style.position = "relative";
+              target.style.zIndex = "99999";
+              target.style.background = "white"; // Make it pop
 
-                const rect = target.getBoundingClientRect();
-                // Position bubble below target if space permits, else above
-                if (rect.bottom + 200 < window.innerHeight) {
-                    bubble.style.top = (rect.bottom + 10) + 'px';
-                } else {
-                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                }
-                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+              const rect = target.getBoundingClientRect();
+              // Position bubble below target if space permits, else above
+              if (rect.bottom + 200 < window.innerHeight) {
+                bubble.style.top = rect.bottom + 10 + "px";
+              } else {
+                bubble.style.top = rect.top - bubble.offsetHeight - 10 + "px";
+              }
+              bubble.style.left =
+                Math.max(10, Math.min(rect.left, window.innerWidth - 320)) +
+                "px";
             } else {
-                // Center if no target
-                bubble.style.top = '50%';
-                bubble.style.left = '50%';
-                bubble.style.transform = 'translate(-50%, -50%)';
+              // Center if no target
+              bubble.style.top = "50%";
+              bubble.style.left = "50%";
+              bubble.style.transform = "translate(-50%, -50%)";
             }
-        }
+          }
 
-        function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-            });
+          function closeWalkthrough() {
+            document
+              .querySelectorAll(
+                ".walkthrough-highlight, .ohc-walkthrough-highlight",
+              )
+              .forEach((el) => {
+                el.classList.remove(
+                  "walkthrough-highlight",
+                  "ohc-walkthrough-highlight",
+                );
+                el.style.position = "";
+                el.style.zIndex = "";
+                el.style.background = "";
+              });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-        }
+          }
 
-        renderStep();
-    };
-}
-initWalkthrough();
-</script>
+          renderStep();
+        };
+      }
+      initWalkthrough();
+    </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject floating widget styles
-    const style = document.createElement('style');
-    style.textContent = `
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Inject floating widget styles
+        const style = document.createElement("style");
+        style.textContent = `
         #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
@@ -2443,21 +3216,21 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1;
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    // Create the button
-    const btn = document.createElement('button');
-    btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('data-tooltip', 'Help Center');
-    btn.setAttribute('aria-label', 'Help');
-    btn.title = 'Help';
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
-    document.body.appendChild(btn);
+        // Create the button
+        const btn = document.createElement("button");
+        btn.id = "ohc-floating-help-btn";
+        btn.setAttribute("data-tooltip", "Help Center");
+        btn.setAttribute("aria-label", "Help");
+        btn.title = "Help";
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
+        document.body.appendChild(btn);
 
-    // Create the widget
-    const widget = document.createElement('div');
-    widget.id = 'ohc-floating-help-widget';
-    widget.innerHTML = `
+        // Create the widget
+        const widget = document.createElement("div");
+        widget.id = "ohc-floating-help-widget";
+        widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>Help Center</h3>
             <button id="ohc-floating-help-close" aria-label="Close">
@@ -2512,228 +3285,282 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
     `;
-    document.body.appendChild(widget);
+        document.body.appendChild(widget);
 
-    // Logic
-    btn.addEventListener('click', () => {
-        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
-    });
-
-    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
-        widget.style.display = 'none';
-    });
-
-    const tabs = widget.querySelectorAll('.ohc-help-tab');
-    const contents = widget.querySelectorAll('.ohc-help-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-
-            tab.classList.add('active');
-            document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+        // Logic
+        btn.addEventListener("click", () => {
+          widget.style.display =
+            widget.style.display === "flex" ? "none" : "flex";
         });
-    });
 
-    // Chat Logic
-    const chatInput = document.getElementById('ohc-help-chat-input');
-    const chatSend = document.getElementById('ohc-help-chat-send');
-    const chatMessages = document.getElementById('ohc-help-chat-messages');
+        document
+          .getElementById("ohc-floating-help-close")
+          .addEventListener("click", () => {
+            widget.style.display = "none";
+          });
 
-    function appendMessage(text, sender, link = null) {
-        const msg = document.createElement('div');
-        msg.className = `ohc-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
+        const tabs = widget.querySelectorAll(".ohc-help-tab");
+        const contents = widget.querySelectorAll(".ohc-help-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            tabs.forEach((t) => t.classList.remove("active"));
+            contents.forEach((c) => c.classList.remove("active"));
+
+            tab.classList.add("active");
+            document
+              .getElementById(tab.getAttribute("data-target"))
+              .classList.add("active");
+          });
+        });
+
+        // Chat Logic
+        const chatInput = document.getElementById("ohc-help-chat-input");
+        const chatSend = document.getElementById("ohc-help-chat-send");
+        const chatMessages = document.getElementById("ohc-help-chat-messages");
+
+        function appendMessage(text, sender, link = null) {
+          const msg = document.createElement("div");
+          msg.className = `ohc-chat-msg ${sender}`;
+          msg.innerHTML = text;
+          if (link && link.url && link.title) {
             msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+          }
+          chatMessages.appendChild(msg);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-        chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
 
-    async function handleSend() {
-        const text = chatInput.value.trim();
-        if (!text) return;
+        async function handleSend() {
+          const text = chatInput.value.trim();
+          if (!text) return;
 
-        appendMessage(text, 'user');
-        chatInput.value = '';
+          appendMessage(text, "user");
+          chatInput.value = "";
 
-        try {
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: text })
+          try {
+            const res = await fetch("/api/chat", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ message: text }),
             });
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+              appendMessage(
+                data.reply.text || data.reply,
+                "agent",
+                data.reply.link,
+              );
             } else if (data.text) {
-                appendMessage(data.text, 'agent', data.link);
+              appendMessage(data.text, "agent", data.link);
             } else {
-                appendMessage(data, 'agent');
+              appendMessage(data, "agent");
             }
-        } catch (e) {
-            appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
+          } catch (e) {
+            appendMessage(
+              "I'm sorry, I'm having trouble connecting right now.",
+              "agent",
+            );
+          }
         }
-    }
 
-    chatSend.addEventListener('click', handleSend);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSend();
-    });
-
-    // --- Global Tooltip & Walkthrough Logic ---
-
-    // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+        chatSend.addEventListener("click", handleSend);
+        chatInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") handleSend();
         });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+        // --- Global Tooltip & Walkthrough Logic ---
 
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
+        // Tooltips
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
+        }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
 
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+        function showTooltip(e, text) {
+          if (!text) return;
+          tooltipEl.textContent = text;
+          const targetRect = e.target.closest("[id]")
+            ? e.target.closest("[id]").getBoundingClientRect()
+            : e.target.getBoundingClientRect();
+
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+          let top = targetRect.bottom + 10;
+
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
             left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
+          } else if (left < 10) {
             left = 10;
-        }
+          }
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
             top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
         }
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
+        function hideTooltip() {
+          tooltipEl.classList.remove("visible");
+        }
 
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        document.addEventListener("mouseover", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
-        }
-    });
+          }
+        });
 
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
             hideTooltip();
-        }
-    });
+          }
+        });
 
-    // Walkthroughs
-    if (!window.startWalkthrough) {
-        window.startWalkthrough = function(steps) {
+        // Walkthroughs
+        if (!window.startWalkthrough) {
+          window.startWalkthrough = function (steps) {
             if (!steps || steps.length === 0) return;
 
             let currentStep = 0;
 
-            const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+            const overlay = document.createElement("div");
+            overlay.className = "ohc-walkthrough-overlay";
+            overlay.style.cssText =
+              "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;";
             document.body.appendChild(overlay);
 
-            const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            const bubble = document.createElement("div");
+            bubble.className = "ohc-walkthrough-bubble";
+            bubble.setAttribute("role", "dialog");
+            bubble.style.cssText =
+              "position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
             document.body.appendChild(bubble);
 
             function renderStep() {
-                const step = steps[currentStep];
+              const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
+              document
+                .querySelectorAll(
+                  ".walkthrough-highlight, .ohc-walkthrough-highlight",
+                )
+                .forEach((el) => {
+                  el.classList.remove(
+                    "walkthrough-highlight",
+                    "ohc-walkthrough-highlight",
+                  );
+                  el.style.position = "";
+                  el.style.zIndex = "";
+                  el.style.background = "";
                 });
 
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+              const target =
+                document.getElementById(step.targetId) ||
+                document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
+              bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
                         <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ""}
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                     </div>
                 `;
 
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
+              document.getElementById("wt-close").onclick = closeWalkthrough;
+              if (document.getElementById("wt-prev"))
+                document.getElementById("wt-prev").onclick = () => {
+                  currentStep--;
+                  renderStep();
                 };
-
-                if (target) {
-                    target.classList.add('walkthrough-highlight');
-                    target.style.position = 'relative';
-                    target.style.zIndex = '99999';
-                    target.style.background = 'white';
-
-                    const rect = target.getBoundingClientRect();
-                    if (rect.bottom + 200 < window.innerHeight) {
-                        bubble.style.top = (rect.bottom + 10) + 'px';
-                    } else {
-                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                    }
-                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+              document.getElementById("wt-next").onclick = () => {
+                if (currentStep === steps.length - 1) {
+                  closeWalkthrough();
                 } else {
-                    bubble.style.top = '50%';
-                    bubble.style.left = '50%';
-                    bubble.style.transform = 'translate(-50%, -50%)';
+                  currentStep++;
+                  renderStep();
                 }
+              };
+
+              if (target) {
+                target.classList.add("walkthrough-highlight");
+                target.style.position = "relative";
+                target.style.zIndex = "99999";
+                target.style.background = "white";
+
+                const rect = target.getBoundingClientRect();
+                if (rect.bottom + 200 < window.innerHeight) {
+                  bubble.style.top = rect.bottom + 10 + "px";
+                } else {
+                  bubble.style.top = rect.top - bubble.offsetHeight - 10 + "px";
+                }
+                bubble.style.left =
+                  Math.max(10, Math.min(rect.left, window.innerWidth - 320)) +
+                  "px";
+              } else {
+                bubble.style.top = "50%";
+                bubble.style.left = "50%";
+                bubble.style.transform = "translate(-50%, -50%)";
+              }
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
+              document
+                .querySelectorAll(
+                  ".walkthrough-highlight, .ohc-walkthrough-highlight",
+                )
+                .forEach((el) => {
+                  el.classList.remove(
+                    "walkthrough-highlight",
+                    "ohc-walkthrough-highlight",
+                  );
+                  el.style.position = "";
+                  el.style.zIndex = "";
+                  el.style.background = "";
                 });
-                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+              if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
             }
 
             renderStep();
-        };
-    }
-});
-</script>
-</body>
+          };
+        }
+      });
+    </script>
+  </body>
 </html>
