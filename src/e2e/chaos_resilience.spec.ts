@@ -3,7 +3,6 @@ import { currentAppSmoke } from './current_app_smoke';
 
 // Start base smoke validation as a baseline
 test('chaos_resilience_baseline', async ({ page, request, loginAs, adminUser }) => {
-  await loginAs(page, adminUser);
   await currentAppSmoke(page, request, 'chaos_resilience_baseline');
 });
 
