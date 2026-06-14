@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use super::locks::DistributedLock;
+use crate::orchestration::mesh::TeammateMesh;
+use ::server_ohc::orchestration::TaskStateTransition;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
@@ -28,16 +30,20 @@ impl State {
 pub trait Repository: Send + Sync {
     fn get_task_state(&self, task_id: &str) -> Result<State, String>;
     fn update_task_state(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String>;
+    fn get_tenant_id(&self, task_id: &str) -> Result<String, String> {
+        Ok("".to_string())
+    }
 }
 
 pub struct StateMachine {
     repo: Arc<dyn Repository>,
     lock: Arc<dyn DistributedLock>,
+    mesh: Arc<dyn TeammateMesh>,
     allowed_transitions: HashMap<State, Vec<State>>,
 }
 
 impl StateMachine {
-    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>) -> Self {
+    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let mut allowed_transitions = HashMap::new();
         allowed_transitions.insert(State::Pending, vec![State::Ready]);
         allowed_transitions.insert(State::Ready, vec![State::InProgress]);
@@ -47,6 +53,7 @@ impl StateMachine {
         Self {
             repo,
             lock,
+            mesh,
             allowed_transitions,
         }
     }
@@ -63,9 +70,29 @@ impl StateMachine {
             return Err(format!("invalid transition from {:?} to {:?}", current_state, new_state));
         }
 
-        self.repo.update_task_state(task_id, new_state, agent_id)?;
+        self.repo.update_task_state(task_id, new_state.clone(), agent_id)?;
 
         // Publish to Teammate Mesh here
+        let tenant_id = self.repo.get_tenant_id(task_id).unwrap_or_default();
+        let transition = TaskStateTransition {
+            task_id: task_id.to_string(),
+            new_state: new_state.as_str().to_string(),
+            agent_id: agent_id.to_string(),
+            tenant_id: tenant_id.clone(),
+        };
+
+        use prost::Message;
+        let payload_bytes = transition.encode_to_vec();
+
+        let topic = if tenant_id.is_empty() {
+            "mesh:tasks".to_string()
+        } else {
+            format!("mesh:tasks:{}", tenant_id)
+        };
+
+        if let Err(e) = self.mesh.publish(&topic, payload_bytes).await {
+            tracing::error!("Failed to publish state transition to mesh for task {}: {}", task_id, e);
+        }
 
         Ok(())
     }

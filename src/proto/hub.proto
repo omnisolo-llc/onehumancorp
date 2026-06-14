@@ -1789,3 +1789,10 @@ message SemanticRoutingResponse {
   string target_department = 2;
   float confidence_score = 3;
 }
+
+message TaskStateTransition {
+  string task_id = 1;
+  string new_state = 2;
+  string agent_id = 3;
+  string tenant_id = 4;
+}

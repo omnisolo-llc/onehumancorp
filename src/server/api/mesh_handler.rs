@@ -132,11 +132,25 @@ pub async fn orchestration_broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
+    let spiffe_id = match check_spiffe_auth(&headers) {
+        Ok(id) => id,
+        Err(err_response) => return err_response,
+    };
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    // Extract tenant_id from SPIFFE ID assuming format: spiffe://ohc/org/{tenant_id}/agent/...
+    // If not matching, default to empty or extract safely
+    let tenant_id = ::server_auth::parse_spiffe_id(&spiffe_id)
+        .map(|(org_id, _agent_id)| org_id)
+        .unwrap_or_default();
+
+    // Enforce tenant isolation on topic
+    let isolated_topic = if payload.topic.contains(&tenant_id) {
+        payload.topic.clone()
+    } else {
+        format!("{}:{}", payload.topic, tenant_id)
+    };
+
+    publish_response(transport.publish(&isolated_topic, payload.message.into()).await)
 }
 
 /// Handler for WebSockets to stream orchestration tasks
