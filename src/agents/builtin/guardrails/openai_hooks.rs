@@ -85,7 +85,8 @@ impl OutputGuardrail for OpenAiOutputAuditor {
         if self.require_json {
             // A simple check to see if it starts with { or [
             let trimmed = output.trim();
-            if !(trimmed.starts_with('{') && trimmed.ends_with('}') || trimmed.starts_with('[') && trimmed.ends_with(']'))
+            if !(trimmed.starts_with('{') && trimmed.ends_with('}')
+                || trimmed.starts_with('[') && trimmed.ends_with(']'))
             {
                 return Err(
                     "OpenAI Output Guardrail tripped: Output must be a valid JSON object or array."

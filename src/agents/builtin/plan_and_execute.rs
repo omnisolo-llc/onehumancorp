@@ -26,15 +26,11 @@ pub struct ExecutionPlan {
     pub tasks: Vec<TaskNode>,
 }
 
-
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct LLMCompilerState {
     pub results: HashMap<String, String>,
     pub completed_tasks: Vec<String>,
 }
-
 
 pub struct LLMCompilerStateReducer;
 
@@ -99,9 +95,16 @@ impl PlanAndExecuteOrchestrator {
         }
     }
 
-    pub async fn plan_and_execute(&self, planner: &Planner, user_query: &str) -> Result<HashMap<String, String>, String> {
+    pub async fn plan_and_execute(
+        &self,
+        planner: &Planner,
+        user_query: &str,
+    ) -> Result<HashMap<String, String>, String> {
         let tool_list: Vec<Tool> = self.tools.values().map(|t| (**t).clone()).collect();
-        let plan = planner.create_plan(user_query, &tool_list).await.map_err(|e| e.to_string())?;
+        let plan = planner
+            .create_plan(user_query, &tool_list)
+            .await
+            .map_err(|e| e.to_string())?;
         self.execute_plan(plan).await
     }
 
@@ -318,7 +321,6 @@ mod tests {
         }
     }
 
-
     #[tokio::test]
     async fn test_llm_compiler_state_reducer() {
         let mut state = LLMCompilerState::default();
@@ -359,7 +361,6 @@ mod tests {
         assert_eq!(plan.tasks[0].task_id, "task_1");
     }
 
-
     #[tokio::test]
     async fn test_planner_generation() {
         let plan_json = r#"{
@@ -386,7 +387,7 @@ mod tests {
     #[tokio::test]
     async fn test_executor_parallel_processing() {
         struct MockExecutor {
-            resp: String
+            resp: String,
         }
         #[async_trait::async_trait]
         impl ToolExecutor for MockExecutor {
@@ -400,14 +401,18 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(MockExecutor { resp: "r1".to_string() })
+            execute: Arc::new(MockExecutor {
+                resp: "r1".to_string(),
+            }),
         };
         let t2 = Tool {
             name: "t2".to_string(),
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(MockExecutor { resp: "r2".to_string() })
+            execute: Arc::new(MockExecutor {
+                resp: "r2".to_string(),
+            }),
         };
         let orchestrator = PlanAndExecuteOrchestrator::new(vec![t1, t2]);
         let plan = ExecutionPlan {
@@ -416,15 +421,15 @@ mod tests {
                     task_id: "id1".to_string(),
                     tool_name: "t1".to_string(),
                     arguments: serde_json::json!({}),
-                    dependencies: vec![]
+                    dependencies: vec![],
                 },
                 TaskNode {
                     task_id: "id2".to_string(),
                     tool_name: "t2".to_string(),
                     arguments: serde_json::json!({}),
-                    dependencies: vec![]
-                }
-            ]
+                    dependencies: vec![],
+                },
+            ],
         };
 
         let start = std::time::Instant::now();
@@ -433,7 +438,11 @@ mod tests {
 
         assert_eq!(res.get("id1").unwrap(), "r1");
         assert_eq!(res.get("id2").unwrap(), "r2");
-        assert!(elapsed < 90, "Expected parallel execution to take < 90ms, took {}ms", elapsed);
+        assert!(
+            elapsed < 90,
+            "Expected parallel execution to take < 90ms, took {}ms",
+            elapsed
+        );
     }
 
     #[tokio::test]
