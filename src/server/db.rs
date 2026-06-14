@@ -1,4 +1,5 @@
-
+use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::fs::PermissionsExt;
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -135,8 +136,7 @@ impl DB {
                             if let Err(e) = builder.create(parent) {
                                 // If directory already exists, ensure its permissions are 0700
                                 if e.kind() == std::io::ErrorKind::AlreadyExists {
-                                    use std::os::unix::fs::PermissionsExt;
-                                    if let Ok(metadata) = std::fs::metadata(parent) {
+                                                                        if let Ok(metadata) = std::fs::metadata(parent) {
                                         let mut perms = metadata.permissions();
                                         if perms.mode() & 0o777 != 0o700 {
                                             perms.set_mode(0o700);
@@ -165,10 +165,7 @@ impl DB {
                 #[cfg(unix)]
                 {
                     use std::fs::OpenOptions;
-                    use std::os::unix::fs::OpenOptionsExt;
-                    use std::os::unix::fs::PermissionsExt;
-
-                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
+                                                                                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
                             ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
                             tracing::error!("Security error: DB path is a symlink. Aborting.");
@@ -210,9 +207,7 @@ impl DB {
 
             #[cfg(unix)]
             {
-                use std::os::unix::fs::OpenOptionsExt;
-                use std::os::unix::fs::PermissionsExt;
-                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
+                                                                        if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
                     let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
                     if db_path.exists() {
                          let mut perms = std::fs::metadata(&db_path)?.permissions();
@@ -253,8 +248,7 @@ impl DB {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
-                            use std::os::unix::fs::PermissionsExt;
-                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                                                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
                                 let perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
                                     panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
@@ -276,8 +270,7 @@ impl DB {
                     #[cfg(unix)]
                     {
                         use std::io::Write;
-                        use std::os::unix::fs::OpenOptionsExt;
-                        if let Ok(mut file) = std::fs::OpenOptions::new()
+                                                                        if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
                             .create_new(true)
                             .mode(0o600)
@@ -287,8 +280,7 @@ impl DB {
                         }
 
                         // Ensure permissions are strictly 0o600
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                                                if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                             if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 let _ = std::fs::set_permissions(&secret_path, perms);
@@ -315,7 +307,8 @@ impl DB {
             conn_opts = conn_opts.pragma("cipher_page_size", "4096");
             conn_opts = conn_opts.pragma("cipher_compatibility", "4");
 
-            let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
+
+                let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -1812,8 +1805,7 @@ mod autodream_db_tests {
 mod security_tests_final {
     use super::*;
     use std::fs;
-    use std::os::unix::fs::PermissionsExt;
-    use std::sync::Mutex;
+        use std::sync::Mutex;
 
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -1855,9 +1847,7 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::fs::OpenOptions;
-                            use std::os::unix::fs::OpenOptionsExt;
-                            use std::os::unix::fs::PermissionsExt;
-                            let file = OpenOptions::new()
+                                                                                                            let file = OpenOptions::new()
                                 .read(true)
                                 .write(true)
                                 .create(true)
