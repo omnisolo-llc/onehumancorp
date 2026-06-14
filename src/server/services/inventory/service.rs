@@ -80,74 +80,87 @@ impl InventoryService {
             }
 
             let pool = crate::db::get_pool();
-            if let Ok(mut tx) = pool.begin().await {
-                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+            let mut tx = match pool.begin().await {
+                Ok(t) => t,
+                Err(_) => {
+                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    return Ok(ReserveResult {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: "Failed to start database transaction".to_string(),
+                    });
+                }
+            };
+
+            if crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_err() {
+                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                return Ok(ReserveResult {
+                    success: false,
+                    lock_id: "".to_string(),
+                    error_message: "Failed to set context".to_string(),
+                });
+            }
+
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+                .bind(product_id)
+                .bind(tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
+
+            if let Some(stock) = current_stock {
+                if stock < quantity {
+                    let _ = tx.rollback().await;
+                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    return Ok(ReserveResult {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: format!("Insufficient inventory. Available: {}", stock)
+                    });
+                }
+
+                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(quantity)
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+            } else {
+                let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+
+                if let Some(f_stock) = fallback_stock {
+                    if f_stock < quantity {
+                        let _ = tx.rollback().await;
+                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                        return Ok(ReserveResult {
+                            success: false,
+                            lock_id: "".to_string(),
+                            error_message: format!("Insufficient inventory. Available: {}", f_stock)
+                        });
+                    }
+
+                    let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(quantity)
                         .bind(product_id)
                         .bind(tenant_id)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .unwrap_or(None);
-
-                    if let Some(stock) = current_stock {
-                        if stock < quantity {
-                            let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: format!("Insufficient inventory. Available: {}", stock)
-                            });
-                        } else {
-                            let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
-                                .bind(quantity)
-                                .bind(product_id)
-                                .bind(tenant_id)
-                                .execute(&mut *tx)
-                                .await;
-                        }
-                    } else {
-                        let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                            .bind(product_id)
-                            .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .unwrap_or(None);
-
-                        if let Some(f_stock) = fallback_stock {
-                            if f_stock < quantity {
-                                let _ = tx.rollback().await;
-                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: format!("Insufficient inventory. Available: {}", f_stock)
-                                });
-                            } else {
-                                let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(tenant_id)
-                                    .execute(&mut *tx)
-                                    .await;
-                            }
-                        } else {
-                            let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: "Product not found".to_string()
-                            });
-                        }
-                    }
-                    let _ = tx.commit().await;
+                        .execute(&mut *tx)
+                        .await;
                 } else {
+                    let _ = tx.rollback().await;
                     let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    return Ok(ReserveResult {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: "Product not found".to_string()
+                    });
                 }
-            } else {
-                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
             }
+            let _ = tx.commit().await;
         }
 
         Ok(ReserveResult {
