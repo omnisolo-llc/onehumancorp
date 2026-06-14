@@ -415,10 +415,38 @@
       .persona-chip:hover {
         background: rgba(0, 102, 255, 0.2);
       }
+
       .persona-chip.selected {
         background: #0066ff;
         color: white;
       }
+
+      .ad-preview-frame {
+        width: 100%;
+        max-width: 375px;
+        height: 600px;
+        border: none;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin: 0 auto 24px auto;
+        display: block;
+      }
+
+      .ad-loading-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #0066ff;
+        margin-top: 16px;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+
 
       .chat-bubble {
         background: rgba(255, 255, 255, 0.8);
@@ -600,6 +628,16 @@
           >
             Conversational Setup
           </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="startAutodreamWizard()"
+            data-testid="btn-autodream-setup"
+            style="margin-top: 10px; min-height: 44px;"
+          >
+            10-Minute Storefront Setup
+          </button>
+
         </div>
       </div>
 
@@ -673,6 +711,7 @@
         </div>
       </div>
 
+
       <div class="step" id="step-loading">
         <h1>Building Your Business...</h1>
         <p>Please wait while we set up your workspace.</p>
@@ -681,6 +720,99 @@
           style="margin: 0 auto; width: 40px; height: 40px"
         ></div>
       </div>
+
+      <!-- Autodream Wizard Steps -->
+      <div class="step" id="step-ad-type">
+        <h1>What type of business do you run?</h1>
+        <p>This helps us tailor your storefront.</p>
+        <div class="radio-group" style="text-align: left">
+          <label class="radio-option" style="min-height: 44px; display: flex; align-items: center;">
+            <input type="radio" name="ad_business_type" value="Physical Products" />
+            <div class="radio-label">Physical Products</div>
+          </label>
+          <label class="radio-option" style="min-height: 44px; display: flex; align-items: center;">
+            <input type="radio" name="ad_business_type" value="Services" />
+            <div class="radio-label">Services</div>
+          </label>
+          <label class="radio-option" style="min-height: 44px; display: flex; align-items: center;">
+            <input type="radio" name="ad_business_type" value="Food" />
+            <div class="radio-label">Food & Beverage</div>
+          </label>
+        </div>
+        <div id="ad-type-error" class="error-msg" aria-live="polite">
+          Please select a business type.
+        </div>
+        <div class="btn-group">
+          <button data-testid="ad-next-type" onclick="nextAdStep('step-ad-type', 'step-ad-name')" style="min-height: 44px;">Next</button>
+          <button class="btn-secondary" onclick="goToStep('step-initial')" style="min-height: 44px;">Back</button>
+        </div>
+      </div>
+
+      <div class="step" id="step-ad-name">
+        <h1>What is your business name and vibe?</h1>
+        <p>Tell us your name and a bit about your style (e.g., Maya's Bakery, Modern & Clean).</p>
+        <input
+          type="text"
+          id="ad-business-name"
+          data-testid="ad-business-name"
+          class="glassmorphism"
+          placeholder="e.g. Maya's Bakery, Friendly"
+          style="margin-bottom: 24px; min-height: 44px;"
+        />
+        <div id="ad-name-error" class="error-msg" aria-live="polite">
+          Please enter your business name.
+        </div>
+        <div class="btn-group">
+          <button data-testid="ad-next-name" onclick="nextAdStep('step-ad-name', 'step-ad-offer')" style="min-height: 44px;">Next</button>
+          <button class="btn-secondary" onclick="goToStep('step-ad-type')" style="min-height: 44px;">Back</button>
+        </div>
+      </div>
+
+      <div class="step" id="step-ad-offer">
+        <h1>What do you sell mostly?</h1>
+        <p>Your core offering (e.g., Custom Cakes, Plumbing Repair).</p>
+        <input
+          type="text"
+          id="ad-core-offer"
+          data-testid="ad-core-offer"
+          class="glassmorphism"
+          placeholder="e.g. Custom Cakes"
+          style="margin-bottom: 24px; min-height: 44px;"
+        />
+        <div id="ad-offer-error" class="error-msg" aria-live="polite">
+          Please enter your core offering.
+        </div>
+        <div class="btn-group">
+          <button data-testid="ad-next-offer" onclick="startAutodreamGeneration()" style="min-height: 44px;">Generate Storefront</button>
+          <button class="btn-secondary" onclick="goToStep('step-ad-name')" style="min-height: 44px;">Back</button>
+        </div>
+      </div>
+
+      <div class="step" id="step-ad-loading">
+        <h1>Generating Storefront...</h1>
+        <p>Our AI agents are building your business from scratch.</p>
+        <div class="spinner" style="margin: 0 auto 16px auto; width: 40px; height: 40px"></div>
+        <div id="ad-loading-status" class="ad-loading-text">Drafting layout...</div>
+      </div>
+
+      <div class="step" id="step-ad-preview">
+        <h1>Here is your new storefront</h1>
+        <p>Looks good?</p>
+        <!-- Mock Preview Frame -->
+        <div class="ad-preview-frame glassmorphism" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.8);">
+          <h2 id="ad-preview-title" style="margin-bottom: 8px;">Your Business</h2>
+          <p id="ad-preview-subtitle" style="color: #666; font-size: 14px; text-align: center; padding: 0 16px;">Core Offering</p>
+          <div style="margin-top: 24px; width: 80%; height: 200px; background: rgba(0, 102, 255, 0.1); border-radius: 8px;"></div>
+          <div style="margin-top: 16px; width: 60%; height: 24px; background: rgba(0, 102, 255, 0.1); border-radius: 4px;"></div>
+          <div style="margin-top: 8px; width: 40%; height: 24px; background: rgba(0, 102, 255, 0.1); border-radius: 4px;"></div>
+        </div>
+
+        <div class="btn-group">
+          <button data-testid="ad-approve-btn" onclick="approveAutodreamStorefront()" style="min-height: 44px;">Looks good!</button>
+          <button class="btn-secondary" data-testid="ad-regenerate-btn" onclick="startAutodreamGeneration()" style="min-height: 44px;">Regenerate</button>
+        </div>
+      </div>
+
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
@@ -1409,7 +1541,112 @@
         }
       };
 
+
+      // Autodream Wizard Logic
+      let autodreamData = {
+        businessType: "",
+        businessName: "",
+        coreOffer: ""
+      };
+
+      window.startAutodreamWizard = function() {
+        goToStep("step-ad-type");
+      };
+
+      window.nextAdStep = function(currentStep, nextStep) {
+        let isValid = true;
+        if (currentStep === "step-ad-type") {
+          const selected = document.querySelector('input[name="ad_business_type"]:checked');
+          const err = document.getElementById("ad-type-error");
+          if (!selected) {
+            err.style.display = "block";
+            isValid = false;
+          } else {
+            err.style.display = "none";
+            autodreamData.businessType = selected.value;
+          }
+        } else if (currentStep === "step-ad-name") {
+          const input = document.getElementById("ad-business-name");
+          const err = document.getElementById("ad-name-error");
+          if (input.value.trim() === "") {
+            err.style.display = "block";
+            isValid = false;
+          } else {
+            err.style.display = "none";
+            autodreamData.businessName = input.value.trim();
+          }
+        } else if (currentStep === "step-ad-offer") {
+          const input = document.getElementById("ad-core-offer");
+          const err = document.getElementById("ad-offer-error");
+          if (input.value.trim() === "") {
+            err.style.display = "block";
+            isValid = false;
+          } else {
+            err.style.display = "none";
+            autodreamData.coreOffer = input.value.trim();
+          }
+        }
+
+        if (isValid) {
+          goToStep(nextStep);
+        }
+      };
+
+      window.startAutodreamGeneration = function() {
+        const input = document.getElementById("ad-core-offer");
+        const err = document.getElementById("ad-offer-error");
+        if (input && input.value.trim() === "") {
+          err.style.display = "block";
+          return;
+        }
+        if (input) {
+            err.style.display = "none";
+            autodreamData.coreOffer = input.value.trim();
+        }
+
+        goToStep("step-ad-loading");
+        const statusEl = document.getElementById("ad-loading-status");
+        statusEl.innerText = "Drafting layout...";
+
+        setTimeout(() => {
+          statusEl.innerText = "Writing copy...";
+        }, 1000);
+
+        setTimeout(() => {
+          statusEl.innerText = "Preparing products...";
+        }, 2000);
+
+        setTimeout(() => {
+          goToStep("step-ad-preview");
+          document.getElementById("ad-preview-title").innerText = autodreamData.businessName;
+          document.getElementById("ad-preview-subtitle").innerText = autodreamData.coreOffer;
+        }, 3000);
+      };
+
+      window.approveAutodreamStorefront = async function() {
+        const btn = document.querySelector('[data-testid="ad-approve-btn"]');
+        btn.disabled = true;
+        btn.innerText = "Approving...";
+
+        const tenantIdStr = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
+        const userIdStr = localStorage.getItem("user_id") || "test-user";
+        const backendUrl = window.location.origin.includes("localhost") || window.location.protocol === "file:" ? "http://127.0.0.1:18789" : "";
+
+        // We simulate a successful onboarding start for this flow
+        localStorage.setItem("has_onboarded", "true");
+
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            window.location.href = "success.html";
+            return;
+        }
+
+        setTimeout(() => {
+            window.location.href = "success.html";
+        }, 500);
+      };
+
       loadStateAndResume();
+
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
@@ -1562,7 +1799,8 @@
         if (
           stepId === "step-initial" ||
           stepId === "step-instant" ||
-          stepId === "step-chat"
+          stepId === "step-chat" ||
+          stepId.startsWith("step-ad-")
         ) {
           return true;
         }
@@ -1683,7 +1921,8 @@
         if (
           stepId === "step-initial" ||
           stepId === "step-instant" ||
-          stepId === "step-chat"
+          stepId === "step-chat" ||
+          stepId.startsWith("step-ad-")
         ) {
           if (stepperIndicator) stepperIndicator.style.display = "none";
         } else {
