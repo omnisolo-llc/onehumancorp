@@ -545,3 +545,5 @@ VALUES
   ('action-test-3', 'triage-test-3', 'e2e-tenant', 'Draft Quote', '{"customer_id": "cust-e2e-1", "suggested_price": 150.0, "required_deposit": 50.0, "generated_response": "Here is the quote for plumbing fix."}'),
   ('action-test-4', 'triage-test-4', 'e2e-tenant', 'Draft Booking', '{"customer_id": "cust-e2e-1", "product_id": "prod-plumbing-fix", "start_time": "2030-01-01T10:00:00Z", "end_time": "2030-01-01T11:00:00Z", "generated_response": "I have drafted a booking for you."}')
 ON CONFLICT (id) DO NOTHING;
+ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tool_integrations ENABLE ROW LEVEL SECURITY;
