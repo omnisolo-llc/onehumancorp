@@ -78,6 +78,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
         .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
         .route("/create-checkout-session", axum::routing::post(create_checkout_session_handler))
+        .route("/create-portal-session", axum::routing::post(create_portal_session_handler))
         .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
         .with_state(hub)
 }
@@ -94,6 +95,11 @@ pub struct CreateCheckoutSessionRequest {
 #[derive(serde::Serialize)]
 pub struct CreateCheckoutSessionResponse {
     pub checkout_url: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CreatePortalSessionResponse {
+    pub portal_url: String,
 }
 
 pub async fn create_checkout_session_handler(
@@ -154,6 +160,42 @@ pub async fn create_checkout_session_handler(
     } else {
         // Fallback for tests / missing Stripe config
         Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+    }
+}
+
+pub async fn create_portal_session_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<CreatePortalSessionResponse>, StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        Some(_) => "default".to_string(),
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // Get the actual customer ID from the database
+    let customer_id_result: Result<String, _> = sqlx::query_scalar("SELECT customer_id FROM subscribers WHERE tenant_id = $1 LIMIT 1")
+        .bind(&tenant_id)
+        .fetch_one(&hub.pool)
+        .await;
+
+    let customer_id = match customer_id_result {
+        Ok(id) => id,
+        Err(_) => format!("cus_{}", tenant_id), // Fallback
+    };
+
+    // Pass the correct return_url
+    let return_url = std::env::var("OHC_APP_URL").unwrap_or_else(|_| "http://localhost:3000".to_string()) + "/cost-dashboard";
+
+    if let Some(client) = &hub.tracker().stripe_client {
+        match client.create_billing_portal_session(&customer_id, &return_url).await {
+            Ok(url) => Ok(Json(CreatePortalSessionResponse { portal_url: url })),
+            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    } else {
+        // Fallback for tests / missing Stripe config
+        Ok(Json(CreatePortalSessionResponse { portal_url: format!("https://billing.stripe.com/p/session/test_portal_{}", customer_id) }))
     }
 }
 

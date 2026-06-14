@@ -280,4 +280,36 @@ impl StripeClient {
 
         Ok(secret.to_string())
     }
+
+    pub async fn create_billing_portal_session(&self, customer_id: &str, return_url: &str) -> Result<String, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            // Mock behavior for testing if no real key is configured
+            return Ok(format!("https://billing.stripe.com/p/session/test_portal_{}", customer_id));
+        }
+
+        let api_key = api_key_res.unwrap();
+        let mut form = std::collections::HashMap::new();
+        form.insert("customer".to_string(), customer_id.to_string());
+        form.insert("return_url".to_string(), return_url.to_string());
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/billing_portal/sessions", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Billing Portal request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let url = json["url"].as_str().ok_or_else(|| "Missing url in response".to_string())?;
+
+        Ok(url.to_string())
+    }
 }

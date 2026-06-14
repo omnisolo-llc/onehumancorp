@@ -115,11 +115,6 @@ export default function CostDashboardPage() {
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Cost Transparency Dashboard</h1>
-        <div className="flex gap-2">
-            <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
-            Back to My Plan
-            </button>
-        </div>
       </header>
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
@@ -139,11 +134,30 @@ export default function CostDashboardPage() {
         <section id="my-plan-section" className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm">
           <div className="app-panel-header flex justify-between items-center bg-transparent border-b border-white/40">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">My Plan</h2>
-             <button
-               onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
-               Upgrade
-             </button>
+             <div className="flex gap-2">
+                 <button
+                   onClick={async () => {
+                     try {
+                         const response = await fetch('/api/billing/create-portal-session', { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+                         if (response.ok) {
+                             const data = await response.json();
+                             window.location.href = data.portal_url;
+                         } else {
+                             alert("Failed to open billing portal");
+                         }
+                     } catch (e) {
+                         alert("Failed to open billing portal");
+                     }
+                   }}
+                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all shadow-sm">
+                   Manage Billing
+                 </button>
+                 <button
+                   onClick={() => router.push('/pricing')}
+                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+                   Upgrade
+                 </button>
+             </div>
           </div>
           <div className="app-panel-body">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

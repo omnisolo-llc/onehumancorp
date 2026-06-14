@@ -11,12 +11,12 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.waitForLoadState('networkidle');
 
     // 3. Check for My Plan components
-    await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
-    await expect(page.locator('.card').first()).toBeVisible();
-    await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
-    await expect(page.locator('div.stat-title:has-text("AI actions used this month")').first()).toBeVisible();
-    await expect(page.locator('div.stat-title:has-text("Storage used")').first()).toBeVisible();
-    await expect(page.locator('div.stat-title:has-text("Estimated Next Bill")').first()).toBeVisible();
+    await expect(page.locator('h2:has-text("My Plan")').first()).toBeVisible();
+    await expect(page.locator('h3:has-text("Current Plan")').first()).toBeVisible();
+    await expect(page.locator('h3:has-text("AI actions used this month")').first()).toBeVisible();
+    await expect(page.locator('h3:has-text("Storage used")').first()).toBeVisible();
+    await expect(page.locator('h3:has-text("Estimated Next Bill")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Manage Billing")').first()).toBeVisible();
     await expect(page.locator('button:has-text("Upgrade")').first()).toBeVisible();
 
     // The tenant `e2e-tenant` seeded in DB may have a Starter plan limit, so we won't strictly enforce / Unlimited here.
@@ -40,10 +40,10 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
-    await expect(proPage.locator('div.stat-value', { hasText: '/ Unlimited' }).nth(0)).toBeVisible();
+    await expect(proPage.locator('p', { hasText: '/ Unlimited' }).nth(0)).toBeVisible();
 
     // Ensure the page renders / 50 GB for Storage
-    await expect(proPage.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
+    await expect(proPage.locator('p', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -57,8 +57,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.goto('/cost-dashboard.html');
     await proPage.waitForLoadState('networkidle');
 
-    const aiActionsCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'AI actions used this month' }) }).first();
-    await expect(aiActionsCard.locator('div.stat-value', { hasText: '/ Unlimited' }).first()).toBeVisible();
+    const aiActionsCard = proPage.locator('div', { has: proPage.locator('h3', { hasText: 'AI actions used this month' }) }).first();
+    await expect(aiActionsCard.locator('p', { hasText: '/ Unlimited' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -72,8 +72,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.goto('/cost-dashboard.html');
     await proPage.waitForLoadState('networkidle');
 
-    const storageCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'Storage used' }) }).first();
-    await expect(storageCard.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
+    const storageCard = proPage.locator('div', { has: proPage.locator('h3', { hasText: 'Storage used' }) }).first();
+    await expect(storageCard.locator('p', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -92,6 +92,23 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Bandwidth Savings' }).first()).toBeVisible();
+  });
+
+  test('Billing portal management journey', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+    await page.goto('/cost-dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Ensure the Manage Billing button is visible
+    const manageBillingButton = page.locator('button:has-text("Manage Billing")');
+    await expect(manageBillingButton).toBeVisible();
+
+    // We can intercept the request or just click and wait for navigation
+    await Promise.all([
+      page.waitForRequest(req => req.url().includes('/api/billing/create-portal-session')),
+      manageBillingButton.click()
+    ]);
+    await expect(page).toHaveURL(/.*billing.stripe.com.*/);
   });
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {
