@@ -17,7 +17,7 @@
       .container {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -30,10 +30,50 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #16161a;
+          color: #F5F5F7;
+        }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, h2 { color: #F5F5F7; }
+        p { color: #A1A1A6; }
+        input, select, textarea {
+          background: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        input:focus, select:focus, textarea:focus {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        .persona-chip {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #F5F5F7;
+        }
+        .persona-chip:hover {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        .step-indicator .dot {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+        .step-indicator .dot.active {
+          background-color: #0066FF;
+        }
       }
       h1 {
         margin-top: 0;
@@ -144,7 +184,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -153,7 +193,7 @@
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
@@ -819,6 +859,19 @@
         const tenantId = localStorage.getItem('tenant_id') || 'storefront';
         const userId = localStorage.getItem('user_id') || 'test-user';
 
+        // Add a loading state over the initial screen instead of destructively replacing its HTML.
+        const step0 = document.getElementById('step-initial');
+        let loadingOverlay = null;
+        if (step0) {
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; border-radius:16px;';
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                 loadingOverlay.style.background = 'rgba(22, 22, 26, 0.8)';
+            }
+            loadingOverlay.innerHTML = '<div class="spinner" style="border-top-color:#0066FF; width:30px; height:30px; border-width:4px;"></div><p style="margin-top:10px; font-weight:600;">Loading your progress...</p>';
+            step0.appendChild(loadingOverlay);
+        }
+
         fetch(`${backendUrl}/api/onboarding/state`, {
             method: 'GET',
             headers: {
@@ -828,13 +881,22 @@
         })
         .then(res => res.json())
         .then(apiState => {
-            if (apiState && Object.keys(apiState).length > 0) {
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+            }
+
+            if (apiState && Object.keys(apiState).length > 0 && typeof apiState.step !== 'undefined') {
                 state = { ...state, ...(apiState.wizardState || apiState) };
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
         })
-        .catch(err => console.error('Failed to load cross-device state:', err));
+        .catch(err => {
+            console.error('Failed to load cross-device state:', err);
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+            }
+        });
       }
 
 
@@ -1326,22 +1388,31 @@
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
       if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
-      if (generateStorefrontBtn) {
-          generateStorefrontBtn.addEventListener('click', async () => {
-              const bioInput = instantBioInputEl.value;
+      function attachGenerateBtnListener() {
+          const btn = document.getElementById('generate-storefront-btn');
+          const bioInputEl = document.getElementById('instant-bio');
+          const errEl = document.getElementById('instant-error');
+          if (!btn || !bioInputEl || !errEl) return;
+
+          // remove old listener if any to avoid duplicates
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+
+          newBtn.addEventListener('click', async () => {
+              const bioInput = bioInputEl.value;
               if (!bioInput.trim()) {
-                  instantErrorEl.innerText = "Please tell us about your business.";
-                  instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  errEl.innerText = "Please tell us about your business.";
+                  errEl.style.display = 'block';
+                  errEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+                  bioInputEl.classList.add('border-[#FF3B30]');
                   return;
               }
 
-              instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
-              generateStorefrontBtn.disabled = true;
-              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
+              errEl.style.display = 'none';
+              errEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+              bioInputEl.classList.remove('border-[#FF3B30]');
+              newBtn.disabled = true;
+              newBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
               try {
                   const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
@@ -1362,17 +1433,19 @@
                          },
                          body: JSON.stringify({ description: bioInput })
                      });
+
                      if (!res.ok) {
                          const errData = await res.json().catch(()=>({}));
-                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
+                         throw new Error(errData.error || errData.message || 'Failed to analyze request');
                      }
+
                      intakeData = await res.json();
                   }
 
                   const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: bioInput,
+                      businessType: intakeData.business_type || "Local Service",
+                      companyName: intakeData.suggested_name || "New Business",
+                      companyDescription: intakeData.tagline || "",
                       sellingCategories: intakeData.categories || ["physical"],
                       paymentPref: "online",
                       adminEmail: "admin@mybusiness.com",
@@ -1437,15 +1510,19 @@
               } catch (err) {
                   console.error(err);
                   const errorMsg = err.message || "Network Error: Failed to fetch";
-                  instantErrorEl.innerText = errorMsg;
-                  instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
-                  generateStorefrontBtn.disabled = false;
-                  generateStorefrontBtn.innerText = "Next";
+                  errEl.innerText = errorMsg;
+                  errEl.style.display = 'block';
+                  errEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  bioInputEl.classList.add('border-[#FF3B30]');
+                  newBtn.disabled = false;
+                  newBtn.innerText = "Next";
               }
           });
       }
+
+      attachGenerateBtnListener();
+      window.addEventListener('setup-html-restored', attachGenerateBtnListener);
+
       document.querySelectorAll(".save-draft-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
             const originalText = e.target.innerText;
@@ -1760,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', () => {
             max-width: calc(100vw - 40px);
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(30px) saturate(2.1);
-            -webkit-backdrop-filter: blur(30px) saturate(2.1);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
