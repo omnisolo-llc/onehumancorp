@@ -3316,6 +3316,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3338,6 +3339,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3440,10 +3442,16 @@ async fn ui_dashboard_analytics_chat_handler(
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                        let query_str = if mobile_optimized {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50"
+            } else {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50"
+            };
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3468,10 +3476,16 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                        let query_str = if mobile_optimized {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50"
+            } else {
+                "SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50"
+            };
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3607,13 +3621,17 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     let mut legacy_rows_json = Vec::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
-            if let Ok(rows) = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+            } else {
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-            )
+            };
+            if let Ok(rows) = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(&db.pool)
             .await {
                 for row in rows {
+                    use sqlx::Row;
                      let item = if mobile_optimized {
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
@@ -3644,13 +3662,17 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(rows) = sqlx::query(
+             let query_str = if mobile_optimized {
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+             } else {
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-            )
+             };
+             if let Ok(rows) = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await {
                 for row in rows {
+                    use sqlx::Row;
                      let item = if mobile_optimized {
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
@@ -3959,17 +3981,8 @@ async fn ui_dashboard_unified_feed_handler(
                         obj.remove("shipping_address");
                     }
                 }
-                for msg in inbox.iter_mut() {
-                    if let Some(obj) = msg.as_object_mut() {
-                        obj.remove("original_message");
-                    }
-                }
-                for item in triage.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("context");
-                        obj.remove("action_payload");
-                    }
-                }
+                // Note: keys already omitted by the load_ui_inbox_from_db sql query if mobile_optimized: original_message
+                // Note: keys already omitted by the load_ui_triage_from_db sql query if mobile_optimized: context, action_payload
                 for item in approvals.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("payload");
