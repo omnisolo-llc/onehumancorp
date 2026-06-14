@@ -68,9 +68,11 @@
       }
       select, textarea, input {
         border-radius: 8px;
+        min-height: 44px !important;
       }
       select, textarea, input {
         border-radius: 8px;
+        min-height: 44px !important;
       }
       input:focus {
         outline: none;
@@ -138,6 +140,54 @@
       }
 
       @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #000;
+        }
+        .container, .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, p {
+          color: #F5F5F7;
+        }
+        body {
+          background-color: #000;
+        }
+        .container, .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, p {
+          color: #F5F5F7;
+        }
+        body {
+          background-color: #000;
+        }
+        .container, .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, p {
+          color: #F5F5F7;
+        }
+        body {
+          background-color: #000;
+        }
+        .container, .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, p {
+          color: #F5F5F7;
+        }
         body {
           background-color: #16161a;
         }
@@ -778,6 +828,15 @@
           templateSelection: document.getElementById('template-error')
       };
 
+
+
+
+      const categoriesMap = {
+          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
+          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
+          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
+          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
+      };
       let state = {
           businessName: '',
           assistantName: '',
@@ -812,6 +871,7 @@
         if (stored) {
           state = { ...state, ...JSON.parse(stored) };
           populateForm();
+          applyStep();
         }
 
         // Fetch from API to support cross-device resume
@@ -832,19 +892,26 @@
                 state = { ...state, ...(apiState.wizardState || apiState) };
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
+                applyStep();
             }
         })
         .catch(err => console.error('Failed to load cross-device state:', err));
+
+        if (!stored) {
+            applyStep();
+        }
       }
 
 
-      if (state.step === undefined || state.step === 0) {
-         goToStep('step-initial');
-      } else {
-         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-         if (state.step < steps.length) {
-            goToStep(steps[state.step]);
-         }
+      function applyStep() {
+          if (state.step === undefined || state.step === 0 || state.step === '0') {
+             goToStep('step-initial');
+          } else {
+             const stepsArray = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+             if (state.step - 1 < stepsArray.length) {
+                goToStep(stepsArray[state.step - 1]);
+             }
+          }
       }
 
             // Clear name error on typing if valid
@@ -920,11 +987,17 @@
       }
 
             function saveCurrentState() {
+          const stepsArray = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+          const activeStepEl = document.querySelector('.step.active');
+          if (activeStepEl && stepsArray.includes(activeStepEl.id)) {
+              state.step = stepsArray.indexOf(activeStepEl.id) + 1; // 1-indexed to differentiate from 0 which might mean uninitialized
+          }
           state.categories = inputs.categories.value;
           state.businessName = inputs.name.value;
           state.tagline = inputs.tagline.value;
           state.assistantName = inputs.assistantName.value;
           state.assistantTone = inputs.assistantTone.value;
+          state.firstOffer = inputs.firstOffer.value;
           state.first_offer = inputs.firstOffer.value;
           state.templateSelection = inputs.templateSelection.value;
 
@@ -1104,12 +1177,7 @@
           });
       }
 
-      const categoriesMap = {
-          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
-          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
-          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
-      };
+
 
       function populateCategories() {
           const context = state.work_context;
@@ -1125,6 +1193,17 @@
               inputs.categories.value = state.categories;
           } else {
               inputs.categories.value = "";
+          }
+      }
+
+            function applyStep() {
+          if (state.step === undefined || state.step === -1) {
+             goToStep('step-initial');
+          } else {
+             const stepsArray = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+             if (state.step < stepsArray.length) {
+                goToStep(stepsArray[state.step]);
+             }
           }
       }
 
@@ -1465,7 +1544,7 @@
 
             const payload = {
                 wizardState: state,
-                step: currentStepIdx
+                step: state.step
             };
 
             if (window.__TAURI__ && window.__TAURI__.core) {
