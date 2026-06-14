@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
+import WhatsAppIntegrationButton from './whatsapp-integration-button';
+
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function SettingsPage() {
@@ -201,6 +203,18 @@ export default function SettingsPage() {
           <p className="app-list-subtitle">Manage integrations, local routing, and security.</p>
         </header>
 
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Integrations</div>
+              <div className="app-list-subtitle">Connect external services to your workspace.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <WhatsAppIntegrationButton />
+          </div>
+        </section>
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
