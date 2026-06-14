@@ -307,12 +307,15 @@ message SyncOfflineTransactionsResponse {
 message StartTerminalSessionRequest {
   string tenant_id = 1;
   string device_id = 2;
+  optional string product_id = 3;
+  optional int32 quantity = 4;
 }
 
 message StartTerminalSessionResponse {
   string session_id = 1;
   bool success = 2;
   string error_message = 3;
+  optional string lock_id = 4;
 }
 
 message UpdateTerminalSessionStatusRequest {
