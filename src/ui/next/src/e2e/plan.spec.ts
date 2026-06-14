@@ -24,10 +24,10 @@ test.describe('My Plan Page Loop', () => {
     await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
 
     // Check for "Upgrade Plan" or "View Upgrade Plans" buttons
-    await expect(page.locator('button', { hasText: 'View Upgrade Plans' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade' })).toBeVisible();
 
     // Check navigation buttons work correctly
-    await page.locator('button', { hasText: 'View Upgrade Plans' }).click();
+    await page.locator('button', { hasText: 'Upgrade' }).click();
     await expect(page).toHaveURL('/pricing');
   });
 });
