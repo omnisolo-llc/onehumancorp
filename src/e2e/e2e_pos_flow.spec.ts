@@ -47,14 +47,34 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Test Centralized Inventory & Distributed POS Architecture
     // Trigger offline conflict generation
     await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
-            id: 'tx_conflict',
-            client_id: 'device_1',
-            amount_cents: 5000,
-            currency: 'USD',
-            product_id: 'prod-conflict',
-            quantity_deducted: 10 // Force a shortage to test pending_reconciliation
-        }]));
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onupgradeneeded = (e) => {
+             const d = e.target.result;
+             if (!d.objectStoreNames.contains("actions")) d.createObjectStore("actions", { keyPath: "id" });
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readwrite");
+        const store = tx.objectStore("actions");
+        await new Promise((resolve, reject) => {
+            const req = store.put({
+                id: 'tx_conflict',
+                type: 'tap_to_pay',
+                payload: {
+                    id: 'tx_conflict',
+                    client_id: 'device_1',
+                    amount_cents: 5000,
+                    currency: 'USD',
+                    product_id: 'prod-conflict',
+                    quantity_deducted: 10 // Force a shortage to test pending_reconciliation
+                },
+                timestamp: Date.now()
+            });
+            req.onsuccess = resolve;
+            req.onerror = reject;
+        });
     });
 
 
@@ -80,9 +100,22 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Wait for background sync to trigger (interval is 10s) and clear events
     await expect(async () => {
       const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
-      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
+      const remainingPosTx = await page.evaluate(async () => {
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.count();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+      });
       // Only verifying pos_tx because timecard events backend is apparently not responding in UI mode
-      expect(remainingPosTx.length).toBe(0);
+      expect(remainingPosTx).toBe(0);
     }).toPass({ timeout: 15000 });
   });
 });

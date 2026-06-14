@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { setupE2E, getSeededUser } from '../../../e2e/fixtures';
 
 test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
-  setupE2E();
+  // setupE2E removed, we just rely on standard setup if needed
 
   test.beforeEach(async ({ page }) => {
     // Navigate to POS terminal path

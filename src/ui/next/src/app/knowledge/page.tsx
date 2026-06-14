@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { PageHeader } from "@/components/PageHeader";
 
 export default function KnowledgePage() {
-  const { t } = useTranslation();
+  const t = (k: string) => k;
   const [documents, setDocuments] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isReady, setIsReady] = useState(true);
@@ -24,7 +22,7 @@ export default function KnowledgePage() {
 
   return (
     <div className="app-page">
-      <PageHeader title={t("Knowledge & Documents")} />
+      <div className="mb-6"><h1 className="text-2xl font-bold text-gray-900">{t("Knowledge & Documents")}</h1></div>
 
       <div className="p-4">
         <div className="glassmorphism p-6 rounded-2xl mb-6">

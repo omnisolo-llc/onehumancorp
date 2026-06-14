@@ -27,9 +27,20 @@ test.describe('Offline-First AI Sync Mesh', () => {
 
     // Ensure the offline mutation was written to local storage
     const offlineQueue = await page.evaluate(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.count();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
     });
-    expect(offlineQueue.length).toBeGreaterThan(0);
+    expect(offlineQueue).toBeGreaterThan(0);
 
     // Go back online
     await context.setOffline(false);

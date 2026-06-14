@@ -19,14 +19,26 @@ const OfflineStore = {
   },
   clearEvents: () => localStorage.setItem('ohc_offline_events', '[]'),
 
-  getPosTransactions: () => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'),
-  setPosTransactions: (transactions: any[]) => localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions)),
-  addPosTransaction: (tx: any) => {
-    const transactions = OfflineStore.getPosTransactions();
-    transactions.push(tx);
-    localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+  getPosTransactions: async () => {
+    const { getActions } = require('../../utils/offlineQueue');
+    const actions = await getActions();
+    return actions.map(a => a.payload).filter(p => p.type === 'tap_to_pay');
   },
-  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
+  setPosTransactions: async (transactions: any[]) => {
+  },
+  addPosTransaction: async (tx: any) => {
+    const { SyncManager } = require('../../../lib/sync/SyncManager');
+    await SyncManager.getInstance().enqueue(tx);
+  },
+  clearPosTransactions: async () => {
+    const { getActions, removeAction } = require('../../utils/offlineQueue');
+    const actions = await getActions();
+    for (const action of actions) {
+      if (action.payload.type === 'tap_to_pay') {
+        await removeAction(action.id);
+      }
+    }
+  }
 };
 
 interface Product {
@@ -101,7 +113,7 @@ export default function TerminalPage() {
     const syncInterval = setInterval(async () => {
       if (navigator.onLine) {
         const events = OfflineStore.getEvents();
-        const posTransactions = OfflineStore.getPosTransactions();
+        const posTransactions = await OfflineStore.getPosTransactions();
 
         if (events.length > 0 || posTransactions.length > 0) {
           setSyncCount(events.length + posTransactions.length);

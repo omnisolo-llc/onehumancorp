@@ -62,7 +62,18 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();
 
     const queueData = await memberPage.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result.map(r => r.payload));
+            req.onerror = () => reject(req.error);
+        });
     });
 
     expect(queueData.length).toBeGreaterThan(0);

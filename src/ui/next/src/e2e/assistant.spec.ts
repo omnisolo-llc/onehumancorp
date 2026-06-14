@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Assistant Page', () => {
   test('navigates to assistant and verifies authentic state', async ({ page }) => {
-    await adminPage({ page }, async ({ page }) => {
+    {
       await page.goto('/assistant');
 
       // Verify the page shell and layout
@@ -27,6 +27,6 @@ test.describe('Assistant Page', () => {
       // Check a panel (e.g., Remote Control)
       await page.getByRole('button', { name: 'Remote Control' }).click();
       await expect(page.getByRole('heading', { name: 'Remote Control' })).toBeVisible();
-    });
+    }
   });
 });

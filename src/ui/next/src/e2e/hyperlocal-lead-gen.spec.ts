@@ -1,10 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 
 test.describe('Hyperlocal Lead Gen CUJ', () => {
   test('Carlos the Handyman sets up a weekly lead gen campaign', async ({ page }) => {
-    await adminPage(page);
+
 
     // 1. Navigate to the dashboard where the Lead Gen card is located.
     // The adminPage fixture logs in and defaults to /dashboard, but ensure we are there.

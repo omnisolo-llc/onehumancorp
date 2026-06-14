@@ -147,9 +147,15 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
              timestamp: new Date().toISOString()
           };
           // Also sync with OfflineStore directly to match page.tsx expectations
-          const existingTxs = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
-          existingTxs.push(tx);
-          localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
+          const { SyncManager } = require('../../../lib/sync/SyncManager');
+          SyncManager.getInstance().enqueue({
+             id: transactionId,
+             type: 'tap_to_pay',
+             client_id: 'terminal_1',
+             amount: amount,
+             product_id: productId,
+             currency: 'usd'
+          });
 
           setStatus('Synced locally. Will push to cloud when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);

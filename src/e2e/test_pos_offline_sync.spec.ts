@@ -33,7 +33,18 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Assert the transaction was written to localStorage
     const queuedTxs = await memberPage.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result.map(r => r.payload));
+            req.onerror = () => reject(req.error);
+        });
     });
     expect(queuedTxs.length).toBeGreaterThan(0);
     expect(queuedTxs[0].amount_cents).toBe(5000);
@@ -51,14 +62,36 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Wait for the sync to complete and the local storage to be cleared
     await memberPage.waitForFunction(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.count();
+            req.onsuccess = () => resolve(req.result === 0);
+            req.onerror = () => reject(req.error);
+        });
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        const db = await new Promise((resolve, reject) => {
+          const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction("actions", "readonly");
+        const store = tx.objectStore("actions");
+        return new Promise((resolve, reject) => {
+            const req = store.count();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
     });
-    expect(afterSyncTxs.length).toBe(0);
+    expect(afterSyncTxs).toBe(0);
   });
 });
 

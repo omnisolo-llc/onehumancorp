@@ -35,7 +35,7 @@ test.describe('Viral Agent Paywall Growth Loop', () => {
         await expect(whatsappLink).toBeVisible();
 
         // Use evaluate to click so we don't actually navigate to whatsapp
-        await whatsappLink.evaluate((node) => node.click());
+        await whatsappLink.evaluate((node) => { if ('click' in node) (node as HTMLElement).click(); });
 
         // The modal should close and the toggle should now be active
         await expect(modalHeader).not.toBeVisible();
