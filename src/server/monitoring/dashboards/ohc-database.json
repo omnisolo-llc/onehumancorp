@@ -24,7 +24,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
       "transparent": true
     },
@@ -194,7 +194,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(sqlite_lock_contention[5m]))",
+          "expr": "sum(rate(ohc_sqlite_lock_contention_total[5m]))",
           "legendFormat": "SQLite Lock Contention",
           "refId": "B"
         }
