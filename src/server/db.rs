@@ -575,46 +575,58 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
-        loop {
-            match f().await {
-                Ok(val) => return Ok(val),
-                Err(err) => {
-                    let err_str = err.to_string().to_lowercase();
-                    let is_sqlite_lock = self.is_sqlite()
-                        && (err_str.contains("database is locked")
-                            || err_str.contains("sqlite_busy"));
-                    let is_postgres_lock = !self.is_sqlite()
-                        && (err_str.contains("serialization failure")
-                            || err_str.contains("deadlock detected")
-                            || err_str.contains("40001")
-                            || err_str.contains("could not obtain lock"));
+        let timeout_duration = std::time::Duration::from_secs(60);
 
-                    if is_sqlite_lock || is_postgres_lock {
-                        attempt += 1;
-                        if attempt >= max_attempts {
-                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                                &self.pool, operation,
-                            )
-                            .await;
-                            return Err(E::from(format!(
-                                "Database retry exhausted after {} attempts: {}",
-                                max_attempts, err
-                            )));
-                        }
-                        if is_postgres_lock {
-                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+        let retry_loop = async {
+            loop {
+                match f().await {
+                    Ok(val) => return Ok::<T, E>(val),
+                    Err(err) => {
+                        let err_str = err.to_string().to_lowercase();
+                        let is_sqlite_lock = self.is_sqlite()
+                            && (err_str.contains("database is locked")
+                                || err_str.contains("sqlite_busy"));
+                        let is_postgres_lock = !self.is_sqlite()
+                            && (err_str.contains("serialization failure")
+                                || err_str.contains("deadlock detected")
+                                || err_str.contains("40001")
+                                || err_str.contains("could not obtain lock"));
+
+                        if is_sqlite_lock || is_postgres_lock {
+                            attempt += 1;
+                            if attempt >= max_attempts {
+                                let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                                return Err(E::from(format!(
+                                    "Database retry exhausted after {} attempts: {}",
+                                    max_attempts, err
+                                )));
+                            }
+                            if is_postgres_lock {
+                                tracing::warn!("postgres_skip_locked contention in {}", operation);
+                            } else {
+                                let _ = ::server_telemetry::record_sqlite_lock_contention(
+                                    &self.pool, operation,
+                                )
+                                .await;
+                            }
+                            tokio::time::sleep(backoff).await;
+                            backoff *= 2;
                         } else {
-                            let _ = ::server_telemetry::record_sqlite_lock_contention(
-                                &self.pool, operation,
-                            )
-                            .await;
+                            return Err(err);
                         }
-                        tokio::time::sleep(backoff).await;
-                        backoff *= 2;
-                    } else {
-                        return Err(err);
                     }
                 }
+            }
+        };
+
+        match tokio::time::timeout(timeout_duration, retry_loop).await {
+            Ok(result) => result,
+            Err(_) => {
+                tracing::error!("Database operation timed out after 60 seconds: {}", operation);
+                Err(E::from(format!("Database operation timed out after 60 seconds: {}", operation)))
             }
         }
     }
