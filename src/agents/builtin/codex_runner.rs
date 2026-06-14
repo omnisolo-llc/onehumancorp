@@ -657,7 +657,7 @@ impl AppServer {
                         error: None,
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    return serde_json::to_string(&resp).unwrap_or_default();
+                    serde_json::to_string(&resp).unwrap_or_default()
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -670,7 +670,7 @@ impl AppServer {
                         }),
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    return serde_json::to_string(&resp).unwrap_or_default();
+                    serde_json::to_string(&resp).unwrap_or_default()
                 }
             }
         } else if req.method == "run_ralph_loop" {
