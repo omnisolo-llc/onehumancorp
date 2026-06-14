@@ -44,7 +44,16 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setWindowWidth(window.innerWidth);
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    let ticking = false;
+    const handleResize = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setWindowWidth(window.innerWidth);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);

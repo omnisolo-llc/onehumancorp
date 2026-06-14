@@ -36,7 +36,16 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       }, 300);
 
       // Also attach resize/scroll listeners for recalculation (simplified for this example)
-      const handleScroll = () => setTargetRect(targetElement.getBoundingClientRect());
+      let ticking = false;
+      const handleScroll = () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            setTargetRect(targetElement.getBoundingClientRect());
+            ticking = false;
+          });
+          ticking = true;
+        }
+      };
       window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('resize', handleScroll);
 
