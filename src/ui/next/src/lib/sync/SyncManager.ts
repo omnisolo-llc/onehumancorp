@@ -1,6 +1,7 @@
+import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+
 export class SyncManager {
   private static instance: SyncManager;
-  private queueKey = 'ohc_offline_queue';
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
@@ -18,12 +19,17 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public enqueue(mutation: any) {
+  public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
 
-    const queue = this.getQueue();
-    queue.push(mutation);
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    if (!mutation.id) {
+        mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+    }
+    if (!mutation.timestamp) {
+        mutation.timestamp = Date.now();
+    }
+
+    await enqueueAction(mutation);
     this.notifyListeners();
 
     if (navigator.onLine) {
@@ -31,17 +37,14 @@ export class SyncManager {
     }
   }
 
-  public getQueueLength(): number {
-    return this.getQueue().length;
+  public async getQueueLength(): Promise<number> {
+    const queue = await this.getQueue();
+    return queue.length;
   }
 
-  private getQueue(): any[] {
+  private async getQueue(): Promise<any[]> {
     if (typeof window === 'undefined') return [];
-    try {
-      return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
-    } catch {
-      return [];
-    }
+    return await getActions();
   }
 
   private notifyListeners() {
@@ -54,7 +57,7 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = this.getQueue();
+    let queue = await this.getQueue();
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
@@ -68,7 +71,7 @@ export class SyncManager {
           amount_cents: Math.round(m.amount),
           currency: m.currency || 'usd',
           payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-          timestamp: new Date().toISOString()
+          timestamp: new Date(m.timestamp || Date.now()).toISOString()
         };
       });
 
@@ -95,6 +98,8 @@ export class SyncManager {
              mutation_type: 'draft_quote',
              payload: m.notes
           };
+        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT') {
+            return m; // keep them for KDS
         }
         return m;
       });
@@ -125,14 +130,15 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      if (generalMutations.length > 0) {
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT');
+      if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-spiffe-id': spiffeId
           },
-          body: JSON.stringify({ mutations: generalMutations })
+          body: JSON.stringify({ mutations: generalGenMutations })
         });
         if (!resGen.ok) {
           allOk = false;
@@ -140,8 +146,38 @@ export class SyncManager {
         }
       }
 
+      // Sync KDS mutations
+      const orderEvents = generalMutations.filter(m => m.type === 'UPDATE_ORDER_STATUS');
+      if (orderEvents.length > 0) {
+        const resOrder = await fetch('/api/pos/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderEvents)
+        });
+        if (!resOrder.ok) {
+          allOk = false;
+          throw new Error(`Order Sync failed with status ${resOrder.status}`);
+        }
+      }
+
+      const inventoryEvents = generalMutations.filter(m => m.type === 'TOGGLE_SOLD_OUT');
+      if (inventoryEvents.length > 0) {
+        const resInv = await fetch('/api/pos/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(inventoryEvents)
+        });
+        if (!resInv.ok) {
+          allOk = false;
+          throw new Error(`Inventory Sync failed with status ${resInv.status}`);
+        }
+      }
+
       if (allOk) {
-        localStorage.setItem(this.queueKey, '[]');
+        // Clear all successfully synced items
+        for (const item of queue) {
+           await removeAction(item.id);
+        }
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
       }
