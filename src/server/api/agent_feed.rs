@@ -55,6 +55,7 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct UpdateStateRequest {
     pub state: String,
+    pub payload: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -271,6 +272,11 @@ async fn update_feed_item_state(
     };
 
     let repo = AgentFeedRepository::new(pool.clone());
+
+    // First update the action payload if provided
+    if let Some(new_payload) = payload.payload.clone() {
+        let _ = repo.update_action(&tenant_id, &id, new_payload).await;
+    }
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
