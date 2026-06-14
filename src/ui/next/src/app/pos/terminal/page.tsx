@@ -263,9 +263,47 @@ export default function TerminalPage() {
     }
   };
 
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = async (product: Product) => {
     setSelectedProduct(product);
     setOrderStatus('');
+
+    if (isOffline) {
+      setOrderStatus(`${t('New Order Total')}: ${(product.price_cents / 100).toFixed(2)} ${product.currency}`);
+      const tx = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        amount_cents: product.price_cents,
+        currency: product.currency,
+        payload: JSON.stringify([{ product_id: product.id, quantity: 1 }]),
+        client_id: 'terminal_1',
+        timestamp: new Date().toISOString()
+      };
+      OfflineStore.addPosTransaction(tx);
+    } else {
+      setReserving(true);
+      setOrderStatus(t('Processing/Reserving...'));
+
+      try {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: product.id, quantity: 1, ttl_seconds: 15 })
+        });
+
+        const reserveData = await reserveRes.json();
+
+        if (!reserveData.success) {
+          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+          setReserving(false);
+          return;
+        }
+
+        setOrderStatus(`${t('New Order Total')}: ${(product.price_cents / 100).toFixed(2)} ${product.currency}`);
+      } catch (err) {
+        setOrderStatus(t('Error connecting to server'));
+      } finally {
+        setReserving(false);
+      }
+    }
   };
 
   if (!activeStaff) {
