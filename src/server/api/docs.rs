@@ -50,7 +50,7 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
 }
 
 pub async fn get_tooltips() -> Json<std::collections::HashMap<String, String>> {
-    let registry = crate::get_tooltips_registry().read().unwrap();
+    let registry = match crate::get_tooltips_registry().read() { Ok(r) => r, Err(e) => { tracing::error!("Failed to acquire tooltips read lock: {}", e); return Json(std::collections::HashMap::new()); } };
     let mut tooltips = std::collections::HashMap::new();
     for (k, v) in registry.iter() {
         tooltips.insert(k.clone(), v.clone());
@@ -70,7 +70,7 @@ pub struct SuccessResponse {
 }
 
 pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
-    let mut registry = crate::get_tooltips_registry().write().unwrap();
+    let mut registry = match crate::get_tooltips_registry().write() { Ok(r) => r, Err(e) => { tracing::error!("Failed to acquire tooltips write lock: {}", e); return Json(SuccessResponse { success: false }); } };
     registry.insert(payload.id, payload.text);
     Json(SuccessResponse { success: true })
 }
