@@ -280,7 +280,12 @@ impl DB {
                         }
 
                         // Ensure permissions are strictly 0o600
-                                                if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                        if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                            if sym_meta.file_type().is_symlink() {
+                                panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key path is a symlink. Aborting.");
+                            }
+                        }
+                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                             if (perms.mode() & 0o777) != 0o600 {
                                 perms.set_mode(0o600);
                                 let _ = std::fs::set_permissions(&secret_path, perms);

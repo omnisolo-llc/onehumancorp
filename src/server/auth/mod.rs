@@ -202,8 +202,13 @@ impl Store {
                         let _ = file.write_all(&new_secret);
                     }
 
-                    // Ensure permissions are strictly 0o600
+                                        // Ensure permissions are strictly 0o600
                     use std::os::unix::fs::PermissionsExt;
+                    if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                        if sym_meta.file_type().is_symlink() {
+                            panic!("Security error: JWT secret path is a symlink. Aborting.");
+                        }
+                    }
                     if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                         if (perms.mode() & 0o777) != 0o600 {
                             perms.set_mode(0o600);
