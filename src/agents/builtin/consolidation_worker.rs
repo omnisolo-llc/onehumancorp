@@ -25,10 +25,28 @@ impl ConsolidationWorker {
 
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
-        let conflicts_resolved = self.repository.auto_resolve_conflicts().await?;
+        tracing::debug!("Starting consolidation pass");
+        let conflicts_resolved = self.repository.auto_resolve_conflicts().await.map_err(|e| {
+            tracing::error!("Failed to resolve conflicts: {}", e);
+            e
+        })?;
+
+        if conflicts_resolved > 0 {
+            tracing::info!("Resolved {} memory conflicts", conflicts_resolved);
+        }
 
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_success = self.repository.prune_stale(threshold_date).await.is_ok();
+        let pruning_res = self.repository.prune_stale(threshold_date).await;
+        let pruning_success = match pruning_res {
+            Ok(_) => {
+                tracing::debug!("Successfully pruned stale context");
+                true
+            }
+            Err(e) => {
+                tracing::error!("Failed to prune stale context: {}", e);
+                false
+            }
+        };
 
         Ok((conflicts_resolved, pruning_success))
     }
