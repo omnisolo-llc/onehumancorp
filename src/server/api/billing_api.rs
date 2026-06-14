@@ -250,8 +250,33 @@ pub async fn my_plan_handler(
 
     let base_bill = tier.base_price();
     let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
-    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
-    let next_bill_estimated = total_cost_cents as i32;
+    let storage_cost_cents = tracker.get_storage_cost_cents(storage_used_bytes);
+
+    let auditor = hub.get_cost_auditor();
+    let compute_cost_cents = (auditor.get_tenant_compute_cost(&tenant_id) * 100.0).round() as i64;
+    let network_cost_cents = (auditor.get_tenant_network_cost(&tenant_id) * 100.0).round() as i64;
+
+    // Fetch API/Email costs from trend like in cost_dashboard_handler
+    let pool = crate::db::get_pool();
+    let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
+    let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
+    let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
+
+    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents + storage_cost_cents + compute_cost_cents + network_cost_cents + email_cost_cents + api_cost_cents;
+
+    let now = chrono::Utc::now();
+    use chrono::Datelike;
+    let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
+        7
+    } else {
+        now.day()
+    };
+
+    // We only project the variable parts, base_bill is flat
+    let variable_costs_f64 = (total_cost_cents as f64 / 100.0) - base_bill;
+    let projected_variable_cost_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(variable_costs_f64, elapsed_days, 30);
+
+    let next_bill_estimated = (base_bill * 100.0).round() as i32 + projected_variable_cost_cents as i32;
 
     let resp = MyPlanResponse {
         current_plan: plan_name,
@@ -372,7 +397,10 @@ pub async fn cost_dashboard_handler(
     let email_cost_f64 = email_cost_cents as f64 / 100.0;
     let api_cost_f64 = api_cost_cents as f64 / 100.0;
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
+    let tier = hub.tracker().get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let base_bill = tier.base_price();
+
+    let total_costs_f64 = base_bill + llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     // For deterministic hermetic tests, if a specific test tenant is detected, force elapsed days to 7.
@@ -382,10 +410,14 @@ pub async fn cost_dashboard_handler(
         now.day()
     };
 
+    let variable_costs_f64 = total_costs_f64 - base_bill;
+    let projected_variable_cost_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(variable_costs_f64, elapsed_days, 30);
+    let projected_monthly_cost = (base_bill * 100.0).round() as i64 + projected_variable_cost_cents;
+
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
-        projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
+        projected_monthly_cost,
         llm_cost: llm_cost_cents,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
