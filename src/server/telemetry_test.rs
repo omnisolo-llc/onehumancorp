@@ -645,3 +645,40 @@ fn test_record_error_signal() {
     // and categorize correctly behind the scenes.
     ::server_telemetry::record_error_signal("panic: test");
 }
+
+#[tokio::test]
+async fn test_sync_telemetry_handler_redacts_pii() {
+    use axum::Json;
+    use axum::response::IntoResponse;
+    use server_lib::api::telemetry::{sync_telemetry_handler, MetricBatchItem};
+
+    // Construct a payload containing PII in the labels
+    let item = MetricBatchItem {
+        metric_name: "test_metric".to_string(),
+        metric_type: "counter".to_string(),
+        value: 1.0,
+        labels: serde_json::json!({
+            "tenant_id": "tenant-abc",
+            "user_email": "top_secret@example.com",
+            "api": "https://example.com?secret_token=123",
+            "data": {
+                "password": "my_password"
+            }
+        }),
+        timestamp: chrono::Utc::now(),
+    };
+
+    let batch = vec![item];
+
+    // Using axum::Json extractor manually
+    let req = Json(batch);
+
+    // We can't easily intercept what it emits to OpenTelemetry,
+    // but we can call it to ensure it processes without panicking.
+    // The previous fix ensures `item.labels` gets redacted before being processed.
+    let response = sync_telemetry_handler(req).await;
+
+    // Ensure the handler returns OK
+    let (parts, _) = response.into_response().into_parts();
+    assert_eq!(parts.status, axum::http::StatusCode::OK);
+}

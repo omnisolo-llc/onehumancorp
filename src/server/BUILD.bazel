@@ -764,6 +764,8 @@ rust_test(
         ":server_lib",
         "//src/server/config:server_config",
         "//src/server/telemetry:server_telemetry",
+        "@crates//:axum",
+        "@crates//:chrono",
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",

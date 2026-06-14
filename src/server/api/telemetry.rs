@@ -11,8 +11,12 @@ pub struct MetricBatchItem {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> impl IntoResponse {
+pub async fn sync_telemetry_handler(Json(mut batch): Json<Vec<MetricBatchItem>>) -> impl IntoResponse {
     tracing::debug!("Received telemetry batch with {} items", batch.len());
+
+    for item in batch.iter_mut() {
+        item.labels = ::server_telemetry::redact_interface_pii(item.labels.clone());
+    }
 
     for item in batch {
         match item.metric_type.as_str() {
