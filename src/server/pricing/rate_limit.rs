@@ -120,6 +120,18 @@ impl RedisRateLimiter {
         self
     }
 
+    fn record_telemetry_check(&self, tenant_id: &str) {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+    }
+
+    fn record_telemetry_exceeded(&self, tenant_id: &str) {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+    }
+
     pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
@@ -193,9 +205,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
-        if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-        }
+        self.record_telemetry_check(tenant_id);
 
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
@@ -216,9 +226,7 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.monthly_action_limit()
             && tenant_used >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
+                self.record_telemetry_exceeded(tenant_id);
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
@@ -236,9 +244,7 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.agent_action_limit()
             && agent_used >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
+                self.record_telemetry_exceeded(tenant_id);
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
@@ -263,9 +269,7 @@ impl RedisRateLimiter {
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id);
-        if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-        }
+        self.record_telemetry_check(tenant_id);
 
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
@@ -276,9 +280,7 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_products()
             && total_products >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
+                self.record_telemetry_exceeded(tenant_id);
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
@@ -310,9 +312,7 @@ impl RedisRateLimiter {
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id);
-        if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-        }
+        self.record_telemetry_check(tenant_id);
 
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
@@ -323,9 +323,7 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_agents()
             && total_agents >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
+                self.record_telemetry_exceeded(tenant_id);
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
@@ -357,9 +355,7 @@ impl RedisRateLimiter {
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes);
-        if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-        }
+        self.record_telemetry_check(tenant_id);
 
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
@@ -381,9 +377,7 @@ impl RedisRateLimiter {
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
+                self.record_telemetry_exceeded(tenant_id);
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,

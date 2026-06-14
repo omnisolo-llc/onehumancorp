@@ -123,6 +123,13 @@ export default function MyPlanPage() {
                               style={{ width: data?.ai_actions_limit ? `${Math.min(100, ((data?.ai_actions_used || 0) / data.ai_actions_limit) * 100)}%` : '5%' }}>
                           </div>
                       </div>
+                      {data?.ai_actions_limit != null && (data?.ai_actions_used || 0) >= data.ai_actions_limit && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                              <p className="text-sm text-amber-800 font-medium">
+                                  You've hit your tier limit of {data.ai_actions_limit} AI actions this month. Upgrade to unlock more power!
+                              </p>
+                          </div>
+                      )}
                   </div>
 
                   {/* Storage */}
@@ -139,6 +146,13 @@ export default function MyPlanPage() {
                               style={{ width: data?.storage_limit_bytes ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
                           </div>
                       </div>
+                      {data?.storage_limit_bytes != null && (data?.storage_used_bytes || 0) >= data.storage_limit_bytes && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                              <p className="text-sm text-amber-800 font-medium">
+                                  You've hit your tier limit for storage. Upgrade to unlock more power!
+                              </p>
+                          </div>
+                      )}
                   </div>
               </div>
           </div>

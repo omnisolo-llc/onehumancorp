@@ -16,4 +16,20 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     await expect(page.locator('text=AI actions used this month')).toBeVisible();
     await expect(page.locator('text=Storage used')).toBeVisible();
   });
+
+  test('Dashboard displays Department Tier Usage component', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
+    await page.goto('/cost-dashboard');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.locator('h2', { hasText: 'Department Tier Usage' }).first()).toBeVisible({ timeout: 15000 });
+
+    // Ensure the department list is rendered or empty
+    const listLocator = page.locator('#department-tier-usage-list');
+    const emptyLocator = page.locator('#department-tier-usage-empty');
+
+    // Playwright `or` matches if at least one resolves true
+    await expect(listLocator.or(emptyLocator)).toBeVisible();
+  });
 });

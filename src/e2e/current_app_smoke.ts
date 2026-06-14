@@ -42,6 +42,12 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
 
+    await page.goto('/plan');
+    await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h2', { hasText: 'Your Current Usage' }).first()).toBeVisible();
+    await expect(page.locator('text=AI actions used this month')).toBeVisible();
+    await expect(page.locator('text=Storage used')).toBeVisible();
+
     await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible();
