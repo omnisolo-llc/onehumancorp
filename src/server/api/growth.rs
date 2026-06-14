@@ -375,7 +375,7 @@ where
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
-        .route("/referrals/click", post(handle_referral_click))
+        .route("/referrals/click", post(handle_referral_click).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -1894,6 +1894,74 @@ async fn handle_onboarding_metrics(
     }
 }
 
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ReferralClickQuery {
+    pub target: Option<String>,
+    pub r#ref: Option<String>,
+    pub source: Option<String>,
+}
+
+async fn handle_referral_click_get(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ReferralClickQuery>,
+) -> axum::response::Redirect {
+
+    let mut target = query.target.unwrap_or_else(|| "/onboarding".to_string());
+
+    // Security: Prevent Open Redirects
+    if !target.starts_with('/') || target.starts_with("//") {
+        target = "/onboarding".to_string();
+    }
+
+    let mut redirect_url = target.clone();
+    if let Some(ref_id) = &query.r#ref {
+        let separator = if redirect_url.contains('?') { "&" } else { "?" };
+        redirect_url = format!("{}{}{}={}", redirect_url, separator, "ref", ref_id);
+
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+        // Find existing referral or create one for the tenant
+        let row = sqlx::query("SELECT id FROM referrals WHERE tenant_id = $1 LIMIT 1")
+            .bind(ref_id)
+            .fetch_optional(&state.pool)
+            .await;
+
+        let tracking_id = match row {
+            Ok(Some(r)) => {
+                use sqlx::Row;
+                r.get::<String, _>(0)
+            },
+            _ => {
+                // Insert default referral for this tenant
+                let new_id = uuid::Uuid::new_v4().to_string();
+                let ref_code = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
+                    .bind(&new_id)
+                    .bind(ref_id)
+                    .bind("system")
+                    .bind(&ref_code)
+                    .bind(now)
+                    .execute(&state.pool)
+                    .await;
+                new_id
+            }
+        };
+
+        let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
+            .bind(&tracking_id)
+            .execute(&state.pool)
+            .await;
+
+        state.hub.referral_tracker().record_click(&tracking_id);
+
+        let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": tracking_id, "source": query.source.unwrap_or_default() }));
+        state.hub.append_recent_event(msg);
+    }
+
+    axum::response::Redirect::to(&redirect_url)
+}
+
 async fn handle_referral_click(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
@@ -2200,6 +2268,67 @@ mod tests {
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_converted"));
     }
 
+
+    #[tokio::test]
+    async fn test_referral_click_get() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(event_tx, pool.clone()));
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
+
+        // 1. Initial click - no referral exists, should create one
+        let query = ReferralClickQuery {
+            target: Some("/onboarding".to_string()),
+            r#ref: Some("test_tenant_xyz".to_string()),
+            source: Some("test_src".to_string()),
+        };
+
+        let res = handle_referral_click_get(Extension(state.clone()), axum::extract::Query(query)).await;
+
+        // Assert redirect response
+        use axum::response::IntoResponse;
+        assert_eq!(res.into_response().status(), StatusCode::SEE_OTHER);
+
+        // Verify it was created and clicked
+        let mut row = sqlx::query("SELECT id, clicks FROM referrals WHERE tenant_id = $1 LIMIT 1")
+            .bind("test_tenant_xyz")
+            .fetch_one(&pool).await.unwrap();
+        use sqlx::Row;
+        let created_id: String = row.get(0);
+        let clicks: i32 = row.get(1);
+
+        assert_eq!(clicks, 1);
+
+        // 2. Second click - should increment
+        let query2 = ReferralClickQuery {
+            target: Some("/onboarding".to_string()),
+            r#ref: Some("test_tenant_xyz".to_string()),
+            source: Some("test_src".to_string()),
+        };
+
+        let res2 = handle_referral_click_get(Extension(state.clone()), axum::extract::Query(query2)).await;
+        assert_eq!(res2.into_response().status(), StatusCode::SEE_OTHER);
+
+        row = sqlx::query("SELECT clicks FROM referrals WHERE id = $1")
+            .bind(&created_id)
+            .fetch_one(&pool).await.unwrap();
+        let clicks_after: i32 = row.get(0);
+
+        assert_eq!(clicks_after, 2);
+
+        // Verify hub events
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_clicked" && serde_json::from_str::<serde_json::Value>(&e.payload).unwrap_or(serde_json::json!({})).get("source").and_then(|v| v.as_str()) == Some("test_src")));
+    }
+
     #[tokio::test]
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
@@ -2301,11 +2430,16 @@ mod tests {
     #[tokio::test]
     async fn test_zero_click_generate() {
         let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
-        let req = super::ZeroClickGenerateRequest { prompt: "Business Name: Maya's Cakes".to_string() };
+        let req = super::ZeroClickGenerateRequest { prompt: "Business Name: Maya's Cakes
+What we sell: Custom Wedding Cakes".to_string() };
         let res = super::handle_zero_click_builder_generate(Extension(state.clone()), Json(req)).await.unwrap();
 
         let data = res.0;
