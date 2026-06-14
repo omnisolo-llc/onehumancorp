@@ -18,26 +18,42 @@ export default function HelpCenterPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  useEffect(() => {
-    const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setArticles(Array.isArray(data) ? data : []))
-      .catch(console.error);
-  }, [debouncedSearchQuery]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/videos')
-      .then(res => res.json())
-      .then(data => setVideos(Array.isArray(data) ? data : []))
-      .catch(console.error);
-  }, []);
+    setLoading(true);
+    setError(null);
+    const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
+
+    Promise.all([
+      fetch(url).then(res => {
+        if (!res.ok) throw new Error("Failed to fetch articles");
+        return res.json();
+      }),
+      fetch('/api/videos').then(res => {
+        if (!res.ok) throw new Error("Failed to fetch videos");
+        return res.json();
+      })
+    ])
+    .then(([articlesData, videosData]) => {
+      setArticles(Array.isArray(articlesData) ? articlesData : []);
+      setVideos(Array.isArray(videosData) ? videosData : []);
+    })
+    .catch(err => {
+      console.error(err);
+      setError("Failed to load help content. Please try again later.");
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+  }, [debouncedSearchQuery]);
 
   const filteredArticles = articles.filter(a => a.category !== "Advanced");
 
-  const filteredVideos = videos.filter(video =>
+  const filteredVideos = debouncedSearchQuery.trim() ? videos.filter(video =>
     video.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-  );
+  ) : videos;
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
@@ -54,7 +70,21 @@ export default function HelpCenterPage() {
           />
         </div>
 
-        {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-20 min-h-[300px]">
+             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] rounded-2xl min-h-[300px] w-full max-w-[400px] mx-auto border border-red-200">
+             <p className="text-center text-red-600 font-medium text-lg mb-4">{error}</p>
+             <button
+               className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-full transition-all min-h-[44px]"
+               onClick={() => window.location.reload()}
+             >
+               Retry
+             </button>
+          </div>
+        ) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
           <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] rounded-2xl min-h-[300px] w-full max-w-[400px] mx-auto">
             <svg className="w-16 h-16 max-w-[64px] max-h-[64px] text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -49,20 +49,26 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const isTopPosition = tooltipRect && tooltipRect.top >= 60;
+
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/80 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-2xl saturate-[210%] border border-white/60 animate-fade-in-up"
+          className={`fixed z-[100] bg-white/80 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-2xl saturate-[210%] border border-white/60 ${isTopPosition ? 'animate-fade-in-up' : 'animate-fade-in-down'}`}
           style={{
-            top: tooltipRect.top - 10,
+            top: isTopPosition ? tooltipRect.top - 10 : tooltipRect.bottom + 10,
             left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
-            transform: 'translate(-50%, -100%)'
+            transform: isTopPosition ? 'translate(-50%, -100%)' : 'translate(-50%, 0)'
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          {isTopPosition ? (
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          ) : (
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-solid border-b-white/80 border-b-8 border-x-transparent border-x-8 border-t-0"></div>
+          )}
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `
@@ -70,7 +76,12 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           0% { opacity: 0; transform: translate(-50%, -90%); }
           100% { opacity: 1; transform: translate(-50%, -100%); }
         }
+        @keyframes fade-in-down {
+          0% { opacity: 0; transform: translate(-50%, -10%); }
+          100% { opacity: 1; transform: translate(-50%, 0); }
+        }
         .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
+        .animate-fade-in-down { animation: fade-in-down 0.2s ease-out forwards; }
       `}} />
     </TooltipContext.Provider>
   );
