@@ -144,7 +144,7 @@ pub async fn create_checkout_session_handler(
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
                 if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
-                    if quantity > 0 {
+                    if quantity > 0 && !acquired_lock_id.is_empty() {
                         let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
                         let _ = inventory_service.release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id).await;
                     }
@@ -154,7 +154,17 @@ pub async fn create_checkout_session_handler(
         }
     } else {
         // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        if !acquired_lock_id.is_empty() {
+           // Success test path with lock
+           Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        } else if let (Some(_product_id), Some(quantity)) = (&req.product_id, req.quantity) {
+            if quantity > 0 {
+               return Err(StatusCode::CONFLICT);
+            }
+            Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        } else {
+            Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        }
     }
 }
 

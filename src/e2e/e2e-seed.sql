@@ -534,3 +534,15 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+-- Insert POS inventory conflict test data
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
+VALUES
+  ('test_restock_prod', 'e2e-tenant', 'Test Restock Product', 'A product for testing restock triggers', 'physical', 15.00, 1500, 'USD', 6, '{}'),
+  ('test_product', 'e2e-tenant', 'Test Product POS', 'A product for POS lock testing', 'physical', 10.00, 1000, 'USD', 10, '{}'),
+  ('prod_123', 'default_tenant', 'Test Product Concurrent', 'A product for concurrent checkout testing', 'physical', 10.00, 1000, 'USD', 10, '{}'),
+  ('prod-worker-test-2', 'tenant-worker-test-low', 'Test Worker Low Stock', 'A product for worker low stock testing', 'physical', 10.00, 1000, 'USD', 6, '{}'),
+  ('prod_123', 'e2e-tenant-pos', 'Test Product POS Sync', 'A product for offline sync', 'physical', 10.00, 1000, 'USD', 10, '{}')
+ON CONFLICT (id) DO UPDATE
+SET title = EXCLUDED.title,
+    inventory_count = EXCLUDED.inventory_count;

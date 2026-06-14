@@ -15,7 +15,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     await page.getByRole('button', { name: '4', exact: true }).click();
 
     // The user should now be logged in
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
 
     // Now we simulate concurrent checkout in the background via API
     // This acquires the lock
@@ -76,7 +76,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await page.getByRole('button', { name: '4', exact: true }).click();
 
      // The user should now be logged in
-     await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
+     await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
 
      // 3. Click new order which reserves the item
      await page.getByText('New Order').click();

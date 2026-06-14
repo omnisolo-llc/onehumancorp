@@ -9,16 +9,34 @@ test.describe('POS Checkout - Centralized Inventory', () => {
     });
 
     await page.goto('/pos/terminal');
-    // Ensure 375px mobile responsiveness
     await page.setViewportSize({ width: 375, height: 667 });
+
+    // Login
+    await page.getByRole('button', { name: '1', exact: true }).click();
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await page.getByRole('button', { name: '3', exact: true }).click();
+    await page.getByRole('button', { name: '4', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
 
     const discoverBtn = page.locator('text=Discover Readers');
     if (await discoverBtn.isVisible()) {
         await discoverBtn.click();
     }
 
-    // Simulate clicking charge
-    // Expect error message
+    // Simulate reader connect
+    const connectBtn = page.getByRole('button', { name: 'Connect', exact: true }).first();
+    if (await connectBtn.isVisible()) {
+        await connectBtn.click();
+    }
+
+    // Attempt charge
+    const chargeBtn = page.getByRole('button', { name: /Charge/ }).first();
+    if (await chargeBtn.isVisible()) {
+        await chargeBtn.click();
+    }
+
+    await expect(page.getByText('Reservation failed: Insufficient inventory. Available: 0')).toBeVisible({ timeout: 5000 });
   });
 
   test('Shows out of stock message when lock fails', async ({ page }) => {
@@ -30,7 +48,31 @@ test.describe('POS Checkout - Centralized Inventory', () => {
     await page.goto('/pos/terminal');
     await page.setViewportSize({ width: 375, height: 667 });
 
-    // Assuming the user discovers and connects to a reader, and clicks 'Charge'
-    // We'd look for: await expect(page.locator('text=Reservation failed: Item is currently being purchased elsewhere')).toBeVisible();
+    // Login
+    await page.getByRole('button', { name: '1', exact: true }).click();
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await page.getByRole('button', { name: '3', exact: true }).click();
+    await page.getByRole('button', { name: '4', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+
+    const discoverBtn = page.locator('text=Discover Readers');
+    if (await discoverBtn.isVisible()) {
+        await discoverBtn.click();
+    }
+
+    // Simulate reader connect
+    const connectBtn = page.getByRole('button', { name: 'Connect', exact: true }).first();
+    if (await connectBtn.isVisible()) {
+        await connectBtn.click();
+    }
+
+    // Attempt charge
+    const chargeBtn = page.getByRole('button', { name: /Charge/ }).first();
+    if (await chargeBtn.isVisible()) {
+        await chargeBtn.click();
+    }
+
+    await expect(page.getByText('Reservation failed: Item is currently being purchased elsewhere')).toBeVisible({ timeout: 5000 });
   });
 });
