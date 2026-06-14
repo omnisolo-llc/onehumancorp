@@ -876,6 +876,24 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    CREATE TABLE IF NOT EXISTS mutation_queue (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS sync_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        batch_id TEXT,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

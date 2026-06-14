@@ -25,7 +25,25 @@ const omniInboxMessages = new Table({
   updated_at: column.text
 });
 
+const mutationQueue = new Table({
+  tenant_id: column.text,
+  action_type: column.text,
+  payload: column.text,
+  status: column.text,
+  created_at: column.text
+});
+
+const syncEvents = new Table({
+  tenant_id: column.text,
+  batch_id: column.text,
+  action_type: column.text,
+  payload: column.text,
+  synced_at: column.text
+});
+
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
-  omni_inbox_messages: omniInboxMessages
+  omni_inbox_messages: omniInboxMessages,
+  mutation_queue: mutationQueue,
+  sync_events: syncEvents
 });

@@ -56,18 +56,55 @@ pub async fn offline_sync_handler(
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();
-                let _ = sqlx::query(
+                let payload_str = mutation.payload.unwrap_or_default();
+
+                let q1 = sqlx::query(
+                    "INSERT INTO mutation_queue (id, tenant_id, action_type, payload, status)
+                     VALUES ($1, $2, 'draft_quote', $3::jsonb, 'synced')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({"notes": payload_str}).to_string())
+                .execute(&mut *db_tx)
+                .await;
+
+                if let Err(e) = q1 {
+                    tracing::error!("Failed to insert into mutation_queue: {}", e);
+                }
+
+                let batch_id = uuid::Uuid::new_v4().to_string();
+                let q2 = sqlx::query(
+                    "INSERT INTO sync_events (id, tenant_id, batch_id, action_type, payload)
+                     VALUES ($1, $2, $3, 'SyncEvent:JobCompleted', $4::jsonb)"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(&batch_id)
+                .bind(serde_json::json!({"notes": payload_str}).to_string())
+                .execute(&mut *db_tx)
+                .await;
+
+                if let Err(e) = q2 {
+                    tracing::error!("Failed to insert into sync_events: {}", e);
+                }
+
+                let q3 = sqlx::query(
                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                     VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
+                     VALUES ($1, $2, 'operations', 'SyncEvent:JobCompleted', $3::jsonb, 'PENDING')"
                 )
                 .bind(uuid::Uuid::new_v4().to_string())
                 .bind(&tenant_id_clone)
                 .bind(serde_json::json!({
                     "source": "offline_app",
-                    "message": mutation.payload.unwrap_or_default()
+                    "message": payload_str
                 }).to_string())
                 .execute(&mut *db_tx)
                 .await;
+
+                if let Err(e) = q3 {
+                    tracing::error!("Failed to insert into department_tasks: {}", e);
+                }
+
                 db_tx.commit().await.unwrap();
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
             continue;

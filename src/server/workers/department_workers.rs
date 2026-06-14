@@ -58,7 +58,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -81,7 +81,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload, event_type FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent' OR event_type = 'SyncEvent:JobCompleted')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -124,6 +124,99 @@ impl OperationsWorker {
         let processed = task.is_some();
         if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
+
+            if event_type == "SyncEvent:JobCompleted" {
+                let message = payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+                let prompt = format!("Draft a concise follow-up invoice/quote response based on this job note: '{}'", message);
+                let mut drafted_msg = "Follow-up invoice drafted.".to_string();
+
+                let mut attempts = 0;
+                while attempts < MAX_RETRIES {
+                    let ai_op = async {
+                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                prompt: prompt.clone(),
+                                from_agent_id: "operations".into(),
+                            };
+                            if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                return Ok(res.into_inner().content);
+                            }
+                        }
+                        Err("AI call failed".to_string())
+                    };
+
+                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                        Ok(Ok(content)) => {
+                            if !content.is_empty() {
+                                drafted_msg = content;
+                            }
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
+                        }
+                    }
+                }
+
+                let invoice_id = Uuid::new_v4().to_string();
+                let feed_id = Uuid::new_v4().to_string();
+                let future_date = (Utc::now() + chrono::Duration::days(7)).timestamp() as i64;
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
+                            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, total_amount)
+                             VALUES ($1, $2, 'offline_client', 'Field Customer', 'draft', $3, 0)"
+                        )
+                        .bind(&invoice_id)
+                        .bind(&tenant_id)
+                        .bind(future_date)
+                        .execute(&db.pool)
+                        .await;
+
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                             VALUES ($1, $2, 'operations_agent', '{}'::jsonb, $3::jsonb, 'pending_review')"
+                        )
+                        .bind(&feed_id)
+                        .bind(&tenant_id)
+                        .bind(serde_json::json!({
+                            "title": "Invoice drafted for Field Job",
+                            "message": drafted_msg
+                        }).to_string())
+                        .execute(&db.pool)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE department_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                            .bind(final_status)
+                            .bind(&id)
+                            .execute(&db.pool)
+                            .await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                             VALUES (?, ?, 'operations_agent', '{}', ?, 'pending_review')"
+                        )
+                        .bind(&feed_id)
+                        .bind(&tenant_id)
+                        .bind(serde_json::json!({
+                            "title": "Invoice drafted for Field Job",
+                            "message": drafted_msg
+                        }).to_string())
+                        .execute(pool)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE department_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(final_status)
+                            .bind(&id)
+                            .execute(pool)
+                            .await;
+                    }
+                }
+                return Ok(true);
+            }
 
             if event_type == "InventoryConflictEvent" {
                 let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
