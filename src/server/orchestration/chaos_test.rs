@@ -228,7 +228,7 @@ impl TeammateMesh for SleepingMockMesh {
 mod chaos_tests {
     #[tokio::test]
     async fn test_timeout_storm() {
-        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout_val(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
 
         let mut successful_sends = 0;
         let mut timeouts = 0;

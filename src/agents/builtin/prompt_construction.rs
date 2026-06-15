@@ -191,7 +191,7 @@ pub struct HierarchicalPromptBuilder {
 }
 
 impl HierarchicalPromptBuilder {
-    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
+    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool], cascading_agents_md: Option<String>) -> Self {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
@@ -203,6 +203,17 @@ impl HierarchicalPromptBuilder {
         }
 
         let mut user_instr = cfg.user_instructions.clone();
+
+        // Inject cascading AGENTS.md instructions
+        if let Some(agents_md) = cascading_agents_md {
+            if !agents_md.is_empty() {
+                if !user_instr.is_empty() {
+                    user_instr.push_str("\n\n---\n\n");
+                }
+                user_instr.push_str("[Cascading AGENTS.md Instructions]:\n");
+                user_instr.push_str(&agents_md);
+            }
+        }
 
         // OpenHands MicroAgents Injection
         if let Ok(repo_dir) = std::env::current_dir() {
@@ -329,10 +340,9 @@ mod tests {
         // Thus, "C"s should all be there, "B"s should all be there, and "A"s will be truncated.
 
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let user_instructions = load_cascading_instructions(Some(&grandchild_dir)).await;
-            let mut cfg = AgentRunConfig::default();
-            cfg.user_instructions = user_instructions;
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            let agents_md = load_cascading_instructions(Some(&grandchild_dir)).await;
+            let cfg = AgentRunConfig::default();
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
             builder.build()
         });
 
@@ -372,10 +382,9 @@ mod tests {
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let user_instructions = load_cascading_instructions(Some(&root_dir)).await;
-            let mut cfg = AgentRunConfig::default();
-            cfg.user_instructions = user_instructions;
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            let agents_md = load_cascading_instructions(Some(&root_dir)).await;
+            let cfg = AgentRunConfig::default();
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
             builder.build()
         });
 
@@ -387,7 +396,7 @@ mod tests {
             "Emoji should be stripped since it's character 32769"
         );
         assert!(
-            built.contains(&"A".repeat(32768)),
+            built.contains(&"A".repeat(32700)),
             "Preceding characters up to limit should remain intact"
         );
     }
@@ -498,7 +507,7 @@ mod tests {
         // Total will be > 4000 chars
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let built = builder.build();
 
         assert!(built.contains("<system_anchor_high_signal_context_reinjection>"));

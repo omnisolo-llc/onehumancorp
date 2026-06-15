@@ -66,7 +66,7 @@ export default function OrdersPage() {
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Order List</div>
-            <div className="app-list-subtitle">Loaded from `/api/ui/orders`.</div>
+            <div className="app-list-subtitle">Live orders for the current tenant.</div>
           </div>
         </div>
         {error && <div className="app-empty">{error}</div>}

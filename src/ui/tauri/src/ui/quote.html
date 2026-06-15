@@ -1172,14 +1172,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1196,13 +1196,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.className = 'ohc-walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -1224,7 +1225,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -1509,7 +1510,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1695,14 +1695,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1715,12 +1715,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -1740,7 +1740,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -1796,80 +1796,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-
-    <!-- Draft Review View (Owner) -->
-    <div id="draft-review-view" style="display: none; padding-top: 60px;">
-        <h2 style="margin-top: 12px; margin-bottom: 24px;">Draft Estimate Review</h2>
-        <div id="draft-customer-issue" style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h3 style="font-size: 16px; margin-bottom: 8px;">Customer Issue</h3>
-            <p id="draft-customer-notes" style="color: var(--text-muted); font-size: 14px;">Loading...</p>
-        </div>
-        <div class="quote-card">
-            <h3 style="margin-bottom: 16px;">AI Suggested Line Items</h3>
-            <div id="draft-line-items"></div>
-
-            <div class="total-row" style="margin-top: 24px;">
-                <span>Total Estimate</span>
-                <span id="draft-total-amount">$0.00</span>
-            </div>
-            <button class="primary-btn" id="approve-quote-btn" style="margin-top: 24px;" onclick="approveDraftEstimate()">Approve & Send</button>
-            <button class="secondary-btn" style="margin-top: 12px; width: 100%; border: 1px solid var(--text-muted); padding: 12px; border-radius: 8px; background: white;" onclick="rejectDraftEstimate()">Reject</button>
-        </div>
-
-        <div id="success-message" style="display: none; padding: 16px; background: #E8F5E9; color: #2E7D32; border-radius: 8px; margin-top: 24px;">
-            Estimate approved and sent to customer.
-            <a id="checkout-link" href="#" style="display: block; margin-top: 8px; color: #0066FF;">View Checkout Link</a>
-        </div>
-    </div>
-
-
-<script>
-        // Handle Multimodal Quote Drafts
-        async function loadDraftEstimate() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const estimateId = urlParams.get('estimate_id');
-            const quoteRequestId = urlParams.get('quote_request_id');
-
-            // For E2E we always mock load it
-            document.getElementById('draft-review-view').style.display = 'block';
-            document.getElementById('draft-customer-notes').innerText = "My sink is leaking under the cabinet. I need an estimate for repair.";
-
-            const lineItemsContainer = document.getElementById('draft-line-items');
-            lineItemsContainer.innerHTML = `
-                <div class="line-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-                    <span>Labor (2 hours)</span>
-                    <span>$150.00</span>
-                </div>
-                <div class="line-item" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-                    <span>Replacement Parts</span>
-                    <span>$45.00</span>
-                </div>
-            `;
-            document.getElementById('draft-total-amount').innerText = "$195.00";
-        }
-
-        window.approveDraftEstimate = async function() {
-            const btn = document.getElementById('approve-quote-btn');
-            btn.innerText = "Approving...";
-            btn.disabled = true;
-
-            // Call API to approve and generate checkout URL
-            try {
-                // Mock API call
-                await new Promise(r => setTimeout(r, 1000));
-
-                document.getElementById('success-message').style.display = 'block';
-                document.getElementById('checkout-link').href = "/checkout?estimate_id=123";
-                btn.style.display = 'none';
-            } catch (err) {
-                btn.innerText = "Approve & Send";
-                btn.disabled = false;
-            }
-        };
-
-        // Call load on init
-        setTimeout(loadDraftEstimate, 500);
-</script>
-
 </body>
 </html>

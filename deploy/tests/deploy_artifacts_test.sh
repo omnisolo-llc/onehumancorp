@@ -8,13 +8,17 @@ compose_file="${root}/deploy/docker-compose.yml"
 chart_file="${root}/deploy/helm/ohc/Chart.yaml"
 values_file="${root}/deploy/helm/ohc/values.yaml"
 build_file="${root}/deploy/BUILD.bazel"
+bootstrap_file="${root}/deploy/docker/server-init/bootstrap-admin.sh"
+standalone_file="${root}/deploy/scripts/ohc-standalone.sh"
 
 # Verify required deployment files are present and non-empty.
 for file in \
   "$compose_file" \
   "$chart_file" \
   "$values_file" \
-  "$build_file"; do
+  "$build_file" \
+  "$bootstrap_file" \
+  "$standalone_file"; do
   test -s "$file"
 done
 
@@ -42,5 +46,15 @@ test ! -e "${root}/deploy/helm/ohc/templates/frontend-service.yaml"
 # Verify health probes are wired in the backend deployment template.
 grep -q "livenessProbe" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
 grep -q "readinessProbe" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
+
+# Verify deploy startup scripts use the readiness endpoint exposed by src/server/lib.rs.
+grep -q "/readyz" "$bootstrap_file"
+grep -q "/readyz" "$standalone_file"
+! grep -q "/health " "$bootstrap_file"
+! grep -q "/health " "$standalone_file"
+
+# BusyBox wget appends an error summary for non-2xx responses; the parser must
+# only read actual HTTP status lines so it does not report "server" as a status.
+grep -Fq '^[[:space:]]*HTTP\/' "$bootstrap_file"
 
 echo "deployment artifact checks passed"
