@@ -1035,6 +1035,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -1068,6 +1069,7 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -1091,6 +1093,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -1551,6 +1554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -1583,6 +1587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
+                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -1604,6 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
