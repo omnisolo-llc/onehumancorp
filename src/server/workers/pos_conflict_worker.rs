@@ -73,11 +73,16 @@ impl JobHandler for PosConflictWorker {
         .await
         .map_err(|e| e.to_string())?;
 
+        let expected_stock = payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+        let actual_stock = payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+
         let event_id = uuid::Uuid::new_v4().to_string();
         let event_payload = json!({
             "product_id": product_id,
             "transaction_id": transaction_id,
-            "message": message
+            "message": message,
+            "expected_stock": expected_stock,
+            "actual_stock": actual_stock
         });
         sqlx::query(
             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
