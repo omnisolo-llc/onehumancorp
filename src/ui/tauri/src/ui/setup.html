@@ -128,7 +128,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        min-height: 44px; height: auto;
+        height: 12px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -194,7 +194,7 @@
       }
       .step-indicator {
         width: 12px;
-        min-height: 44px; height: auto;
+        height: 12px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
@@ -427,7 +427,7 @@
         }
         .step-indicator {
           width: 8px;
-          min-height: 44px; height: auto;
+          height: 12px;
         }
         .step-indicator.active {
           transform: scale(1.2);
@@ -484,7 +484,7 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
@@ -492,7 +492,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
@@ -516,7 +516,7 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
@@ -527,10 +527,10 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 12px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 12px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 12px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
       </div>
@@ -766,6 +766,7 @@
           templateSelection: document.getElementById('template-selection')
       };
 
+
       const errors = {
           context: document.getElementById('context-error'),
           categories: document.getElementById('categories-error'),
@@ -778,6 +779,7 @@
           templateSelection: document.getElementById('template-error')
       };
 
+
       let state = {
           businessName: '',
           assistantName: '',
@@ -788,6 +790,7 @@
           first_offer: '',
           templateSelection: ''
       };
+
 
       // Handle radio buttons selection visual state
       inputs.context.forEach(radio => {
@@ -829,7 +832,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState.wizardState || apiState) };
+                state = { ...state, ...(apiState)
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
@@ -958,7 +961,7 @@
               fetch(`${backendUrl}/api/onboarding/state`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-                  body: JSON.stringify({ wizardState: state })
+                  body: JSON.stringify(state)
               }).catch(console.error);
           }
       }
@@ -1109,7 +1112,7 @@
           'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
-      };
+
 
       function populateCategories() {
           const context = state.work_context;
@@ -1271,7 +1274,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
-                  };
+
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1386,7 +1389,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
-                  };
+
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1463,13 +1466,13 @@
                 currentStepIdx = steps.indexOf(currentStepEl);
             }
 
-            const payload = {
-                wizardState: state,
-                step: currentStepIdx
-            };
+            state.step = currentStepIdx;
+
+
+
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
+                window.__TAURI__.core.invoke("save_onboarding_state", { state }).then(() => {
                     e.target.innerText = "Saved!";
                     setTimeout(() => {
                         e.target.innerText = originalText;
@@ -1491,7 +1494,7 @@
                         "X-Tenant-ID": tenantId,
                         "X-User-ID": userId
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(state)
                 }).then(res => {
                     if (res.ok) {
                         e.target.innerText = "Saved!";
@@ -1534,7 +1537,8 @@
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General"
-               };
+
+
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
@@ -1630,7 +1634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
+        window.OHC_TOOLTIPS = {
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -2019,7 +2023,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
+        window.OHC_TOOLTIPS = {
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -2127,7 +2131,7 @@ function initWalkthrough() {
             `;
 
             document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
             document.getElementById('wt-next').onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
@@ -2135,7 +2139,7 @@ function initWalkthrough() {
                     currentStep++;
                     renderStep();
                 }
-            };
+
 
             if (target) {
                 target.classList.add('walkthrough-highlight');
@@ -2171,7 +2175,7 @@ function initWalkthrough() {
         }
 
         renderStep();
-    };
+
 }
 initWalkthrough();
 </script>
@@ -2543,7 +2547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
+        window.OHC_TOOLTIPS = {
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -2642,7 +2646,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
                 document.getElementById('wt-next').onclick = () => {
                     if (currentStep === steps.length - 1) {
                         closeWalkthrough();
@@ -2650,7 +2654,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentStep++;
                         renderStep();
                     }
-                };
+
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
@@ -2684,7 +2688,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             renderStep();
-        };
+
     }
 });
 </script>
