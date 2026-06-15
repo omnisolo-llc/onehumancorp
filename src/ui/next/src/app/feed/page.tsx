@@ -121,7 +121,7 @@ export default function FeedPage() {
   const handleAction = async (id: string, state: string) => {
     try {
       setProcessingId(id);
-      const res = await fetch(`/api/agent-feed/${id}`, {
+      const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state }),
