@@ -22,13 +22,11 @@ export class SyncManager {
 
     const ws = new WebSocket(wsUrl);
     ws.onmessage = (event) => {
-      console.log('Received real-time sync event:', event.data);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('ohc_queue_updated'));
       }
     };
     ws.onclose = () => {
-      console.log('Sync WebSocket closed, reconnecting in 5s...');
       setTimeout(() => this.connectWebSocket(), 5000);
     };
     ws.onerror = (err) => {

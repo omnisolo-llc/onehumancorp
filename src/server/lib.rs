@@ -197,6 +197,9 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
     m.insert("help-search-tooltip".to_string(), "Search our knowledge base for help articles.".to_string());
     m.insert("changelog-tooltip".to_string(), "See what has changed in the latest version.".to_string());
+    m.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
+    m.insert("network-status-tooltip".to_string(), "Shows whether you are currently online and syncing to the cloud, or offline.".to_string());
+    m.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
     RwLock::new(m)
     })
 }
@@ -4063,16 +4066,28 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                 }
                             };
 
-                            let item = serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": row.get::<String, _>("tenant_id"),
-                                "event_source": row.get::<String, _>("event_source"),
-                                "context_payload": context_payload,
-                                "proposed_action": proposed_action,
-                                "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                            });
+                            let item = if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                })
+                            };
                             feed_rows_json.push(item);
                         }
                     }
@@ -4100,16 +4115,28 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                 }
                             };
 
-                            let item = serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": row.get::<String, _>("tenant_id"),
-                                "event_source": row.get::<String, _>("event_source"),
-                                "context_payload": context_payload,
-                                "proposed_action": proposed_action,
-                                "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
-                                "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
-                            });
+                            let item = if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                })
+                            };
                             feed_rows_json.push(item);
                         }
                     }

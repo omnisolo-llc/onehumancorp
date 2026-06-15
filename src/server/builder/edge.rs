@@ -244,7 +244,10 @@ pub async fn regenerate_cache(
 
     html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
     if let Some(seo_name) = page.seo_metadata.get("name").and_then(|v| v.as_str()) {
-        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_name)));
+        html.push_str(&format!("<meta name=\"title\" content=\"{}\">\n", escape_html(seo_name)));
+    }
+    if let Some(seo_description) = page.seo_metadata.get("description").and_then(|v| v.as_str()) {
+        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_description)));
     }
 
     let mut seo_ld = page.seo_metadata.clone();
