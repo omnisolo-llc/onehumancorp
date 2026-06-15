@@ -24,4 +24,40 @@ test.describe('Storefront Edge Cache Invalidation & SEO', () => {
 
     expect(invalidateRes.status()).toBeDefined();
   });
+
+  test('should respect edge caching and SEO prerendering settings', async ({ page }) => {
+    // 1. Visit dashboard
+    await page.goto('/dashboard.html');
+
+    // 2. Open advanced settings
+    await page.click('#toggle-advanced-cache-btn');
+
+    // 3. Toggle off edge caching
+    await page.uncheck('#edge-cache-toggle');
+    await page.click('#save-cache-settings-btn');
+
+    // 4. Verify badge is gone
+    await expect(page.locator('#speed-badge')).toBeHidden();
+
+    // 5. Toggle it back on
+    await page.check('#edge-cache-toggle');
+    await page.click('#save-cache-settings-btn');
+
+    // 6. Verify badge is back
+    await expect(page.locator('#speed-badge')).toBeVisible();
+  });
+});
+
+
+import { memberPage as testWithMember } from './fixtures';
+const extendedTest = testWithMember;
+
+extendedTest.describe('Storefront Edge Cache - Realistic E2E', () => {
+    extendedTest('should show storefront UI toggle correctly after login', async ({ memberPage }) => {
+        await memberPage.goto('/dashboard.html');
+        await expect(memberPage.locator('#toggle-advanced-cache-btn')).toBeVisible({ timeout: 15000 });
+
+        await memberPage.click('#toggle-advanced-cache-btn');
+        await expect(memberPage.locator('#advanced-cache-settings')).toBeVisible();
+    });
 });

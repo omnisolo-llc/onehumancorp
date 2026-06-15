@@ -129,6 +129,7 @@ pub async fn handle_edge_request_impl(
             return Ok(response);
         }
     }
+    }
 
     let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
 
@@ -187,16 +188,28 @@ pub async fn regenerate_cache(
     html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
     html.push_str("<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
 
-    html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
-    if let Some(seo_name) = page.seo_metadata.get("name").and_then(|v| v.as_str()) {
-        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_name)));
-    }
+    let cache_config = crate::builder::db::get_storefront_cache_config(&pool, &tenant_id.to_string())
+        .await
+        .unwrap_or_else(|_| crate::builder::db::StorefrontCacheConfig {
+            id: uuid::Uuid::new_v4(),
+            tenant_id: tenant_id.to_string(),
+            edge_caching_enabled: true,
+            auto_seo_prerender: true,
+        });
 
-    let mut seo_ld = page.seo_metadata.clone();
-    if seo_ld.get("@context").is_none() {
-        seo_ld["@context"] = serde_json::Value::String("https://schema.org".to_string());
+    html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
+
+    if cache_config.auto_seo_prerender {
+        if let Some(seo_name) = page.seo_metadata.get("name").and_then(|v| v.as_str()) {
+            html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_name)));
+        }
+
+        let mut seo_ld = page.seo_metadata.clone();
+        if seo_ld.get("@context").is_none() {
+            seo_ld["@context"] = serde_json::Value::String("https://schema.org".to_string());
+        }
+        html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
     }
-    html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
 
     html.push_str(r#"
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
@@ -297,7 +310,9 @@ pub async fn regenerate_cache(
     </html>
     "#);
 
-    cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+    if cache_config.edge_caching_enabled {
+        cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+    }
 
     Ok((html, tags))
 }

@@ -32,9 +32,22 @@ impl Department for OperationsAgent {
         if event.event_type == "tenant.inventory.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            if !product_id.is_empty() {
-                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
+            // Check cache config
+            let db = self.orchestrator.db();
+            let pool = db.pool.clone();
+            if let Ok(config) = crate::builder::db::get_storefront_cache_config(&pool, &event.tenant_id).await {
+                if config.edge_caching_enabled {
+                    cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                    if !product_id.is_empty() {
+                        cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    }
+                }
+            } else {
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                if !product_id.is_empty() {
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                }
             }
         }
 

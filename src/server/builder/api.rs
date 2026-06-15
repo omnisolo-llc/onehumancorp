@@ -1,3 +1,4 @@
+use axum::response::IntoResponse;
 use axum::{
     extract::Extension,
     extract::{Path, State},
@@ -229,6 +230,13 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
 }
 
 
+
+#[derive(serde::Deserialize)]
+pub struct StorefrontCacheConfigRequest {
+    pub edge_caching_enabled: bool,
+    pub auto_seo_prerender: bool,
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
@@ -243,7 +251,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
             get(list_blocks).post(create_block),
         )
         .route("/blocks/{block_id}", put(update_block))
-        .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
+        .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks)
+        .route("/storefront/cache-config", get(get_storefront_cache_config).post(update_storefront_cache_config)))
         .route("/sites/{site_id}/publish", post(publish_site))
         .route("/generate", post(generate_storefront))
         .route("/brand_toolbox", get(list_brand_toolboxes))
@@ -1471,4 +1480,39 @@ async fn publish_store_profile(
     }
 
     Ok(site)
+}
+
+
+async fn get_storefront_cache_config(
+    State(pool): State<sqlx::PgPool>,
+    Extension(claims): Extension<server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id;
+    match super::db::get_storefront_cache_config(&pool, &tenant_id).await {
+        Ok(config) => (axum::http::StatusCode::OK, axum::Json(config)).into_response(),
+        Err(e) => {
+            tracing::error!("Error fetching storefront cache config: {:?}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json("Internal server error")).into_response()
+        }
+    }
+}
+
+async fn update_storefront_cache_config(
+    State(pool): State<sqlx::PgPool>,
+    Extension(claims): Extension<server_common::Claims>,
+    axum::Json(payload): axum::Json<StorefrontCacheConfigRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id;
+    match super::db::upsert_storefront_cache_config(
+        &pool,
+        &tenant_id,
+        payload.edge_caching_enabled,
+        payload.auto_seo_prerender,
+    ).await {
+        Ok(config) => (axum::http::StatusCode::OK, axum::Json(config)).into_response(),
+        Err(e) => {
+            tracing::error!("Error updating storefront cache config: {:?}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json("Internal server error")).into_response()
+        }
+    }
 }

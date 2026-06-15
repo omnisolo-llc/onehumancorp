@@ -350,3 +350,64 @@ pub async fn reorder_blocks(
     tx.commit().await?;
     Ok(())
 }
+
+#[derive(sqlx::FromRow, serde::Serialize, serde::Deserialize, Clone)]
+pub struct StorefrontCacheConfig {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub edge_caching_enabled: bool,
+    pub auto_seo_prerender: bool,
+}
+
+pub async fn get_storefront_cache_config(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<StorefrontCacheConfig, sqlx::Error> {
+    let tenant_uuid = uuid::Uuid::parse_str(tenant_id).unwrap_or_default();
+    let mut tx = crate::builder::db::acquire_tenant_conn(pool, tenant_uuid).await?;
+    let config = sqlx::query_as::<_, StorefrontCacheConfig>(
+        "SELECT id, tenant_id, edge_caching_enabled, auto_seo_prerender FROM storefront_cache_configs WHERE tenant_id = $1"
+    )
+    .bind(tenant_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    if let Some(cfg) = config {
+        Ok(cfg)
+    } else {
+        Ok(StorefrontCacheConfig {
+            id: uuid::Uuid::new_v4(),
+            tenant_id: tenant_id.to_string(),
+            edge_caching_enabled: true,
+            auto_seo_prerender: true,
+        })
+    }
+}
+
+pub async fn upsert_storefront_cache_config(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    edge_caching_enabled: bool,
+    auto_seo_prerender: bool,
+) -> Result<StorefrontCacheConfig, sqlx::Error> {
+    let tenant_uuid = uuid::Uuid::parse_str(tenant_id).unwrap_or_default();
+    let mut tx = crate::builder::db::acquire_tenant_conn(pool, tenant_uuid).await?;
+    let result = sqlx::query_as::<_, StorefrontCacheConfig>(
+        r#"
+        INSERT INTO storefront_cache_configs (tenant_id, edge_caching_enabled, auto_seo_prerender)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (tenant_id) DO UPDATE SET
+            edge_caching_enabled = EXCLUDED.edge_caching_enabled,
+            auto_seo_prerender = EXCLUDED.auto_seo_prerender,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING id, tenant_id, edge_caching_enabled, auto_seo_prerender
+        "#
+    )
+    .bind(tenant_id)
+    .bind(edge_caching_enabled)
+    .bind(auto_seo_prerender)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
+}
