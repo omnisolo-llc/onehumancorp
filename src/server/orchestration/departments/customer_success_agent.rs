@@ -186,6 +186,14 @@ impl Department for CustomerSuccessAgent {
 
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
+            let mut confidence_score = 50;
+            if !memories.is_empty() {
+                confidence_score += 20;
+            }
+            if !past_orders.is_empty() {
+                confidence_score += 10;
+            }
+
             let mut context_summary = if !memories.is_empty() {
                 memories.join("\n")
             } else {
@@ -200,8 +208,10 @@ impl Department for CustomerSuccessAgent {
             if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
                 context_summary.push_str("\n\n");
                 context_summary.push_str(&inventory_summary);
+                confidence_score += 15;
             }
 
+            let confidence_score = if confidence_score > 100 { 100 } else { confidence_score };
             let prompt = format!(
                 "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
                 event.tenant_id, message, context_summary
@@ -221,7 +231,14 @@ impl Department for CustomerSuccessAgent {
                 }
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
+            let mut actual_risk = ActionRisk::DraftForReview;
+            if let Some(cfg) = &config {
+                if cfg.auto_approve_limits > 0.0 && confidence_score >= 80 {
+                    actual_risk = ActionRisk::AutoExecute;
+                }
+            }
+
+            let description = if actual_risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
                 "Draft email for review".to_string()
@@ -230,7 +247,7 @@ impl Department for CustomerSuccessAgent {
             let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
-                if risk == ActionRisk::AutoExecute {
+                if actual_risk == ActionRisk::AutoExecute {
                     let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
                 }
             }
@@ -246,17 +263,18 @@ impl Department for CustomerSuccessAgent {
                 "sender_id": sender_id,
                 "customer_id": customer_id,
                 "past_orders": past_orders,
+                "confidence_score": confidence_score,
             });
 
             let approval_req = self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk.clone(),
+                actual_risk.clone(),
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
 
-            if risk == ActionRisk::AutoExecute {
+            if actual_risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id: event.tenant_id.clone(),

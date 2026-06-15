@@ -5,6 +5,11 @@ import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
 
+type Draft = {
+  id: string;
+  payload: any;
+};
+
 type Message = {
   id: string;
   source?: string;
@@ -47,6 +52,25 @@ function InboxWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+
+  useEffect(() => {
+    async function fetchDrafts() {
+      try {
+        const token = localStorage.getItem("token") || "";
+        const res = await fetch(`/api/inbox/drafts`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDrafts(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch drafts", e);
+      }
+    }
+    fetchDrafts();
+  }, []);
 
   const selected = useMemo(() => {
     if (messages.length === 0) return null;
@@ -58,14 +82,7 @@ function InboxWorkspace({
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals?limit=50`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch approvals");
-      const data = await res.json();
-      const pendingApprovals = data.pending_approvals || [];
-
-      const approval = pendingApprovals.find((a: any) => {
+      const approval = drafts.find((a: any) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
           return payload && payload.inbox_message_id === inboxMessageId;
@@ -184,7 +201,14 @@ function InboxWorkspace({
                   </div>
                 </div>
                 <div className="mb-4">
-                  <div className="app-metric-label">Draft Reply</div>
+                  <div className="flex items-center justify-between">
+                    <div className="app-metric-label">Draft Reply</div>
+                    {drafts.find((d) => d.payload?.inbox_message_id === selected.id)?.payload?.confidence_score && (
+                      <span className="app-badge good text-xs">
+                        {drafts.find((d) => d.payload?.inbox_message_id === selected.id)?.payload?.confidence_score}% Confidence
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
                     {selected.draft_reply || "No draft reply stored for this message."}
                   </div>
