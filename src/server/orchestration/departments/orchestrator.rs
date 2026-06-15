@@ -1286,6 +1286,50 @@ impl DepartmentOrchestrator {
     }
 
 
+    pub async fn predict_replenishment(&self, tenant_id: &str, customer_id: &str) -> Result<Option<String>, String> {
+        let pool = &self.db.pool;
+        let query = "SELECT created_at FROM orders WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 5";
+
+        // Use a generic query to support both Pg and Sqlite dynamically if needed, but since we rely on created_at parsing:
+        let orders_res: Result<Vec<(chrono::DateTime<chrono::Utc>,)>, _> = match &self.db.store {
+            crate::db::DbStore::Postgres => sqlx::query_as(query)
+                .bind(tenant_id)
+                .bind(customer_id)
+                .fetch_all(pool)
+                .await,
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let sqlite_query = "SELECT created_at FROM orders WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 5";
+                let rows: Result<Vec<(String,)>, _> = sqlx::query_as(sqlite_query)
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(sqlite_pool)
+                    .await;
+
+                rows.map(|r| r.into_iter()
+                    .filter_map(|(s,)| chrono::DateTime::parse_from_rfc3339(&s).ok().map(|d| (d.with_timezone(&chrono::Utc),)))
+                    .collect())
+            }
+        };
+
+        let orders = orders_res.map_err(|e| e.to_string())?;
+
+        if orders.len() < 2 {
+            return Ok(None);
+        }
+
+        let mut total_duration = chrono::Duration::zero();
+        for i in 0..(orders.len() - 1) {
+            total_duration = total_duration + (orders[i].0 - orders[i + 1].0);
+        }
+
+        let avg_duration = total_duration / (orders.len() as i32 - 1);
+
+        let last_order_date = orders[0].0;
+        let predicted_date = last_order_date + avg_duration;
+
+        Ok(Some(predicted_date.to_rfc3339()))
+    }
+
     pub async fn get_inventory_summary(&self, tenant_id: &str) -> Result<String, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
