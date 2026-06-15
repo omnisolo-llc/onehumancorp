@@ -196,7 +196,7 @@ export default function WebsiteBuilderPage() {
 
 
 
-  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
+  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "error") => {
     setStatus(newStatus);
     localStorage.setItem("ohc_builder_status", newStatus);
   };
@@ -643,7 +643,7 @@ export default function WebsiteBuilderPage() {
                           setProductPrice('10.00');
 
                           // Do not start store in fallback
-                          setStatus('live');
+                          setStatus('error');
                         };
                         const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
                         const controller = new AbortController();
@@ -698,6 +698,10 @@ export default function WebsiteBuilderPage() {
                             });
 
                             if (!startRes.ok) {
+                                setStatus('error');
+                                completed = true;
+                                window.clearTimeout(safetyTimeout);
+                                window.clearTimeout(abortTimeout);
                                 throw new Error('Failed to start');
                             }
                             const startData = await startRes.json();
@@ -711,6 +715,10 @@ export default function WebsiteBuilderPage() {
                             finishWithFallback();
                           }
                         } catch (err) {
+                          setStatus('error');
+                          completed = true;
+                          window.clearTimeout(safetyTimeout);
+                          window.clearTimeout(abortTimeout);
                           console.error(err);
                           finishWithFallback();
                         } finally {
@@ -718,7 +726,7 @@ export default function WebsiteBuilderPage() {
                         }
                       }}
                     >
-                      Next
+                      Generate Storefront
                     </button>
                   </div>
                 </>
@@ -737,6 +745,25 @@ export default function WebsiteBuilderPage() {
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center glassmorphism">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center glassmorphism">
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[8px] text-sm animate-shake">
+              Failed to launch
+            </div>
+            <p className="text-gray-500 dark:text-[#a1a1a6] font-medium mt-4">Something went wrong while launching your store.</p>
+            <button
+              onClick={() => setStatus("idle")}
+              className="mt-6 w-full max-w-[200px] min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+            >
+              Try Again
+            </button>
         </div>
       </div>
     );
