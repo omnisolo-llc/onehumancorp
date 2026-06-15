@@ -27,6 +27,7 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
+#[allow(dead_code)]
 fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
@@ -294,6 +295,7 @@ impl VectorRepository {
                         "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
+                         ORDER BY created_at DESC \
                          LIMIT 1000"
                     )
                     .bind(tenant_id)
@@ -782,7 +784,7 @@ impl VectorRepository {
                         embedding: Vec<f32>,
                     }
 
-                    let batch_size = 1000;
+                    let _batch_size = 1000;
                     let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
                     let mut match_count = 0;
 
@@ -795,40 +797,29 @@ impl VectorRepository {
                     let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
 
                     'outer: for current_tenant_id in tenant_ids {
-                        let mut offset = 0;
+                        // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
+                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
+                        let rows = sqlx::query(query)
+                            .bind(&current_tenant_id)
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+
                         let mut records_in_tenant: Vec<MinimalRecord> = Vec::new();
+                        for row in rows {
+                            let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                                String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                    .unwrap_or_default()
+                            });
+                            let embedding: Vec<f32> =
+                                serde_json::from_str(&emb_str).unwrap_or_default();
 
-                        loop {
-                            let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY id LIMIT ? OFFSET ?";
-                            let rows = sqlx::query(query)
-                                .bind(&current_tenant_id)
-                                .bind(batch_size)
-                                .bind(offset)
-                                .fetch_all(pool)
-                                .await
-                                .map_err(|e| e.to_string())?;
-
-                            if rows.is_empty() {
-                                break;
-                            }
-
-                            for row in rows {
-                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                        .unwrap_or_default()
-                                });
-                                let embedding: Vec<f32> =
-                                    serde_json::from_str(&emb_str).unwrap_or_default();
-
-                                let record = MinimalRecord {
-                                    id: row.get("id"),
-                                    tenant_id: row.get("tenant_id"),
-                                    embedding,
-                                };
-                                records_in_tenant.push(record);
-                            }
-
-                            offset += batch_size;
+                            let record = MinimalRecord {
+                                id: row.get("id"),
+                                tenant_id: row.get("tenant_id"),
+                                embedding,
+                            };
+                            records_in_tenant.push(record);
                         }
 
                         let records = records_in_tenant;
