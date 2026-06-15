@@ -394,7 +394,7 @@
                 document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
                 document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
 
-                if (costData.projected_monthly_cost > 10000) {
+                if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
                     document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
                 } else {
