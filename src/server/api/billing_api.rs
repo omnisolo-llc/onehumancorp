@@ -111,8 +111,8 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let mut amount_usd;
-    let mut item_name;
+    let amount_usd;
+    let item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -585,7 +585,7 @@ mod department_tier_usage_tests {
         // Start a transaction so we can rollback and not pollute the DB
         let mut tx = pool.begin().await.unwrap();
 
-        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
@@ -616,7 +616,7 @@ mod department_tier_usage_tests {
 
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM tenants WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
     }
 
     #[tokio::test]
