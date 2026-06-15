@@ -333,7 +333,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       };
 
       ws.onerror = (err) => {
-        console.error("Websocket error:", err);
+        // console.error("Websocket error:", err);
       };
     };
 

@@ -2,26 +2,11 @@ import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
 import { FloatingActionButton } from './components/FAB';
+import { expect, test, vi, beforeEach } from 'vitest';
+
 vi.mock('./components/FAB', () => ({
   FloatingActionButton: () => <div data-testid="mock-fab">Mock FAB</div>
 }));
-import { expect, test, vi } from 'vitest';
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-  usePathname: () => '',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-// Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
-global.fetch = vi.fn(() => Promise.resolve({
-  ok: true,
-  json: () => Promise.resolve({})
-})) as any;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -38,15 +23,20 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+beforeEach(() => {
+  global.EventSource = class MockEventSource {
+    onmessage: any = null;
+    onerror: any = null;
+    close = vi.fn();
+  } as any;
+
+  global.fetch = vi.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  })) as any;
+});
+
 test('renders dashboard with actionable feed', async () => {
-  global.fetch = vi.fn(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({})
-  })) as any;
-  global.fetch = vi.fn(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({})
-  })) as any;
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
