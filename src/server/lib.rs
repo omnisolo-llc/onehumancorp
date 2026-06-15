@@ -197,6 +197,9 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
     m.insert("help-search-tooltip".to_string(), "Search our knowledge base for help articles.".to_string());
     m.insert("changelog-tooltip".to_string(), "See what has changed in the latest version.".to_string());
+    m.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
+    m.insert("network-status-tooltip".to_string(), "Shows whether you are currently online and syncing to the cloud, or offline.".to_string());
+    m.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
     RwLock::new(m)
     })
 }
