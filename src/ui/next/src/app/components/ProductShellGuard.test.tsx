@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { ProductShellGuard } from "./ProductShellGuard";
 
 const navigationMock = vi.hoisted(() => ({
-  pathname: "/business-setup",
+  pathname: "/onboarding",
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,7 +21,7 @@ vi.mock("./AppShell", () => ({
 }));
 
 beforeEach(() => {
-  navigationMock.pathname = "/business-setup";
+  navigationMock.pathname = "/onboarding";
 });
 
 test("wraps dashboard workspace routes that do not own an app shell", () => {
@@ -32,7 +32,7 @@ test("wraps dashboard workspace routes that do not own an app shell", () => {
   );
 
   expect(screen.getByTestId("app-shell")).toBeDefined();
-  expect(screen.getByRole("heading", { name: "Business Setup" })).toBeDefined();
+  expect(screen.getByRole("heading", { name: "Setup" })).toBeDefined();
   expect(screen.getByText("Workspace content")).toBeDefined();
 });
 
