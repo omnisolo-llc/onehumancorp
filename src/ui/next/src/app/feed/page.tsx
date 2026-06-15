@@ -137,6 +137,21 @@ export default function FeedPage() {
     }
   };
 
+  const simulateAmbassadorDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
+      // The websocket should pick it up, but we can also refetch
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
@@ -170,6 +185,8 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+            const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -180,7 +197,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {item.event_source.replace(/_/g, ' ')}
+                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -188,7 +205,9 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {item.proposed_action?.title || 'Review Required'}
+                  {isAmbassador
+                    ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
+                    : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
                 {editingId === item.id ? (
@@ -218,12 +237,31 @@ export default function FeedPage() {
                   </div>
                 ) : (
                   <div className="mb-5">
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                      {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                    </p>
+                    {isAmbassador ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
+                          {ambassadorPayload.past_orders && (
+                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
+                              {ambassadorPayload.past_orders}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
+                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed">
+                            {ambassadorPayload.generated_response}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
+                        {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                      </p>
+                    )}
                     <button
                       onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
+                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium mt-2 inline-block"
                       data-testid="feed-edit-btn"
                     >
                       Edit Action
@@ -238,7 +276,7 @@ export default function FeedPage() {
                     className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
                     data-testid="feed-approve-btn"
                   >
-                    {isProcessing ? 'Processing...' : 'Approve'}
+                    {isProcessing ? 'Processing...' : (isAmbassador ? 'Approve & Send' : 'Approve')}
                   </button>
                   <button
                     onClick={() => handleAction(item.id, 'DISMISSED')}
@@ -252,6 +290,17 @@ export default function FeedPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Hidden test button to trigger simulation easily during development/testing */}
+        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center">
+          <button
+             onClick={simulateAmbassadorDraft}
+             data-testid="simulate-ambassador-btn"
+             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded"
+          >
+            Simulate Ambassador Draft
+          </button>
         </div>
       </div>
     </AppShell>
