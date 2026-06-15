@@ -59,7 +59,7 @@ test.describe('Ambassador RAG Pipeline', () => {
     // The exact drafted text could vary slightly, but it will have an Approve button
 
     // Approve the response
-    const approveButton = page.locator('button:has-text("Approve")').first();
+    const approveButton = page.locator('button:has-text("Send Draft"), button:has-text("Approve")').first();
     await expect(approveButton).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box
