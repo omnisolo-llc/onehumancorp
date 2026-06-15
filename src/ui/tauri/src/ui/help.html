@@ -1319,6 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="ohc-floating-help-tabs">
             <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
             <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
+            <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
             <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
         </div>
 
@@ -1350,6 +1351,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h4>Activate your AI Support Agent</h4>
                 <p>Let AI handle customer queries for you.</p>
             </div>
+        </div>
+
+        <div id="tab-videos" class="ohc-help-content">
+            <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
         </div>
 
         <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
@@ -1385,6 +1390,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tab.classList.add('active');
             document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            if (tab.getAttribute("data-target") === "tab-videos") {
+                fetch("/api/videos").then(r => r.json()).then(data => {
+                    const vl = document.getElementById("video-list");
+                    vl.innerHTML = "";
+                    data.forEach(v => {
+                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="alert('Playing video: ' + v.title)">` +
+                            `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
+                            `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
+                            `</div>`;
+                    });
+                }).catch(e => { document.getElementById("video-list").innerHTML = "Error loading videos."; });
+            }
         });
     });
 
