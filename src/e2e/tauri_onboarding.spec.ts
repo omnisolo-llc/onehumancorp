@@ -266,7 +266,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(container).toBeVisible();
     await expect(container).toHaveClass(/glassmorphism/);
 
-    const option = page.locator('.radio-option').first();
+    const option = page.locator('.context-card').first();
     const optionBox = await option.boundingBox();
     const catInput = page.getByPlaceholder("e.g. Graphic Design");
 
