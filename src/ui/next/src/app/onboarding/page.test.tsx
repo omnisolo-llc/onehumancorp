@@ -540,7 +540,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Open Dashboard/i })).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByRole('link', { name: /Open Assistant/i })).toHaveAttribute('href', '/assistant');
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
   });
