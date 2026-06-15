@@ -111,10 +111,8 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let mut amount_usd = 0.0;
-    let _ = amount_usd;
-    let mut item_name = "Checkout".to_string();
-    let _ = item_name;
+    let amount_usd;
+    let item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -365,9 +363,8 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let cost_per_gb = auditor.get_cost_per_gb_month();
-    let storage_cost_f64 = storage_gb * cost_per_gb;
+    let storage_cost_cents = ::server_pricing::calculator::calculate_storage_cost_cents(storage_bytes, &::server_pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+    let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
     let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
     let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
@@ -389,7 +386,7 @@ pub async fn cost_dashboard_handler(
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
         llm_cost: llm_cost_cents,
-        storage_cost: (storage_cost_f64 * 100.0).round() as i64,
+        storage_cost: storage_cost_cents,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
         compute_cost: (compute_cost_f64 * 100.0).round() as i64,
@@ -588,7 +585,7 @@ mod department_tier_usage_tests {
         // Start a transaction so we can rollback and not pollute the DB
         let mut tx = pool.begin().await.unwrap();
 
-        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
@@ -619,7 +616,7 @@ mod department_tier_usage_tests {
 
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM tenants WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
     }
 
     #[tokio::test]

@@ -1214,11 +1214,11 @@ describe('assistant API contract', () => {
     const body = await (await getParity()).json();
 
     expect(body.summary).toMatchObject({
-      total: 213,
-      implemented: 213,
+      total: 212,
+      implemented: 212,
       remaining: 0,
     });
-    expect(body.gaps).toHaveLength(213);
+    expect(body.gaps).toHaveLength(212);
     expect(body.gaps.every((gap: any) => gap.status === 'implemented')).toBe(true);
     expect(body.gaps.map((gap: any) => gap.name)).toEqual(expect.arrayContaining([
       'Runtime sandbox filesystem',

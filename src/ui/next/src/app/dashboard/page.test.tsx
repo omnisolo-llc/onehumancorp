@@ -59,8 +59,9 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText("Operations Map")).toBeDefined();
   expect(screen.getByText(/Action Required/)).toBeDefined();
   expect(screen.getByText("Recent Orders")).toBeDefined();
+  expect(screen.queryByText(/\/api\/ui\/dashboard\/unified-feed/)).toBeNull();
   expect(screen.getByText("Inbox Activity")).toBeDefined();
   expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/feed");
   expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
-  expect(screen.getByText("Open WorkBuddy Assistant")).toBeDefined();
+  expect(screen.getByText("Assistant Tasks")).toBeDefined();
 });

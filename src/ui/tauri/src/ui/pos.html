@@ -256,7 +256,11 @@
     <div class="container" id="main-container">
 
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
-          <div class="header">
+
+      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
+
+      <div class="header">
             <a href="dashboard.html" class="back-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               Dashboard
@@ -343,7 +347,7 @@
         .ohc-walkthrough-bubble {
             position: absolute;
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
             padding: 20px;
@@ -875,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
 <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask anything..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
@@ -957,8 +961,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -1149,14 +1153,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1173,13 +1177,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.className = 'ohc-walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -1487,7 +1492,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1673,14 +1677,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1693,12 +1697,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -1773,6 +1777,149 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+</script>
+
+<script>
+    // Offline Sync Logic
+
+    function enqueueOfflineMutation(mutation) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+        queue.push(mutation);
+        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+        window.dispatchEvent(new Event("ohc_queue_updated"));
+
+        if (navigator.onLine) {
+            syncOfflineQueue();
+        }
+    }
+
+    function updateOfflineStatus() {
+        const networkIndicator = document.getElementById("network-status-indicator");
+        const queueIndicator = document.getElementById("queue-dashboard");
+        if (!networkIndicator || !queueIndicator) return;
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "block";
+            networkIndicator.classList.remove("hidden");
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length > 0) {
+            queueIndicator.style.display = "block";
+            queueIndicator.classList.remove("hidden");
+            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+        } else {
+            queueIndicator.style.display = "none";
+            queueIndicator.classList.add("hidden");
+        }
+    }
+
+    async function syncOfflineQueue() {
+        if (!navigator.onLine) return;
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length === 0) return;
+
+        const posTransactions = [];
+        const generalMutations = [];
+        queue.forEach(m => {
+            if (m.type === "tap_to_pay") {
+                posTransactions.push({
+                    id: m.id,
+                    client_id: "terminal_client",
+                    amount_cents: Math.round(m.amount),
+                    currency: m.currency || "usd",
+                    payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+                    timestamp: new Date().toISOString()
+                });
+            } else if (m.type === "inventory_toggle") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: m.id.replace("e2e-product-", ""),
+                    quantity_deducted: 1,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: null
+                });
+            } else {
+                generalMutations.push(m);
+            }
+        });
+
+        const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+        const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+
+        let allOk = true;
+        if (posTransactions.length > 0) {
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+            try {
+                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (generalMutations.length > 0) {
+
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+            try {
+                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (generalMutations.length > 0) {
+            try {
+                const res = await fetch("/api/v1/sync/offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ mutations: generalMutations })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (allOk) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            updateOfflineStatus();
+        }
+    }
+
+    window.addEventListener("online", () => {
+        updateOfflineStatus();
+        syncOfflineQueue();
+    });
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+    updateOfflineStatus();
 </script>
 </body>
 </html>

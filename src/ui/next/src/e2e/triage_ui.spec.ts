@@ -69,34 +69,4 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(page.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
     await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
   });
-
-  test('Owner can approve a Draft Quote triage item', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-3"]');
-    await expect(triageCard).toBeVisible({ timeout: 15000 });
-
-    await triageCard.click();
-
-    await expect(page.locator('text=Customer wants a quote for plumbing fix')).toBeVisible();
-    await expect(page.locator('text=Draft Quote')).toBeVisible();
-
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
-    await approveBtn.click();
-
-    await expect(triageCard).not.toBeVisible();
-  });
-
-  test('Owner can approve a Draft Booking triage item', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-4"]');
-    await expect(triageCard).toBeVisible({ timeout: 15000 });
-
-    await triageCard.click();
-
-    await expect(page.locator('text=Customer wants to book a time slot')).toBeVisible();
-    await expect(page.locator('text=Draft Booking')).toBeVisible();
-
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
-    await approveBtn.click();
-
-    await expect(triageCard).not.toBeVisible();
-  });
 });

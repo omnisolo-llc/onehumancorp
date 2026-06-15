@@ -270,8 +270,6 @@ export type AssistantSettings = {
   contentFilter: 'friendly_notice' | 'hide_filtered_answer';
   compactMode: boolean;
   autoInstallLowRiskSkills: boolean;
-  enableObservationMasking?: boolean;
-  observationMaskingSizeLimit?: number;
   preventSleep: boolean;
   profile: {
     name: string;
@@ -580,7 +578,6 @@ export const agentParityGaps: AgentParityGap[] = [
   { id: 'docs-unarchive-task', category: 'Official docs gap closure', name: 'Unarchive task', source: 'Agent Data Management docs', agentSurface: 'Data Management', status: 'implemented' },
   { id: 'docs-feedback-screenshot', category: 'Official docs gap closure', name: 'Feedback screenshot attachment', source: 'Agent Help & Feedback docs', agentSurface: 'System & Safety', status: 'implemented' },
   { id: 'docs-automation-schedule-kinds', category: 'Official docs gap closure', name: 'Automation schedule kinds', source: 'Agent Automation docs', agentSurface: 'Automations', status: 'implemented' },
-  { id: 'context-observation-masking', category: 'Context Management', name: 'JetBrains Observation Masking', source: 'Observation Masking', agentSurface: 'System & Safety', status: 'implemented' },
   ...extendedDocsGapClosureGaps,
   ...coreDocsGapClosureGaps,
 ];
@@ -642,7 +639,7 @@ export const assistantCapabilities = {
     trainingOptOut: 'agent_ai@tencent.com',
     rights: ['Access', 'Portability', 'Correction', 'Erasure', 'Restriction', 'Objection', 'Consent Withdrawal'],
   },
-  paritySummary: { total: 213, implemented: 213, remaining: 0 },
+  paritySummary: { total: 212, implemented: 212, remaining: 0 },
   parityCategories: [
     'Cloud Agent lifecycle: 24/24',
     'Home execution controls: 4/4',
@@ -664,7 +661,7 @@ export const assistantCapabilities = {
     'Mobile attachment sources: 6/6',
     'Account and sharing settings: 4/4',
     'Official docs gap closure: 14/14',
-    'Extended docs gap closure: 25/25',
+    'Extended docs gap closure: 24/24',
     'Core docs gap closure: 24/24',
   ],
   parityHighlights: [
@@ -776,8 +773,6 @@ let settings: AssistantSettings = {
   contentFilter: 'friendly_notice',
   compactMode: true,
   autoInstallLowRiskSkills: true,
-    enableObservationMasking: true,
-    observationMaskingSizeLimit: 512,
   preventSleep: false,
   agentName: 'Agent One',
   profile: {
@@ -2884,8 +2879,6 @@ export function resetAssistantStore() {
     contentFilter: 'friendly_notice',
     compactMode: true,
     autoInstallLowRiskSkills: true,
-    enableObservationMasking: true,
-    observationMaskingSizeLimit: 512,
     preventSleep: false,
     profile: {
       name: 'Kevin',

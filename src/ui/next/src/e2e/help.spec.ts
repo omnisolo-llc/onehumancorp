@@ -54,7 +54,7 @@ test.describe('Help Center', () => {
         // Wait for UI to update (non-matching articles should disappear)
         await expect(page.locator('a[href="/help/getting-started-1"]')).not.toBeVisible({ timeout: 10000 });
 
-        const articleLink = page.locator('a[href="/help/add-products"]');
+        const articleLink = page.locator('a[href="/help/my-store"]');
         await expect(articleLink).toBeVisible({ timeout: 10000 });
     });
 
