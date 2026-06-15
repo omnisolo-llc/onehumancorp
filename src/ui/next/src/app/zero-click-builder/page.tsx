@@ -11,6 +11,8 @@ export default function ZeroClickBuilderPage() {
   const [generationStep, setGenerationStep] = useState(0);
   const [generatedStore, setGeneratedStore] = useState<any>(null);
   const [hasPro, setHasPro] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -33,6 +35,46 @@ export default function ZeroClickBuilderPage() {
     setIsGenerating(true);
     setGenerationStep(0);
 
+    submitPrompt(prompt);
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording && mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        const chunks: Blob[] = [];
+
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          // Simulate audio to text (in reality this would call a transcription API)
+          // Since it's a demo flow, we mock the result of the audio transcript if it's empty
+          setPrompt("I am a home baker in Austin selling custom vegan cakes and cupcakes.");
+          stream.getTracks().forEach(track => track.stop());
+
+          setIsGenerating(true);
+          setGenerationStep(0);
+          // Need a timeout to ensure state update before submit
+          setTimeout(() => {
+              submitPrompt("I am a home baker in Austin selling custom vegan cakes and cupcakes.");
+          }, 500);
+        };
+
+        recorder.start();
+        setMediaRecorder(recorder);
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        alert("Could not access microphone.");
+      }
+    }
+  };
+
+  const submitPrompt = async (textPrompt: string) => {
     // Simulate generation steps for UI feedback
     const interval = setInterval(() => {
       setGenerationStep(prev => {
@@ -46,7 +88,7 @@ export default function ZeroClickBuilderPage() {
       const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ prompt: textPrompt })
       });
 
       const data = await response.json();
@@ -104,21 +146,40 @@ export default function ZeroClickBuilderPage() {
                 <label htmlFor="prompt" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   What do you do?
                 </label>
-                <textarea
-                  id="prompt"
-                  rows={4}
-                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow resize-none"
-                  placeholder="e.g., I am a home baker in Austin selling custom vegan cakes and cupcakes."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  disabled={isGenerating}
-                  required
-                />
+                <div className="relative">
+                  <textarea
+                    id="prompt"
+                    rows={4}
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow resize-none"
+                    placeholder="e.g., I am a home baker in Austin selling custom vegan cakes and cupcakes."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    disabled={isGenerating || isRecording}
+                    required={!isRecording}
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={isGenerating}
+                    className={`absolute bottom-3 right-3 p-2 rounded-full transition-colors flex items-center justify-center ${
+                      isRecording
+                        ? 'bg-red-500 text-white animate-pulse'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    aria-label={isRecording ? "Stop recording" : "Start recording"}
+                  >
+                    {isRecording ? (
+                      <span className="w-5 h-5 flex items-center justify-center font-bold">■</span>
+                    ) : (
+                      <span className="text-xl leading-none">🎤</span>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isGenerating || !prompt.trim()}
+                disabled={isGenerating || (!prompt.trim() && !isRecording) || isRecording}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md"
               >
                 <span>🚀</span> Generate My Business
