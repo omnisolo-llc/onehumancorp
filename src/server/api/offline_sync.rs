@@ -173,6 +173,24 @@ pub async fn offline_sync_handler(
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
 
+                    // Publish to Redis Pub/Sub for Real-Time Sync Engine
+                    let redis_client_opt = crate::get_redis_client();
+                    let redis_tenant_id = tenant_id_clone.clone();
+                    let redis_product_id = mutation.product_id.clone();
+                    tokio::spawn(async move {
+                        if let Some(client) = redis_client_opt {
+                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                let topic = format!("inventory:{}", redis_tenant_id);
+                                let payload = serde_json::json!({
+                                    "event": "inventory_updated",
+                                    "product_id": redis_product_id,
+                                    "timestamp": chrono::Utc::now().to_rfc3339()
+                                }).to_string();
+                                let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
+                            }
+                        }
+                    });
+
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event

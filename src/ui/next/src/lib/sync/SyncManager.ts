@@ -7,9 +7,34 @@ export class SyncManager {
   private maxRetries = 5;
 
   private constructor() {
+    this.connectWebSocket();
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.sync());
     }
+  }
+
+  private connectWebSocket() {
+    if (typeof window === 'undefined') return;
+    const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?tenant_id=${tenantId}`;
+
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      console.log('Received real-time sync event:', event.data);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ohc_queue_updated'));
+      }
+    };
+    ws.onclose = () => {
+      console.log('Sync WebSocket closed, reconnecting in 5s...');
+      setTimeout(() => this.connectWebSocket(), 5000);
+    };
+    ws.onerror = (err) => {
+      console.error('Sync WebSocket error', err);
+      ws.close();
+    };
   }
 
   public static getInstance(): SyncManager {
