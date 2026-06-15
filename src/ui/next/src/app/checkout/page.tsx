@@ -1,3 +1,4 @@
+import { useSyncGateway } from "../../hooks/useSyncGateway";
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
@@ -22,6 +23,19 @@ function CheckoutContent() {
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
   const [shareDiscountApplied, setShareDiscountApplied] = useState(false);
+  const [isSoldOut, setIsSoldOut] = useState(false);
+  const { lastMessage } = useSyncGateway({
+    topics: ['inventory'],
+    enabled: !!tenant && !!productId,
+  });
+
+  useEffect(() => {
+    if (lastMessage && lastMessage.product_id === productId && lastMessage.action === 'reserve') {
+      setIsSoldOut(true);
+      setCheckoutStatus('Item just sold out.');
+    }
+  }, [lastMessage, productId]);
+
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -189,7 +203,7 @@ function CheckoutContent() {
               <WithTooltip id="checkout-plan-upgrade-tooltip" defaultText={"Click here to securely subscribe to the " + tier + " plan."}>
                 <button
                   onClick={() => handlePayment(true)}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isSoldOut}
                   className={"w-full mb-3 px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm " + (isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700')}
                 >
                   {isProcessing ? 'Processing...' : 'Upgrade'}
@@ -330,7 +344,7 @@ function CheckoutContent() {
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              {isProcessing ? "Processing..." : "Pay"}
+              {isSoldOut ? "Sold Out" : isProcessing ? "Processing..." : "Pay"}
             </button>
           </WithTooltip>
 
