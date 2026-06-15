@@ -128,7 +128,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        min-height: 44px; height: auto;
+        height: 12px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -194,7 +194,7 @@
       }
       .step-indicator {
         width: 12px;
-        min-height: 44px; height: auto;
+        height: 12px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
@@ -427,7 +427,7 @@
         }
         .step-indicator {
           width: 8px;
-          min-height: 44px; height: auto;
+          height: 12px;
         }
         .step-indicator.active {
           transform: scale(1.2);
@@ -484,7 +484,7 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
@@ -492,7 +492,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
@@ -516,7 +516,7 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
@@ -527,10 +527,10 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 12px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 12px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 12px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
       </div>
