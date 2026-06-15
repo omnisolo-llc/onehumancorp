@@ -1277,7 +1277,12 @@
 
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
+                      await goToStep('step-loading');
+                      const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      if (startData && startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
                       localStorage.setItem('has_onboarded', 'true');
                       window.location.href = "success.html";
                       return;
@@ -1392,7 +1397,11 @@
 
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      if (startData && startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
                       localStorage.setItem('has_onboarded', 'true');
                       window.location.href = "success.html";
                   } else {
@@ -1543,7 +1552,11 @@
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  goToStep('step-loading');
-                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
+                 window.__TAURI__.core.invoke("start_onboarding", { req }).then((startData) => {
+                   if (startData && startData.organization_id) {
+                       localStorage.setItem('tenant_id', startData.organization_id);
+                       localStorage.setItem('tenant', startData.organization_id);
+                   }
                    localStorage.setItem('has_onboarded', 'true');
                    window.location.href = "success.html";
                  }).catch((err) => {
