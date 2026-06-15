@@ -96,7 +96,7 @@ pub struct MailboxRequest {
     pub message: MeshMessage,
 }
 
-fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
+fn check_spiffe_auth(headers: &HeaderMap) -> Result<(String, String, String), axum::response::Response> {
     let spiffe_id = headers.get("x-spiffe-id")
         .and_then(|val| val.to_str().ok())
         .unwrap_or("");
@@ -106,12 +106,13 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
         return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
     }
 
-    if let Err(_) = ::server_auth::parse_spiffe_id(spiffe_id) {
-        let error_res = serde_json::json!({ "error": "unauthorized" });
-        return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
+    match ::server_auth::parse_spiffe_id(spiffe_id) {
+        Ok((org_id, agent_id)) => Ok((org_id, agent_id, spiffe_id.to_string())),
+        Err(_) => {
+            let error_res = serde_json::json!({ "error": "unauthorized" });
+            Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response())
+        }
     }
-
-    Ok(spiffe_id.to_string())
 }
 
 
@@ -132,11 +133,13 @@ pub async fn orchestration_broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
+    let (org_id, _agent_id, _spiffe_id) = match check_spiffe_auth(&headers) {
+        Ok(res) => res,
+        Err(err) => return err,
+    };
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    let isolated_topic = format!("tenant:{}:{}", org_id, payload.topic);
+    publish_response(transport.publish(&isolated_topic, payload.message.into()).await)
 }
 
 /// Handler for WebSockets to stream orchestration tasks
@@ -154,11 +157,13 @@ pub async fn broadcast_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
+    let (org_id, _agent_id, _spiffe_id) = match check_spiffe_auth(&headers) {
+        Ok(res) => res,
+        Err(err) => return err,
+    };
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    let isolated_topic = format!("tenant:{}:{}", org_id, payload.topic);
+    publish_response(transport.publish(&isolated_topic, payload.message.into()).await)
 }
 
 /// Handler for direct agent-to-agent communication over HTTP
@@ -167,11 +172,12 @@ pub async fn direct_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<DirectRequest>,
 ) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
+    let (org_id, _agent_id, _spiffe_id) = match check_spiffe_auth(&headers) {
+        Ok(res) => res,
+        Err(err) => return err,
+    };
 
-    let topic = format!("mesh:direct:{}", payload.target_agent_id);
+    let topic = format!("tenant:{}:mesh:direct:{}", org_id, payload.target_agent_id);
     publish_response(transport.publish(&topic, payload.message.into()).await)
 }
 
@@ -181,11 +187,12 @@ pub async fn mailbox_handler(
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<MailboxRequest>,
 ) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
+    let (org_id, _agent_id, _spiffe_id) = match check_spiffe_auth(&headers) {
+        Ok(res) => res,
+        Err(err) => return err,
+    };
 
-    let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    let topic = format!("tenant:{}:mesh:mailbox:{}", org_id, payload.mailbox_id);
     publish_response(transport.publish(&topic, payload.message.into()).await)
 }
 

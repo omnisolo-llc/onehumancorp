@@ -40,11 +40,24 @@ impl TaskStatus {
 pub struct StateMachine {
     db: Arc<DB>,
     sqlite_mutex: Mutex<()>,
+    mesh: Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>>,
 }
 
 impl StateMachine {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db, sqlite_mutex: Mutex::new(()) }
+        Self { db, sqlite_mutex: Mutex::new(()), mesh: None }
+    }
+
+    pub fn with_mesh(mut self, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        self.mesh = Some(mesh);
+        self
+    }
+
+    async fn publish_mesh_event(&self, task_id: &str, status: &TaskStatus, _agent_id: Option<&str>) {
+        if let Some(mesh) = &self.mesh {
+            let payload = format!("{{\"task_id\":\"{}\",\"state\":\"{}\"}}", task_id, status.as_str());
+            let _ = mesh.publish("mesh:state_transitions", payload.into_bytes()).await;
+        }
     }
 
     fn increment_transition_metric(status: &TaskStatus) {
@@ -127,6 +140,7 @@ impl StateMachine {
         }
 
         Self::increment_transition_metric(&TaskStatus::Pending);
+        self.publish_mesh_event(&tid, &TaskStatus::Pending, None).await;
 
         Ok(tid)
     }
@@ -181,6 +195,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::InProgress);
+                    self.publish_mesh_event(task_id, &TaskStatus::InProgress, Some(agent_id)).await;
                     Ok(())
                 } else {
                     Err("Task not found or locked".to_string())
@@ -234,6 +249,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::InProgress);
+                    self.publish_mesh_event(task_id, &TaskStatus::InProgress, Some(agent_id)).await;
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -274,6 +290,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Completed);
+                    self.publish_mesh_event(task_id, &TaskStatus::Completed, None).await;
 
                     // Emitting telemetry for general tasks as well.
                     // Shared_tasks don't track tokens individually yet but we can log 0 tokens and role 'system' or similar,
@@ -322,6 +339,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Completed);
+                    self.publish_mesh_event(task_id, &TaskStatus::Completed, None).await;
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -361,6 +379,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Blocked);
+                    self.publish_mesh_event(task_id, &TaskStatus::Blocked, None).await;
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
@@ -395,6 +414,7 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Blocked);
+                    self.publish_mesh_event(task_id, &TaskStatus::Blocked, None).await;
                     Ok(())
                 } else {
                     Err("Task not found".to_string())
