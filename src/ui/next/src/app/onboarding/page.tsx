@@ -459,7 +459,117 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleStartOnboarding = async () => {
+  const handleInstantBuild = async () => {
+    if (!bio.trim()) {
+      setError('Please tell us about your business.');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    setStep(4); syncStateToBackend({ step: 4 });
+
+    try {
+      const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      let combinedInput = bio;
+      if (instantImageUrl) {
+        combinedInput += `\nImage provided: ${instantImageUrl}`;
+      }
+
+      const intakeRes = await fetchWithRetry(`${backendUrl}/api/onboarding/intake`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
+      });
+      const intakeData = await intakeRes.json();
+
+      setBusinessName(intakeData.business_name || 'My Business');
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessDescription(bio);
+      setCategories(intakeData.categories || ['physical']);
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '0.00');
+      setLocation(intakeData.location || 'Local');
+      setTargetAudience(intakeData.target_audience || 'General');
+      setAdminName(intakeData.business_name || 'Admin');
+      setAdminEmail('admin@mybusiness.com');
+      setAdminPassword('password123');
+      setDomainChoice('subdomain');
+      setWebsiteTemplate('auto');
+
+      setTimeout(() => {
+        handleStartOnboarding(intakeData);
+      }, 100);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to generate your business');
+      setStep(-1); syncStateToBackend({ step: -1 });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartOnboarding = async (intakeDataOverride?: any) => {
+    if (intakeDataOverride && intakeDataOverride.business_name) {
+      setIsLoading(true);
+      setError('');
+      setStep(4); syncStateToBackend({ step: 4 });
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        const startRes = await fetchWithRetry('/api/onboarding/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+          body: JSON.stringify({
+            business_type: intakeDataOverride.business_type || 'Online Store',
+            company_name: intakeDataOverride.business_name || 'My Business',
+            company_description: bio,
+            selling_categories: intakeDataOverride.categories || ['physical'],
+            payment_pref: 'online',
+            admin_email: 'admin@mybusiness.com',
+            admin_name: intakeDataOverride.business_name || 'Admin',
+            admin_password: 'password123',
+            website_template: 'auto',
+            first_product_name: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
+            first_product_price: intakeDataOverride.initial_products?.[0]?.price || '0.00',
+            domain_choice: 'subdomain',
+            price_type: 'fixed',
+            location: intakeDataOverride.location || 'Local',
+            target_audience: intakeDataOverride.target_audience || 'General',
+            ai_agents: [],
+            ai_auto_respond: true,
+            initial_products: intakeDataOverride.initial_products || []
+          })
+        });
+
+        const result = await startRes.json().catch(() => ({}));
+        if (!startRes.ok) throw new Error(result.error || result.message || 'Failed to start onboarding');
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setStartResult(result);
+        localStorage.setItem('has_onboarded', 'true');
+        if (result.organization_id) {
+          localStorage.setItem('tenant_id', result.organization_id);
+          localStorage.setItem('tenant', result.organization_id);
+        }
+        setStep(5); syncStateToBackend({ step: 5 });
+        fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
+        return;
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || 'Failed to start onboarding');
+        setStep(3); syncStateToBackend({ step: 3 });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
       errors.adminName = 'Admin Name is required';
@@ -534,7 +644,7 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to start onboarding');
-      setStep(3); syncStateToBackend({ step: 3 }); // Go back to last input screen on error
+      setStep(3); syncStateToBackend({ step: 3 });
     } finally {
       setIsLoading(false);
     }
@@ -616,6 +726,61 @@ export default function OnboardingWizard() {
                 >
                   Start My Business
                 </button>
+                <button
+                  type="button"
+                  className="w-full bg-transparent text-[#A1A1A6] p-4 font-bold rounded-[8px] border border-white/20 hover:bg-white/10 hover:text-[#F5F5F7] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  onClick={() => { setStep(-1); syncStateToBackend({ step: -1 }); }}
+                >
+                  Instant Build
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === -1 && (
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
+                Our AI will handle the rest in 30 seconds.
+              </p>
+
+              <div className="flex flex-col gap-4 w-full">
+                <textarea
+                  id="instant-bio"
+                  data-testid="instant-bio"
+                  className={`glassmorphism w-full p-4 rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-h-[44px] transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF]"}`}
+                  placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+                  rows={6}
+                  style={{ resize: 'none' }}
+                  value={bio}
+                  onChange={(e) => {
+                    setBio(e.target.value);
+                    if (error) setError('');
+                  }}
+                />
+
+                <input
+                  id="instant-image-url"
+                  data-testid="instant-image-url"
+                  type="url"
+                  className="glassmorphism w-full p-4 rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-h-[44px] border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms]"
+                  placeholder="Image URL (Optional)"
+                  value={instantImageUrl}
+                  onChange={(e) => setInstantImageUrl(e.target.value)}
+                />
+
+                <div className="mt-4">
+                  <button
+                    onClick={handleInstantBuild}
+                    disabled={!bio.trim() || isLoading}
+                    className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1201,7 +1366,7 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={handleStartOnboarding}
+                  onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
                   className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >

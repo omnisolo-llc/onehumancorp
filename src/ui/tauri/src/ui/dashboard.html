@@ -644,6 +644,37 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <!-- OHC Wrapped: Year in Review -->
+      <div class="ohc-growth-card" id="wrapped-widget" style="display: none; background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(0, 102, 255, 0.3);">
+        <div style="text-align: center; padding: 10px;">
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">2026 Wrapped 🎁</h2>
+          <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+              <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">$0.00</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
+              <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
+              <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
+              <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+          </div>
+
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 12px; padding: 12px; font-weight: 700;">
+            Share 2026 Success
+          </button>
+        </div>
+      </div>
+
       <!-- Viral Soft Paywall Loop -->
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -775,6 +806,7 @@
 
         <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
         <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
@@ -808,7 +840,7 @@
     </div>
 
     <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="index.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <a href="/onboarding" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -1037,7 +1069,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `index.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
+          footerLink.href = `/onboarding?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
@@ -1348,7 +1380,33 @@
       }
       checkMilestones();
 
+      async function checkWrapped() {
+        try {
+          const res = await fetch('/api/v1/growth/wrapped');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.total_sales > 0 || data.total_orders > 0) {
+              document.getElementById('wrapped-widget').style.display = 'block';
+              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
+              document.getElementById('wrapped-orders').innerText = data.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.total_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
 
+              const shareBtn = document.getElementById('wrapped-share-btn');
+              shareBtn.onclick = () => {
+                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                navigator.clipboard.writeText(text).then(() => {
+                  shareBtn.innerText = 'Copied to Clipboard! ✨';
+                  setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);
+                });
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch Wrapped data", e);
+        }
+      }
+      checkWrapped();
 
       const generateBtn = document.getElementById('generate-link-btn');
 
@@ -1538,7 +1596,7 @@
           if (actionType === 'SocialPostDraft') {
             let parsedPayload = item.proposed_action || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1590,7 +1648,7 @@
           if (actionType === 'Draft Reply') {
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
@@ -1619,7 +1677,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>

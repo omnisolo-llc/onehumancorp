@@ -1,3 +1,4 @@
+#![allow(clippy::useless_vec)]
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 

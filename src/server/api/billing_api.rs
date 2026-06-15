@@ -47,6 +47,7 @@ pub struct CostDashboardResponse {
     pub department_tier_usage: DepartmentTierUsageResponse,
     pub email_cost: i64,
     pub api_cost: i64,
+    pub budget_health_alert: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
@@ -111,8 +112,8 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let mut amount_usd = 0.0;
-    let mut item_name = "Checkout".to_string();
+    let amount_usd;
+    let item_name;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -278,7 +279,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0 })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0, budget_health_alert: false })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -372,14 +373,41 @@ pub async fn cost_dashboard_handler(
     let api_cost_f64 = api_cost_cents as f64 / 100.0;
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
-    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
-    // For deterministic hermetic tests, if a specific test tenant is detected, force elapsed days to 7.
     let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
         7
     } else {
         now.day()
     };
+
+    let pool = crate::db::get_pool();
+    let tier_str: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1")
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| "free".to_string());
+
+    let tier = match tier_str.to_lowercase().as_str() {
+        "starter" => ::server_pricing::rate_limit::PlanTier::Starter,
+        "pro" => ::server_pricing::rate_limit::PlanTier::Pro,
+        "business" => ::server_pricing::rate_limit::PlanTier::Business,
+        _ => ::server_pricing::rate_limit::PlanTier::Free,
+    };
+
+    let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
+
+    // For free tier, base_price is 0, so any cost > 0 might trigger it, but let's say the budget is $10 for free, $50 for starter, $150 for pro, $500 for business
+    let budget_limit = tier.base_price();
+    let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
+
+    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+    budget_manager.record_spend_cents(projected_cents).unwrap_or(false);
+    let budget_health_alert = budget_manager.check_alert_threshold();
+
+
+    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
+
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -400,6 +428,8 @@ pub async fn cost_dashboard_handler(
         department_tier_usage,
         email_cost: email_cost_cents,
         api_cost: api_cost_cents,
+        budget_health_alert,
+
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
@@ -585,7 +615,7 @@ mod department_tier_usage_tests {
         // Start a transaction so we can rollback and not pollute the DB
         let mut tx = pool.begin().await.unwrap();
 
-        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
@@ -616,7 +646,7 @@ mod department_tier_usage_tests {
 
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM tenants WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
     }
 
     #[tokio::test]

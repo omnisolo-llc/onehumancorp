@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
