@@ -3,10 +3,12 @@ import React from 'react';
 import CostDashboardPage from './page';
 import { useRouter } from 'next/navigation';
 import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
+import { TooltipProvider } from "@/components/TooltipRegistry";
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn()
+  useRouter: vi.fn(),
+  usePathname: () => "/cost-dashboard",
 }));
 
 const mockPush = vi.fn();
@@ -29,7 +31,11 @@ describe('CostDashboardPage', () => {
     // Mock fetch to not resolve immediately
     global.fetch = vi.fn(() => new Promise(() => {})) as any;
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
     expect(screen.getByTestId('cost-dashboard-loading')).toBeDefined();
   });
 
@@ -105,7 +111,11 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
@@ -122,7 +132,7 @@ describe('CostDashboardPage', () => {
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
-    expect(screen.getByText('Cost Transparency')).toBeDefined();
+    expect(screen.getAllByText('Cost Transparency')[0]).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
 
     // total revenue
@@ -176,7 +186,11 @@ describe('CostDashboardPage', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
@@ -244,7 +258,11 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
@@ -287,7 +305,11 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
@@ -331,7 +353,11 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
-    render(<CostDashboardPage />);
+    render(
+      <TooltipProvider>
+        <CostDashboardPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();

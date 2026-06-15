@@ -1,12 +1,22 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/TooltipRegistry";
 import Integrations from "./page";
 
 const push = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  usePathname: () => "/integrations",
 }));
+
+const mockIntersectionObserver = vi.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null
+});
+window.IntersectionObserver = mockIntersectionObserver as any;
 
 describe("Integrations", () => {
   beforeEach(() => {
@@ -24,14 +34,21 @@ describe("Integrations", () => {
       configurable: true,
       value: { assign },
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        authorization_url: "https://oauth.example/shippo",
-      }),
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === "/api/tooltips") return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          authorization_url: "https://oauth.example/shippo",
+        }),
+      });
     });
 
-    render(<Integrations />);
+    render(
+      <TooltipProvider>
+        <Integrations />
+      </TooltipProvider>
+    );
     fireEvent.click(screen.getAllByRole("button", { name: "Connect" })[4]);
 
     await waitFor(() => {
