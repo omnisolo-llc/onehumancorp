@@ -10,8 +10,15 @@ Object.assign(navigator, {
 });
 
 describe('DashboardViralInviteWidget', () => {
+  let fetchMock: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ invite_link: "https://ohc.app/invite/test-tenant-123" }),
+    });
+    global.fetch = fetchMock;
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn((key) => {
@@ -23,32 +30,47 @@ describe('DashboardViralInviteWidget', () => {
     });
   });
 
-  it('renders correctly with tenant link', async () => {
+  it('renders and generates link via API', async () => {
     render(<DashboardViralInviteWidget />);
 
     expect(screen.getByText('Refer & Earn $50')).toBeDefined();
     expect(screen.getByText(/Invite another business owner to OHC/)).toBeDefined();
 
-    const input = screen.getByDisplayValue(/test-tenant-123/);
+    const generateBtn = screen.getByRole('button', { name: 'Generate Invite Link' });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith('/api/v1/growth/team-invites', expect.objectContaining({
+            method: 'POST',
+        }));
+    });
+
+    const input = await screen.findByDisplayValue('https://ohc.app/invite/test-tenant-123');
     expect(input).toBeDefined();
   });
 
   it('copies link to clipboard and shows Copied! text', async () => {
     render(<DashboardViralInviteWidget />);
 
-    const copyButton = screen.getByRole('button', { name: 'Copy Link' });
+    const generateBtn = screen.getByRole('button', { name: 'Generate Invite Link' });
+    fireEvent.click(generateBtn);
+
+    const copyButton = await screen.findByRole('button', { name: 'Copy Link' });
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('test-tenant-123')
+      'https://ohc.app/invite/test-tenant-123'
     );
-    expect(screen.getByText('Copied!')).toBeDefined();
+    expect(await screen.findByText('Copied!')).toBeDefined();
   });
 
   it('contains a valid WhatsApp share link', async () => {
     render(<DashboardViralInviteWidget />);
 
-    const whatsappLink = screen.getByRole('link', { name: /Share on WhatsApp/i });
+    const generateBtn = screen.getByRole('button', { name: 'Generate Invite Link' });
+    fireEvent.click(generateBtn);
+
+    const whatsappLink = await screen.findByRole('link', { name: /Share on WhatsApp/i });
     expect(whatsappLink.getAttribute('href')).toContain('wa.me');
     expect(whatsappLink.getAttribute('href')).toContain('test-tenant-123');
   });

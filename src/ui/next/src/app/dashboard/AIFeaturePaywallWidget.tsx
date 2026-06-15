@@ -18,14 +18,35 @@ export function AIFeaturePaywallWidget() {
     }
   }, []);
 
-  const handleGenerateLink = () => {
+  const handleGenerateLink = async () => {
     setGenerating(true);
-    // Simulate network delay for link generation
-    setTimeout(() => {
-      const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
-      setReferralLink(link);
+    try {
+      const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
+      const res = await fetch('/api/v1/growth/team-invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          team_id: tenantId,
+          inviter_id: inviterId,
+          invitee_id: 'pending-ai-feature-invite',
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to generate invite');
+      }
+
+      const data = await res.json();
+      setReferralLink(data.invite_link);
+    } catch (err) {
+      console.error('Error generating referral link:', err);
+      // Fallback
+      setReferralLink(`${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`);
+    } finally {
       setGenerating(false);
-    }, 800);
+    }
   };
 
   const handleCopy = () => {
