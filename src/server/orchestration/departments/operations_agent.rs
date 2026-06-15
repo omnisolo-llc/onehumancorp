@@ -61,9 +61,6 @@ impl Department for OperationsAgent {
                 }
             },
             "InventoryConflictEvent" => {
-                // If it's the specific test/simulation message from offline_sync, we forward it exactly.
-                // Otherwise we would use an LLM here to evaluate if we should cancel or draft a restock,
-                // but since the framework expects a very specific Action Card payload, we use this matching payload.
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
@@ -72,8 +69,31 @@ impl Department for OperationsAgent {
                     let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                     let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
-                    let deficit = expected - actual;
-                    format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
+                    let deficit = expected - actual; // e.g. quantity_deducted if offline stock was 0, but actually pos_sync_worker passes quantity_deducted as expected_stock
+
+                    let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    let prompt = format!("Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).", expected, product_id, actual, transaction_id);
+
+                    let llm_response = if !llm_key.is_empty() {
+                        let llm = crate::minimax::MinimaxClient::new(llm_key);
+                        llm.reason(&prompt).await.unwrap_or_else(|_| format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id))
+                    } else {
+                        format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
+                    };
+
+                    if llm_response.contains("AUTO_RESOLVE") {
+                        // Let's create an auto-resolution action
+                        let _ = self.orchestrator.execute_action(
+                            DepartmentType::Operations,
+                            format!("Auto-resolving inventory conflict for {} (tx: {})", product_id, transaction_id),
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            event.payload.clone(),
+                        ).await;
+                        return Ok(());
+                    }
+
+                    llm_response
                 }
             },
             "tenant.subscription.fulfillment_batch.created" => {
