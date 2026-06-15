@@ -277,6 +277,8 @@ impl Department for MarketingAgent {
             tokio::spawn(async move {
                 if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str2) {
                     if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str2) {
+                        // The regenerate_cache already generates the proper HTML and pushes it.
+                        // But per requirements, let's also ensure CacheManager is utilized to push static content.
                         let (html, tags) = crate::builder::edge::regenerate_cache(pool2, tenant_id, s_id, format!("edge_site_{}_{}", tenant_id, s_id), cache).await.unwrap_or_default();
                         if !html.is_empty() {
                             cache_manager.push_static_content(&tenant_id.to_string(), &s_id.to_string(), html, tags).await;
