@@ -2646,6 +2646,27 @@ impl Agent {
         }
     }
 
+
+    /// State Management: Implementation of OpenAI's lightweight previous_response_id chaining
+    pub fn chain_previous_response_id(messages: &[Message], target_id: &str) -> Option<Vec<Message>> {
+        let mut new_messages = Vec::new();
+        let mut found = false;
+        for m in messages.iter() {
+            new_messages.push(m.clone());
+            if let Some(rid) = &m.response_id {
+                if rid == target_id {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if found {
+            Some(new_messages)
+        } else {
+            None
+        }
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -4123,15 +4144,20 @@ impl Agent {
                 }
             }
 
-            // 2. Local File Scratchpad (Claude Code)
-            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty()
-                && let Ok(json_state) = serde_json::to_string_pretty(&messages)
-                    && tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+            // 2. Local File Scratchpad (Claude Code Mechanic)
+            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
+                let mut pf = crate::checkpointer::ProgressFile::default();
+                pf.status = format!("Iteration {}", iteration);
+                pf.notes.push(format!("Total mutating tools executed: {}", mutating_calls.len()));
+                if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
+                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
                         });
                     }
+                }
+            }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
             if iteration == max_iterations - 1 || tool_calls.is_empty() {
@@ -4460,6 +4486,70 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_state_management_lightweight_chaining() {
+        use crate::types::{Message, Role, ToolResult};
+
+        // Create a fake chain of messages
+        let mut messages = vec![
+            Message::user("Task: Do something"),
+            Message {
+                role: Role::Assistant,
+                content: "Thought 1".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_1".to_string()),
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Result 1".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: Some("resp_1".to_string()),
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Thought 2".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_2".to_string()),
+                previous_response_id: Some("resp_1".to_string()),
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "Result 2".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: Some("resp_2".to_string()),
+            },
+        ];
+
+        let prev_id = "resp_1".to_string();
+        let mut restored_msgs = None;
+
+        // Test the actual helper method from the Agent struct
+        restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
+
+        assert!(restored_msgs.is_some());
+        let restored = restored_msgs.unwrap();
+
+        // Should contain exactly the first two messages: User + Assistant(resp_1)
+        assert_eq!(restored.len(), 2);
+        assert_eq!(restored[1].response_id, Some("resp_1".to_string()));
+    }
+
     use crate::tools::ToolExecutor;
     #[tokio::test]
     async fn test_agentstate_reducer() {
