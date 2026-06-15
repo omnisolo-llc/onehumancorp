@@ -57,7 +57,7 @@ type ApprovalRequest = {
 };
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
-  const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
+  const [triageItems, setTriageItems] = useState<TriageItem[]>(initialData?.triage || []);
   const [triageLoading, setTriageLoading] = useState(true);
   const [triageError, setTriageError] = useState("");
 
@@ -146,7 +146,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         if (!res.ok) throw new Error("Failed to load triage items from the database");
         const data = await res.json();
         const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
-        if (mounted) setTriageItems(rows);
+        if (mounted && (!initialData || !initialData.triage || initialData.triage.length === 0)) setTriageItems(rows);
       } catch (e: any) {
         if (mounted) setTriageError(e?.message || "Failed to load triage items");
       } finally {
@@ -484,7 +484,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
 
             {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+              <div key={item.id} data-testid={`triage-card-${item.id}`} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -523,7 +523,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             ))}
 
             {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
+              <div key={item.id} data-testid={`triage-card-${item.id}`} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">

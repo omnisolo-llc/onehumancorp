@@ -441,6 +441,7 @@ pub mod services {
     pub mod collective;
     pub mod inventory_sync;
     pub mod inventory;
+    pub mod agent_triage;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -5172,7 +5173,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
-        .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+        .route("/api/ui/triage", axum::routing::get(crate::services::agent_triage::get_triage_feed))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))

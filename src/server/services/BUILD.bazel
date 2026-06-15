@@ -33,6 +33,7 @@ rust_library(
         "//src/server/services/agent:service.rs",
         "//src/server/services/agent_memory:mod.rs",
         "//src/server/services/agent_memory:service.rs",
+        "agent_triage.rs",
         "//src/server/services/autodream:mod.rs",
         "//src/server/services/autodream:service.rs",
         "//src/server/services/b2b:mod.rs",
@@ -226,3 +227,4 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files(["agent_triage.rs"])

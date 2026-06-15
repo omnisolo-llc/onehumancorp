@@ -348,6 +348,8 @@ export default function Dashboard() {
         const ordersData = unifiedData.orders || [];
         const inboxData = unifiedData.inbox || [];
         const supplyData = unifiedData.supply || {};
+        const triageData = unifiedData.triage || [];
+        setInitialTriage(Array.isArray(triageData) ? triageData : []);
 
         if (onboardingData?.wizardState?.aiAgents) {
           setActiveDepartments(onboardingData.wizardState.aiAgents);
@@ -496,7 +498,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-col">
         <div className="order-first md:order-last mb-6">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities, triage: initialTriage }} />
         </div>
 
         <div className="order-last md:order-first">
