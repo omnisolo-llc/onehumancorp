@@ -27,6 +27,8 @@ exports_files(
         "telemetry.rs",
         "chaos.rs",
         "catalog.rs",
+        "ai_ingest.rs",
+
         "fulfillment.rs",
         "shipping.rs",
         "local_seo.rs",
@@ -70,6 +72,8 @@ rust_library(
         "telemetry.rs",
         "chaos.rs",
         "catalog.rs",
+        "ai_ingest.rs",
+
         "fulfillment.rs",
         "shipping.rs",
         "local_seo.rs",

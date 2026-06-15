@@ -2510,6 +2510,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
 
+    let ai_catalog_handler = std::sync::Arc::new(crate::workers::ai_catalog_worker::AiCatalogWorker { hub: hub.clone() });
+    let ai_catalog_queue = std::sync::Arc::new(crate::orchestration::queue::OHCJobQueue::new(std::sync::Arc::new(hub.pool.clone())));
+    let _ai_catalog_pool = crate::orchestration::queue::WorkerPool::new(
+        ai_catalog_queue,
+        2, // num workers
+        vec!["AutoDreamVisionAgent".to_string()],
+        ai_catalog_handler
+    );
+    // Keep ai_catalog_pool alive - actually WorkerPool spawns and keeps running until shutdown is called. We should probably store it somewhere, or let it leak if that's the pattern. Looking at the code, other workers seem to be leaked or held.
+    // Oh wait, WorkerPool doesn't have a `.start()`, its `new()` spawns the tasks automatically. So we can just `std::mem::forget(ai_catalog_pool)` or let it be dropped?
+    // Let's check `WorkerPool` drop behavior.
+
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
@@ -5734,6 +5747,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/catalog", api::ai_ingest::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))

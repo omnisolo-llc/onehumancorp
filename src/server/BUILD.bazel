@@ -67,6 +67,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:telemetry.rs",
     "//src/server/api:chaos.rs",
     "//src/server/api:catalog.rs",
+
+    "//src/server/api:ai_ingest.rs",
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
@@ -302,6 +304,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:pos_conflict_worker.rs",
     "//src/server/workers:proactive_analysis_job.rs",
     "//src/server/workers:message_triage_worker.rs",
+    "//src/server/workers:ai_catalog_worker.rs",
     "//src/server/workers:pricing_analysis_worker.rs",
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
