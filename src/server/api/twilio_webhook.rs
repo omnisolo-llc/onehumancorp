@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::Hub;
+use crate::hub::Hub;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {

@@ -2856,6 +2856,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
 
+    let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .with_state(twilio_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -5894,6 +5903,7 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
+        .merge(twilio_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
