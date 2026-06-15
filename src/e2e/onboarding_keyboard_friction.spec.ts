@@ -20,6 +20,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
       window.__TAURI__ = {
         core: {
           invoke: async (cmd, args) => {
+            if (cmd === 'get_onboarding_state') return '{}';
             return null;
           }
         }
@@ -27,6 +28,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     });
 
     await page.goto('http://mock/setup.html');
+    await page.waitForTimeout(500); // Wait for populateForm to run
 
     // Step 0 -> Step Context
     await page.locator('#step-initial .next-step-btn').click();
@@ -50,8 +52,8 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
 
     // Step Assistant
     await page.locator('#assistant-name').fill('Jarvis');
-    await page.locator('#assistant-tone').selectOption('Friendly');
-    await page.locator('#assistant-name').press('Enter');
+    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.keyboard.press('Enter');
     await expect(page.locator('#step-admin')).toHaveClass(/active/);
 
     // Step Admin
@@ -73,6 +75,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
     await page.goto('http://mock/setup.html');
+    await page.waitForTimeout(500); // Wait for populateForm to run
 
     // Step 0 -> Step Context
     await page.locator('#step-initial .next-step-btn').click();
@@ -103,6 +106,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
       window.__TAURI__ = {
         core: {
           invoke: async (cmd, args) => {
+             if (cmd === 'get_onboarding_state') return '{}';
              if (cmd === 'process_intake') {
                 return {
                     business_name: 'Instant',
@@ -120,6 +124,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     });
 
     await page.goto('http://mock/setup.html');
+    await page.waitForTimeout(500); // Wait for populateForm to run
 
     // Go to instant build
     await page.getByRole('button', { name: 'Instant Build' }).click();
