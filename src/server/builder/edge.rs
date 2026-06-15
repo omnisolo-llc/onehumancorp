@@ -184,7 +184,7 @@ pub async fn handle_edge_request_impl(
         }
     }
 
-    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await;
 
     {
         let ongoing = get_ongoing_generation();
