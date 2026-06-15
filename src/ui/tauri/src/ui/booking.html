@@ -122,11 +122,19 @@
 
     <div class="glass-card">
       <h2 style="font-size: 16px; margin: 0;">How can we help you?</h2>
-      <p style="margin-top: 4px; font-size: 13px;">Describe the problem or what you need done. We'll send you a custom quote and timeslots.</p>
+      <p style="margin-top: 4px; font-size: 13px;">Select a service, pick a time, and describe what you need done.</p>
 
       <form id="booking-form">
+        <select id="service-select" required style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.5); font-family: inherit; font-size: 15px; margin-top: 16px; margin-bottom: 8px;">
+          <option value="" disabled selected>Select a service</option>
+        </select>
+
+        <select id="slot-select" required style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.5); font-family: inherit; font-size: 15px; margin-bottom: 16px;">
+          <option value="" disabled selected>Select a time slot</option>
+        </select>
+
         <textarea id="description" placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing." required></textarea>
-        <button type="submit" class="btn btn-primary" id="btn-submit">Get a Quote</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit">Book Now</button>
       </form>
     </div>
     <div style="text-align: center; margin-top: 12px; font-family: sans-serif; font-size: 12px;">
@@ -168,26 +176,65 @@
         });
 
 
+      // Initial fetch to get services could be done via builder edge, but we'll mock services for this view or hardcode for now
+      // assuming the page gets a ?service=XXX param or similar.
+      const serviceSelect = document.getElementById('service-select');
+      const slotSelect = document.getElementById('slot-select');
+      const urlService = urlParams.get('service_id') || 'test_service';
+
+      serviceSelect.innerHTML = `<option value="${urlService}">Standard Service</option>`;
+
+      fetch(`/api/v1/booking/available_slots/${urlService}`, { headers: { 'x-tenant-id': tenantId }})
+        .then(res => res.json())
+        .then(data => {
+            if (data.slots && data.slots.length > 0) {
+                slotSelect.innerHTML = '<option value="" disabled selected>Select a time slot</option>';
+                data.slots.forEach(slot => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({st: slot.start_time, et: slot.end_time});
+                    opt.innerText = new Date(slot.start_time).toLocaleString();
+                    slotSelect.appendChild(opt);
+                });
+            } else {
+                slotSelect.innerHTML = '<option value="" disabled selected>No slots available</option>';
+            }
+        });
+
       document.getElementById('booking-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const description = document.getElementById('description').value;
+        const slotVal = document.getElementById('slot-select').value;
+        const serviceVal = document.getElementById('service-select').value;
+
+        if (!slotVal) { alert('Select a slot'); return; }
+        const { st, et } = JSON.parse(slotVal);
+
         const btn = document.getElementById('btn-submit');
 
         btn.innerText = 'Sending...';
         btn.disabled = true;
 
         try {
-          // Simulate backend processing (AI Agent picking it up to draft a quote)
-          await fetch('/api/agents/approvals/simulate-quote-draft', {
+          const res = await fetch('/api/v1/booking/reserve', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'x-tenant-id': tenantId
             },
-            body: JSON.stringify({ description })
+            body: JSON.stringify({
+              service_id: serviceVal,
+              start_time: st,
+              end_time: et,
+              customer_id: null // optional
+            })
           });
 
-          // In E2E tests, the backend creates the agent feed item.
+          const data = await res.json();
+          if (data.checkout_url) {
+              window.location.href = data.checkout_url;
+              return;
+          }
+
           setTimeout(() => {
             document.getElementById('request-view').style.display = 'none';
             document.getElementById('success-view').style.display = 'flex';
@@ -195,7 +242,7 @@
 
         } catch (error) {
           console.error(error);
-          btn.innerText = 'Get a Quote';
+          btn.innerText = 'Book Now';
           btn.disabled = false;
           alert('Something went wrong. Please try again.');
         }
