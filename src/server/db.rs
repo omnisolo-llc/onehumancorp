@@ -1218,6 +1218,29 @@ impl DB {
                         UNIQUE(tenant_id, customer_id)
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+
+                    CREATE TABLE IF NOT EXISTS ohc_job_queue (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        parent_task_id TEXT,
+                        job_type TEXT NOT NULL,
+                        payload TEXT DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        retry_count INTEGER DEFAULT 0,
+                        max_retries INTEGER DEFAULT 3,
+                        next_retry_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        locked_until TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS ohc_universal_ledger (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        state_change TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
