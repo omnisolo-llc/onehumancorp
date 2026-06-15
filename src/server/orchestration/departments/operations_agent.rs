@@ -35,7 +35,6 @@ impl Department for OperationsAgent {
             let stock = event.payload.get("stock").and_then(|v| v.as_i64()).unwrap_or(0);
             let cache = crate::builder::edge::get_edge_cache();
             let cache_manager = crate::services::cache_manager::CacheManager::new(cache.clone());
-
             cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
             if !product_id.is_empty() {
                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
