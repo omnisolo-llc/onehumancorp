@@ -4003,11 +4003,15 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     .fetch_all(&db2.pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
+                            let context_payload: Option<serde_json::Value> = if mobile_optimized {
+                                None
+                            } else {
+                                match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
                                 }
                             };
                             let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
@@ -4018,16 +4022,28 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                 }
                             };
 
-                            let item = serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": row.get::<String, _>("tenant_id"),
-                                "event_source": row.get::<String, _>("event_source"),
-                                "context_payload": context_payload,
-                                "proposed_action": proposed_action,
-                                "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                            });
+                            let item = if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                })
+                            };
                             feed_rows_json.push(item);
                         }
                     }
@@ -4040,11 +4056,15 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     .fetch_all(pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
+                            let context_payload: Option<serde_json::Value> = if mobile_optimized {
+                                None
+                            } else {
+                                match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
                                 }
                             };
                             let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
@@ -4055,16 +4075,28 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                 }
                             };
 
-                            let item = serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": row.get::<String, _>("tenant_id"),
-                                "event_source": row.get::<String, _>("event_source"),
-                                "context_payload": context_payload,
-                                "proposed_action": proposed_action,
-                                "lifecycle_state": row.get::<String, _>("lifecycle_state"),
-                                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
-                                "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
-                            });
+                            let item = if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
+                                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                    "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                })
+                            };
                             feed_rows_json.push(item);
                         }
                     }
