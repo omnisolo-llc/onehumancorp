@@ -327,7 +327,15 @@ impl StateManager for StandaloneStateManager {
                     status: row.get("status"),
                     priority: row.try_get("priority").unwrap_or_else(|_| "P2".to_string()),
                     payload: payload_str,
-                    locked_until: None,
+                    locked_until: {
+                    let locked_str: Option<String> = row.try_get("locked_until").unwrap_or(None);
+                    locked_str.and_then(|s| {
+                        chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
+                            .ok()
+                    })
+                },
                     ultraplan_phase: None,
                     deliberation_log: None,
                     depth: None,

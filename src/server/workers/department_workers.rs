@@ -163,6 +163,35 @@ impl OperationsWorker {
                         },
                         _ => {
                             attempts += 1;
+                            if attempts == MAX_RETRIES {
+                                final_status = "PAUSED";
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, 'AI Agent Paused: Operations', 'The AI agent responsible for operations is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually resolve inventory issues.')
+                                            "#
+                                        )
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool)
+                                        .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES (?, ?, 'AI Agent Paused: Operations', 'The AI agent responsible for operations is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually resolve inventory issues.')
+                                            "#
+                                        )
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
+                            }
                             tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                         }
                     }
@@ -799,16 +828,32 @@ impl CustomerSuccessWorker {
                             attempts += 1;
                             if attempts == MAX_RETRIES {
                                 final_status = "PAUSED";
-                                let _ = sqlx::query(
-                                    r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
-                                    "#
-                                )
-                                .bind(Uuid::new_v4().to_string())
-                                .bind(&tenant_id)
-                                .execute(&db.pool)
-                                .await;
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
+                                            "#
+                                        )
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool)
+                                        .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES (?, ?, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
+                                            "#
+                                        )
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
                             }
                             tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                         }
