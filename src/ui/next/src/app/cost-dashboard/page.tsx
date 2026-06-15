@@ -157,7 +157,7 @@ export default function CostDashboardPage() {
       actions={[{ label: "Back to Dashboard", href: "/dashboard" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 rounded-2xl">
+        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">
             <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Advisory Summary</h2>
             </div>
@@ -169,7 +169,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="app-panel glassmorphism border border-white/40 dark:border-white/10 rounded-2xl shadow-sm">
+        <section id="my-plan-section" className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 shadow-lg dark:bg-gray-900/70 rounded-2xl">
           <div className="app-panel-header flex justify-between items-center bg-transparent border-b border-white/40">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">My Plan</h2>
              <button
@@ -220,7 +220,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 rounded-2xl">
+        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">
             <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40 bg-transparent">
                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -263,7 +263,7 @@ export default function CostDashboardPage() {
         )}
 
         {/* Breakdown Section */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 rounded-2xl">
+        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">
             <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Breakdown</h2>
             </div>

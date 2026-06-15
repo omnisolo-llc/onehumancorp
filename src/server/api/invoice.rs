@@ -2,6 +2,9 @@ use std::sync::Arc;
 
 use ::server_ohc::invoice::*;
 use ::server_ohc::invoice::invoice_service_server::InvoiceService;
+use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, post, put}, Json, Router};
+use serde::Deserialize;
+use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 
 use crate::hub::Hub;
@@ -408,13 +411,101 @@ impl InvoiceService for InvoiceServiceImpl {
     }
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
+#[derive(Deserialize)]
+pub struct CreateInvoiceHttp {
+    pub client_id: String,
+    pub client_name: String,
+    pub due_date: i64,
+    pub currency: String,
+    // We avoid using InvoiceLineItem directly in the struct if it doesn't derive Deserialize, but we can accept json values and construct it.
+    pub line_items: Vec<serde_json::Value>,
+}
 
+#[derive(Deserialize)]
+pub struct UpdateInvoiceStatusHttp {
+    pub status: String,
+}
 
-    // This is just a stub router for Axum integration if needed,
-    // though typically gRPC services are mounted differently.
-    // For now, we return an empty router.
-    axum::Router::new()
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
+    Router::new()
+        .route("/", get(list_invoices_handler).post(create_invoice_handler))
+        .route("/{id}/status", put(update_invoice_status_handler))
+        .with_state(hub)
+}
+
+async fn list_invoices_handler(
+    State(hub): State<Arc<Hub>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+
+    let service = InvoiceServiceImpl { hub };
+    let req = Request::new(ListInvoicesRequest { tenant_id });
+
+    match service.list_invoices(req).await {
+        Ok(resp) => {
+            Ok(Json(resp.into_inner()))
+        }
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn create_invoice_handler(
+    State(hub): State<Arc<Hub>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<CreateInvoiceHttp>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let service = InvoiceServiceImpl { hub };
+
+    let mut mapped_line_items = Vec::new();
+    for val in payload.line_items {
+        if let (Some(desc), Some(qty), Some(price)) = (
+            val.get("description").and_then(|v| v.as_str()),
+            val.get("quantity").and_then(|v| v.as_i64()),
+            val.get("unit_price").and_then(|v| v.as_f64()),
+        ) {
+            mapped_line_items.push(InvoiceLineItem {
+                id: "".to_string(),
+                invoice_id: "".to_string(),
+                description: desc.to_string(),
+                quantity: qty as i32,
+                unit_price: price,
+                amount: price * (qty as f64),
+            });
+        }
+    }
+
+    let req = Request::new(CreateInvoiceRequest {
+        tenant_id,
+        client_id: payload.client_id,
+        client_name: payload.client_name,
+        due_date: payload.due_date,
+        currency: payload.currency,
+        line_items: mapped_line_items,
+    });
+
+    match service.create_invoice(req).await {
+        Ok(resp) => Ok(Json(resp.into_inner())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn update_invoice_status_handler(
+    State(hub): State<Arc<Hub>>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateInvoiceStatusHttp>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let service = InvoiceServiceImpl { hub };
+
+    let req = Request::new(UpdateInvoiceStatusRequest { tenant_id, invoice_id: id, status: payload.status });
+
+    match service.update_invoice_status(req).await {
+        Ok(resp) => Ok(Json(resp.into_inner())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 #[cfg(test)]

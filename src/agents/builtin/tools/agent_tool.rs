@@ -82,3 +82,7 @@ pub fn agent_status_tool() -> Tool {
         execute: Arc::new(PydanticAdapter::new(TaskStatusExecutor)),
     }
 }
+
+#[cfg(test)]
+#[path = "agent_tool_test.rs"]
+mod agent_tool_test;
