@@ -15,6 +15,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
+import { WeeklyWinShareWidget } from "./WeeklyWinShareWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -500,6 +501,7 @@ export default function Dashboard() {
 
         <div className="order-last md:order-first">
           <SuccessMilestoneAlert />
+          <WeeklyWinShareWidget />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
           <div className="mb-6">
