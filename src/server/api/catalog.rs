@@ -247,9 +247,10 @@ async fn handle_generate_offering(
     Json(payload): Json<GenerateOfferingRequest>,
 ) -> impl IntoResponse {
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&payload.prompt);
     let prompt = format!(
         "Extract the product or service offering details from the following text:\n\n'{}'\n\nOutput ONLY a raw JSON object (do not wrap in markdown or backticks) matching this exact schema: {{\"title\": \"string\", \"description\": \"string\", \"price\": \"string\", \"item_type\": \"string (either Product or Service)\", \"is_subscription\": \"boolean\"}}. Suggest an appropriate market price if none is provided.",
-        payload.prompt
+        optimized_prompt
     );
 
     let client = crate::minimax::MinimaxClient::new(api_key);
@@ -294,4 +295,20 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_token_reduction_integration() {
+        let input = "This is a long sentence with many unnecessary words that should be reduced.";
+        let optimized = ::server_pricing::compression::reduce_tokens(input);
+
+        assert!(optimized.len() < input.len());
+        assert!(!optimized.contains(" is "));
+        assert!(!optimized.contains(" a "));
+        assert!(!optimized.contains(" with "));
+    }
 }
