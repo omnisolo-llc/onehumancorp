@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { WithTooltip } from "../../components/TooltipRegistry";
 
 export function SuccessMilestoneWidget() {
   const [milestone, setMilestone] = useState<{ title: string; subtitle: string; shareText: string; reward: string } | null>(null);

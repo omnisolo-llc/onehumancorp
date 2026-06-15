@@ -10,6 +10,10 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc">Powered by OHC</div>,
+}));
+
 describe('ZeroClickBuilderPage', () => {
   beforeEach(() => {
     // Reset fetch mock
@@ -66,5 +70,11 @@ describe('ZeroClickBuilderPage', () => {
     render(<ZeroClickBuilderPage />);
     const texts = screen.getAllByText(/Powered by OHC/i);
     expect(texts.length).toBeGreaterThan(0);
+  });
+
+  it('renders the PoweredByOHC component', () => {
+    render(<ZeroClickBuilderPage />);
+    const components = screen.getAllByTestId('powered-by-ohc');
+    expect(components.length).toBeGreaterThan(0);
   });
 });
