@@ -573,6 +573,32 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTooltip();
         }
     });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            window.touchTimer = setTimeout(() => {
+                showTooltip(e.touches[0], window.OHC_TOOLTIPS[target.id]);
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
 });
 </script>
 
@@ -1094,6 +1120,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            window.touchTimer = setTimeout(() => {
+                showTooltip(e.touches[0], window.OHC_TOOLTIPS[target.id]);
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
         const target = e.target.closest('[id]');
         if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
