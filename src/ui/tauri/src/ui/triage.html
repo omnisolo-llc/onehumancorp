@@ -205,6 +205,43 @@
         }
       }
 
+      .thread-view-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .thread-view-bubble {
+        background: #0066FF;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 18px;
+        border-bottom-right-radius: 4px;
+        max-width: 85%;
+        align-self: flex-end;
+        font-size: 15px;
+        line-height: 1.4;
+      }
+      .frosted-input {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        width: 100%;
+        min-height: 80px;
+        border-radius: 12px;
+        padding: 12px;
+        font-family: inherit;
+        font-size: 14px;
+        color: #1d1d1f;
+        box-sizing: border-box;
+        resize: vertical;
+      }
+      .frosted-input:focus {
+        outline: none;
+        border-color: #0066FF;
+        box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+      }
+
       button {
         font-family: inherit;
         border: none;
@@ -444,19 +481,15 @@
           if (selected.status === 'auto_replied') {
             actionHtml = `
               <div class="detail-group">
-                <div class="app-metric-label">AI Handled Reply</div>
-                <div class="detail-value proposed-action">
-                  ${selected.generated_response || selected.draft_reply || "No reply generated."}
-                </div>
+                <div class="app-metric-label" style="margin-bottom: 8px;">AI Handled Reply</div>
+                <textarea class="frosted-input" readonly>${selected.generated_response || selected.draft_reply || "No reply generated."}</textarea>
               </div>
             `;
-          } else if (selected.action_type) {
+          } else if (selected.action_type || selected.draft_reply) {
             actionHtml = `
               <div class="detail-group">
-                <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
-                <div class="detail-value proposed-action">
-                  ${selected.action_payload || "No specific payload"}
-                </div>
+                <div class="app-metric-label" style="margin-bottom: 8px;">Draft Reply</div>
+                <textarea id="draft-reply-input" class="frosted-input">${selected.action_payload || selected.draft_reply || ""}</textarea>
               </div>
             `;
           }
