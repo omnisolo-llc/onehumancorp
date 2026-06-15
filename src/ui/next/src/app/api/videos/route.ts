@@ -6,7 +6,7 @@ const fallbackVideos = [
   { id: 3, title: "Activating your AI Support Agent", duration: "1:25", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
   { id: 4, title: "Adding a new product to your inventory", duration: "0:50", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
   { id: 5, title: "Managing staff and user permissions", duration: "1:10", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-  { id: 6, title: "Creating a marketing campaign", duration: "1:30", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
+  { id: 6, title: "Creating a marketing campaign", duration: "1:20", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
   { id: 7, title: "Using the Analytics Dashboard", duration: "1:20", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
   { id: 8, title: "How to handle refunds and returns", duration: "1:05", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
   { id: 9, title: "Customizing your storefront design", duration: "1:15", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },

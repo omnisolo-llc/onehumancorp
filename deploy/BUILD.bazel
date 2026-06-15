@@ -353,7 +353,7 @@ sh_binary(
         ":default_agent_load",
     ],
     deps = ["@bazel_tools//tools/bash/runfiles"],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

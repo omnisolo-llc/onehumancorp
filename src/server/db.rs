@@ -503,7 +503,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -514,7 +514,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
                     let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
@@ -814,6 +814,7 @@ impl DB {
                         owner_id TEXT,
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
+                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

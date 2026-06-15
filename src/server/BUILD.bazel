@@ -48,6 +48,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
     "//src/server/api:meta_webhook.rs",
+    "//src/server/api:twilio_webhook.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
@@ -59,6 +60,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
@@ -335,6 +337,7 @@ rust_library(
     compile_data = [
         "//src/ui/tauri/src/ui:all_files",
         "//src/ui/next/public/api/ui:all_files",
+        "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
@@ -453,7 +456,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -621,7 +624,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -675,7 +678,7 @@ test_suite(
         proc_macro_deps = [
             "@crates//:async-trait",
         ],
-        tags = ["manual"],
+
         target_compatible_with = select({
             "@platforms//os:linux": [],
             "//conditions:default": ["@platforms//:incompatible"],
@@ -793,7 +796,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -848,7 +851,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -875,7 +878,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -903,7 +906,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -934,7 +937,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

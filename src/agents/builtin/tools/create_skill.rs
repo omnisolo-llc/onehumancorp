@@ -62,3 +62,7 @@ pub fn create_skill_tool() -> Tool {
         execute: Arc::new(PydanticAdapter::new(CreateSkillExecutor {})),
     }
 }
+
+#[cfg(test)]
+#[path = "create_skill_test.rs"]
+mod create_skill_test;

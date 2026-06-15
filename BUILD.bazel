@@ -25,6 +25,7 @@ exports_files([
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
+    "CHANGELOG.md",
 ])
 
 config_setting(
@@ -90,7 +91,7 @@ sh_binary(
         "//deploy:server_load",
         "//deploy:setup_k8s.sh",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -113,7 +114,7 @@ py_binary(
     args = ["build"],
     data = [":docs_srcs"],
     main = "docs/mkdocs_runner.py",
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -132,7 +133,7 @@ py_binary(
     args = ["serve"],
     data = [":docs_srcs"],
     main = "docs/mkdocs_runner.py",
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -151,7 +152,7 @@ sh_binary(
     data = [
         "MODULE.bazel",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -162,7 +163,7 @@ sh_binary(
 alias(
     name = "hello-world",
     actual = "//src/examples/hello-world-agent:hello-world",
-    tags = ["manual"],
+
 )
 
 # gazelle:prefix onehumancorp

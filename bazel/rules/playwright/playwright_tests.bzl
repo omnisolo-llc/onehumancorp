@@ -133,6 +133,6 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
 
     native.test_suite(
         name = "playwright",
-        tags = ["manual"],
+
         tests = [":playwright_spec_coverage"] + shard_targets,
     )

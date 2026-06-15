@@ -216,7 +216,7 @@ pkg_rpm(
     license = "Apache-2.0",
     release = "1",
     summary = "One Human Corp application bundle",
-    tags = ["manual"],
+
     target_compatible_with = select({
         ":linux_with_rpmbuild": [],
         "//conditions:default": ["@platforms//:incompatible"],

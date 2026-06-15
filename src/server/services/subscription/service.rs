@@ -1,5 +1,5 @@
 use crate::domain::subscription::{
-    FulfillmentBatch, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
+    FulfillmentSchedule, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
 };
 use crate::db::{DB, DbStore};
 use sqlx::PgPool as DbPool;
@@ -153,6 +153,7 @@ impl SubscriptionService {
             status: SubscriptionStatus::Active,
             current_period_end: Utc::now().timestamp() + 30 * 24 * 60 * 60, // 30 days
             created_at: Utc::now().timestamp(),
+            predicted_restock_date: None,
         };
 
         self.ensure_subscription_schema().await?;
@@ -169,8 +170,8 @@ impl SubscriptionService {
             DbStore::Postgres => {
                 sqlx::query(
                     "INSERT INTO subscribers
-                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at)
-                     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date)
+                     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $7)",
                 )
                 .bind(&subscriber.id)
                 .bind(&subscriber.tenant_id)
@@ -178,6 +179,7 @@ impl SubscriptionService {
                 .bind(&subscriber.customer_id)
                 .bind(&subscriber.stripe_subscription_id)
                 .bind(status_str)
+                .bind(subscriber.predicted_restock_date)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -185,8 +187,8 @@ impl SubscriptionService {
             DbStore::Sqlite(pool) => {
                 sqlx::query(
                     "INSERT INTO subscribers
-                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date)
+                     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)",
                 )
                 .bind(&subscriber.id)
                 .bind(&subscriber.tenant_id)
@@ -194,6 +196,7 @@ impl SubscriptionService {
                 .bind(&subscriber.customer_id)
                 .bind(&subscriber.stripe_subscription_id)
                 .bind(status_str)
+                .bind(subscriber.predicted_restock_date)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -239,6 +242,73 @@ impl SubscriptionService {
         Ok(())
     }
 
+    pub async fn handle_stripe_webhook(&self, event_type: &str, subscription_id: &str) -> Result<(), String> {
+        match event_type {
+            "invoice.payment_succeeded" => {
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
+                            .bind(subscription_id)
+                            .execute(&self.db.pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
+                            .bind(subscription_id)
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+            "invoice.payment_failed" => {
+                let subscriber_id: Option<String> = match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let row = sqlx::query("SELECT id FROM subscribers WHERE stripe_subscription_id = $1")
+                            .bind(subscription_id)
+                            .fetch_optional(&self.db.pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        row.map(|r| r.try_get("id").unwrap_or_default())
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let row = sqlx::query("SELECT id FROM subscribers WHERE stripe_subscription_id = ?")
+                            .bind(subscription_id)
+                            .fetch_optional(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                        row.map(|r| r.try_get("id").unwrap_or_default())
+                    }
+                };
+
+                if let Some(sub_id) = subscriber_id {
+                    self.trigger_dunning(&sub_id).await?;
+                }
+            }
+            "customer.subscription.deleted" => {
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
+                            .bind(subscription_id)
+                            .execute(&self.db.pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
+                            .bind(subscription_id)
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
     pub async fn cancel_subscription(&self, subscriber_id: &str) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
@@ -260,12 +330,12 @@ impl SubscriptionService {
         Ok(())
     }
 
-    pub async fn generate_fulfillment_batch(
+    pub async fn generate_fulfillment_schedule(
         &self,
         tenant_id: &str,
         plan_id: &str,
         fulfillment_date: &str,
-    ) -> Result<FulfillmentBatch, String> {
+    ) -> Result<FulfillmentSchedule, String> {
         if tenant_id.trim().is_empty() {
             return Err("tenant id is required".to_string());
         }
@@ -311,7 +381,7 @@ impl SubscriptionService {
             }
         };
 
-        let batch = FulfillmentBatch {
+        let batch = FulfillmentSchedule {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
             plan_id: plan_id.to_string(),
@@ -325,7 +395,7 @@ impl SubscriptionService {
         match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query(
-                    "INSERT INTO fulfillment_batches
+                    "INSERT INTO fulfillment_schedules
                         (id, tenant_id, subscription_plan_id, fulfillment_date, subscriber_count, status, created_at, updated_at)
                      VALUES ($1, $2, $3, $4::date, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 )
@@ -340,7 +410,7 @@ impl SubscriptionService {
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query(
-                    "INSERT INTO fulfillment_batches
+                    "INSERT INTO fulfillment_schedules
                         (id, tenant_id, subscription_plan_id, fulfillment_date, subscriber_count, status, created_at, updated_at)
                      VALUES (?, ?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 )
@@ -358,7 +428,7 @@ impl SubscriptionService {
         Ok(batch)
     }
 
-    pub fn fulfillment_batch_event_payload(&self, batch: &FulfillmentBatch) -> serde_json::Value {
+    pub fn fulfillment_schedule_event_payload(&self, batch: &FulfillmentSchedule) -> serde_json::Value {
         serde_json::json!({
             "batch_id": batch.id,
             "subscription_plan_id": batch.plan_id,
@@ -397,14 +467,15 @@ impl SubscriptionService {
                         status TEXT NOT NULL DEFAULT 'ACTIVE',
                         stripe_subscription_id TEXT,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        predicted_restock_date BIGINT
                     )",
                 )
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
                 sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS fulfillment_batches (
+                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         subscription_plan_id TEXT NOT NULL REFERENCES subscription_plans(id) ON DELETE CASCADE,
@@ -446,14 +517,15 @@ impl SubscriptionService {
                         status TEXT NOT NULL DEFAULT 'ACTIVE',
                         stripe_subscription_id TEXT,
                         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        predicted_restock_date INTEGER
                     )",
                 )
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
                 sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS fulfillment_batches (
+                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         subscription_plan_id TEXT NOT NULL,
@@ -531,7 +603,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn generate_fulfillment_batch_counts_active_subscribers_from_db() {
+    async fn generate_fulfillment_schedule_counts_active_subscribers_from_db() {
         let service = sqlite_subscription_service().await;
         let tenant_id = "tenant-fulfillment";
         let plan = service
@@ -561,7 +633,7 @@ mod tests {
         service.cancel_subscription(&canceled.id).await.unwrap();
 
         let batch = service
-            .generate_fulfillment_batch(tenant_id, &plan.id, "2026-06-15")
+            .generate_fulfillment_schedule(tenant_id, &plan.id, "2026-06-15")
             .await
             .unwrap();
 
@@ -571,7 +643,7 @@ mod tests {
         assert_eq!(batch.subscriber_count, 2);
         assert_eq!(batch.fulfillment_date, "2026-06-15");
 
-        let payload = service.fulfillment_batch_event_payload(&batch);
+        let payload = service.fulfillment_schedule_event_payload(&batch);
         assert_eq!(payload["batch_id"], batch.id);
         assert_eq!(payload["subscription_plan_id"], plan.id);
         assert_eq!(payload["subscriber_count"], 2);
