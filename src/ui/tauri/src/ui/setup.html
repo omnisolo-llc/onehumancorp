@@ -424,7 +424,7 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      select, textarea {
+      input, select, textarea {
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
@@ -440,7 +440,7 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
-      select:focus, textarea:focus {
+      input:focus, select:focus, textarea:focus {
         outline: none;
         border-color: #0066FF;
         background: rgba(255, 255, 255, 0.8);
@@ -689,12 +689,12 @@
           background: rgba(0, 102, 255, 0.2);
           box-shadow: 0 0 0 1px #0066FF;
         }
-        select, textarea {
+        input, select, textarea {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        select:focus, textarea:focus {
+        input:focus, select:focus, textarea:focus {
           border-color: #0066FF;
           background: rgba(255, 255, 255, 0.15);
         }
@@ -834,7 +834,7 @@
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="Tell us about your business that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-top: 10px; margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+
 
         <div class="btn-group" style="margin-top: 24px;">
           <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
@@ -867,6 +867,22 @@
                 <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 12px; border-radius: 8px;">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 12px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
+        </div>
+      </div>
+
+
+      <div class="step" id="step-approval">
+        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Ready to Launch</h1>
+        <p>Your business is ready to be created.</p>
+
+        <div id="approval-details" class="glassmorphism" style="text-align: left; padding: 16px; margin-bottom: 24px; border-radius: 8px;">
+        </div>
+
+        <div class="btn-group">
+          <button id="approve-publish-btn" data-testid="approve-publish-btn">Approve & Publish</button>
         </div>
       </div>
 
@@ -1197,7 +1213,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState)
+                state = { ...state, ...(apiState) };
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
@@ -1344,7 +1360,7 @@
       function validateStep(stepId) {
           let isValid = true;
 
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat' || stepId === 'step-approval') {
               return true;
           }
 
@@ -1458,7 +1474,7 @@
 
       function updateStepper(stepId) {
           const stepperIndicator = document.getElementById('stepper-indicator');
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat' || stepId === 'step-approval') {
               if (stepperIndicator) stepperIndicator.style.display = 'none';
           } else {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
@@ -1487,6 +1503,7 @@
           'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
+      };
 
 
       function populateCategories() {
@@ -1640,7 +1657,7 @@
                       paymentPref: "online",
                       adminEmail: "admin@mybusiness.com",
                       adminName: "Admin",
-                      adminPassword: "password",
+                      adminPassword: "password123",
                       websiteTemplate: "auto",
                       firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
                       firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
@@ -1649,8 +1666,46 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
+                  };
 
 
+                  window.pendingOnboardingReq = req;
+                  const approvalDetails = document.getElementById('approval-details');
+                  if (approvalDetails) {
+                      let productsHtml = '';
+                      if (req.initialProducts && req.initialProducts.length > 0) {
+                          productsHtml = req.initialProducts.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
+                      } else {
+                          productsHtml = `<li>${req.firstProductName} - ${req.firstProductPrice}</li>`;
+                      }
+
+                      approvalDetails.innerHTML = `
+                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.companyName}</div>
+                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.businessType}</div>
+                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
+                      `;
+                  }
+                  await goToStep('step-approval');
+              }
+          } catch (e) {
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+          } finally {
+              chatSendBtn.disabled = false;
+          }
+      }
+
+
+      const approvePublishBtn = document.getElementById('approve-publish-btn');
+      if (approvePublishBtn) {
+          approvePublishBtn.addEventListener('click', async () => {
+              if (!window.pendingOnboardingReq) return;
+              const req = window.pendingOnboardingReq;
+
+              approvePublishBtn.disabled = true;
+              approvePublishBtn.innerHTML = '<div class="spinner"></div>Publishing...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1697,13 +1752,15 @@
                       }
                       localStorage.setItem('has_onboarded', 'true');
                       window.location.href = "success.html";
+                  } else {
+                      throw new Error('Failed to start onboarding');
                   }
+              } catch (e) {
+                  approvePublishBtn.disabled = false;
+                  approvePublishBtn.innerText = 'Approve & Publish';
+                  alert('Error publishing storefront.');
               }
-          } catch (e) {
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
-          } finally {
-              chatSendBtn.disabled = false;
-          }
+          });
       }
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
@@ -1762,7 +1819,7 @@
                       paymentPref: "online",
                       adminEmail: "admin@mybusiness.com",
                       adminName: "Admin",
-                      adminPassword: "password",
+                      adminPassword: "password123",
                       websiteTemplate: "auto",
                       firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
                       firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
@@ -1771,6 +1828,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
+                  };
 
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1923,6 +1981,7 @@
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General"
+               };
 
 
 
@@ -2713,6 +2772,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -2746,6 +2806,7 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -2769,6 +2830,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -3229,6 +3291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -3261,6 +3324,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
+                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -3282,6 +3346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);

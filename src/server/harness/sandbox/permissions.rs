@@ -1,10 +1,15 @@
-#![allow(clippy::new_without_default)]
 use regex::Regex;
 use super::manager::SandboxPolicy;
 
 pub struct PermissionEvaluator {
     disabled_commands: Vec<String>,
     disabled_patterns: Vec<Regex>,
+}
+
+impl Default for PermissionEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PermissionEvaluator {

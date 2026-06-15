@@ -2,6 +2,7 @@
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
+import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 
@@ -439,6 +440,7 @@ export default function Dashboard() {
       <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
+      <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}

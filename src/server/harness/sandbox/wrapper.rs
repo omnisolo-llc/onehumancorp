@@ -1,4 +1,3 @@
-#![allow(clippy::new_without_default)]
 use super::manager::SandboxPolicy;
 
 pub struct BashWrapper {
@@ -6,6 +5,12 @@ pub struct BashWrapper {
     blocked_domains: Vec<String>,
     socat_socket_path: Option<String>,
     socat_proxy_port: Option<u16>,
+}
+
+impl Default for BashWrapper {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BashWrapper {

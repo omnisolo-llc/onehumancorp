@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_unwrap, clippy::collapsible_if, clippy::nonminimal_bool, clippy::implicit_saturating_sub)]
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -501,9 +500,9 @@ impl LlmClient for OpenAIClient {
         }
 
         let result = resp.json::<OpenAIResponse>().await;
-        if result.is_err() {
+        if let Err(e) = result {
             cb.record_failure();
-            return Err(format!("openai api error: failed to parse response: {:?}", result.unwrap_err()).into());
+            return Err(format!("api error: failed to parse response: {:?}", e).into());
         }
         let result = result.unwrap();
         cb.record_success();
@@ -602,8 +601,8 @@ impl LlmClient for OpenAIClient {
         let result: OpenAIEmbeddingResponse = resp.json().await?;
 
         // Handle Minimax base_resp wrapper which always returns HTTP 200 OK
-        if let Some(base_resp) = result.base_resp {
-            if base_resp.status_code != 0 && base_resp.status_code != 1000 {
+        if let Some(base_resp) = result.base_resp
+            && base_resp.status_code != 0 && base_resp.status_code != 1000 {
                 cb.record_failure();
                 return Err(format!(
                     "minimax embeddings error (status {}): {}",
@@ -611,7 +610,6 @@ impl LlmClient for OpenAIClient {
                 )
                 .into());
             }
-        }
 
         cb.record_success();
 

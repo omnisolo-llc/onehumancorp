@@ -1,4 +1,3 @@
-#![allow(clippy::new_without_default)]
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::process::Stdio;
@@ -239,6 +238,12 @@ pub struct ServeMcpRequest {
 /// Expose the OHC Agent Harness itself as an MCP Server
 pub struct HarnessMcpServer {
     // The agent harness MCP Server could hold configuration here
+}
+
+impl Default for HarnessMcpServer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HarnessMcpServer {

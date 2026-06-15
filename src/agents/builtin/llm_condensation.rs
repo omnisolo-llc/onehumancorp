@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
 
@@ -28,7 +29,7 @@ pub async fn condense_summary_llm(
 
             let req = ChatRequest {
                 model: model.to_string(),
-                system: ::server_pricing::compression::reduce_tokens(system_prompt),
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                 messages: vec![Message::user(chunk)],
                 tools: vec![],
                 max_tokens: 2000,
@@ -52,7 +53,7 @@ pub async fn condense_summary_llm(
     if raw_output.len() == current_text.len() && current_text.len() > 1000 {
         let req = ChatRequest {
             model: model.to_string(),
-            system: ::server_pricing::compression::reduce_tokens(system_prompt),
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(current_text.clone())],
             tools: vec![],
             max_tokens: 2000,

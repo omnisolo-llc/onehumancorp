@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
 /// Master Catalog B.5. Prompt Construction
@@ -205,14 +206,15 @@ impl HierarchicalPromptBuilder {
         let mut user_instr = cfg.user_instructions.clone();
 
         // Inject cascading AGENTS.md instructions
-        if let Some(agents_md) = cascading_agents_md
-            && !agents_md.is_empty() {
+        if let Some(agents_md) = cascading_agents_md {
+            if !agents_md.is_empty() {
                 if !user_instr.is_empty() {
                     user_instr.push_str("\n\n---\n\n");
                 }
                 user_instr.push_str("[Cascading AGENTS.md Instructions]:\n");
                 user_instr.push_str(&agents_md);
             }
+        }
 
         // OpenHands MicroAgents Injection
         if let Ok(repo_dir) = std::env::current_dir() {
@@ -377,7 +379,7 @@ mod tests {
 
         // Let's use exactly 32,768 logical characters to reach the boundary, then push an emoji.
         let mut content = "A".repeat(32768);
-        content.push_str("😊");
+        content.push('😊');
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
@@ -488,7 +490,7 @@ mod tests {
     #[test]
     fn test_summarize_recent_tool_errors_char_boundary() {
         let mut error_msg = "error: ".to_string() + &"A".repeat(88) + "😊";
-        error_msg = error_msg + "BCDEF";
+        error_msg += "BCDEF";
         let messages = vec![Message::user(error_msg)];
 
         let summary = PromptBuilder::summarize_recent_tool_errors(&messages);
@@ -500,8 +502,7 @@ mod tests {
 
     #[test]
     fn test_high_signal_reinjection_trigger() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.user_instructions = "Objective: Build a skyscraper.".repeat(200); // ~6000 chars
+        let mut cfg = AgentRunConfig { user_instructions: "Objective: Build a skyscraper.".repeat(200), ..Default::default() }; // ~6000 chars
         cfg.developer_instructions = "Use steel beams.".repeat(50); // ~800 chars
         // Total will be > 4000 chars
 
