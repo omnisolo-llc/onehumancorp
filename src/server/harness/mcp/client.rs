@@ -240,6 +240,12 @@ pub struct HarnessMcpServer {
     // The agent harness MCP Server could hold configuration here
 }
 
+impl Default for HarnessMcpServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HarnessMcpServer {
     pub fn new() -> Self {
         Self {}
