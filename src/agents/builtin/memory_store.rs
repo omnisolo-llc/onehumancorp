@@ -3627,3 +3627,86 @@ mod override_tests_resolve {
         );
     }
 }
+
+
+#[cfg(test)]
+mod additional_tests_fallback {
+    use super::*;
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_sqlite_fallback_conflict() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+
+        // Insert two very similar embeddings
+        let v1 = vec![1.0_f32; 10];
+        let mut v2 = vec![1.0_f32; 10];
+        v2[0] = 0.99; // Very similar, should be < 0.05 distance
+
+        let record_a = EmbeddingRecord {
+            id: "rec_fallback_a".to_string(),
+            tenant_id: "org_fallback".to_string(),
+            agent_id: "agent_1".to_string(),
+            content: "content A".to_string(),
+            embedding: v1,
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_b = EmbeddingRecord {
+            id: "rec_fallback_b".to_string(),
+            tenant_id: "org_fallback".to_string(),
+            agent_id: "agent_1".to_string(),
+            content: "content B".to_string(),
+            embedding: v2,
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+        assert_eq!(conflicts.len(), 1, "Should find exactly 1 conflicting pair");
+
+        let (a, b) = &conflicts[0];
+        assert_eq!(a.id, "rec_fallback_a");
+        assert_eq!(b.id, "rec_fallback_b");
+    }
+}

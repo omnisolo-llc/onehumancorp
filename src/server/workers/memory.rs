@@ -19,7 +19,7 @@ impl MemoryConsolidationWorker {
         }
     }
 
-    pub fn start(&self) {
+    pub fn start(&self) -> tokio::task::JoinHandle<()> {
         let repository = self.repository.clone();
         let interval_duration = self.poll_interval;
         let prune_threshold_days = self.prune_threshold_days;
@@ -37,7 +37,7 @@ impl MemoryConsolidationWorker {
                     tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
                 }
             }
-        });
+        })
     }
 }
 
@@ -56,11 +56,12 @@ mod tests {
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let worker = MemoryConsolidationWorker::new(repo);
 
-        worker.start();
+        let handle = worker.start();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         assert!(true, "Worker started successfully");
+        handle.abort();
     }
 
     #[tokio::test]
@@ -131,7 +132,7 @@ mod tests {
 
         let mut worker = MemoryConsolidationWorker::new(repo.clone());
         worker.poll_interval = std::time::Duration::from_millis(10); // Fast interval for testing
-        worker.start();
+        let handle = worker.start();
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
@@ -143,6 +144,7 @@ mod tests {
             .expect("Failed to query consolidated_memory count");
 
         assert_eq!(row.0, 0, "Stale record should be pruned by worker pipeline");
+        handle.abort();
     }
 
     #[tokio::test]
@@ -232,7 +234,7 @@ mod tests {
 
         let mut worker = MemoryConsolidationWorker::new(repo.clone());
         worker.poll_interval = std::time::Duration::from_millis(10);
-        worker.start();
+        let handle = worker.start();
 
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
@@ -249,6 +251,7 @@ mod tests {
         assert_eq!(id, "conflict_winner", "The winner must be preserved");
         // Loser has 1, winner has 2, logic increments winner by loser + 1 -> 2 + 1 + 1 = 4.
         assert_eq!(ref_count, 4, "The winner should inherit the loser's reference count");
+        handle.abort();
     }
 }
 // Integration complete.
@@ -270,11 +273,12 @@ mod additional_tests {
         let mut worker = MemoryConsolidationWorker::new(repo);
         worker.poll_interval = std::time::Duration::from_millis(10);
 
-        worker.start();
+        let handle = worker.start();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         // The worker will fail queries internally but shouldn't panic
         assert!(true, "Worker didn't panic when schema is missing");
+        handle.abort();
     }
 
     #[tokio::test]
@@ -309,9 +313,10 @@ mod additional_tests {
         worker.poll_interval = std::time::Duration::from_millis(10);
         worker.prune_threshold_days = 90;
 
-        worker.start();
+        let handle = worker.start();
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         assert_eq!(worker.prune_threshold_days, 90, "Worker threshold properly configured and stable during rapid loop");
+        handle.abort();
     }
 }
