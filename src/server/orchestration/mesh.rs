@@ -13,10 +13,6 @@ pub trait TeammateMesh: Send + Sync {
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
-    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe(pattern, handler).await
-    }
-
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
@@ -61,10 +57,6 @@ impl MeshTransport for LocalTeammateMesh {
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.inner.subscribe_pattern(pattern, handler).await
-    }
-
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
@@ -86,14 +78,23 @@ pub struct CentrifugeNode {
     transport: Arc<dyn MeshTransport>,
     publish_counter: Counter<u64>,
     receive_counter: Counter<u64>,
+    timeout: Option<std::time::Duration>,
 }
 
 impl CentrifugeNode {
     pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
+        Self::new_internal(transport, None)
+    }
+
+    pub fn new_with_timeout_val(transport: Arc<dyn MeshTransport>, timeout: std::time::Duration) -> Self {
+        Self::new_internal(transport, Some(timeout))
+    }
+
+    fn new_internal(transport: Arc<dyn MeshTransport>, timeout: Option<std::time::Duration>) -> Self {
         let meter = global::meter("ohc.orchestration.mesh");
         let publish_counter = meter.u64_counter("mesh.messages.published").build();
         let receive_counter = meter.u64_counter("mesh.messages.received").build();
-        Self { transport, publish_counter, receive_counter }
+        Self { transport, publish_counter, receive_counter, timeout }
     }
 }
 
@@ -125,12 +126,14 @@ impl TeammateMesh for CentrifugeNode {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        self.transport.acquire_lock(resource, owner, ttl_seconds).await
-    }
-
-    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.receive_counter.add(1, &[KeyValue::new("pattern", pattern.to_string())]);
-        self.transport.subscribe_pattern(pattern, handler).await
+        if let Some(t) = self.timeout {
+            match tokio::time::timeout(t, self.transport.acquire_lock(resource, owner, ttl_seconds)).await {
+                Ok(res) => res,
+                Err(_) => Err("Timeout acquiring lock".to_string()),
+            }
+        } else {
+            self.transport.acquire_lock(resource, owner, ttl_seconds).await
+        }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
@@ -495,8 +498,8 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
     match db_store {
         crate::db::DbStore::Postgres => {
             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            let transport = crate::orchestration::hub::RedisMeshTransport::new(&redis_url).await
-                .map_err(|e| format!("Failed to create RedisMeshTransport: {}", e))?;
+            let transport = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(&redis_url).await
+                .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
@@ -524,7 +527,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                 }
                 Err(e) => {
                     tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
-                    let transport = crate::orchestration::hub::MemoryMeshTransport::new();
+                    let transport = ohc_builtin_agent::mesh::transport::InProcessTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
             }

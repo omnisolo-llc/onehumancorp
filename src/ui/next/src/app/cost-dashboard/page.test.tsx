@@ -6,13 +6,7 @@ import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(),
-  usePathname: () => '/cost-dashboard',
-}));
-
-vi.mock('../../components/TooltipRegistry', () => ({
-  TooltipProvider: ({ children }: any) => children,
-  WithTooltip: ({ children }: any) => children,
+  useRouter: vi.fn()
 }));
 
 const mockPush = vi.fn();
@@ -128,7 +122,7 @@ describe('CostDashboardPage', () => {
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
-    expect(screen.getAllByText('Cost Transparency')[0]).toBeDefined();
+    expect(screen.getByText('Cost Transparency')).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
 
     // total revenue

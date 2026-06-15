@@ -1,217 +1,318 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import StripeTerminalClient from './StripeTerminalClient';
+import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
-import { SyncManager } from '../../../lib/sync/SyncManager';
+import StripeTerminalClient from './StripeTerminalClient';
+import Link from 'next/link';
 
-const t = (text: string) => text;
+// Offline storage helper for staff data
+const OfflineStore = {
+  getStaff: () => JSON.parse(localStorage.getItem('ohc_offline_staff') || '[]'),
+  setStaff: (staff: any[]) => localStorage.setItem('ohc_offline_staff', JSON.stringify(staff)),
 
-export default function POSTerminal() {
+  getEvents: () => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'),
+  addEvent: (event: any) => {
+    const events = OfflineStore.getEvents();
+    events.push(event);
+    localStorage.setItem('ohc_offline_events', JSON.stringify(events));
+  },
+  clearEvents: () => localStorage.setItem('ohc_offline_events', '[]'),
+
+  getPosTransactions: () => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'),
+  setPosTransactions: (transactions: any[]) => localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions)),
+  addPosTransaction: (tx: any) => {
+    const transactions = OfflineStore.getPosTransactions();
+    transactions.push(tx);
+    localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+  },
+  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
+};
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  stock: number;
+}
+
+export default function TerminalPage() {
+  const { t } = useTranslation();
+  const { currency, convert } = useCurrency();
   const [pin, setPin] = useState('');
-  const [locked, setLocked] = useState(true);
+  const [activeStaff, setActiveStaff] = useState<any | null>(null);
   const [clockedIn, setClockedIn] = useState(false);
-  const [activeStaff, setActiveStaff] = useState<any>(null);
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [reserving, setReserving] = useState(false);
-  const [orderStatus, setOrderStatus] = useState('');
-  const [isOffline, setIsOffline] = useState(false);
+  const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+  const [orderStatus, setOrderStatus] = useState('');
+  const [reserving, setReserving] = useState(false);
+  const [inventory, setInventory] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
+  useEffect(() => {
+    const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+    if (navigator.onLine) {
+      fetch('/api/staff')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            OfflineStore.setStaff(data);
+          } else if (data && data.staff) {
+            OfflineStore.setStaff(data.staff);
+          }
+        })
+        .catch(console.error);
+
+      fetch(`/api/pos/inventory?tenant_id=${tenant}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.inventory) {
+            setInventory(data.inventory);
+          }
+        })
+        .catch(console.error);
+    }
+  }, []);
+
+  // Network listener
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
-    if (typeof window !== 'undefined') {
-        setIsOffline(!navigator.onLine);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
+    // Set initial state safely
+    setIsOffline(!navigator.onLine);
 
-        return () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-        };
-    }
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
-  const handlePinEntry = async (digit: string) => {
+  // Background sync
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      if (navigator.onLine) {
+        const events = OfflineStore.getEvents();
+        const posTransactions = OfflineStore.getPosTransactions();
+
+        if (events.length > 0 || posTransactions.length > 0) {
+          setSyncCount(events.length + posTransactions.length);
+          setSyncing(true);
+          try {
+            const syncTasks = [];
+            if (events.length > 0) {
+              syncTasks.push(
+                fetch("/api/staff/timecard", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(events)
+                }).then(res => { if (res.ok) OfflineStore.clearEvents(); })
+              );
+            }
+
+            if (posTransactions.length > 0) {
+              const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+              syncTasks.push(
+                fetch("/api/v1/payments/terminal/sync_offline", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+                }).then(async (res) => {
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                      const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                      OfflineStore.setPosTransactions(failedTxs);
+                    } else {
+                      OfflineStore.clearPosTransactions();
+                    }
+                  }
+                })
+              );
+            }
+            await Promise.all(syncTasks);
+
+          } catch (e) {
+            console.error("Sync failed", e);
+          } finally {
+            setSyncing(false);
+          }
+        }
+      }
+    }, 10000); // Try syncing every 10 seconds
+
+    return () => clearInterval(syncInterval);
+  }, []);
+
+  const handlePinEntry = (digit: string) => {
     if (pin.length < 4) {
       const newPin = pin + digit;
       setPin(newPin);
-      if (newPin.length === 4) {
-        if (isOffline) {
-           const staff = { id: 'staff_1', name: 'Offline Manager', role: 'Manager' };
-           setActiveStaff(staff);
-           setLocked(false);
-           setPin('');
-           return;
-        }
+      setError('');
 
-        try {
-          const res = await fetch('/api/v1/pos/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: newPin })
-          });
-          const data = await res.json();
-          if (data.success) {
-            setActiveStaff(data.staff);
-            setLocked(false);
-            setPin('');
-          } else {
-            alert(t('Invalid PIN'));
-            setPin('');
+      if (newPin.length === 4) {
+        // Attempt to authenticate offline
+        const staff = OfflineStore.getStaff();
+        const found = staff.find((s: any) => s.pin_hash === newPin); // Simple check
+
+        if (found) {
+          setActiveStaff(found);
+          // Check last event locally to determine clockedIn status
+          const events = OfflineStore.getEvents().filter((e: any) => e.staff_id === found.id);
+          if (events.length > 0) {
+             const lastEvent = events[events.length - 1];
+             setClockedIn(lastEvent.event_type === 'CLOCK_IN');
           }
-        } catch (e) {
-           console.error("Auth failed, falling back to offline", e);
-           const staff = { id: 'staff_1', name: 'Offline Manager (Fallback)', role: 'Manager' };
-           setActiveStaff(staff);
-           setLocked(false);
-           setPin('');
+        } else {
+          setError(t('Invalid PIN'));
+          setPin('');
         }
       }
     }
   };
 
   const handleClear = () => setPin('');
-
   const handleLock = () => {
-    setLocked(true);
-    setActiveStaff(null);
+      setActiveStaff(null);
+      setPin('');
   };
 
-  const loadDashboard = async () => {
-    if (isOffline) {
-       // Just load something empty for now
-       setInventory([]);
-       return;
-    }
-    try {
-      const res = await fetch('/api/pos/inventory');
-      const data = await res.json();
-      setInventory(data);
-    } catch (e) {
-      console.error("Failed to load inventory", e);
-      setInventory([]);
-    }
-  };
-
-  useEffect(() => {
-    if (!locked && activeStaff) {
-      loadDashboard();
-    }
-  }, [locked, activeStaff]);
-
-  const handleClockAction = async (action: 'CLOCK_IN' | 'CLOCK_OUT') => {
+  const handleClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT') => {
     if (!activeStaff) return;
 
-    const isClockingIn = action === 'CLOCK_IN';
-    setClockedIn(isClockingIn);
-
     const event = {
-      type: action,
-      payload: { staff_id: activeStaff.id, timestamp: new Date().toISOString() },
+      staff_id: activeStaff.id,
+      tenant_id: activeStaff.tenant_id || 'default_tenant',
+      event_type: type,
+      timestamp: new Date().toISOString(),
+      sync_status: 'PENDING'
     };
 
-    await SyncManager.getInstance().enqueue(event);
+    OfflineStore.addEvent(event);
+    setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleSelectProduct = (product: any) => {
+  const handleQuickCharge = async () => {
+    const basePrice = 5000; // $50.00
+    const converted = convert(basePrice, 'USD', currency);
+    if (converted.isOffline) {
+      setOfflineConversion(true);
+      setTimeout(() => setOfflineConversion(false), 3000);
+    }
+
+    if (isOffline) {
+      setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+      // Bypass Stripe Terminal and save offline
+      const tx = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        amount_cents: converted.amount,
+        currency: currency,
+        payload: JSON.stringify([{ product_id: 'custom_charge', quantity: 1 }]),
+        client_id: 'terminal_1',
+        timestamp: new Date().toISOString()
+      };
+      OfflineStore.addPosTransaction(tx);
+      setOrderStatus(`${t('Payment Saved Locally (Offline)')} - ${converted.amount / 100} ${currency}`);
+      setTimeout(() => setOrderStatus(''), 3000);
+    } else {
+      setReserving(true);
+      setOrderStatus(t('Processing/Reserving...'));
+
+      try {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'custom_charge', quantity: 1, ttl_seconds: 15 })
+        });
+
+        const reserveData = await reserveRes.json();
+
+        if (!reserveData.success) {
+          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+          setReserving(false);
+          return;
+        }
+
+        setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+        await fetch('/api/v1/payments/terminal/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+             tenant_id: activeStaff?.tenant_id || "default_tenant",
+             product_id: 'custom_charge',
+             quantity: 1,
+             lock_id: reserveData.lock_id,
+             amount_cents: converted.amount
+          })
+        });
+        setOrderStatus(`${t('Payment Completed')}`);
+      } catch (err) {
+        setOrderStatus(t('Error connecting to server'));
+      } finally {
+        setReserving(false);
+      }
+    }
+  };
+
+  const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
     setOrderStatus('');
   };
 
   const handleOptimisticReserve = (productId: string) => {
-    setInventory(prev => prev.map(p => {
-      if (p.id === productId) {
-        return { ...p, stock: p.stock - 1 };
-      }
-      return p;
-    }));
+    setInventory(prev => prev.map(p => p.id === productId ? { ...p, stock: p.stock - 1 } : p));
   };
 
   const handleOptimisticRollback = (productId: string) => {
-    setInventory(prev => prev.map(p => {
-      if (p.id === productId) {
-        return { ...p, stock: p.stock + 1 };
-      }
-      return p;
-    }));
+    setInventory(prev => prev.map(p => p.id === productId ? { ...p, stock: p.stock + 1 } : p));
   };
 
-  const handleQuickCharge = async () => {
-     if (!activeStaff) return;
-     setReserving(true);
-
-     if (isOffline) {
-         setOrderStatus(t('Processing offline quick charge...'));
-         const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-         const tx = {
-            id: transactionId,
-            type: 'tap_to_pay',
-            amount: 5000,
-            currency: 'usd',
-            product_id: 'quick_charge',
-            quantity: 1,
-            timestamp: new Date().toISOString()
-         };
-
-         await SyncManager.getInstance().enqueue(tx);
-
-         setTimeout(() => {
-            setOrderStatus(t('Offline Quick Charge Saved.'));
-            setReserving(false);
-            setTimeout(() => setOrderStatus(''), 3000);
-         }, 1000);
-         return;
-     }
-
-     try {
-         // simulate quick charge
-         await new Promise(r => setTimeout(r, 1000));
-         setOrderStatus(t('Quick charge successful'));
-     } catch (e) {
-         setOrderStatus(t('Quick charge failed'));
-     } finally {
-         setReserving(false);
-         setTimeout(() => setOrderStatus(''), 3000);
-     }
-  };
-
-  if (locked) {
+  if (!activeStaff) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter px-4 w-full">
-        <div className="w-[375px] bg-white rounded-3xl shadow-xl overflow-hidden p-8 border border-gray-100 relative">
-           <div className="text-center mb-8">
-             <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-             </div>
-             <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
-             <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
-             {isOffline && <p className="text-orange-500 font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter w-full overflow-hidden">
+        <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-[#F5F5F7] text-gray-900 p-8 flex flex-col items-center relative overflow-x-hidden md:shadow-2xl">
+           <div className="absolute top-8 left-8">
+              <Link href="/dashboard" className="text-gray-400 hover:text-white flex items-center gap-1 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                {t('Dashboard')}
+              </Link>
+           </div>
+           <div className="absolute top-8 right-8 flex items-center gap-4">
+              {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
+              <LocalizationToggle />
            </div>
 
-           <div className="flex justify-center mb-8">
-             <div className="flex space-x-4">
-               {[...Array(4)].map((_, i) => (
-                 <div key={i} className={`w-4 h-4 rounded-full transition-all ${i < pin.length ? 'bg-blue-600 scale-110 shadow-sm' : 'bg-gray-200'}`} />
-               ))}
-             </div>
+           <div className="mt-20 mb-12 text-center">
+             <h1 className="text-2xl font-bold font-outfit mb-2">{t('Terminal Locked')}</h1>
+             <p className="text-gray-400">{t('Enter your PIN to unlock')}</p>
            </div>
 
-           <div className="grid grid-cols-3 gap-y-6 gap-x-6 max-w-[280px] mx-auto">
-             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-               <div key={num} className="flex justify-center">
-                 <button
-                   onClick={() => handlePinEntry(num.toString())}
-                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-50 text-3xl font-light text-gray-800 hover:bg-gray-100 hover:shadow-inner active:bg-gray-200 transition-all flex items-center justify-center min-h-[44px] min-w-[44px]"
-                 >
-                   {num}
-                 </button>
-               </div>
+           <div className="flex gap-4 mb-12">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className={`w-4 h-4 rounded-full border-2 ${pin.length > i ? 'bg-white border-white' : 'border-gray-600'}`}></div>
+              ))}
+           </div>
+
+           {error && <p className="text-red-500 mb-4 animate-bounce">{error}</p>}
+
+           <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full max-w-[280px]">
+             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+               <button
+                 key={num}
+                 onClick={() => handlePinEntry(num.toString())}
+                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
+               >
+                 {num}
+               </button>
              ))}
              <div className="col-start-2">
                <button
@@ -245,8 +346,8 @@ export default function POSTerminal() {
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
+            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
+            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
             {isOffline ? (
               <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
             ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
@@ -37,23 +37,19 @@ function formatStatus(status?: string) {
   return status || "Open";
 }
 
-function InboxWorkspace({
-  messages,
-  sourceLabel,
-}: {
-  messages: Message[];
-  sourceLabel: string;
-}) {
+function InboxContent() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
 
+  const { data: messages } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
+
   const selected = useMemo(() => {
-    if (messages.length === 0) return null;
+    if (!messages || messages.length === 0) return null;
     return messages.find((m) => m.id === selectedId) || messages[0];
   }, [messages, selectedId]);
 
-  const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+  const openCount = (messages || []).filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
@@ -103,7 +99,7 @@ function InboxWorkspace({
       title="Unified Inbox"
       subtitle="Local-first offline unified customer conversations and drafts."
       statusItems={[
-        { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
+        { label: "Messages", value: String(messages?.length || 0), tone: (messages?.length || 0) > 0 ? "good" : "neutral" },
         { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
@@ -115,12 +111,12 @@ function InboxWorkspace({
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
               <div>
                 <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
-                <div className="app-list-subtitle text-xs text-gray-500">{sourceLabel}</div>
+                <div className="app-list-subtitle text-xs text-gray-500">Loaded securely via PowerSync local embedded DB.</div>
               </div>
             </div>
             <div id="messages-list" className="app-list p-2">
-              {messages.length === 0 ? (
-                <div className="app-empty">No inbox messages found for this tenant.</div>
+              {!messages || messages.length === 0 ? (
+                <div className="app-empty">No inbox messages found offline. Connect to sync.</div>
               ) : messages.map((message) => (
                 <button
                   key={message.id}
@@ -216,70 +212,10 @@ function InboxWorkspace({
   );
 }
 
-function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
-}
-
-function ApiInboxFallback() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadMessages() {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
-        if (!res.ok) throw new Error("Failed to load inbox messages");
-        const data = await res.json();
-        setMessages(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load inbox messages");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadMessages();
-  }, []);
-
-  if (error) {
-    return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel">
-          <div className="app-empty">{error}</div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (loading) {
-    return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel">
-          <div className="app-empty">Loading inbox messages...</div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
-}
-
 export default function InboxPage() {
   return (
-    <PowerSyncProvider
-      fallback={(
-        <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-          <div className="app-panel">
-            <div className="app-empty">Loading local database...</div>
-          </div>
-        </AppShell>
-      )}
-      unsupportedFallback={<ApiInboxFallback />}
-    >
-      <PowerSyncInboxContent />
+    <PowerSyncProvider>
+      <InboxContent />
     </PowerSyncProvider>
   );
 }

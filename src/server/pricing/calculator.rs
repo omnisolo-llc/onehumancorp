@@ -169,20 +169,6 @@ pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
     (cost * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_storage_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_storage_cost(bytes, config);
-    (cost * 100.0).round() as i64
-}
-
-pub fn calculate_storage_cost(bytes: i64, config: &CostConfig) -> f64 {
-    if bytes < 0 {
-        return 0.0;
-    }
-    let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let cost = gb * config.cost_per_gb_month;
-    (cost * 10000.0).round() / 10000.0
-}
-
 pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
     if cost <= 0.0 {
         return 0.0;
@@ -377,16 +363,6 @@ mod tests {
         let small_bytes: i64 = 1024 * 1024; // 1 MB
         let cost = calculate_network_cost(small_bytes, &config);
         assert!(cost > 0.0 && cost < 0.01);
-    }
-
-    #[test]
-    fn test_calculate_storage_cost() {
-        let config = CostConfig {
-            cost_per_gb_month: 0.10,
-            ..Default::default()
-        };
-        let bytes: i64 = 10 * 1024 * 1024 * 1024;
-        assert_eq!(calculate_storage_cost_cents(bytes, &config), 100);
     }
 
     #[test]

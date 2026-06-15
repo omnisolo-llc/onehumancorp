@@ -60,7 +60,7 @@ impl PromptCache {
             });
 
             let pricing = super::calculator::get_pricing(model);
-            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.cached_cost;
+            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.input_cost;
             (cost_dollars * 100.0).round() as i64
         } else {
             0
@@ -207,8 +207,8 @@ mod tests {
         let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response.is_some());
         assert_eq!(response.unwrap().text, "Paris");
-        // 1,000,000 tokens * 2.50 / 1M = 2.5 dollars = 250 cents
-        assert_eq!(cost, 250);
+        // 1,000,000 tokens * 5.00 / 1M = 5.0 dollars = 500 cents
+        assert_eq!(cost, 500);
     }
 
     #[test]

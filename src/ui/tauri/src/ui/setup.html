@@ -20,7 +20,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         text-align: center;
         max-width: 480px;
         width: 100%;
@@ -33,7 +33,7 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
       }
       h1 {
         margin-top: 0;
@@ -147,7 +147,7 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         .glassmorphism {
           border-radius: 16px;
@@ -155,7 +155,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         h1 {
           color: #F5F5F7;
@@ -527,9 +527,9 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" inputmode="url" autocomplete="off" enterkeyhint="next" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <input type="text" id="chat-input" autocomplete="off" enterkeyhint="send" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
@@ -556,6 +556,8 @@
             <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
             <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
             <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('FoodCart', event)" data-testid="persona-foodcart">I'm a Food Cart Operator</div>
+            <div class="persona-chip" onclick="applyPersona('Agency', event)" data-testid="persona-agency">I'm an Agency Principal</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -614,10 +616,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" autocomplete="off" enterkeyhint="next" />
 
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
@@ -635,7 +637,7 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" autocomplete="off" enterkeyhint="next" />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism">
@@ -659,10 +661,10 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" />
         <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
@@ -676,7 +678,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" autocomplete="off" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
@@ -740,6 +742,20 @@
               state.assistantName = "Melody";
               state.assistantTone = "Friendly";
               state.first_offer = "1-Hour Guitar Lesson";
+          } else if (persona === 'FoodCart') {
+              state.work_context = 'Storefront';
+              state.categories = 'Other';
+              state.businessName = "Fatima's Flavors";
+              state.assistantName = "Spice";
+              state.assistantTone = "Friendly";
+              state.first_offer = "Daily Lunch Special";
+          } else if (persona === 'Agency') {
+              state.work_context = 'Agency';
+              state.categories = 'Design';
+              state.businessName = "Nora Studio";
+              state.assistantName = "Vision";
+              state.assistantTone = "Professional";
+              state.first_offer = "Standard Design Project";
           }
           populateForm();
           saveCurrentState();
@@ -798,12 +814,24 @@
           });
       });
 
+            function resumeStep() {
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+                  return true;
+              }
+          }
+          return false;
+      }
+
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
         window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
           if (backendState) {
             state = { ...state, ...backendState };
             populateForm();
+            resumeStep();
           }
         }).catch(console.error);
 
@@ -812,6 +840,7 @@
         if (stored) {
           state = { ...state, ...JSON.parse(stored) };
           populateForm();
+          resumeStep();
         }
 
         // Fetch from API to support cross-device resume
@@ -832,19 +861,15 @@
                 state = { ...state, ...(apiState.wizardState || apiState) };
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
+                resumeStep();
             }
         })
         .catch(err => console.error('Failed to load cross-device state:', err));
       }
 
 
-      if (state.step === undefined || state.step === 0) {
-         goToStep('step-initial');
-      } else {
-         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-         if (state.step < steps.length) {
-            goToStep(steps[state.step]);
-         }
+      if (!resumeStep()) {
+          goToStep('step-initial');
       }
 
             // Clear name error on typing if valid
@@ -888,6 +913,7 @@
           if (state.businessName) inputs.name.value = state.businessName;
           if (state.tagline) inputs.tagline.value = state.tagline;
 
+          state.work_context = state.work_context || state.workContext;
           if (state.work_context) {
               populateCategories();
           }
@@ -897,7 +923,8 @@
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
           if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
-          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
+          state.firstOffer = state.firstOffer || state.first_offer;
+          if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
           const contextVal = state.work_context;
@@ -925,12 +952,14 @@
           state.tagline = inputs.tagline.value;
           state.assistantName = inputs.assistantName.value;
           state.assistantTone = inputs.assistantTone.value;
+          state.firstOffer = inputs.firstOffer.value;
           state.first_offer = inputs.firstOffer.value;
           state.templateSelection = inputs.templateSelection.value;
 
           let selectedContext = document.querySelector('input[name="work_context"]:checked');
           if (selectedContext) {
               state.work_context = selectedContext.value;
+              state.workContext = selectedContext.value;
           }
 
           // Increment step if we are moving forward
@@ -1239,9 +1268,15 @@
 
           try {
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+              const userId = localStorage.getItem('user_id') || 'test-user';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-Tenant-ID': tenantId,
+                      'X-User-ID': userId
+                  },
                   body: JSON.stringify({ messages: chatHistory })
               });
 
@@ -1285,7 +1320,11 @@
 
                   const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': tenantIdStr,
+                          'X-User-ID': userIdStr
+                      },
                       body: JSON.stringify({
                           business_type: req.businessType,
                           company_name: req.companyName,
@@ -1302,7 +1341,9 @@
                           price_type: req.priceType,
                           location: req.location,
                           target_audience: req.targetAudience,
-                          initial_products: req.initialProducts
+                          initial_products: req.initialProducts,
+                          ai_agents: [],
+                          ai_auto_respond: true
                       })
                   });
 
@@ -1540,7 +1581,6 @@
                  finishBtn.disabled = true;
                  goToStep('step-loading');
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
-                   localStorage.setItem('has_onboarded', 'true');
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
@@ -1552,16 +1592,23 @@
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+                 const userId = localStorage.getItem('user_id') || 'test-user';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
                      headers: {
-                         'Content-Type': 'application/json'
+                         'Content-Type': 'application/json',
+                         'X-Tenant-ID': tenantId,
+                         'X-User-ID': userId
                      },
-                     body: JSON.stringify(req)
+                     body: JSON.stringify({
+                         ...req,
+                         ai_agents: state.aiAgents || [],
+                         ai_auto_respond: state.aiAutoRespond !== undefined ? state.aiAutoRespond : true
+                     })
                  }).then(response => {
                      if (response.ok) {
                          localStorage.setItem('onboardingState', JSON.stringify(state));
-                         localStorage.setItem('has_onboarded', 'true');
                          window.location.href = "success.html";
                      } else {
                          throw new Error('Failed to start onboarding');
@@ -1597,8 +1644,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(2.1);
+            -webkit-backdrop-filter: blur(20px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -1761,8 +1808,8 @@ document.addEventListener('DOMContentLoaded', () => {
             max-height: calc(100vh - 120px);
             max-width: calc(100vw - 40px);
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(30px) saturate(2.1);
+            -webkit-backdrop-filter: blur(30px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
@@ -2064,14 +2111,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -2088,14 +2135,13 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.className = 'ohc-walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2117,7 +2163,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -2402,6 +2448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
+    btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -2587,14 +2634,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -2607,12 +2654,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.className = 'ohc-walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.className = 'ohc-walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -2632,7 +2679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">

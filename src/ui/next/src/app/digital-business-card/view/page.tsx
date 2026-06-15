@@ -183,7 +183,7 @@ function VCardContent() {
           <div className="mt-8 text-center animate-fade-in flex flex-col items-center">
             <PoweredByOHC tenantId={tenant} />
             <a
-              href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}&source=digital_business_card`}
+              href={`/onboarding?ref=${tenant}&source=digital_business_card`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex flex-col items-center gap-1 group mt-3"

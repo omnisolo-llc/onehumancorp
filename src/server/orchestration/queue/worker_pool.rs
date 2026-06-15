@@ -53,32 +53,32 @@ impl WorkerPool {
                                     match result {
                                         Ok(Ok(Ok(()))) => {
                                             if let Err(e) = queue_clone.complete(&job_id).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to complete job ");
+                                                ::server_telemetry::record_error_signal("Failed to complete job ");
                                                 tracing::error!("Failed to complete job {}: {}", job_id, e);
                                             }
                                         }
                                         Ok(Ok(Err(e))) => {
-                                            ::server_telemetry::record_error_signal("[bug] Job handler returned error for ");
+                                            ::server_telemetry::record_error_signal("Job handler returned error for ");
                                             tracing::error!("Job handler returned error for {}: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
+                                                ::server_telemetry::record_error_signal("Failed to register fail for job ");
                                                 tracing::error!("Failed to register fail for job {}: {}", job_id, fail_err);
                                             }
                                         }
                                         Ok(Err(e)) => {
-                                            ::server_telemetry::record_error_signal("[bug] Job panicked/join error");
+                                            ::server_telemetry::record_error_signal("Job  panicked/join error");
                                             tracing::error!("Job {} panicked/join error: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
+                                                ::server_telemetry::record_error_signal("Failed to register fail for job ");
                                                 tracing::error!("Failed to register fail for job {}: {}", job_id, fail_err);
                                             }
                                         }
                                         Err(_) => {
-                                            ::server_telemetry::record_error_signal("[bug] Job timed out after ms");
+                                            ::server_telemetry::record_error_signal("Job  timed out after  ms");
                                             tracing::error!("Job {} timed out after {} ms", job_id, timeout_ms);
                                             join_handle.abort();
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for timed out job ");
+                                                ::server_telemetry::record_error_signal("Failed to register fail for timed out job ");
                                                 tracing::error!("Failed to register fail for timed out job {}: {}", job_id, fail_err);
                                             }
                                         }
@@ -88,7 +88,7 @@ impl WorkerPool {
                                     // No jobs, loop back and sleep
                                 }
                                 Err(e) => {
-                                    ::server_telemetry::record_error_signal("[bug] Worker failed to dequeue");
+                                    ::server_telemetry::record_error_signal("Worker  failed to dequeue");
                                     tracing::error!("Worker {} failed to dequeue: {}", i, e);
                                 }
                             }

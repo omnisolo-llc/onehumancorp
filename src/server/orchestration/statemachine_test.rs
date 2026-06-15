@@ -32,29 +32,28 @@ impl Repository for MockRepository {
 async fn test_statemachine_valid_transitions() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = StateMachine::new(repo.clone(), lock, None);
+    let sm = StateMachine::new(repo.clone(), lock);
 
     let task_id = "task1";
-    let tenant_id = "tenant1";
 
     // Pending -> Ready
-    sm.transition_to_ready(tenant_id, task_id).await.unwrap();
+    sm.transition_to_ready(task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Ready);
 
     // Ready -> InProgress
-    sm.transition_to_in_progress(tenant_id, task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Blocked
-    sm.transition_to_blocked(tenant_id, task_id).await.unwrap();
+    sm.transition_to_blocked(task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Blocked);
 
     // Blocked -> InProgress
-    sm.transition_to_in_progress(tenant_id, task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Completed
-    sm.transition_to_completed(tenant_id, task_id).await.unwrap();
+    sm.transition_to_completed(task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Completed);
 }
 
@@ -62,13 +61,12 @@ async fn test_statemachine_valid_transitions() {
 async fn test_statemachine_invalid_transition() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = StateMachine::new(repo.clone(), lock, None);
+    let sm = StateMachine::new(repo.clone(), lock);
 
     let task_id = "task2";
-    let tenant_id = "tenant1";
 
     // Pending -> InProgress (Invalid)
-    let err = sm.transition_to_in_progress(tenant_id, task_id, "agent1").await;
+    let err = sm.transition_to_in_progress(task_id, "agent1").await;
     assert!(err.is_err());
 }
 
@@ -76,22 +74,21 @@ async fn test_statemachine_invalid_transition() {
 async fn test_statemachine_concurrent_transitions() {
     let repo = Arc::new(MockRepository::new());
     let lock = Arc::new(StandaloneLock::new());
-    let sm = Arc::new(StateMachine::new(repo.clone(), lock, None));
+    let sm = Arc::new(StateMachine::new(repo.clone(), lock));
 
     let task_id = "task3";
-    let tenant_id = "tenant1";
 
-    sm.transition_to_ready(tenant_id, task_id).await.unwrap();
+    sm.transition_to_ready(task_id).await.unwrap();
 
     let sm1 = sm.clone();
     let sm2 = sm.clone();
 
     let t1 = tokio::spawn(async move {
-        sm1.transition_to_in_progress("tenant1", "task3", "agent1").await
+        sm1.transition_to_in_progress("task3", "agent1").await
     });
 
     let t2 = tokio::spawn(async move {
-        sm2.transition_to_in_progress("tenant1", "task3", "agent2").await
+        sm2.transition_to_in_progress("task3", "agent2").await
     });
 
     let res1 = t1.await.unwrap();

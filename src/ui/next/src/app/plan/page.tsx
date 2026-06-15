@@ -46,7 +46,7 @@ export default function MyPlanPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(amount / 100);
   };
 
   if (loading) {
@@ -92,7 +92,7 @@ export default function MyPlanPage() {
                 <button
                     onClick={() => router.push('/pricing')}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
-                    View Upgrade Plans
+                    Upgrade
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
