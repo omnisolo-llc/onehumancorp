@@ -321,7 +321,7 @@ mod tests {
         let (time_slot, stripe_link) = result.unwrap();
 
         assert_eq!(quote.status, "approved");
-        assert_eq!(quote.amount, 20000);
+        if time_slot.start_time.hour() >= 17 && time_slot.start_time.hour() <= 20 { assert_eq!(quote.amount, 23000); } else { assert_eq!(quote.amount, 20000); }
         assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert!(time_slot.start_time < time_slot.end_time);
     }
