@@ -49,14 +49,14 @@ export default function Integrations() {
       router.push('/inbox');
       return;
     }
-    if (id === 'twilio') {
-      setShowTwilioModal(true);
-      setStatusMessage("Choose Twilio channels to finish connecting.");
-      return;
-    }
     if (id === 'whatsapp') {
       setShowWhatsAppModal(true);
       setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
+      return;
+    }
+    if (id === 'twilio') {
+      setShowTwilioModal(true);
+      setStatusMessage("Choose Twilio channels to finish connecting.");
       return;
     }
     setStatusMessage(`Connecting ${integration?.name || id}...`);

@@ -44,6 +44,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:health.rs",
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:omnichannel_webhook.rs",
+    "//src/server/api:twilio_webhook.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
