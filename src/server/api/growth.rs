@@ -311,7 +311,6 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
-        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -1043,92 +1042,6 @@ async fn handle_send_campaign(
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateResponse {
-    pub name: String,
-    pub url: String,
-    pub products_count: usize,
-}
-
-async fn handle_zero_click_generate(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<ZeroClickGenerateRequest>,
-) -> impl IntoResponse {
-    use crate::services::onboarding::onboarding_agent::OnboardingAgent;
-    use ::server_ohc::orchestration::{StartOnboardingRequest, IntakeProductProto, IntakeProductVariantProto};
-
-    let db = Arc::new(crate::db::DB {
-        pool: state.pool.clone(),
-        store: crate::db::DbStore::Postgres,
-    });
-    let agent = OnboardingAgent::new(db, state.hub.clone());
-
-    let intake_data = match agent.process_intake(&req.prompt).await {
-        Ok(data) => data,
-        Err(e) => {
-            tracing::error!("zero click generate intake error: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Intake generation failed" }))).into_response();
-        }
-    };
-
-    let business_name = intake_data.business_name.clone();
-    let products_count = intake_data.initial_products.len();
-
-    let initial_products = intake_data.initial_products.into_iter().map(|p| {
-        IntakeProductProto {
-            name: p.name,
-            price: p.price,
-            description: p.description.unwrap_or_default(),
-            variants: p.variants.unwrap_or_default().into_iter().map(|v| {
-                IntakeProductVariantProto {
-                    name: v.name,
-                    price_modifier: v.price_modifier,
-                }
-            }).collect(),
-        }
-    }).collect();
-
-    let start_req = StartOnboardingRequest {
-        business_type: intake_data.business_type,
-        company_name: business_name.clone(),
-        company_description: req.prompt.clone(),
-        selling_categories: intake_data.categories,
-        payment_pref: "online".to_string(),
-        admin_email: "admin@example.com".to_string(),
-        website_template: "modern".to_string(),
-        first_product_name: "Product".to_string(),
-        first_product_price: "0.00".to_string(),
-        domain_choice: "subdomain".to_string(),
-        admin_name: "Admin".to_string(),
-        admin_password: "password123".to_string(),
-        price_type: "fixed".to_string(),
-        location: intake_data.location.unwrap_or_default(),
-        target_audience: intake_data.target_audience.unwrap_or_default(),
-        initial_products,
-        ai_agents: vec!["Sales".to_string(), "Ops".to_string(), "Marketing".to_string()],
-        ai_auto_respond: true,
-    };
-
-    match agent.start_onboarding(start_req).await {
-        Ok(res) => {
-            let url = format!("https://{}.ohc.app", res.organization_id);
-            Json(ZeroClickGenerateResponse {
-                name: business_name,
-                url,
-                products_count,
-            }).into_response()
-        },
-        Err(e) => {
-            tracing::error!("zero click generate start onboarding error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Tenant generation failed" }))).into_response()
-        }
-    }
-}
 
 async fn handle_track_visitor(
     Extension(_state): Extension<GrowthState>,
@@ -2072,7 +1985,8 @@ mod tests {
         // Note: the actual OnboardingAgent requires external API calls, but we can verify
         // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
         // We just ensure we can invoke the handler without panic.
-        let _ = handle_zero_click_generate(Extension(state), Json(req)).await;
+        // No longer testing handle_zero_click_generate directly here as it's been refactored
+        // let _ = handle_zero_click_generate(Extension(state), Json(req)).await;
     }
 
     #[tokio::test]
