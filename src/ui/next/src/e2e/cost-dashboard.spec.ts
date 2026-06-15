@@ -1,12 +1,12 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
     // Navigate to the dashboard page
-    await page.goto('/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to appear, indicating successful load
-    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
 
     // Check that the Advisory Summary is present
     await expect(page.locator('h2', { hasText: 'Advisory Summary' })).toBeVisible();
@@ -25,14 +25,14 @@ test.describe('Cost Dashboard Loop', () => {
 
     // We do not explicitly test 'Budget Alert' here since it is dynamically triggered based on backend limits.
     // However, we verify the structure surrounding the LLM usage metrics hasn't broken.
-    await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Email Sends' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('a', { hasText: 'Back to Dashboard' }).click();
-    await expect(page.url()).toContain('/dashboard.html');
+    await page.locator('button', { hasText: 'Back to My Plan' }).click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
   });
 });
