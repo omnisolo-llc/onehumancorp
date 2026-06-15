@@ -1,5 +1,4 @@
-
-      document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
         // Inject floating widget styles
         const style = document.createElement("style");
         style.textContent = `
