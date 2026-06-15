@@ -141,7 +141,7 @@ where
             let mut has_expired = false;
 
             // We do a small probabilistic sample instead of an O(N) iteration for eviction.
-            for item in local.iter().take(10) {
+            for item in local.iter().take(50) {
                 if item.expiry <= now {
                     removed_keys.push(item.key().clone());
                     has_expired = true;
@@ -156,7 +156,6 @@ where
                 }
             } else {
                 if local.len() >= self.max_local_capacity {
-                    sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
                     if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
                         local.remove(&least_accessed_key);
                         removed_keys.push(least_accessed_key);
