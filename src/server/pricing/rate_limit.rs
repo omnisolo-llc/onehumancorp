@@ -9,6 +9,31 @@ pub enum PlanTier {
     Business,
 }
 
+impl std::fmt::Display for PlanTier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PlanTier::Free => write!(f, "Free"),
+            PlanTier::Starter => write!(f, "Starter"),
+            PlanTier::Pro => write!(f, "Pro"),
+            PlanTier::Business => write!(f, "Business"),
+        }
+    }
+}
+
+impl std::str::FromStr for PlanTier {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "starter" => Ok(PlanTier::Starter),
+            "pro" => Ok(PlanTier::Pro),
+            "business" => Ok(PlanTier::Business),
+            "free" => Ok(PlanTier::Free),
+            _ => Err(format!("Unknown tier: {}", s)),
+        }
+    }
+}
+
 impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
@@ -148,11 +173,9 @@ impl RedisRateLimiter {
                     }
             }
 
-        match tier.as_deref() {
-            Some("Starter") | Some("starter") => Ok(PlanTier::Starter),
-            Some("Pro") | Some("pro") => Ok(PlanTier::Pro),
-            Some("Business") | Some("business") => Ok(PlanTier::Business),
-            _ => Ok(PlanTier::Free),
+        match tier {
+            Some(t) => t.parse::<PlanTier>().or_else(|_| Ok(PlanTier::Free)),
+            None => Ok(PlanTier::Free),
         }
     }
 
@@ -183,12 +206,7 @@ impl RedisRateLimiter {
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
-        let tier_str = match tier {
-            PlanTier::Free => "Free",
-            PlanTier::Starter => "Starter",
-            PlanTier::Pro => "Pro",
-            PlanTier::Business => "Business",
-        };
+        let tier_str = tier.to_string();
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
@@ -463,6 +481,31 @@ mod tests {
                 assert!(products > 0);
             }
         }
+    }
+
+    #[test]
+    fn test_plan_tier_display_and_from_str() {
+        use std::str::FromStr;
+
+        // Test Display
+        assert_eq!(PlanTier::Free.to_string(), "Free");
+        assert_eq!(PlanTier::Starter.to_string(), "Starter");
+        assert_eq!(PlanTier::Pro.to_string(), "Pro");
+        assert_eq!(PlanTier::Business.to_string(), "Business");
+
+        // Test FromStr
+        assert_eq!(PlanTier::from_str("free").unwrap(), PlanTier::Free);
+        assert_eq!(PlanTier::from_str("Free").unwrap(), PlanTier::Free);
+        assert_eq!(PlanTier::from_str("starter").unwrap(), PlanTier::Starter);
+        assert_eq!(PlanTier::from_str("Starter").unwrap(), PlanTier::Starter);
+        assert_eq!(PlanTier::from_str("pro").unwrap(), PlanTier::Pro);
+        assert_eq!(PlanTier::from_str("Pro").unwrap(), PlanTier::Pro);
+        assert_eq!(PlanTier::from_str("business").unwrap(), PlanTier::Business);
+        assert_eq!(PlanTier::from_str("Business").unwrap(), PlanTier::Business);
+
+        // Test Invalid
+        assert!(PlanTier::from_str("unknown").is_err());
+        assert_eq!(PlanTier::from_str("unknown").unwrap_err(), "Unknown tier: unknown");
     }
 
     #[tokio::test]
