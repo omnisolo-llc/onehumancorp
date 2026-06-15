@@ -173,11 +173,7 @@ TAURI_MOBILE_SRCS = glob([
     "capabilities/**",
     "icons/**",
     "next_out/**",
-]) + [
-    "//:Cargo.lock",
-    "//:Cargo.toml",
-    "//src/server/integrations/twilio:Cargo.toml",
-    "Cargo.toml",
+], allow_empty = True) + [    "Cargo.toml",
     "build.rs",
     "tauri.conf.json",
 ]

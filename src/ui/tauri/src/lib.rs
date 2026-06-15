@@ -148,7 +148,7 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
         tagline: None,
         admin_email: None,
         admin_password: None,
-        first_offer: None,
+        first_offer: None, step: None,
     })
 }
 
