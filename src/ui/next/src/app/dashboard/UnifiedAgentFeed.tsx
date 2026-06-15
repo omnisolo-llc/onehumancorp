@@ -1,8 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
+
+
+type Order = {
+  id: string;
+  customer_name?: string;
+  total_amount?: number;
+  status?: string;
+  created_at?: string;
+};
+
+type InboxMessage = {
+  id: string;
+  from_name?: string;
+  from_email?: string;
+  subject?: string;
+  snippet?: string;
+  status?: string;
+  created_at?: string;
+};
+
+type Booking = {
+  id: string;
+  customer_name?: string;
+  service_name?: string;
+  start_time?: string;
+  status?: string;
+  created_at?: string;
+};
+
+type UnifiedItem = {
+  id: string;
+  sortDate: Date;
+  type: "proposal" | "triage" | "order" | "booking" | "message";
+  title: string;
+  description: string;
+  department: string;
+  status: string;
+  original: any;
+};
 
 type TriageItem = {
   id: string;
@@ -57,6 +96,10 @@ type ApprovalRequest = {
 };
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
   const [triageLoading, setTriageLoading] = useState(true);
   const [triageError, setTriageError] = useState("");
@@ -72,6 +115,87 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>("");
+
+  const unifiedFeedItems = useMemo(() => {
+    const list: UnifiedItem[] = [];
+
+    // Triage items
+    triageItems.forEach(t => {
+      if (t.status === "COMPLETED" || t.status === "DISMISSED") return;
+      list.push({
+        id: t.id,
+        sortDate: t.created_at ? new Date(t.created_at) : new Date(),
+        type: "triage",
+        title: "Triage Alert: " + (t.action_type || t.source || "System"),
+        description: t.context || t.action_payload || "Requires attention",
+        department: t.source || "System",
+        status: t.status || "PENDING",
+        original: t
+      });
+    });
+
+    // Owner Feed items
+    items.forEach(i => {
+      list.push({
+        id: i.id,
+        sortDate: i.created_at ? new Date(i.created_at) : new Date(),
+        type: "proposal",
+        title: i.proposed_action?.title || i.event_source?.replace(/_/g, " ") || "Agent Action",
+        description: i.context_payload?.summary || i.proposed_action?.description || "A new update requires your attention",
+        department: i.event_source || "Agent",
+        status: i.lifecycle_state || "PENDING",
+        original: i
+      });
+    });
+
+    // Orders
+    orders.forEach(o => {
+      if (o.status === "FULFILLED" || o.status === "CANCELLED") return;
+      list.push({
+        id: o.id,
+        sortDate: o.created_at ? new Date(o.created_at) : new Date(),
+        type: "order",
+        title: "New Order",
+        description: `Order from ${o.customer_name || 'Customer'} (${(o.total_amount || 0).toFixed(2)})`,
+        department: "Sales",
+        status: o.status || "PENDING",
+        original: o
+      });
+    });
+
+    // Bookings
+    bookings.forEach(b => {
+      if (b.status === "COMPLETED" || b.status === "CANCELLED") return;
+      list.push({
+        id: b.id,
+        sortDate: b.created_at ? new Date(b.created_at) : new Date(),
+        type: "booking",
+        title: "New Booking",
+        description: `${b.service_name || 'Service'} with ${b.customer_name || 'Customer'} at ${b.start_time ? new Date(b.start_time).toLocaleString() : ''}`,
+        department: "Operations",
+        status: b.status || "PENDING",
+        original: b
+      });
+    });
+
+    // Messages
+    messages.forEach(m => {
+      if (m.status === "READ" || m.status === "REPLIED") return;
+      list.push({
+        id: m.id,
+        sortDate: m.created_at ? new Date(m.created_at) : new Date(),
+        type: "message",
+        title: "New Message",
+        description: `From ${m.from_name || m.from_email || 'Customer'}: ${m.subject || m.snippet || ''}`,
+        department: "Customer Service",
+        status: m.status || "UNREAD",
+        original: m
+      });
+    });
+
+    return list.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
+  }, [triageItems, items, orders, bookings, messages]);
+
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -442,7 +566,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 w-full w-full overflow-hidden" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full w-full overflow-hidden" aria-label="Unified Owner Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -463,7 +587,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >
-          Proposals ({items.length})
+          Owner Feed ({unifiedFeedItems.length})
         </button>
         <button
           onClick={() => setActiveTab("activity")}
@@ -480,672 +604,71 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4 w-full">
         {activeTab === "proposals" && (
           <>
-            {triageError && (
-              <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
-                {triageError}
-              </div>
-            )}
-
-            {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
-                      <span className="text-2xl">✨</span> Needs Attention Today
-                    </h2>
-                    <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">{item.context}</p>
-                  </div>
-                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "High"}</span>
-                </div>
-
-                {item.action_type && (
-                  <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
-                    <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
-                  <button
-                    onClick={() => handleTriageDecision(item.id, true)}
-                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center"
-                    data-testid={`triage-approve-${item.id}`}
-                  >
-                    Approve & Execute
-                  </button>
-                  <button
-                    onClick={() => handleTriageDecision(item.id, false)}
-                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center"
-                    data-testid={`triage-dismiss-${item.id}`}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
-              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {item.source || "Triage Action"}
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">{item.context}</p>
-                  </div>
-                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
-                </div>
-
-                {item.action_type && (
-                  <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
-                    <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
-                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
-                  <button
-                    onClick={() => handleTriageDecision(item.id, true)}
-                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-sm transition-colors flex items-center justify-center"
-                    data-testid={`triage-approve-${item.id}`}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleTriageDecision(item.id, false)}
-                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-colors flex items-center justify-center"
-                    data-testid={`triage-dismiss-${item.id}`}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
-                </h3>
-              </div>
-            </div>
-
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
-                </h3>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
-                  Approve
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
-                  Edit
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
-                  Deny
-                </button>
-              </div>
-            </div>
-
-            {(loading || triageLoading) && (
+            {loading && (
               <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
-                Loading Agent Proposals...
+                Loading Owner Feed...
               </div>
             )}
-            {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
-                <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
+            {!loading && unifiedFeedItems.length === 0 && (
+              <div className="w-full p-6 glassmorphism rounded-[16px] text-center" data-testid="unified-owner-feed-empty">
+                <div className="w-16 h-16 bg-[#e8f7ef] dark:bg-[rgba(23,166,106,0.2)] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-[#17a66a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-2">You're all caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
-                  Your agents are currently monitoring the business. While you're here, why not help us grow?
+                  There are no pending actions for you right now.
                 </p>
-                <div className="w-full max-w-md text-left">
-                   <GrowthReferralWidget />
-                </div>
               </div>
             )}
-            {items.map((approval) => (
-              <div
-                key={approval.id}
-                className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4"
-              >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.event_source.replace('_', ' ')}
-                    </span>
-                    {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
-                        Requires Review
-                      </span>
-                    )}
-                    {queuedActionIds.has(approval.id) && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md shadow-sm border border-yellow-200" data-testid="queued-badge">
-                        Queued
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
-                  </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
-                    <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
-                        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
-                          <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            CRITICAL INCIDENT
-                          </div>
-                          <p className="text-gray-700 dark:text-gray-300 text-sm break-words">
-                            {(approval.proposed_action || approval.context_payload)?.description || 'An operational issue requires immediate attention.'}
-                          </p>
-                        </div>
-                      )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="instagram-dm-card">
-                          <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Instagram DM
-                          </div>
-                          <div className="text-xs text-gray-500 font-medium">
-                            Customer: {(approval.proposed_action || approval.context_payload).customer_message}
-                          </div>
-                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
-                            Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
-                          </div>
-                        </div>
-                      )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="ambassador-reply-card">
-                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                            </svg>
-                            Customer Inquiry
-                          </div>
-                          <div className="app-card p-3 rounded-lg  text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic">
-                            "{(approval.proposed_action || approval.context_payload).original_message}"
-                          </div>
-                          <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Draft Reply
-                          </div>
-                          <div className="bg-[#0066FF] p-3 rounded-lg text-xs text-white shadow-inner">
-                            {(approval.proposed_action || approval.context_payload).generated_response}
-                          </div>
-                        </div>
-                      )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
-                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
-                          </div>
-                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
-                            {(approval.proposed_action || approval.context_payload).customer_inquiry}
-                          </div>
-                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg  relative mt-2">
-                            <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Calculated Total:</span>
-                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">${(approval.proposed_action || approval.context_payload).suggested_price}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Scope of Work:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{(approval.proposed_action || approval.context_payload).scope}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Suggested Time:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{(approval.proposed_action || approval.context_payload).suggested_time}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
-                        <div className="flex flex-col gap-3">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
-                            <span className="text-pink-500 font-bold text-xs">Schedule a post?</span>
-                          </div>
-                          <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
-                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Instagram / TikTok Draft</div>
-                            <div className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3">
-                                "{(approval.proposed_action || approval.context_payload).instagram || (approval.proposed_action || approval.context_payload).tiktok || 'Check out our new product!'}"
-                            </div>
-                          </div>
-                        </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
-                        <>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
-                            <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                               ${Number((approval.proposed_action || approval.context_payload).old_price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="stockout-new-price">
-                               ${Number((approval.proposed_action || approval.context_payload).new_price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="stockout-reorder">
-                               {(approval.proposed_action || approval.context_payload).suggested_reorder_quantity} Units
-                            </span>
-                          </div>
-                          <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-2">
-                            {(approval.proposed_action || approval.context_payload).message}
-                          </div>
-                        </>
-                      ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
-                        <>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
-                            <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                              ${Number((approval.proposed_action || approval.context_payload).context.old_price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="smart-pricing-new-price">
-                              ${Number((approval.proposed_action || approval.context_payload).context.new_price).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Sales Projection:</span>
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400" data-testid="smart-pricing-sales-projection">
-                              {(approval.proposed_action || approval.context_payload).context.sales_projection}
-                            </span>
-                          </div>
-                        </>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'incident_resolution' ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Proposed Actions:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">
-                              {((approval.proposed_action || approval.context_payload).actions || []).length} steps
-                            </span>
-                          </div>
-                          <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-                          {((approval.proposed_action || approval.context_payload).actions || []).map((action: any, idx: number) => (
-                            <div key={idx} className="flex flex-col mb-2">
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                {action.action}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {action.details}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).source || 'Message'}</span>
-                          </div>
-                          <div className="flex flex-col text-sm mt-1">
-                            <span className="text-gray-500 dark:text-gray-400">Draft:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">{(approval.proposed_action || approval.context_payload).generated_response}</span>
-                          </div>
-                        </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).customer_inquiry || 'Client Inquiry'}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Scope:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).scope || (approval.proposed_action || approval.context_payload).service}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).suggested_time || 'TBD'}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Price:</span>
-                            <span className="font-semibold text-green-600 dark:text-green-400">
-                              ${Number((approval.proposed_action || approval.context_payload).suggested_price || (approval.proposed_action || approval.context_payload).price || 0).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {(approval.proposed_action || approval.context_payload)?.context?.weekly_health_report === true ? (                            <div className="flex flex-col gap-2">
-                              <div className="text-sm text-gray-700 dark:text-gray-300">
-                                <span className="font-semibold">Summary:</span> {(approval.proposed_action || approval.context_payload).context.summary}
-                              </div>
-                              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">Suggestion:</span> {(approval.proposed_action || approval.context_payload).context.actionable_suggestion}
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              {(approval.proposed_action || approval.context_payload)?.context?.abandoned_carts_count !== undefined && (
-                                <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).context.abandoned_carts_count}</span>
-                                </div>
-                              )}
-                              {(approval.proposed_action || approval.context_payload)?.context?.potential_revenue !== undefined && (
-                                <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
-                                  <span className="font-semibold text-green-600 dark:text-green-400">
-                                    ${Number((approval.proposed_action || approval.context_payload).context.potential_revenue).toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-                              {(approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined && (
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Product ID:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).product_id}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Remaining Stock:</span>
-                                    <span className="font-semibold text-red-600 dark:text-red-400">{(approval.proposed_action || approval.context_payload).remaining_stock}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Alert Message:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).message}</span>
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+            {unifiedFeedItems.map((item) => {
+              const isProcessing = queuedActionIds.has(item.id);
+              let icon = "⚡️";
+              let colorClass = "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30";
+              if (item.type === "order") { icon = "📦"; colorClass = "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30"; }
+              if (item.type === "booking") { icon = "📅"; colorClass = "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30"; }
+              if (item.type === "message") { icon = "💬"; colorClass = "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"; }
+              if (item.type === "proposal") { icon = "🤖"; colorClass = "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30"; }
 
-                <div className="flex flex-col gap-3 w-full mt-2">
-                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'incident_resolution' ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Execute Plan"
-                        data-testid="approve-incident-resolution"
-                      >
-                        Execute Plan
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Plan"
-                        data-testid="dismiss-incident-resolution"
-                      >
-                        Dismiss
-                      </button>
+              return (
+                <div
+                  key={item.id}
+                  className={`glassmorphism p-5 rounded-[16px] transition-all duration-300 shadow-sm border border-white/40 dark:border-white/10 ${isProcessing ? "opacity-50 scale-[0.98] border-green-500" : "animate-fade-in hover:shadow-md hover:-translate-y-0.5"}`}
+                  data-testid="agent-feed-card"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1.5 ${colorClass}`}>
+                      <span>{icon}</span> {item.type}
+                    </span>
+                    <span className="text-xs text-gray-400 font-inter font-medium bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md">
+                      {item.sortDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center shadow-inner">
+                      <span className="text-sm">👤</span>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="approve-instagram-dm"
-                      >
-                        Approve & Send
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss"
-                        data-testid="dismiss-instagram-dm"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Schedule"
-                        data-testid="approve-social-post"
-                      >
-                        Approve & Schedule
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss proposal"
-                        data-testid="dismiss-social-post"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve"
-                        data-testid="approve-stockout"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss"
-                        data-testid="dismiss-stockout"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
-                    editingId === approval.id ? (
-                      <div className="flex flex-col gap-3 w-full">
+                    <h3 className="text-[15px] font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                      {item.title}
+                    </h3>
+                  </div>
+
+                  {editingId === item.id ? (
+                      <div className="mb-5 pl-10">
                         <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
-                          rows={4}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          data-testid="edit-ambassador-reply-textarea"
-                          autoFocus
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => {
-                              handleDecision(approval.id, true, editContent);
-                              setEditingId(null);
-                            }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                            data-testid="save-send-ambassador-reply"
-                          >
-                            Save & Send
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                            data-testid="cancel-edit-ambassador-reply"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => handleDecision(approval.id, true)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                          aria-label="Approve & Send Draft"
-                          data-testid="approve-ambassador-reply"
-                        >
-                          ✨ 1-Tap Approve
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(approval.id);
-                            setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || "");
-                          }}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit Draft"
-                          data-testid="edit-ambassador-reply"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Dismiss Draft"
-                          data-testid="dismiss-ambassador-reply"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    )
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="approve-quote-draft"
-                      >
-                        Approve & Send
-                      </button>
-                      <a
-                        href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="edit-quote-draft"
-                      >
-                        Edit Draft
-                      </a>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Run Sale"
-                        data-testid="approve-run-sale"
-                      >
-                        Approve & Run Sale
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss proposal"
-                        data-testid="dismiss-sale"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.context?.weekly_health_report === true ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Draft it"
-                        data-testid="approve-draft"
-                      >
-                        Yes, draft it!
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss proposal"
-                        data-testid="dismiss-draft"
-                      >
-                        Dismiss
-                      </button>
-                    </div>                  ) : (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve Restock"
-                        data-testid="approve-restock"
-                      >
-                        Approve Restock
-                      </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss restock"
-                        data-testid="dismiss-restock"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
-                    <>
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
-                        aria-label="Approve & Send"
-                        data-testid="approve-send-proposal"
-                      >
-                        Approve & Send
-                      </button>
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <a
-                          href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit Draft"
-                          data-testid="edit-proposal"
-                        >
-                          Edit Draft
-                        </a>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Ask Agent to Adjust"
-                          data-testid="reject-proposal"
-                        >
-                          Ask Agent to Adjust
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    editingId === approval.id ? (
-                      <div className="flex flex-col gap-3 w-full">
-                        <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none shadow-inner"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
                           data-testid="edit-proposal-textarea"
                           autoFocus
                         />
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 mt-3">
                           <button
                             onClick={() => {
-                              handleDecision(approval.id, true, editContent);
+                              handleDecision(item.id, true, editContent);
                               setEditingId(null);
                             }}
                             className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
@@ -1162,50 +685,77 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </button>
                         </div>
                       </div>
-                    ) : (
-                    <>
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
-                        aria-label="Approve proposal"
-                        data-testid="approve-proposal"
-                      >
-                        Approve
-                      </button>
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  ) : (
+                    <div className="mb-5 pl-10">
+                      <p className="text-[14px] text-gray-700 dark:text-gray-300 leading-relaxed bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-white/60 dark:border-white/5">
+                        {item.description}
+                      </p>
+
+                      {item.type === 'proposal' && (
+                         <div className="mt-2 flex justify-end">
+                           <button
+                            onClick={() => {
+                              setEditingId(item.id);
+                              setEditContent(item.description);
+                            }}
+                            className="text-xs text-[#0066FF] hover:text-[#0052CC] dark:text-[#0071E3] dark:hover:text-[#005bb5] font-semibold transition-colors flex items-center gap-1"
+                            data-testid="edit-proposal"
+                           >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            Edit Action
+                           </button>
+                         </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!editingId && (
+                    <div className="flex gap-3 mt-4 pl-10">
+                      {item.type === 'proposal' && (
+                        <>
+                          <button
+                            onClick={() => handleDecision(item.id, true)}
+                            disabled={isProcessing}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] transition-all shadow-md flex items-center justify-center gap-2"
+                            data-testid="approve-proposal"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                            {isProcessing ? 'Processing...' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => handleDecision(item.id, false)}
+                            disabled={isProcessing}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
+                            data-testid="reject-proposal"
+                          >
+                            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            Dismiss
+                          </button>
+                        </>
+                      )}
+                      {(item.type === 'order' || item.type === 'booking') && (
                         <button
-                          onClick={() => {
-                            setEditingId(approval.id);
-                            const textToEdit =
-                              (approval.proposed_action || approval.context_payload)?.generated_response ||
-                              (approval.proposed_action || approval.context_payload)?.draft_reply ||
-                              (approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source);
-                            setEditContent(textToEdit || "");
-                          }}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit proposal"
-                          data-testid="edit-proposal"
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
                         >
-                          Edit
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                           View Details
                         </button>
+                      )}
+                      {item.type === 'message' && (
                         <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Reject proposal"
-                          data-testid="reject-proposal"
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center gap-2"
                         >
-                          Deny
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                          Draft Reply
                         </button>
-                      </div>
-                    </>
-                    )
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
-
         {activeTab === "activity" && (
           <>
             {activityLoading && (
