@@ -406,11 +406,30 @@
         imgPreview.src = cardUrl;
 
         // Update Links
+
+        // Track the share using the new backend endpoint
+        const trackMilestoneShare = async (platform, milestoneId) => {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch('/api/v1/growth/milestone/track-share', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ platform: platform, milestone_id: milestoneId })
+                });
+            } catch(e) { console.error('Failed to track share', e); }
+        };
+
         const text = getShareText(milestone);
         const encodedText = encodeURIComponent(text);
 
+        document.getElementById('btn-x').onclick = () => trackMilestoneShare('x', milestone.id);
         document.getElementById('btn-x').href = `https://twitter.com/intent/tweet?text=${encodedText}`;
+        document.getElementById('btn-whatsapp').onclick = () => trackMilestoneShare('whatsapp', milestone.id);
         document.getElementById('btn-whatsapp').href = `https://wa.me/?text=${encodedText}`;
+        document.getElementById('btn-facebook').onclick = () => trackMilestoneShare('facebook', milestone.id);
         document.getElementById('btn-facebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}&quote=${encodedText}`;
 
         // Setup Download

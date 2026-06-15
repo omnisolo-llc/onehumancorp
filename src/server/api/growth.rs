@@ -327,6 +327,7 @@ where
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/milestone/track-share", post(handle_track_share))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -2821,5 +2822,38 @@ async fn handle_simulate_referral_checkout(
     Ok(Json(SimulateReferralCheckoutResponse {
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
+    }))
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct TrackShareRequest {
+    pub platform: String,
+    pub milestone_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrackShareResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn handle_track_share(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<TrackShareRequest>,
+) -> Result<Json<TrackShareResponse>, StatusCode> {
+    // Log the event in the event hub
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.milestone_shared",
+        "tenant_id": auth_info.org_id,
+        "platform": req.platform,
+        "milestone_id": req.milestone_id,
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(TrackShareResponse {
+        success: true,
+        message: "Share tracked successfully".to_string(),
     }))
 }
