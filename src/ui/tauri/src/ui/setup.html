@@ -424,7 +424,7 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      select, textarea {
+      input, select, textarea {
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
@@ -440,7 +440,7 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
-      select:focus, textarea:focus {
+      input:focus, select:focus, textarea:focus {
         outline: none;
         border-color: #0066FF;
         background: rgba(255, 255, 255, 0.8);
@@ -689,12 +689,12 @@
           background: rgba(0, 102, 255, 0.2);
           box-shadow: 0 0 0 1px #0066FF;
         }
-        select, textarea {
+        input, select, textarea {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        select:focus, textarea:focus {
+        input:focus, select:focus, textarea:focus {
           border-color: #0066FF;
           background: rgba(255, 255, 255, 0.15);
         }
@@ -834,7 +834,7 @@
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="Tell us about your business that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-top: 10px; margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+
 
         <div class="btn-group" style="margin-top: 24px;">
           <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
