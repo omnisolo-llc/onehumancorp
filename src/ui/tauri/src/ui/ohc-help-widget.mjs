@@ -1,7 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject floating widget styles
-    const style = document.createElement('style');
-    style.textContent = `
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Inject floating widget styles
+        const style = document.createElement("style");
+        style.textContent = `
         #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
@@ -218,21 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1;
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    // Create the button
-    const btn = document.createElement('button');
-    btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('data-tooltip', 'Help Center');
-    btn.setAttribute('aria-label', 'Help');
-    btn.title = 'Help';
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
-    document.body.appendChild(btn);
+        // Create the button
+        const btn = document.createElement("button");
+        btn.id = "ohc-floating-help-btn";
+        btn.setAttribute("data-tooltip", "Help Center");
+        btn.setAttribute("aria-label", "Help");
+        btn.title = "Help";
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
+        document.body.appendChild(btn);
 
-    // Create the widget
-    const widget = document.createElement('div');
-    widget.id = 'ohc-floating-help-widget';
-    widget.innerHTML = `
+        // Create the widget
+        const widget = document.createElement("div");
+        widget.id = "ohc-floating-help-widget";
+        widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>Help Center</h3>
             <button id="ohc-floating-help-close" aria-label="Close">
@@ -287,222 +288,279 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
     `;
-    document.body.appendChild(widget);
+        document.body.appendChild(widget);
 
-    // Logic
-    btn.addEventListener('click', () => {
-        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
-    });
-
-    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
-        widget.style.display = 'none';
-    });
-
-    const tabs = widget.querySelectorAll('.ohc-help-tab');
-    const contents = widget.querySelectorAll('.ohc-help-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-
-            tab.classList.add('active');
-            document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+        // Logic
+        btn.addEventListener("click", () => {
+          widget.style.display =
+            widget.style.display === "flex" ? "none" : "flex";
         });
-    });
 
-    // Chat Logic
-    const chatInput = document.getElementById('ohc-help-chat-input');
-    const chatSend = document.getElementById('ohc-help-chat-send');
-    const chatMessages = document.getElementById('ohc-help-chat-messages');
+        document
+          .getElementById("ohc-floating-help-close")
+          .addEventListener("click", () => {
+            widget.style.display = "none";
+          });
 
-    function appendMessage(text, sender, link = null) {
-        const msg = document.createElement('div');
-        msg.className = `ohc-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
+        const tabs = widget.querySelectorAll(".ohc-help-tab");
+        const contents = widget.querySelectorAll(".ohc-help-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            tabs.forEach((t) => t.classList.remove("active"));
+            contents.forEach((c) => c.classList.remove("active"));
+
+            tab.classList.add("active");
+            document
+              .getElementById(tab.getAttribute("data-target"))
+              .classList.add("active");
+          });
+        });
+
+        // Chat Logic
+        const chatInput = document.getElementById("ohc-help-chat-input");
+        const chatSend = document.getElementById("ohc-help-chat-send");
+        const chatMessages = document.getElementById("ohc-help-chat-messages");
+
+        function appendMessage(text, sender, link = null) {
+          const msg = document.createElement("div");
+          msg.className = `ohc-chat-msg ${sender}`;
+          msg.innerHTML = text;
+          if (link && link.url && link.title) {
             msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+          }
+          chatMessages.appendChild(msg);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-        chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
 
-    async function handleSend() {
-        const text = chatInput.value.trim();
-        if (!text) return;
+        async function handleSend() {
+          const text = chatInput.value.trim();
+          if (!text) return;
 
-        appendMessage(text, 'user');
-        chatInput.value = '';
+          appendMessage(text, "user");
+          chatInput.value = "";
 
-        try {
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: text })
+          try {
+            const res = await fetch("/api/chat", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ message: text }),
             });
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+              appendMessage(
+                data.reply.text || data.reply,
+                "agent",
+                data.reply.link,
+              );
             } else if (data.text) {
-                appendMessage(data.text, 'agent', data.link);
+              appendMessage(data.text, "agent", data.link);
             } else {
-                appendMessage(data, 'agent');
+              appendMessage(data, "agent");
             }
-        } catch (e) {
-            appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
+          } catch (e) {
+            appendMessage(
+              "I'm sorry, I'm having trouble connecting right now.",
+              "agent",
+            );
+          }
         }
-    }
 
-    chatSend.addEventListener('click', handleSend);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSend();
-    });
-
-    // --- Global Tooltip & Walkthrough Logic ---
-
-    // Tooltips
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+        chatSend.addEventListener("click", handleSend);
+        chatInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") handleSend();
         });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+        // --- Global Tooltip & Walkthrough Logic ---
 
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
+        // Tooltips
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
+        }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
 
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+        function showTooltip(e, text) {
+          if (!text) return;
+          tooltipEl.textContent = text;
+          const targetRect = e.target.closest("[id]")
+            ? e.target.closest("[id]").getBoundingClientRect()
+            : e.target.getBoundingClientRect();
+
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+          let top = targetRect.bottom + 10;
+
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
             left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
+          } else if (left < 10) {
             left = 10;
-        }
+          }
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
             top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
         }
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
+        function hideTooltip() {
+          tooltipEl.classList.remove("visible");
         }
-    });
 
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
+        document.addEventListener("mouseover", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+          }
+        });
+
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target.closest("[id]");
+          if (
+            target &&
+            target.id &&
+            window.OHC_TOOLTIPS &&
+            window.OHC_TOOLTIPS[target.id]
+          ) {
             hideTooltip();
-        }
-    });
+          }
+        });
 
-    // Walkthroughs
-    if (!window.startWalkthrough) {
-        window.startWalkthrough = function(steps) {
+        // Walkthroughs
+        if (!window.startWalkthrough) {
+          window.startWalkthrough = function (steps) {
             if (!steps || steps.length === 0) return;
 
             let currentStep = 0;
 
-            const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+            const overlay = document.createElement("div");
+            overlay.className = "ohc-walkthrough-overlay";
+            overlay.style.cssText =
+              "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;";
             document.body.appendChild(overlay);
 
-            const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            const bubble = document.createElement("div");
+            bubble.className = "ohc-walkthrough-bubble";
+            bubble.setAttribute("role", "dialog");
+            bubble.style.cssText =
+              "position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
             document.body.appendChild(bubble);
 
             function renderStep() {
-                const step = steps[currentStep];
+              const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
+              document
+                .querySelectorAll(
+                  ".walkthrough-highlight, .ohc-walkthrough-highlight",
+                )
+                .forEach((el) => {
+                  el.classList.remove(
+                    "walkthrough-highlight",
+                    "ohc-walkthrough-highlight",
+                  );
+                  el.style.position = "";
+                  el.style.zIndex = "";
+                  el.style.background = "";
                 });
 
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+              const target =
+                document.getElementById(step.targetId) ||
+                document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
+              bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
                         <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ""}
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                     </div>
                 `;
 
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
+              document.getElementById("wt-close").onclick = closeWalkthrough;
+              if (document.getElementById("wt-prev"))
+                document.getElementById("wt-prev").onclick = () => {
+                  currentStep--;
+                  renderStep();
                 };
-
-                if (target) {
-                    target.classList.add('walkthrough-highlight');
-                    target.style.position = 'relative';
-                    target.style.zIndex = '99999';
-                    target.style.background = 'white';
-
-                    const rect = target.getBoundingClientRect();
-                    if (rect.bottom + 200 < window.innerHeight) {
-                        bubble.style.top = (rect.bottom + 10) + 'px';
-                    } else {
-                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                    }
-                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+              document.getElementById("wt-next").onclick = () => {
+                if (currentStep === steps.length - 1) {
+                  closeWalkthrough();
                 } else {
-                    bubble.style.top = '50%';
-                    bubble.style.left = '50%';
-                    bubble.style.transform = 'translate(-50%, -50%)';
+                  currentStep++;
+                  renderStep();
                 }
+              };
+
+              if (target) {
+                target.classList.add("walkthrough-highlight");
+                target.style.position = "relative";
+                target.style.zIndex = "99999";
+                target.style.background = "white";
+
+                const rect = target.getBoundingClientRect();
+                if (rect.bottom + 200 < window.innerHeight) {
+                  bubble.style.top = rect.bottom + 10 + "px";
+                } else {
+                  bubble.style.top = rect.top - bubble.offsetHeight - 10 + "px";
+                }
+                bubble.style.left =
+                  Math.max(10, Math.min(rect.left, window.innerWidth - 320)) +
+                  "px";
+              } else {
+                bubble.style.top = "50%";
+                bubble.style.left = "50%";
+                bubble.style.transform = "translate(-50%, -50%)";
+              }
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
+              document
+                .querySelectorAll(
+                  ".walkthrough-highlight, .ohc-walkthrough-highlight",
+                )
+                .forEach((el) => {
+                  el.classList.remove(
+                    "walkthrough-highlight",
+                    "ohc-walkthrough-highlight",
+                  );
+                  el.style.position = "";
+                  el.style.zIndex = "";
+                  el.style.background = "";
                 });
-                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+              if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
             }
 
             renderStep();
-        };
-    }
-});
-</script>
-</body>
-</html>
+          };
+        }
+      });
