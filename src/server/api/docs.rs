@@ -36,7 +36,7 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
         ],
         "dashboard" => vec![
             WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
-            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+            WalkthroughStep { selector: "#wrapped-summary".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
         ],
         "pos" => vec![
             WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
