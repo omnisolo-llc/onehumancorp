@@ -341,7 +341,7 @@ describe('OnboardingWizard', () => {
 
     // Set initial state to Step 3 to test start API directly
     act(() => {
-      useOnboardingStore.setState({ step: 3 });
+      useOnboardingStore.setState({ step: 3, adminName: "Test Admin", adminEmail: "test@example.com", adminPassword: "Password123" });
     });
 
     // Mock start failure
