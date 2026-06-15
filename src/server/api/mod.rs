@@ -1,5 +1,6 @@
 pub mod oauth;
 pub mod offline_sync;
+pub mod sync_ws;
 pub mod mesh_handler;
 pub mod omnichannel_webhook;
 pub mod autodream;
