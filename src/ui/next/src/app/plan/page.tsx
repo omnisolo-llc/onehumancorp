@@ -92,15 +92,76 @@ export default function MyPlanPage() {
                 <button
                     onClick={() => router.push('/pricing')}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
-                    View Upgrade Plans
+                    Upgrade
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
                     className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl font-medium transition-all shadow-sm text-center">
                     View Detailed Costs
                 </button>
+                <button
+                    onClick={() => {
+                        setShowCancelModal(true);
+                    }}
+                    className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium transition-all shadow-sm text-center">
+                    Cancel Subscription
+                </button>
             </div>
         </section>
+
+        {showCancelModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm px-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden relative">
+                    <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Cancel Subscription</h3>
+                    <p className="text-gray-600 text-sm mb-6">Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.</p>
+
+                    {cancelStatus && (
+                        <div className={`mb-4 p-3 rounded-lg text-sm ${cancelStatus.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {cancelStatus}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 mt-4">
+                        <button
+                            onClick={() => {
+                                setShowCancelModal(false);
+                                setCancelStatus('');
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                        >
+                            Nevermind
+                        </button>
+                        <button
+                            onClick={async () => {
+                                setIsCanceling(true);
+                                setCancelStatus('');
+                                try {
+                                    const res = await fetch('/api/billing/cancel-subscription', { method: 'POST' });
+                                    if (res.ok) {
+                                        setCancelStatus('Subscription canceled successfully.');
+                                        setTimeout(() => {
+                                            setShowCancelModal(false);
+                                            router.refresh();
+                                        }, 1500);
+                                    } else {
+                                        setCancelStatus('Failed to cancel subscription.');
+                                    }
+                                } catch (error) {
+                                    console.error(error);
+                                    setCancelStatus('An error occurred. Please try again.');
+                                } finally {
+                                    setIsCanceling(false);
+                                }
+                            }}
+                            disabled={isCanceling}
+                            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                            {isCanceling ? 'Canceling...' : 'Confirm Cancel'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Current Usage Section */}
         <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm mt-4">
