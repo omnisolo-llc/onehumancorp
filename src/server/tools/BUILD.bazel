@@ -2,7 +2,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
-        "ingest_arch.rs",
         "mod.rs",
     ],
     visibility = ["//visibility:public"],
@@ -12,12 +11,10 @@ rust_library(
     name = "server_tools",
     srcs = [
         "bazel_lib.rs",
-        "ingest_arch.rs",
         "mod.rs",
         "//src/server/tools/config_sync:mod.rs",
         "//src/server/tools/config_sync:server.rs",
         "//src/server/tools/config_sync:tests.rs",
-        "//src/server/tools/fsmcp:mod.rs",
         "//src/server/tools/hybridfsmcp:factory.rs",
         "//src/server/tools/hybridfsmcp:mod.rs",
         "//src/server/tools/hybridfsmcp:provider.rs",
