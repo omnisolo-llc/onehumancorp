@@ -2837,6 +2837,10 @@ impl Agent {
         }
 
         if final_cfg.enable_lazy_tool_loading {
+            let tool_search = crate::tools::toolsearch::toolsearch_tool();
+            if !session_tools.iter().any(|t| t.name == "ToolSearch") {
+                 session_tools.push(tool_search);
+            }
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
@@ -10300,5 +10304,105 @@ mod e2e_verification_tests {
             .await;
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Corrected answer.");
+    }
+
+    #[derive(Default)]
+    struct LazyMockLlmClient {
+        responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+        requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for LazyMockLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_lazy_tool_loading_mechanic() {
+        let mut msg1 = Message::assistant("lazy");
+        msg1.tool_calls.push(ToolCall {
+            id: "call_1".to_string(),
+            name: "LazyLoadTools".to_string(),
+            arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
+        });
+
+        let mut msg2 = Message::assistant("heavy");
+        msg2.tool_calls.push(ToolCall {
+            id: "call_2".to_string(),
+            name: "HeavyTool".to_string(),
+            arguments: serde_json::json!({}),
+        });
+
+        let client = Arc::new(LazyMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: msg1,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                ChatResponse {
+                    message: msg2,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                ChatResponse {
+                    message: Message::assistant("Final Answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                },
+            ]),
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let agent = Agent::new(
+            client.clone() as Arc<dyn crate::llm::LlmClient>,
+            vec![crate::tools::Tool {
+                name: "HeavyTool".to_string(),
+                description: "A heavy tool".to_string(),
+                parameters: serde_json::Value::Null,
+                is_read_only: false,
+                execute: Arc::new(DummyToolExecutor),
+            }],
+        );
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lazy_tool_loading = true;
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final Answer");
+
+        let all_reqs = client.requests.lock().await;
+        assert!(!all_reqs[0].tools.iter().any(|t| t.name == "HeavyTool"));
+        assert!(all_reqs[1].tools.iter().any(|t| t.name == "HeavyTool"));
     }
 }
