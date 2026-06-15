@@ -394,11 +394,24 @@
                 document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
                 document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
 
-                if (costData.projected_monthly_cost > 10000) {
+                let isSoftLimitReached = false;
+                let limitMessage = '';
+                if (planData.ai_actions_limit && planData.ai_actions_used >= planData.ai_actions_limit) {
+                    isSoftLimitReached = true;
+                    limitMessage = "You have reached your tier's AI actions limit. Don't worry, your agents will keep running! Consider upgrading your plan.";
+                } else if (planData.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes) {
+                    isSoftLimitReached = true;
+                    limitMessage = "You have reached your tier's storage limit. Your data is safe! Consider upgrading your plan.";
+                } else if (costData.projected_monthly_cost > 10000) {
+                    isSoftLimitReached = true;
+                    limitMessage = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage.`;
+                }
+
+                if (isSoftLimitReached) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
+                    document.getElementById('budget-health-alert-text').innerText = limitMessage;
                 } else {
-                    document.getElementById('budget-health-alert').style.display = 'flex';
+                    document.getElementById('budget-health-alert').style.display = 'none';
                 }
 
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);

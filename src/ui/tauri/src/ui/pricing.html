@@ -43,6 +43,12 @@
         align-items: stretch;
       }
 
+      @media (max-width: 480px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .ohc-growth-card {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(2.1);
@@ -132,6 +138,7 @@
         background-color: #0066FF;
         color: white;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+        min-height: 44px;
       }
 
       .btn-primary:hover {
@@ -141,6 +148,7 @@
       .btn-secondary {
         background-color: #e5e5ea;
         color: #1d1d1f;
+        min-height: 44px;
       }
 
       .btn-secondary:hover {
