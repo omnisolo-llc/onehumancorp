@@ -870,6 +870,22 @@
         </div>
       </div>
 
+
+      <div class="step" id="step-approval">
+        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Ready to Launch</h1>
+        <p>Your business is ready to be created.</p>
+
+        <div id="approval-details" class="glassmorphism" style="text-align: left; padding: 16px; margin-bottom: 24px; border-radius: 8px;">
+        </div>
+
+        <div class="btn-group">
+          <button id="approve-publish-btn" data-testid="approve-publish-btn">Approve & Publish</button>
+        </div>
+      </div>
+
       <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
@@ -1344,7 +1360,7 @@
       function validateStep(stepId) {
           let isValid = true;
 
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat' || stepId === 'step-approval') {
               return true;
           }
 
@@ -1458,7 +1474,7 @@
 
       function updateStepper(stepId) {
           const stepperIndicator = document.getElementById('stepper-indicator');
-          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat' || stepId === 'step-approval') {
               if (stepperIndicator) stepperIndicator.style.display = 'none';
           } else {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
@@ -1641,7 +1657,7 @@
                       paymentPref: "online",
                       adminEmail: "admin@mybusiness.com",
                       adminName: "Admin",
-                      adminPassword: "password",
+                      adminPassword: "password123",
                       websiteTemplate: "auto",
                       firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
                       firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
@@ -1653,6 +1669,43 @@
                   };
 
 
+                  window.pendingOnboardingReq = req;
+                  const approvalDetails = document.getElementById('approval-details');
+                  if (approvalDetails) {
+                      let productsHtml = '';
+                      if (req.initialProducts && req.initialProducts.length > 0) {
+                          productsHtml = req.initialProducts.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
+                      } else {
+                          productsHtml = `<li>${req.firstProductName} - ${req.firstProductPrice}</li>`;
+                      }
+
+                      approvalDetails.innerHTML = `
+                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.companyName}</div>
+                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.businessType}</div>
+                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
+                      `;
+                  }
+                  await goToStep('step-approval');
+              }
+          } catch (e) {
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+          } finally {
+              chatSendBtn.disabled = false;
+          }
+      }
+
+
+      const approvePublishBtn = document.getElementById('approve-publish-btn');
+      if (approvePublishBtn) {
+          approvePublishBtn.addEventListener('click', async () => {
+              if (!window.pendingOnboardingReq) return;
+              const req = window.pendingOnboardingReq;
+
+              approvePublishBtn.disabled = true;
+              approvePublishBtn.innerHTML = '<div class="spinner"></div>Publishing...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1699,13 +1752,15 @@
                       }
                       localStorage.setItem('has_onboarded', 'true');
                       window.location.href = "success.html";
+                  } else {
+                      throw new Error('Failed to start onboarding');
                   }
+              } catch (e) {
+                  approvePublishBtn.disabled = false;
+                  approvePublishBtn.innerText = 'Approve & Publish';
+                  alert('Error publishing storefront.');
               }
-          } catch (e) {
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
-          } finally {
-              chatSendBtn.disabled = false;
-          }
+          });
       }
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
@@ -1764,7 +1819,7 @@
                       paymentPref: "online",
                       adminEmail: "admin@mybusiness.com",
                       adminName: "Admin",
-                      adminPassword: "password",
+                      adminPassword: "password123",
                       websiteTemplate: "auto",
                       firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
                       firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
