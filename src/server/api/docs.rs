@@ -98,9 +98,9 @@ pub fn get_videos() -> Vec<VideoTutorial> {
         VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string(), video_url: "/videos/4.mp4".to_string() },
         VideoTutorial { id: 5, title: "Review an order".to_string(), duration: "1:10".to_string(), video_url: "/videos/5.mp4".to_string() },
         VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string(), video_url: "/videos/6.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string(), video_url: "/videos/7.mp4".to_string() },
+        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:20".to_string(), video_url: "/videos/7.mp4".to_string() },
         VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
-        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "3:45".to_string(), video_url: "/videos/9.mp4".to_string() },
+        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "1:25".to_string(), video_url: "/videos/9.mp4".to_string() },
         VideoTutorial { id: 10, title: "View analytics and reports".to_string(), duration: "1:20".to_string(), video_url: "/videos/10.mp4".to_string() },
     ]
 }
