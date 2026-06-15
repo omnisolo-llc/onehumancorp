@@ -785,7 +785,22 @@
         outline-offset: 2px;
       }
 
-    </style>
+
+      /* OHC Premium Glassmorphism Overrides */
+      .glassmorphism {
+        border-radius: 16px;
+      }
+      button.glassmorphism,
+      input.glassmorphism,
+      select.glassmorphism,
+      textarea.glassmorphism,
+      .glassmorphism input,
+      .glassmorphism select,
+      .glassmorphism textarea,
+      .glassmorphism button {
+        border-radius: 8px !important;
+      }
+</style>
   </head>
   <body>
         <div class="container glassmorphism" id="form-container">
@@ -1957,6 +1972,36 @@
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+      // Global Enter key support for all inputs within active step
+      document.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+              const activeStep = document.querySelector('.step.active');
+              if (activeStep) {
+                  // Don't auto-advance in chat if we are focused on chat input
+                  if (activeStep.id === 'step-chat' && (e.target.id === 'chat-input' || e.target.id === 'chat-image-url')) {
+                      return;
+                  }
+                  e.preventDefault();
+                  const nextBtn = activeStep.querySelector('.next-step-btn');
+                  if (nextBtn) {
+                      nextBtn.click();
+                  } else if (activeStep.id === 'step-instant' || activeStep.id === 'step-template') {
+                      const launchBtn = activeStep.querySelector('#generate-storefront-btn, button[onclick*="start_onboarding"]');
+                      if (launchBtn) {
+                          launchBtn.click();
+                      } else {
+                          // Try to find any submit/launch button
+                          const anyLaunchBtn = document.querySelector('button[onclick*="start_onboarding"]');
+                          if (anyLaunchBtn) {
+                              anyLaunchBtn.click();
+                          }
+                      }
+                  }
+              }
+          }
+      });
+
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
