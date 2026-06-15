@@ -294,6 +294,17 @@ async fn update_feed_item_state(
                             // Real implementation would buffer post here to AYRSHARE.
                         }
 
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
+                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                                tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
+                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
+                                    .bind(inbox_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
+
                         if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                             if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
                                 tracing::info!("Approved quote draft: {}", quote_id);
