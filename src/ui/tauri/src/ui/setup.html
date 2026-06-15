@@ -819,6 +819,7 @@
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="Tell us about your business that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
+        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-top: 10px; margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
 
         <div class="btn-group" style="margin-top: 24px;">
           <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
@@ -1691,6 +1692,8 @@
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
               const bioInput = instantBioInputEl.value;
+              const imageUrlInput = document.getElementById("instant-image-url");
+              const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
@@ -1713,7 +1716,7 @@
                   let intakeData = null;
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput, imageUrl: imageUrl || undefined });
                   } else {
                      const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
                          method: 'POST',
@@ -1722,7 +1725,7 @@
                              'X-Tenant-ID': tenantIdStr,
                              'X-User-ID': userIdStr
                          },
-                         body: JSON.stringify({ description: bioInput })
+                         body: JSON.stringify({ description: bioInput, image_url: imageUrl || undefined })
                      });
                      if (!res.ok) {
                          const errData = await res.json().catch(()=>({}));
