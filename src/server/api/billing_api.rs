@@ -18,7 +18,7 @@ pub struct MyPlanResponse {
     pub ai_actions_limit: Option<i32>,
     pub storage_used_bytes: i64,
     pub storage_limit_bytes: Option<i64>,
-    pub next_bill_estimated: i32,
+    pub next_bill_estimated: i64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -252,7 +252,7 @@ pub async fn my_plan_handler(
     let base_bill = tier.base_price();
     let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
     let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
-    let next_bill_estimated = total_cost_cents as i32;
+    let next_bill_estimated = total_cost_cents;
 
     let resp = MyPlanResponse {
         current_plan: plan_name,

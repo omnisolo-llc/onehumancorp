@@ -45,11 +45,11 @@ export default function MyPlanPage() {
     return `${gb.toFixed(2)} GB`;
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amountCents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(amountCents / 100);
   };
 
   if (loading) {
