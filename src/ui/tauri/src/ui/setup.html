@@ -937,8 +937,8 @@
         </div>
         <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -951,9 +951,9 @@
         </select>
         <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-name">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
 
@@ -967,9 +967,9 @@
         <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-assistant">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
 
@@ -1027,9 +1027,9 @@
         </div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
@@ -1042,7 +1042,19 @@
         <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <div style="position: relative; width: 100%;">
+          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" style="padding-right: 40px;" />
+          <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #555;">
+            <svg id="eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg id="eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
         <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
 
         <div style="border-top: 1px solid rgba(255,255,255,0.4); margin-top: 24px; padding-top: 16px; text-align: left;">
@@ -1077,9 +1089,9 @@
         </div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-offer">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
@@ -1090,9 +1102,9 @@
         <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
@@ -1109,9 +1121,9 @@
         <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
 
         <div class="btn-group">
-          <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+          <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -1502,6 +1514,16 @@
           return isValid;
       }
 
+
+      const togglePasswordBtn = document.getElementById('toggle-password-visibility');
+      if (togglePasswordBtn) {
+          togglePasswordBtn.addEventListener('click', () => {
+              const type = inputs.adminPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+              inputs.adminPassword.setAttribute('type', type);
+              document.getElementById('eye-icon-show').style.display = type === 'password' ? 'block' : 'none';
+              document.getElementById('eye-icon-hide').style.display = type === 'password' ? 'none' : 'block';
+          });
+      }
 
       function updateStepper(stepId) {
           const stepperIndicator = document.getElementById('stepper-indicator');
