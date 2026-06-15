@@ -358,7 +358,7 @@ impl UserRepository for SqliteUserRepository {
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
-            ON CONFLICT (jti) DO NOTHING
+            ON CONFLICT (jti, tenant_id) DO NOTHING
             "#
         )
         .bind(jti)
