@@ -631,7 +631,7 @@
         const tenantId = urlParams.get('tenant') || 'e2e-tenant';
 
         viralBadge.style.display = 'block';
-        viralLink.href = `https://ohc.app/onboarding?ref=${encodeURIComponent(tenantId)}&source=quote_viewer`;
+        viralLink.href = `/onboarding?ref=${encodeURIComponent(tenantId)}&source=quote_viewer`;
 
         const handlePayment = async () => {
           btnPayCard.innerText = 'Processing...';

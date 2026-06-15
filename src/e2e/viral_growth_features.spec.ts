@@ -6,10 +6,10 @@ test.describe('Viral Growth Features', () => {
 
   test('Viral Badge Visibility and Link on Quote Page', async ({ page }) => {
     // Set tenant in localStorage
-    await page.goto(BASE_URL + '/dashboard.html');
+    await page.goto(BASE_URL + '/dashboard');
     await page.evaluate(() => localStorage.setItem('tenant_id', 'maya-cakes'));
 
-    await page.goto(BASE_URL + '/quote.html?id=123&tenant=maya-cakes');
+    await page.goto(BASE_URL + '/quote?id=123&tenant=maya-cakes');
 
     const badge = page.locator('#viral-badge');
     await expect(badge).toBeVisible();
@@ -23,11 +23,15 @@ test.describe('Viral Growth Features', () => {
   });
 
   test('Referral Card on Success Page (Deposit Flow)', async ({ page }) => {
-    await page.goto(BASE_URL + '/dashboard.html');
+    // Navigate and set storage
+    await page.goto(BASE_URL + '/dashboard');
     await page.evaluate(() => localStorage.setItem('tenant_id', 'carlos-repairs'));
 
     // Simulate successful deposit
-    await page.goto(BASE_URL + '/success.html?type=booking_deposit&tenant=carlos-repairs');
+    await page.goto(BASE_URL + '/success?type=booking_deposit&tenant=carlos-repairs');
+
+    // Make sure we wait for it to display via JS logic
+    await page.waitForSelector('#referral-success-card', { state: 'visible', timeout: 5000 });
 
     const referralCard = page.locator('#referral-success-card');
     await expect(referralCard).toBeVisible();
@@ -40,13 +44,13 @@ test.describe('Viral Growth Features', () => {
   });
 
   test('Success Page does NOT show Referral Card for non-deposit types', async ({ page }) => {
-    await page.goto(BASE_URL + '/success.html?type=general');
+    await page.goto(BASE_URL + '/success?type=general');
     const referralCard = page.locator('#referral-success-card');
     await expect(referralCard).not.toBeVisible();
   });
 
   test('Dashboard Footer Viral Link', async ({ page }) => {
-    await page.goto(BASE_URL + '/dashboard.html');
+    await page.goto(BASE_URL + '/dashboard');
     await page.evaluate(() => localStorage.setItem('tenant_id', 'nora-agency'));
     // Reload to apply script
     await page.reload();
@@ -62,7 +66,7 @@ test.describe('Viral Growth Features', () => {
 
   test('Mobile Responsiveness: Viral Badge Touch Target', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(BASE_URL + '/quote.html?id=123');
+    await page.goto(BASE_URL + '/quote?id=123');
 
     const badge = page.locator('#viral-badge');
     await expect(badge).toBeVisible();
