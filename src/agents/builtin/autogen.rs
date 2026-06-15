@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use crate::agent::{Agent, AgentRunConfig};
 use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;

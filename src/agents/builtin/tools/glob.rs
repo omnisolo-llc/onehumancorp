@@ -1,3 +1,4 @@
+#![allow(clippy::comparison_to_empty)]
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use serde::Deserialize;

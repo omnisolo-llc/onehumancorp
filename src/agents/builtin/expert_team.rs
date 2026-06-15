@@ -1,3 +1,4 @@
+#![allow(clippy::needless_borrow)]
 use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_unwrap)]
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;

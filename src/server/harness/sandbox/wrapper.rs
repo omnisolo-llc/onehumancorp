@@ -7,6 +7,12 @@ pub struct BashWrapper {
     socat_proxy_port: Option<u16>,
 }
 
+impl Default for BashWrapper {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BashWrapper {
     pub fn new() -> Self {
         BashWrapper {

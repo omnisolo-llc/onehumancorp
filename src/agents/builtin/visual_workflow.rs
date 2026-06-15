@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::agent::{Agent, AgentRunConfig};
 
 use serde::{Deserialize, Serialize};
@@ -697,8 +698,7 @@ mod tests {
         };
 
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
-        let mut config = AgentRunConfig::default();
-        config.max_workflow_cycles = Some(3); // allow up to 3 visits
+        let config = AgentRunConfig { max_workflow_cycles: Some(3), ..Default::default() };
 
         let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
 

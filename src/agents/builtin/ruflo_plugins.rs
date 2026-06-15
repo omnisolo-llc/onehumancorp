@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use std::collections::HashMap;
 
 /// Ruflo Unique Harness Innovations: 32+ Claude Code plugins
