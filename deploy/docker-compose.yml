@@ -126,7 +126,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: public.ecr.aws/docker/library/redis:7
+    image: public.ecr.aws/docker/library/redis:7-alpine
     pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
