@@ -815,7 +815,7 @@
         }
 
         // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+        const backendUrl = 'http://127.0.0.1:18789';
         const tenantId = localStorage.getItem('tenant_id') || 'storefront';
         const userId = localStorage.getItem('user_id') || 'test-user';
 
@@ -952,7 +952,7 @@
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = 'http://127.0.0.1:18789';
               const tenantId = localStorage.getItem('tenant_id') || 'storefront';
               const userId = localStorage.getItem('user_id') || 'test-user';
               fetch(`${backendUrl}/api/onboarding/state`, {
@@ -1238,7 +1238,7 @@
           chatSendBtn.disabled = true;
 
           try {
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = 'http://127.0.0.1:18789';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -1344,7 +1344,7 @@
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
               try {
-                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = 'http://127.0.0.1:18789';
                   const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
                   const userIdStr = localStorage.getItem('user_id') || 'test-user';
 
@@ -1550,7 +1550,7 @@
                } else {
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 const backendUrl = 'http://127.0.0.1:18789';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
                      headers: {
