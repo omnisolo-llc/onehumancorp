@@ -39,12 +39,14 @@ impl SandboxViolationStore {
         if let Some(pool) = &self.pool {
             let id = Uuid::new_v4().to_string();
 
+            let redacted_details = ::server_telemetry::redact_interface_pii(details);
+
             // Explicitly map details to Json to be stored natively as JSONB (in PG) or TEXT (in SQLite)
             // if needed, or stringify it based on what `agent_violations` schema actually is.
             // In 002_missing_tables.sql it is `details TEXT NOT NULL`
             // Wait, the harness store uses `sqlx::types::Json`, but `002_missing_tables.sql` has `details TEXT NOT NULL`.
             // Let's just stringify details to be safe and compatible with TEXT.
-            let details_str = details.to_string();
+            let details_str = redacted_details.to_string();
 
             // Execute in an explicit transaction
             let mut tx = pool.begin().await?;
