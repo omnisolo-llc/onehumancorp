@@ -142,8 +142,8 @@ export function VoiceAssistant() {
       <style jsx>{`
         .glassmorphism {
           background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
         @media (prefers-color-scheme: dark) {
           .glassmorphism {
