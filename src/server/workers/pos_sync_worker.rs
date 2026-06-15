@@ -102,13 +102,6 @@ impl PosSyncWorker {
 
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
-                    let ai_payload = serde_json::json!({
-                        "product_id": product_id,
-                        "expected_stock": quantity_deducted,
-                        "actual_stock": stock,
-                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
-                    }).to_string();
-
                     let notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
                         "product_id": product_id,
@@ -269,14 +262,7 @@ impl PosSyncWorker {
 
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
-                                let ai_payload = serde_json::json!({
-                        "product_id": product_id,
-                        "expected_stock": qty,
-                        "actual_stock": stock,
-                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
-                    }).to_string();
-
-                    let notification_id = uuid::Uuid::new_v4().to_string();
+                                let notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": qty,
