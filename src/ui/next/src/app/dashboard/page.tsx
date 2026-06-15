@@ -209,7 +209,7 @@ export default function Dashboard() {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
-  const [userName, setUserName] = useState("Human");
+  const [userName, setUserName] = useState("");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
@@ -427,14 +427,17 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+          {userName ? `Welcome back, ${userName}.` : "Welcome back."}
+        </h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <DashboardViralInviteWidget />
+      {/* Promotional/Mock Viral widgets hidden for Data Truth remediation */}
+      {/* <DashboardViralInviteWidget /> */}
 
       <AiTimeSavingsWidget />
-      <NeighborhoodPulseCard tenant={tenantId()} />
+      {/* <NeighborhoodPulseCard tenant={tenantId()} /> */}
       <FloatingActionButton />
       <VoiceAssistantFAB />
 
@@ -616,9 +619,9 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <PromoterCard />
+        {/* <PromoterCard /> */}
 
-        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
+        {dashboardData?.pendingReviews?.filter((item: any) => item.review || item.response).map((item: any, idx: number) => (
              <ReviewFeedCard
                key={idx}
                review={{
@@ -672,28 +675,30 @@ export default function Dashboard() {
         ))}
 
         <section>
-          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">🎉</div>
-                <div>
-                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+          {metrics.total_sales > 0 && orders.length >= 5 && (
+            <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="text-4xl">🎉</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
+                    navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
+                    setActionMessage("Reward claimed. Invite link copied.");
+                  }}
+                  className="px-4 py-2 min-h-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-lg font-medium shadow-sm transition-colors"
+                >
+                  Share & Claim Reward
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
-                  navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
-                  setActionMessage("Reward claimed. Invite link copied.");
-                }}
-                className="px-4 py-2 min-h-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-lg font-medium shadow-sm transition-colors"
-              >
-                Share & Claim Reward
-              </button>
             </div>
-          </div>
+          )}
 
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
@@ -704,7 +709,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
-            <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
+            <div className="app-grid metrics !grid-cols-1 xs:!grid-cols-2 lg:!grid-cols-4">
               <WalkthroughTarget id="sales-card-target" className="app-card">
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
                   <div className="app-metric-label">Total Sales</div>
@@ -876,7 +881,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <InviteAndEarnWidget />
+        {/* <InviteAndEarnWidget /> */}
 
         <section className="mt-4">
           <div className="mb-3 flex items-center justify-between gap-3">
