@@ -145,7 +145,7 @@ impl InvoiceService for InvoiceServiceImpl {
             });
         }
 
-        let invoice = Invoice {
+        let mut invoice = Invoice {
             id: row.try_get("id").unwrap_or_default(),
             client_id: row.try_get("client_id").unwrap_or_default(),
             client_name: row.try_get("client_name").unwrap_or_default(),
@@ -288,6 +288,35 @@ impl InvoiceService for InvoiceServiceImpl {
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),
         };
+
+        // If approved/sent, make sure we generate a Stripe payment link
+        if invoice.status == "approved" || invoice.status == "sent" {
+            let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_default();
+            let stripe_client = ::server_integrations_stripe::client::StripeClient::new(api_key);
+
+            let display_name = format!("Invoice for {}", invoice.client_name);
+            let link_res = stripe_client.create_payment_link(&display_name, &invoice.client_id, invoice.total_amount).await;
+
+            if let Ok(link) = link_res {
+                invoice.stripe_payment_link = link;
+
+                // update db
+                let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    .bind(&req.tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                sqlx::query("UPDATE invoices SET stripe_payment_link = $1 WHERE id = $2")
+                    .bind(&invoice.stripe_payment_link)
+                    .bind(&invoice.id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+            }
+        }
 
         Ok(Response::new(invoice))
     }
