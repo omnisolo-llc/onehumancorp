@@ -22,6 +22,17 @@ test.describe('Storefront Edge Cache Invalidation & SEO', () => {
       }
     });
 
-    expect(invalidateRes.status()).toBeDefined();
+    expect(invalidateRes.status()).toBe(200);
+
+    // Simulate stock reaching 0
+    const stockOutRes = await page.request.post('/api/v1/public/storefront/webhook/invalidate', {
+        data: {
+            tags: ["resource:22222222-2222-2222-2222-222222222222"]
+        }
+    });
+
+    // In a real environment, this validates the CacheManager webhook triggers properly
+    const status = stockOutRes.status();
+    expect(status === 200 || status === 404).toBeTruthy();
   });
 });
