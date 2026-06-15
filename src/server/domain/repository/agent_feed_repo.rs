@@ -57,8 +57,44 @@ impl AgentFeedRepository {
         Ok(rec)
     }
 
-    pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
-        let query = r#"
+    pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64, mobile_optimized: bool) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
+        let query = if mobile_optimized {
+            r#"
+            SELECT
+                id,
+                tenant_id,
+                event_source,
+                NULL::jsonb as context_payload,
+                NULL::jsonb as proposed_action,
+                lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_feed_items
+            WHERE tenant_id = $1
+
+            UNION ALL
+
+            SELECT
+                id,
+                tenant_id,
+                department as event_source,
+                NULL::jsonb as context_payload,
+                NULL::jsonb as proposed_action,
+                CASE
+                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
+                    WHEN status = 'REJECTED' THEN 'DISMISSED'
+                    ELSE status
+                END as lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_approvals
+            WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+            "#
+        } else {
+            r#"
             SELECT
                 id,
                 tenant_id,
@@ -91,7 +127,8 @@ impl AgentFeedRepository {
 
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
-        "#;
+            "#
+        };
 
         let items = sqlx::query_as::<_, AgentFeedItem>(query)
         .bind(tenant_id)
@@ -163,8 +200,15 @@ mod tests {
         assert_eq!(updated.lifecycle_state, "APPROVED");
 
         // 4. List items
-        let list = repo.list(tenant_id, 10, 0).await.expect("Failed to list feed items");
+        let list = repo.list(tenant_id, 10, 0, false).await.expect("Failed to list feed items");
         assert!(!list.is_empty());
         assert!(list.iter().any(|i| i.id == new_item.id));
+
+        // 5. List items with mobile_optimized = true
+        let list_mobile = repo.list(tenant_id, 10, 0, true).await.expect("Failed to list feed items (mobile)");
+        assert!(!list_mobile.is_empty());
+        let mobile_item = list_mobile.iter().find(|i| i.id == new_item.id).unwrap();
+        assert!(mobile_item.context_payload.is_none());
+        assert!(mobile_item.proposed_action.is_none());
     }
 }

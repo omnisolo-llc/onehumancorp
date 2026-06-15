@@ -171,13 +171,7 @@ async fn list_feed_items(
 
         tokio::spawn(async move {
             let repo = AgentFeedRepository::new(pool_bg);
-            if let Ok(mut items) = repo.list(&tenant_id_bg, limit, offset).await {
-                if mobile_optimized {
-                    for item in items.iter_mut() {
-                        item.context_payload = None;
-                        item.proposed_action = None;
-                    }
-                }
+            if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
                 let response = AgentFeedListResponse { items };
                 let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
                 cache_bg.set_with_tags(&cache_key_bg, response, vec![tag], std::time::Duration::from_secs(60)).await;
@@ -189,14 +183,8 @@ async fn list_feed_items(
 
     let repo = AgentFeedRepository::new(pool);
 
-    match repo.list(&tenant_id, limit, offset).await {
-        Ok(mut items) => {
-            if mobile_optimized {
-                for item in items.iter_mut() {
-                    item.context_payload = None;
-                    item.proposed_action = None;
-                }
-            }
+    match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
+        Ok(items) => {
             let response = AgentFeedListResponse { items };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
