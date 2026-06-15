@@ -117,13 +117,14 @@ Message from {}: '{}'
 Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote details, or booking details.\"
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking details.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -205,6 +206,85 @@ Output JSON format:
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+            let mut quote_id_opt: Option<String> = None;
+
+            if action_type == "Draft Quote" {
+                if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                    let draft_quote_id = Uuid::new_v4();
+                    quote_id_opt = Some(draft_quote_id.to_string());
+                    let total_amount = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let required_deposit = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
+
+                    match &self.db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Ok(mut tx) = self.db.pool.begin().await {
+                                let _ = sqlx::query(
+                                    "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+                                )
+                                .bind(draft_quote_id)
+                                .bind(&tenant_id)
+                                .bind(customer_id_uuid)
+                                .bind(total_amount)
+                                .bind(required_deposit)
+                                .execute(&mut *tx).await;
+
+                                if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                    for item in items {
+                                        let item_id = Uuid::new_v4();
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                        let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                        let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
+                                        let _ = sqlx::query(
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+                                        )
+                                        .bind(item_id)
+                                        .bind(draft_quote_id)
+                                        .bind(desc)
+                                        .bind(price)
+                                        .bind(qty)
+                                        .bind(is_opt)
+                                        .execute(&mut *tx).await;
+                                    }
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                            let _ = sqlx::query(
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(draft_quote_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(customer_id_uuid.to_string())
+                            .bind(total_amount)
+                            .bind(required_deposit)
+                            .execute(sqlite_pool).await;
+
+                            if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                for item in items {
+                                    let item_id = Uuid::new_v4();
+                                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                    let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                    let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                    let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
+                                    let _ = sqlx::query(
+                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(item_id.to_string())
+                                    .bind(draft_quote_id.to_string())
+                                    .bind(desc)
+                                    .bind(price)
+                                    .bind(qty)
+                                    .bind(is_opt)
+                                    .execute(sqlite_pool).await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
@@ -231,7 +311,8 @@ Output JSON format:
                     .bind(serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
-                        "inbox_message_id": message_id
+                        "inbox_message_id": message_id,
+                        "quote_id": quote_id_opt
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -269,7 +350,8 @@ Output JSON format:
                     .bind(serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
-                        "inbox_message_id": message_id
+                        "inbox_message_id": message_id,
+                        "quote_id": quote_id_opt
                     }).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
