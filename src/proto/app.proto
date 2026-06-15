@@ -306,6 +306,7 @@ message SyncOfflineTransactionsResponse {
 message StartTerminalSessionRequest {
   string tenant_id = 1;
   string device_id = 2;
+  int64 opening_balance_cents = 3;
 }
 
 message StartTerminalSessionResponse {
@@ -328,6 +329,7 @@ message UpdateTerminalSessionStatusResponse {
 message EndTerminalSessionRequest {
   string tenant_id = 1;
   string session_id = 2;
+  int64 closing_balance_cents = 3;
 }
 
 message EndTerminalSessionResponse {
@@ -335,11 +337,50 @@ message EndTerminalSessionResponse {
   string error_message = 2;
 }
 
+message CashLedgerEntry {
+  string id = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string entry_type = 4; // SALE, CASH_IN, CASH_OUT, DROP, PAYOUT
+  int64 amount_cents = 5;
+  string currency = 6;
+  string reason = 7;
+  int64 created_at_unix = 8;
+}
+
+message RecordCashMovementRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string entry_type = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string reason = 6;
+}
+
+message RecordCashMovementResponse {
+  bool success = 1;
+  string entry_id = 2;
+}
+
+message GetTerminalSessionSummaryRequest {
+  string session_id = 1;
+}
+
+message GetTerminalSessionSummaryResponse {
+  int64 total_sales_cents = 1;
+  int64 total_cash_in_cents = 2;
+  int64 total_cash_out_cents = 3;
+  int64 expected_cash_cents = 4;
+  repeated CashLedgerEntry entries = 5;
+}
+
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
   rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
   rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
   rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
+  rpc RecordCashMovement(RecordCashMovementRequest) returns (RecordCashMovementResponse);
+  rpc GetTerminalSessionSummary(GetTerminalSessionSummaryRequest) returns (GetTerminalSessionSummaryResponse);
 }
 
 service InventorySyncService {

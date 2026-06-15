@@ -129,8 +129,17 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks revenue, costs, and profit margins per product/service\n\
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
-                - Provides tax-ready financial summaries (income statements, expense tracking)").leak(),
-            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
+                - Provides tax-ready financial summaries (income statements, expense tracking)
+                - Performs POS terminal reconciliation and identifies cash discrepancies").leak(),
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "write",
+                "bash",
+                "finance_report",
+                "pos_reconciliation_analysis",
+            ],
             confidence_threshold: 0.95,
         },
         Department::Legal => DepartmentConfig {
@@ -160,6 +169,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "write",
                 "websearch",
                 "finance_report",
+                "pos_reconciliation_analysis",
             ],
             confidence_threshold: 0.85,
         },

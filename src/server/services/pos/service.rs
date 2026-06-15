@@ -3,16 +3,21 @@ use ::server_ohc::app::{
     EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,
     StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
+    RecordCashMovementRequest, RecordCashMovementResponse,
+    GetTerminalSessionSummaryRequest, GetTerminalSessionSummaryResponse,
+    CashLedgerEntry,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-pub struct MyPosService {}
+pub struct MyPosService {
+    db: Arc<crate::db::DB>,
+}
 
 impl MyPosService {
-    pub fn new(_db: Arc<crate::db::DB>) -> Self {
-        Self { }
+    pub fn new(db: Arc<crate::db::DB>) -> Self {
+        Self { db }
     }
 }
 
@@ -42,7 +47,7 @@ impl PosService for MyPosService {
         let mut synced_count = 0;
         let mut failed_ids = Vec::new();
 
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
 
         let session_id = req.session_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let _ = sqlx::query(
@@ -63,6 +68,7 @@ impl PosService for MyPosService {
             let pool_clone = pool.clone();
             let tenant_id_clone = tenant_id.clone();
             let client_id_clone = client_id.clone();
+            let session_id_clone = session_id.clone();
             let tx_id = if tx.id.is_empty() { Uuid::new_v4().to_string() } else { tx.id.clone() };
 
             futures.push(tokio::spawn(async move {
@@ -96,6 +102,20 @@ impl PosService for MyPosService {
                     tracing::error!("Failed to insert offline transaction: {}", e);
                     return Err(tx.id);
                 }
+
+                // Record in cash ledger if it's a cash sale (assume CASH for offline POS in this flow)
+                let ledger_id = Uuid::new_v4().to_string();
+                let _ = sqlx::query(
+                    "INSERT INTO pos_cash_ledger_entries (id, tenant_id, session_id, entry_type, amount_cents, currency, reason)
+                     VALUES ($1, $2, $3, 'SALE', $4, $5, 'Offline POS Sync')"
+                )
+                .bind(&ledger_id)
+                .bind(&tenant_id_clone)
+                .bind(&session_id_clone)
+                .bind(tx.amount_cents)
+                .bind(&tx.currency)
+                .execute(&mut *db_tx)
+                .await;
 
                 // Queue job
                 let job_id = Uuid::new_v4().to_string();
@@ -175,16 +195,17 @@ impl PosService for MyPosService {
         let tenant_id = auth_tenant;
 
         let session_id = uuid::Uuid::new_v4().to_string();
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
 
         let res = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
-             ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count, opening_balance_cents)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, $4)
+             ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0, opening_balance_cents = $4 RETURNING id"
         )
         .bind(&session_id)
         .bind(&tenant_id)
         .bind(&req.device_id)
+        .bind(req.opening_balance_cents)
         .fetch_one(&pool)
         .await;
 
@@ -228,7 +249,7 @@ impl PosService for MyPosService {
         let req = request.into_inner();
         let tenant_id = auth_tenant;
 
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
 
         let res = sqlx::query(
             "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
@@ -283,11 +304,12 @@ impl PosService for MyPosService {
         let req = request.into_inner();
         let tenant_id = auth_tenant;
 
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
 
         let res = sqlx::query(
-            "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+            "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP, closing_balance_cents = $1, closed_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
         )
+        .bind(req.closing_balance_cents)
         .bind(&req.session_id)
         .bind(&tenant_id)
         .execute(&pool)
@@ -315,6 +337,125 @@ impl PosService for MyPosService {
                 }))
             }
         }
+    }
+
+    async fn record_cash_movement(
+        &self,
+        request: Request<RecordCashMovementRequest>,
+    ) -> Result<Response<RecordCashMovementResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        let req = request.into_inner();
+        let entry_id = Uuid::new_v4().to_string();
+        let pool = self.db.pool.clone();
+
+        let res = sqlx::query(
+            "INSERT INTO pos_cash_ledger_entries (id, tenant_id, session_id, entry_type, amount_cents, currency, reason)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(&entry_id)
+        .bind(&tenant_id)
+        .bind(&req.session_id)
+        .bind(&req.entry_type)
+        .bind(req.amount_cents)
+        .bind(&req.currency)
+        .bind(&req.reason)
+        .execute(&pool)
+        .await;
+
+        match res {
+            Ok(_) => Ok(Response::new(RecordCashMovementResponse {
+                success: true,
+                entry_id,
+            })),
+            Err(e) => Err(Status::internal(format!("Failed to record cash movement: {}", e))),
+        }
+    }
+
+    async fn get_terminal_session_summary(
+        &self,
+        request: Request<GetTerminalSessionSummaryRequest>,
+    ) -> Result<Response<GetTerminalSessionSummaryResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        let req = request.into_inner();
+        let pool = self.db.pool.clone();
+
+        let session_row = sqlx::query(
+            "SELECT opening_balance_cents FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(&req.session_id)
+        .bind(&tenant_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| Status::not_found(format!("Session not found: {}", e)))?;
+
+        let opening_balance: i64 = sqlx::Row::get(&session_row, "opening_balance_cents");
+
+        let entries_rows = sqlx::query(
+            "SELECT id, entry_type, amount_cents, currency, reason, created_at FROM pos_cash_ledger_entries WHERE session_id = $1 AND tenant_id = $2 ORDER BY created_at ASC"
+        )
+        .bind(&req.session_id)
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| Status::internal(format!("Failed to fetch entries: {}", e)))?;
+
+        let mut entries = Vec::new();
+        let mut total_sales_cents = 0;
+        let mut total_cash_in_cents = 0;
+        let mut total_cash_out_cents = 0;
+
+        for row in entries_rows {
+            let entry_type: String = sqlx::Row::get(&row, "entry_type");
+            let amount: i64 = sqlx::Row::get(&row, "amount_cents");
+            let created_at: chrono::DateTime<chrono::Utc> = sqlx::Row::get(&row, "created_at");
+
+            entries.push(CashLedgerEntry {
+                id: sqlx::Row::get(&row, "id"),
+                tenant_id: tenant_id.clone(),
+                session_id: req.session_id.clone(),
+                entry_type: entry_type.clone(),
+                amount_cents: amount,
+                currency: sqlx::Row::get(&row, "currency"),
+                reason: sqlx::Row::get(&row, "reason"),
+                created_at_unix: created_at.timestamp(),
+            });
+
+            match entry_type.as_str() {
+                "SALE" => {
+                    total_sales_cents += amount;
+                    total_cash_in_cents += amount;
+                }
+                "CASH_IN" => total_cash_in_cents += amount,
+                "CASH_OUT" | "DROP" | "PAYOUT" => total_cash_out_cents += amount,
+                _ => {}
+            }
+        }
+
+        let expected_cash_cents = opening_balance + total_cash_in_cents - total_cash_out_cents;
+
+        Ok(Response::new(GetTerminalSessionSummaryResponse {
+            total_sales_cents,
+            total_cash_in_cents,
+            total_cash_out_cents,
+            expected_cash_cents,
+            entries,
+        }))
     }
 }
 

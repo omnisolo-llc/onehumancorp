@@ -60,6 +60,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
@@ -336,6 +337,7 @@ rust_library(
     compile_data = [
         "//src/ui/tauri/src/ui:all_files",
         "//src/ui/next/public/api/ui:all_files",
+        "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
