@@ -7,6 +7,8 @@ use ::server_ohc::app::dashboard_service_server::DashboardService;
 // Database Query Time Standalone Mode (SQLite): p50: 230 us, p95: 336 us, p99: 405 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us
+// Agent Snapshot Fetch Latency: p50: 509 us, p95: 1389 us, p99: 1389 us
+// Dashboard Snapshot Latency: p50: 237 us, p95: 490 us, p99: 490 us
 
 use std::time::Instant;
 use std::sync::Arc;
@@ -714,6 +716,12 @@ pub async fn bench_hybrid_latency() {
 
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
+
+    println!("3.5 Agent Snapshot Fetch Latency");
+    bench_agent_snapshot().await;
+
+    println!("3.6 Dashboard Snapshot Latency");
+    bench_dashboard_snapshot().await;
 
     println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;

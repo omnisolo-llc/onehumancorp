@@ -34,19 +34,18 @@ impl MyAgentManagerService {
         let hub_meetings = self.hub.clone();
         let hub_tasks = self.hub.clone();
         let org_id_clone = org_id.to_string();
+        let org_id_clone_2 = org_id.to_string();
+        let org_id_clone_3 = org_id.to_string();
+
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = tokio::join!(
-            tokio::spawn(async move { hub_agents.get_agents().await }),
-            tokio::spawn(async move { hub_meetings.get_meetings().await }),
+            tokio::spawn(async move { hub_agents.get_agents_by_org(&org_id_clone_2) }),
+            tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_3).await }),
             tokio::spawn(async move {
-                tokio::task::spawn_blocking(move || {
-                    let cost_auditor = hub_cost.get_cost_auditor();
-                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-                }).await.unwrap_or((0.0, 0, vec![]))
+                let cost_auditor = hub_cost.get_cost_auditor();
+                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
             }),
             tokio::spawn(async move {
-                tokio::task::spawn_blocking(move || {
-                    hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
-                }).await.unwrap_or_else(|_| vec![])
+                hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
             })
         );
         let agents = agents_res.unwrap();
@@ -83,7 +82,7 @@ impl MyAgentManagerService {
         let snapshot = DashboardSnapshot {
             meetings: Arc::unwrap_or_clone(meetings),
             costs: Some(costs),
-            agents: Arc::unwrap_or_clone(agents),
+            agents,
             statuses,
             task_queue: proto_task_queue,
             queue_length,
