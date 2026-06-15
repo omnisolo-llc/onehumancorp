@@ -51,6 +51,8 @@ static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::Hy
 static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_ANALYTICS_BRIEFING_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -3681,6 +3683,50 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
+    let cache_key = format!("ui_analytics_briefing:{}", tenant_id);
+    let cache = UI_ANALYTICS_BRIEFING_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            let db1 = db_bg.clone(); let db2 = db_bg.clone();
+            let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
+
+            let (metrics_res, inbox_res) = tokio::join!(
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
+                tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+            );
+
+            let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+            let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+
+            let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
+                active_customers: 0,
+                pending_orders: 0,
+                total_sales: 0.0,
+                total_campaigns_sent: 0,
+                auto_replied: 0,
+            });
+            let inbox_messages = inbox_res.unwrap_or_default();
+            let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
+
+            let total_sales_formatted = format!("${:.2}", metrics.total_sales);
+            let summary = format!("Good morning. You have {} pending orders totaling {}, and {} unanswered DMs.", metrics.pending_orders, total_sales_formatted, unanswered_dms);
+
+            let result = serde_json::json!({ "briefing": summary });
+            if let Some(c) = UI_ANALYTICS_BRIEFING_CACHE.get() {
+                c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
+            }
+        });
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
     let db1 = db.clone();
     let db2 = db.clone();
     let tenant_id1 = tenant_id.clone();
@@ -3708,9 +3754,10 @@ async fn ui_dashboard_analytics_briefing_handler(
 
     let summary = format!("Good morning. You have {} pending orders totaling {}, and {} unanswered DMs.", metrics.pending_orders, total_sales_formatted, unanswered_dms);
 
-    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
-        "briefing": summary
-    }))).into_response()
+    let result = serde_json::json!({ "briefing": summary });
+    cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(60)).await;
+
+    (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -3724,8 +3771,62 @@ async fn ui_dashboard_analytics_chat_handler(
     axum::Json(payload): axum::Json<AnalyticsChatRequest>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
     let tenant_id = ui_tenant_id(&query);
     let text = payload.message.to_lowercase();
+
+    let mut hasher = DefaultHasher::new();
+    text.hash(&mut hasher);
+    let text_hash = hasher.finish();
+
+    let cache_key = format!("ui_analytics_chat:{}:{}", tenant_id, text_hash);
+    let cache = UI_ANALYTICS_CHAT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+        let text_bg = text.clone();
+        tokio::spawn(async move {
+            let db1 = db_bg.clone(); let db2 = db_bg.clone();
+            let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
+
+            let (inbox_res_handle, metrics_res_handle) = tokio::join!(
+                tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2).await })
+            );
+
+            let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+            let metrics_res = metrics_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+
+            let response_text = if text_bg.contains("dm") || text_bg.contains("message") {
+                let inbox_messages = inbox_res.unwrap_or_default();
+                let senders: Vec<String> = inbox_messages.iter().take(3).filter_map(|m| m.get("source").and_then(|s| s.as_str()).map(|s| s.to_string())).collect();
+                if senders.is_empty() {
+                    "You have no recent messages.".to_string()
+                } else {
+                    format!("Your latest messages are from: {}.", senders.join(", "))
+                }
+            } else if text_bg.contains("order") || text_bg.contains("booking") || text_bg.contains("revenue") || text_bg.contains("sale") {
+                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+                format!("You have {} pending orders. Total sales are ${:.2}.", metrics.pending_orders, metrics.total_sales)
+            } else {
+                "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
+            };
+
+            let result = serde_json::json!({ "reply": response_text });
+            if let Some(c) = UI_ANALYTICS_CHAT_CACHE.get() {
+                c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
+            }
+        });
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let db1 = db.clone();
     let db2 = db.clone();
@@ -3755,9 +3856,10 @@ async fn ui_dashboard_analytics_chat_handler(
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
     };
 
-    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
-        "reply": response_text
-    }))).into_response()
+    let result = serde_json::json!({ "reply": response_text });
+    cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(60)).await;
+
+    (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
