@@ -244,14 +244,44 @@ pub async fn regenerate_cache(
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
-                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
+                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                        let mut dynamic_price_or_status = price;
+
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
+
+                            // Dynamically fetch live inventory and price
+                            if let Ok(row) = sqlx::query("SELECT inventory_count, available_quantity, price_cents, currency FROM products WHERE id = $1")
+                                .bind(pid)
+                                .fetch_one(&pool)
+                                .await {
+                                use sqlx::Row;
+                                let available_quantity: Option<i32> = row.try_get("available_quantity").unwrap_or(None);
+                                let inventory_count: Option<i32> = row.try_get("inventory_count").unwrap_or(None);
+                                let price_cents: Option<i64> = row.try_get("price_cents").unwrap_or(None);
+                                let currency: Option<String> = row.try_get("currency").unwrap_or(None);
+
+                                let stock = available_quantity.or(inventory_count);
+                                if let Some(qty) = stock {
+                                    if qty <= 0 {
+                                        dynamic_price_or_status = "Sold Out".to_string();
+                                    } else if let (Some(cents), Some(curr)) = (price_cents, currency) {
+                                        // Simple formatting, could be localized
+                                        let curr_symbol = match curr.as_str() {
+                                            "USD" => "$",
+                                            "EUR" => "€",
+                                            "GBP" => "£",
+                                            _ => "$",
+                                        };
+                                        dynamic_price_or_status = format!("{}{:.2}", curr_symbol, (cents as f64) / 100.0);
+                                    }
+                                }
+                            }
                         }
                         html.push_str(&format!(
                             "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
-                            escape_html(name), escape_html(desc), escape_html(price)
+                            escape_html(name), escape_html(desc), escape_html(&dynamic_price_or_status)
                         ));
                     }
                 }
