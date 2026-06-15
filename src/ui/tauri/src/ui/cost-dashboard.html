@@ -846,8 +846,11 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
 .ohc-tooltip {
     position: fixed;
-    background: #333;
-    color: white;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #1d1d1f;
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 13px;
