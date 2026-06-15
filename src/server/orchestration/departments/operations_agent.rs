@@ -50,7 +50,27 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
+            "tenant.order.created" => {
+                let mut translated_notes = String::new();
+                if let Some(notes) = event.payload.get("order_notes").and_then(|v| v.as_str()) {
+                    if !notes.is_empty() {
+                        let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                        if !llm_key.is_empty() {
+                            let llm = crate::minimax::MinimaxClient::new(llm_key);
+                            // Food cart operator preferred language logic, default to Arabic
+                            let prompt = format!("Translate the following customer order notes to Arabic concisely. Only output the translation. Notes: '{}'", notes);
+                            if let Ok(translated) = llm.reason(&prompt).await {
+                                translated_notes = translated;
+                            }
+                        }
+                    }
+                }
+                if !translated_notes.is_empty() {
+                    format!("Process Order & Update Inventory. Translated notes: {}", translated_notes)
+                } else {
+                    "Process Order & Update Inventory".to_string()
+                }
+            },
             "LowStockAlert" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if !msg.is_empty() {

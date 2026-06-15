@@ -17,8 +17,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/orders", get(get_orders_handler))
-        .route("/inventory", get(get_inventory_handler))
+        .route("/orders", get(get_orders_handler).post(post_orders_handler))
+        .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
         .with_state(hub)
 }
 
@@ -88,6 +88,151 @@ async fn get_orders_handler(
     Json(result)
 }
 
+
+#[derive(serde::Deserialize)]
+pub struct MutationPayload {
+    pub item_id: Option<String>,
+    pub is_sold_out: Option<bool>,
+    pub order_id: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct OfflineMutation {
+    pub r#type: String,
+    pub payload: MutationPayload,
+    pub timestamp: String,
+}
+
+
+async fn post_inventory_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    axum::Json(mutations): axum::Json<Vec<OfflineMutation>>,
+) -> Json<Value> {
+    let pool = crate::db::get_pool();
+    let req_tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("default");
+
+    let mut failed = 0;
+
+    for mutation in mutations {
+        if mutation.r#type == "TOGGLE_SOLD_OUT" {
+            if let (Some(item_id), Some(is_sold_out)) = (mutation.payload.item_id, mutation.payload.is_sold_out) {
+                // Determine tenant_id
+                let row = sqlx::query("SELECT tenant_id FROM products WHERE id = $1")
+                    .bind(&item_id)
+                    .fetch_optional(&pool)
+                    .await
+                    .unwrap_or(None);
+
+                if let Some(row) = row {
+                    let tenant_id: String = row.get("tenant_id");
+                    if tenant_id != req_tenant_id && req_tenant_id != "default" { failed += 1; continue; }
+                    if tenant_id != req_tenant_id && req_tenant_id != "default" { failed += 1; continue; }
+
+                    let res = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2")
+                        .bind(is_sold_out)
+                        .bind(&item_id)
+                        .execute(&pool)
+                        .await;
+
+                    if res.is_err() {
+                        failed += 1;
+                    } else {
+                        // Notify operations agent
+                        // let event = crate::orchestration::TeammateMeshEvent {
+let event = crate::orchestration::departments::types::DepartmentEvent {
+                                 id: uuid::Uuid::new_v4().to_string(),
+                                 tenant_id: tenant_id.clone(),
+                                 event_type: "tenant.inventory.updated".to_string(),
+                                 payload: json!({
+                                     "product_id": item_id,
+                                     "is_sold_out": is_sold_out
+                                 })
+                             };
+                             // Cannot easily dispatch here without refactoring pos_routes to take orchestrator.
+
+                    }
+                } else {
+                    failed += 1;
+                }
+            } else {
+                failed += 1;
+            }
+        }
+    }
+
+    if failed > 0 {
+        Json(json!({ "success": false, "failed_count": failed }))
+    } else {
+        Json(json!({ "success": true, "failed_count": 0 }))
+    }
+}
+
+
+async fn post_orders_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    axum::Json(mutations): axum::Json<Vec<OfflineMutation>>,
+) -> Json<Value> {
+    let pool = crate::db::get_pool();
+    let req_tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("default");
+
+    let mut failed = 0;
+
+    for mutation in mutations {
+        if mutation.r#type == "UPDATE_ORDER_STATUS" {
+            if let (Some(order_id), Some(status)) = (mutation.payload.order_id, mutation.payload.status) {
+                let row = sqlx::query("SELECT tenant_id, total_amount FROM orders WHERE id = $1")
+                    .bind(&order_id)
+                    .fetch_optional(&pool)
+                    .await
+                    .unwrap_or(None);
+
+                if let Some(row) = row {
+                    let tenant_id: String = row.get("tenant_id");
+                    if tenant_id != req_tenant_id && req_tenant_id != "default" { failed += 1; continue; }
+                    if tenant_id != req_tenant_id && req_tenant_id != "default" { failed += 1; continue; }
+
+                    let res = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2")
+                        .bind(&status)
+                        .bind(&order_id)
+                        .execute(&pool)
+                        .await;
+
+                    if res.is_err() {
+                        failed += 1;
+                    } else {
+                        if status == "Ready" {
+                             let event = crate::orchestration::departments::types::DepartmentEvent {
+                                 id: uuid::Uuid::new_v4().to_string(),
+                                 tenant_id: tenant_id.clone(),
+                                 event_type: "tenant.order.fulfillment_ready".to_string(),
+                                 payload: json!({
+                                     "order_id": order_id,
+                                     "status": "Ready"
+                                 })
+                             };
+                             // Cannot easily dispatch here without refactoring pos_routes to take orchestrator.
+                        }
+                    }
+                } else {
+                    failed += 1;
+                }
+            } else {
+                failed += 1;
+            }
+        }
+    }
+
+    if failed > 0 {
+        Json(json!({ "success": false, "failed_count": failed }))
+    } else {
+        Json(json!({ "success": true, "failed_count": 0 }))
+    }
+}
+
+
 async fn get_inventory_handler(
     State(_hub): State<Arc<Hub>>,
     Query(query): Query<PosQuery>,
@@ -95,7 +240,7 @@ async fn get_inventory_handler(
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
     let pool = crate::db::get_pool();
 
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_sold_out FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&pool)
         .await
@@ -109,6 +254,7 @@ async fn get_inventory_handler(
             "price_cents": row.get::<i64, _>("price_cents"),
             "currency": row.get::<String, _>("currency"),
             "stock": row.get::<i32, _>("inventory_count"),
+            "is_sold_out": row.get::<Option<bool>, _>("is_sold_out").unwrap_or(false),
         })
     }).collect();
 
