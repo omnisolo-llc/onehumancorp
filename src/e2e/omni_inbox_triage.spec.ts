@@ -4,7 +4,7 @@ import { adminPage } from './fixtures';
 test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
     test('Should display unified message feed and allow AI drafted reply to be sent', async ({ browser }) => {
         // Step 1: Login via fixture
-        const page = await adminPage({ browser });
+        const page = await adminPage(browser);
 
         // Step 2: Hit mock ingestion endpoint to simulate Maya receiving an Instagram DM
         const mockPayload = {

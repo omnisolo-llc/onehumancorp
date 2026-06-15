@@ -428,7 +428,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -440,7 +440,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
                     let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
@@ -452,7 +452,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (original_content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -464,7 +464,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -526,7 +526,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -537,7 +537,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -2151,16 +2151,21 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE orders (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, status TEXT, total_amount REAL)")
+        sqlx::query("CREATE TABLE vendors (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT)")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE purchase_orders (id TEXT PRIMARY KEY, tenant_id TEXT, vendor_id TEXT, status TEXT, total_cost REAL)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, content TEXT)")
+        sqlx::query("CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, status TEXT)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
 
         // Insert into SQLite
+        sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES (?, ?, ?)")
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
             .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
@@ -2168,23 +2173,27 @@ mod e2e_search_workspace_tests {
             .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
-            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind(150.25)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
+            .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind(150.25)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
-            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<f64>)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<f64>)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
-            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
-            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         // Insert into Postgres
         sqlx::query("INSERT INTO tenants (id, name, ceo_name) VALUES ($1, $1, $1) ON CONFLICT DO NOTHING")
             .bind(&unique_tenant)
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES ($1, $2, $3)")
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
@@ -2196,18 +2205,18 @@ mod e2e_search_workspace_tests {
 
         // Wait, for DECIMAL, sqlx handles it depending on Cargo.toml features, we might need a workaround for `rust_decimal` missing, but `total_amount` is `DECIMAL` in Postgres.
         // As seen from previous error `use of unresolved module or unlinked crate rust_decimal`, we should insert using direct string casting or float casting.
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind("150.25")
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind("150.25")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<&str>)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<&str>)
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
-            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
-            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Query both and compare

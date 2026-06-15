@@ -298,7 +298,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "Validation Error (Pydantic-first tool schema): parse error"),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }

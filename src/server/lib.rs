@@ -4476,6 +4476,49 @@ async fn ui_dashboard_unified_agent_feed_handler(
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
+static UI_PRIORITY_TASKS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+
+pub async fn list_ui_priority_tasks_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let cache_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
+    let cache = UI_PRIORITY_TASKS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if is_stale {
+            let cache_key_bg = cache_key.clone();
+            let db_bg = db.clone();
+            let t_bg = tenant_id.clone();
+            tokio::spawn(async move {
+                if let Ok(tasks) = load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await {
+                    if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                        c.set(&cache_key_bg, tasks, std::time::Duration::from_secs(10)).await;
+                    }
+                }
+            });
+        }
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    match load_ui_priority_tasks_from_db(&db, &tenant_id, mobile_optimized).await {
+        Ok(tasks) => {
+            let _ = cache.set(&cache_key, tasks.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(tasks)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch UI priority tasks: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
+static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -4927,8 +4970,30 @@ async fn list_ui_supply_handler(
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
+    let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
+    let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if is_stale {
+            let cache_key_bg = cache_key.clone();
+            let db_bg = db.clone();
+            let t_bg = tenant_id.clone();
+            tokio::spawn(async move {
+                if let Ok(result) = load_ui_supply_from_db(&db_bg, &t_bg, mobile_optimized).await {
+                    if let Some(c) = UI_SUPPLY_CACHE.get() {
+                        c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
+                    }
+                }
+            });
+        }
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
     match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(result) => (axum::http::StatusCode::OK, axum::Json(result)).into_response(),
+        Ok(result) => {
+            let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(result)).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to fetch UI supply: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({}))).into_response()
@@ -5324,6 +5389,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
+        .route("/api/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
@@ -5642,6 +5708,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/sync/ws", axum::routing::get(api::sync::ws_sync_handler))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
