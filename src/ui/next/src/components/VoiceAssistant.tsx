@@ -1,5 +1,5 @@
-import { WithTooltip } from "./TooltipRegistry";
 "use client";
+import { WithTooltip } from "./TooltipRegistry";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
