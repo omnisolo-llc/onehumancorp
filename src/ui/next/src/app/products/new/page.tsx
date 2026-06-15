@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { optimizeImage } from '../../../lib/imageOptimization';
 
 export default function AutoCatalogPage() {
   return (
@@ -36,16 +37,23 @@ function AutoCatalogContent() {
   const searchParams = useSearchParams();
   const [textMode, setTextMode] = useState(searchParams.get('mode') === 'text');
   const [promptText, setPromptText] = useState('');
-
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      setUploadProgress(10);
       setLoading(true);
-    setPublishingStep(1);
+      setPublishingStep(1);
       setError(null);
       try {
+        const optimizedBlob = await optimizeImage(file);
+        setUploadProgress(40);
         const formData = new FormData();
-        formData.append('image', e.target.files[0]);
+        formData.append('image', optimizedBlob, 'image.webp');
 
         const response = await fetch('/api/auto-catalog', {
           method: 'POST',
@@ -86,7 +94,9 @@ function AutoCatalogContent() {
         }
       } finally {
         setLoading(false);
-      setPublishingStep(0);
+        setPublishingStep(0);
+        setUploadProgress(100);
+        // Do not revoke object url immediately if you want to keep the preview on success
       }
     }
   };
@@ -272,9 +282,24 @@ function AutoCatalogContent() {
 
       {loading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-           <div className="w-full aspect-square bg-gray-200 rounded-2xl animate-pulse flex items-center justify-center">
-              <div className="text-4xl animate-bounce">✨</div>
-           </div>
+           {previewUrl ? (
+               <div className="w-full aspect-square rounded-2xl overflow-hidden relative border border-gray-200 shadow-sm">
+                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
+                       <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                   </div>
+                   <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px] flex items-center justify-center">
+                       <div className="bg-white/90 px-4 py-2 rounded-full shadow-md flex items-center gap-2">
+                           <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                           <span className="text-sm font-bold text-gray-800">Optimizing...</span>
+                       </div>
+                   </div>
+               </div>
+           ) : (
+               <div className="w-full aspect-square bg-gray-200 rounded-2xl animate-pulse flex items-center justify-center">
+                  <div className="text-4xl animate-bounce">✨</div>
+               </div>
+           )}
            <div className="w-full space-y-4">
               <div className="h-6 bg-gray-200 rounded-md animate-pulse w-3/4"></div>
               <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full"></div>
@@ -287,9 +312,13 @@ function AutoCatalogContent() {
       {productData && !loading && (
         <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
            <div className="w-full aspect-square bg-gray-200 rounded-2xl overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center">
-                 <div className="text-6xl">🧁</div>
-              </div>
+              {previewUrl ? (
+                 <img src={previewUrl} alt="Product" className="w-full h-full object-cover" />
+              ) : (
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center">
+                     <div className="text-6xl">🧁</div>
+                  </div>
+              )}
            </div>
 
            {/* Glassmorphism Card */}
