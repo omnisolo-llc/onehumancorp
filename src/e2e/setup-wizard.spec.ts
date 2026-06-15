@@ -1,10 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Setup Wizard 375px Flow', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
-    test('should render properly and allow selection', async ({ adminPage: page }) => {
+    test('should render properly and allow selection', async ({ page }) => {
         // Go to setup wizard
         await page.goto('/ui/setup.html');
         await expect(page).toHaveTitle(/OHC Setup/);
@@ -60,5 +59,24 @@ test.describe('Setup Wizard 375px Flow', () => {
 
         // Verify we reached Admin setup step
         await expect(page.locator('#step-admin')).toBeVisible();
+
+        // Admin Setup
+        await page.locator('#admin-email').fill('admin@mycoolbakery.com');
+        await page.locator('#admin-password').fill('securepassword123');
+        await page.locator('#step-admin .next-step-btn').click();
+
+        // Offer Setup
+        await page.locator('#first-offer').fill('Custom Wedding Cake');
+        await page.locator('#step-offer .next-step-btn').click();
+
+        // Template Setup
+        await page.locator('#template-selection').selectOption('Modern');
+        await page.locator('#finish-btn').click();
+
+        // We expect to get redirected to success page
+        await expect(page).toHaveURL(/\/ui\/success\.html/);
+
+        // And check if Go to Assistant button is there
+        await expect(page.locator('#dashboard-btn')).toBeVisible();
     });
 });
