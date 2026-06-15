@@ -3913,7 +3913,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
     let (legacy_res, feed_res, approvals_res) = tokio::join!(
         tokio::spawn(async move {
-            let mut legacy_rows_json = Vec::new();
+            let mut legacy_rows_json = Vec::with_capacity(50);
             match &db1.store {
                 crate::db::DbStore::Postgres => {
                     if let Ok(rows) = sqlx::query(
@@ -3993,7 +3993,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             legacy_rows_json
         }),
         tokio::spawn(async move {
-            let mut feed_rows_json = Vec::new();
+            let mut feed_rows_json = Vec::with_capacity(50);
             match &db2.store {
                 crate::db::DbStore::Postgres => {
                     if let Ok(rows) = sqlx::query(
