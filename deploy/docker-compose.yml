@@ -30,7 +30,7 @@ services:
       LOG_LEVEL: "info"
       LISTEN_ADDR: "0.0.0.0:18789"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      REDIS_URL: redis://valkey:6379
+      REDIS_URL: redis://localhost:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,8 +60,8 @@ services:
       LOG_LEVEL: "info"
       PORT: "8080"
       OHC_PORT: "8080"
-      REDIS_ADDR: valkey:6379
-      REDIS_URL: redis://valkey:6379
+      REDIS_ADDR: localhost:6379
+      REDIS_URL: redis://localhost:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       CHATWOOT_URL: http://chatwoot:3000
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
@@ -153,7 +153,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg15
+    image: postgres:15-alpine
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
@@ -215,7 +215,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://valkey:6379
+      REDIS_URL: redis://localhost:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
@@ -239,7 +239,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://valkey:6379
+      REDIS_URL: redis://localhost:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
@@ -267,7 +267,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://valkey:6379
+      REDIS_URL: redis://localhost:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
