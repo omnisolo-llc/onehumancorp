@@ -203,23 +203,40 @@ impl Department for CustomerSuccessAgent {
             }
 
             let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}\n\nOutput ONLY a valid JSON object containing two fields: \"reply\" (the drafted string) and \"confidence\" (an integer 0-100 indicating how confident you are in this reply given the context).",
                 event.tenant_id, message, context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+            let raw_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "{\"reply\": \"Thank you for your message. We will get back to you shortly.\", \"confidence\": 50}".to_string())
                 }
                 _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "{\"reply\": \"Thank you for your message. We will get back to you shortly.\", \"confidence\": 50}".to_string())
                 }
             };
+
+            let (generated_response, confidence) = if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
+                let reply = parsed.get("reply").and_then(|v| v.as_str()).unwrap_or("Thank you for your message. We will get back to you shortly.").to_string();
+                let conf = parsed.get("confidence").and_then(|v| v.as_i64()).unwrap_or(50) as i32;
+                (reply, conf)
+            } else {
+                let cleaned = raw_response.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(cleaned) {
+                    let reply = parsed.get("reply").and_then(|v| v.as_str()).unwrap_or("Thank you for your message. We will get back to you shortly.").to_string();
+                    let conf = parsed.get("confidence").and_then(|v| v.as_i64()).unwrap_or(50) as i32;
+                    (reply, conf)
+                } else {
+                    ("Thank you for your message. We will get back to you shortly.".to_string(), 50)
+                }
+            };
+
+            let risk = if confidence >= 80 { ActionRisk::AutoExecute } else { ActionRisk::DraftForReview };
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)

@@ -2856,6 +2856,30 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
 
+    let inbox_drafts_state = api::inbox::drafts::DraftsState {
+        db: db.clone(),
+    };
+    let inbox_drafts_router = api::inbox::drafts::router(inbox_drafts_state).layer(
+        axum::middleware::from_fn(
+            |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                use axum::response::IntoResponse;
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                let token = match auth_header {
+                    Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                    _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                let claims = match store.validate_token(token).await {
+                    Ok(c) => c,
+                    Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                let mut req = req;
+                req.extensions_mut().insert(claims);
+                next.run(req).await
+            }
+        )
+    );
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -5778,6 +5802,7 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
+        .nest("/api/v1/inbox", inbox_drafts_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 

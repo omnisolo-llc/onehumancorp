@@ -231,10 +231,21 @@ function ApiInboxFallback() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
-        if (!res.ok) throw new Error("Failed to load inbox messages");
+        const token = localStorage.getItem("token") || "";
+        const res = await fetch(`/api/v1/inbox/drafts?tenant_id=${encodeURIComponent(tenantId())}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          // fallback
+          const res2 = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
+          if (!res2.ok) throw new Error("Failed to load inbox messages");
+          const data2 = await res2.json();
+          setMessages(Array.isArray(data2) ? data2 : []);
+          return;
+        }
         const data = await res.json();
-        setMessages(Array.isArray(data) ? data : []);
+        const drafts = data.drafts || [];
+        setMessages(Array.isArray(drafts) ? drafts : []);
       } catch (err: any) {
         setError(err?.message || "Failed to load inbox messages");
       } finally {
