@@ -31,15 +31,6 @@ jobs:
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
@@ -104,15 +95,6 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Free runner disk space
@@ -263,15 +245,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Free runner disk space
@@ -345,15 +318,6 @@ jobs:
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Free runner disk space
@@ -433,15 +397,6 @@ jobs:
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Free runner disk space
@@ -570,15 +525,6 @@ jobs:
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - name: Free Disk Space
-        uses: AdityaGarg8/remove-unwanted-software@v3
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-docker-images: 'true'
-          remove-codeql: 'true'
-
       - uses: actions/checkout@v6
 
       - name: Free runner disk space
