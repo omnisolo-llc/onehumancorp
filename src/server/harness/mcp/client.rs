@@ -1,3 +1,4 @@
+#![allow(clippy::new_without_default)]
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::process::Stdio;

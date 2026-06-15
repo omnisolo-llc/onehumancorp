@@ -1,3 +1,4 @@
+#![allow(clippy::new_without_default)]
 use super::manager::SandboxPolicy;
 
 pub struct BashWrapper {

@@ -1,3 +1,5 @@
+#![allow(clippy::if_same_then_else)]
+#![allow(clippy::collapsible_if)]
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use serde::Deserialize;

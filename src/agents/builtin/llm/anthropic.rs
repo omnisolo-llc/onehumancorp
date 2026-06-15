@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_unwrap, clippy::collapsible_if, clippy::nonminimal_bool, clippy::implicit_saturating_sub)]
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

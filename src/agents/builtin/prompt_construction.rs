@@ -205,15 +205,14 @@ impl HierarchicalPromptBuilder {
         let mut user_instr = cfg.user_instructions.clone();
 
         // Inject cascading AGENTS.md instructions
-        if let Some(agents_md) = cascading_agents_md {
-            if !agents_md.is_empty() {
+        if let Some(agents_md) = cascading_agents_md
+            && !agents_md.is_empty() {
                 if !user_instr.is_empty() {
                     user_instr.push_str("\n\n---\n\n");
                 }
                 user_instr.push_str("[Cascading AGENTS.md Instructions]:\n");
                 user_instr.push_str(&agents_md);
             }
-        }
 
         // OpenHands MicroAgents Injection
         if let Ok(repo_dir) = std::env::current_dir() {

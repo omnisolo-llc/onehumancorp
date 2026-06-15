@@ -1,3 +1,4 @@
+#![allow(clippy::new_without_default)]
 use regex::Regex;
 use super::manager::SandboxPolicy;
 

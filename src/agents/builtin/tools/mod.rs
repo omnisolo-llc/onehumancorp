@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 /// Master Catalog B.2. Tools
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;

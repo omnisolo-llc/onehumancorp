@@ -1,3 +1,6 @@
+#![allow(clippy::new_without_default)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::while_let_loop)]
 use tree_sitter::{Node, Parser};
 use server_telemetry::record_harness_security_divergence;
 

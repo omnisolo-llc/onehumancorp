@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_unwrap, clippy::collapsible_if, clippy::nonminimal_bool, clippy::implicit_saturating_sub)]
 use async_trait::async_trait;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Role};
 

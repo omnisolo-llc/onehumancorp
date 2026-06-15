@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if, clippy::suspicious_open_options)]
 use serde::Deserialize;
 use std::sync::OnceLock;
 
