@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ohc.collective;
 
-
 option go_package = "github.com/onehumancorp/mono/src/proto/ohc/collective;collectivepb";
 
 message Collective {
@@ -69,9 +68,46 @@ message GetCollectivesResponse {
   repeated Collective collectives = 1;
 }
 
+message RecordLoyaltyPointsRequest {
+  string collective_id = 1;
+  string buyer_id = 2;
+  string tenant_id = 3;
+  int32 points = 4;
+}
+
+message RecordLoyaltyPointsResponse {
+  bool success = 1;
+  int32 new_balance = 2;
+}
+
+message SpendLoyaltyPointsRequest {
+  string collective_id = 1;
+  string buyer_id = 2;
+  string tenant_id = 3;
+  int32 points = 4;
+}
+
+message SpendLoyaltyPointsResponse {
+  bool success = 1;
+  int32 new_balance = 2;
+}
+
+message MatchSynergyRequest {
+  string tenant_id = 1;
+  string category = 2;
+}
+
+message MatchSynergyResponse {
+  repeated string suggested_tenant_ids = 1;
+}
+
 service CollectiveService {
   rpc GetNearbyTenants(GetNearbyTenantsRequest) returns (GetNearbyTenantsResponse);
   rpc InviteTenant(InviteTenantRequest) returns (InviteTenantResponse);
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetCollectives(GetCollectivesRequest) returns (GetCollectivesResponse);
+
+  rpc RecordLoyaltyPoints(RecordLoyaltyPointsRequest) returns (RecordLoyaltyPointsResponse);
+  rpc SpendLoyaltyPoints(SpendLoyaltyPointsRequest) returns (SpendLoyaltyPointsResponse);
+  rpc MatchSynergy(MatchSynergyRequest) returns (MatchSynergyResponse);
 }

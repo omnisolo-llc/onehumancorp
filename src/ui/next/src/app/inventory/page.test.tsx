@@ -1,6 +1,5 @@
 import { render, screen, act } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import { act } from "@testing-library/react";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import InventoryDashboard from "./page";
 
