@@ -45,7 +45,7 @@ impl InventoryService {
 
             let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 };
 
-            let acquired: bool = redis::cmd("SET")
+            let acquired: bool = match redis::cmd("SET")
                 .arg(&lock_key)
                 .arg(&lock_id)
                 .arg("EX")
@@ -53,7 +53,7 @@ impl InventoryService {
                 .arg("NX")
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(false);
+                .map_err(|e| tracing::error!("Failed to acquire lock: {}", e)).unwrap_or(false);
 
             if !acquired {
                 let pool = crate::db::get_pool();
@@ -92,7 +92,7 @@ impl InventoryService {
                     if let Some(stock) = current_stock {
                         if stock < quantity {
                             let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            let _: Result<(), _> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| tracing::error!("Failed to delete lock: {}", e));
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -117,7 +117,7 @@ impl InventoryService {
                         if let Some(f_stock) = fallback_stock {
                             if f_stock < quantity {
                                 let _ = tx.rollback().await;
-                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                let _: Result<(), _> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| tracing::error!("Failed to delete lock: {}", e));
                                 return Ok(ReserveResult {
                                     success: false,
                                     lock_id: "".to_string(),
@@ -133,7 +133,7 @@ impl InventoryService {
                             }
                         } else {
                             let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            let _: Result<(), _> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| tracing::error!("Failed to delete lock: {}", e));
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -143,10 +143,10 @@ impl InventoryService {
                     }
                     let _ = tx.commit().await;
                 } else {
-                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    let _: Result<(), _> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| tracing::error!("Failed to delete lock: {}", e));
                 }
             } else {
-                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                let _: Result<(), _> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| tracing::error!("Failed to delete lock: {}", e));
             }
         }
 
@@ -198,11 +198,11 @@ impl InventoryService {
                 }
             }
 
-            let _: () = redis::cmd("DEL")
+            let _: Result<(), _> = redis::cmd("DEL")
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(());
+                .map_err(|e| tracing::error!("Failed to delete lock: {}", e));
         }
 
         Ok(ReleaseResult {
@@ -239,11 +239,11 @@ impl InventoryService {
                 }
             }
 
-            let _: () = redis::cmd("DEL")
+            let _: Result<(), _> = redis::cmd("DEL")
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(());
+                .map_err(|e| tracing::error!("Failed to delete lock: {}", e));
         }
 
         let pool = crate::db::get_pool();
@@ -379,6 +379,22 @@ impl InventoryService {
                     success: false,
                     error_message: "Product not found".to_string(),
                 });
+            }
+        }
+
+
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.updated",
+                    "tags": [format!("entity:product:{}", product_id)]
+                }).to_string();
+                let _: Result<(), _> = redis::cmd("PUBLISH")
+                    .arg("cache_invalidation_events")
+                    .arg(&invalidation_payload)
+                    .query_async(&mut conn)
+                    .await
+                    .map_err(|e| tracing::error!("Failed to publish cache invalidation event: {}", e));
             }
         }
 
