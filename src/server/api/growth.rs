@@ -1909,10 +1909,10 @@ async fn handle_team_invite_accept(
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
                 let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
-            }
 
-            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+                let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+                metrics_cache.invalidate(&format!("aggregated_metrics_{}", team_id)).await;
+            }
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
@@ -1937,7 +1937,7 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -2515,7 +2515,7 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
