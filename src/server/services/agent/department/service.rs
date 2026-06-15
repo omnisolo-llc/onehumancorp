@@ -20,7 +20,7 @@ impl DepartmentService {
         let orchestrator_clone = self.orchestrator.clone();
 
         let handler = Box::new(move |msg: Message| {
-            if msg.topic == "system:order_received" {
+            if msg.topic == "system:order_received" || msg.topic == "system:booking_created" {
                 let orchestrator = orchestrator_clone.clone();
                 let payload_str = String::from_utf8_lossy(&msg.payload).to_string();
 
@@ -31,10 +31,16 @@ impl DepartmentService {
                     "e2e-tenant".to_string()
                 };
 
+                let event_type = if msg.topic == "system:booking_created" {
+                    "tenant.booking.created".to_string()
+                } else {
+                    "tenant.order.created".to_string()
+                };
+
                 let event = DepartmentEvent {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id,
-                    event_type: "tenant.order.created".to_string(),
+                    event_type,
                     payload: serde_json::json!({"source": "system_bus"}),
                 };
 
@@ -45,6 +51,32 @@ impl DepartmentService {
         });
 
         let _ = self.bus.subscribe("system:order_received".to_string(), handler).await?;
+
+        let orchestrator_clone_2 = self.orchestrator.clone();
+        let handler_booking = Box::new(move |msg: Message| {
+            if msg.topic == "system:booking_created" {
+                let orchestrator = orchestrator_clone_2.clone();
+                let payload_str = String::from_utf8_lossy(&msg.payload).to_string();
+
+                let tenant_id = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                    json.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("e2e-tenant").to_string()
+                } else {
+                    "e2e-tenant".to_string()
+                };
+
+                let event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id,
+                    event_type: "tenant.booking.created".to_string(),
+                    payload: serde_json::json!({"source": "system_bus"}),
+                };
+
+                tokio::spawn(async move {
+                    let _ = orchestrator.dispatch_event(event).await;
+                });
+            }
+        });
+        let _ = self.bus.subscribe("system:booking_created".to_string(), handler_booking).await?;
 
         Ok(())
     }
