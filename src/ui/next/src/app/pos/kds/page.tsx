@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-
-// Offline storage helper for KDS data
-const OfflineStore = {
-  getEvents: () => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'),
-  addEvent: (event: any) => {
-    const events = OfflineStore.getEvents();
-    events.push(event);
-    localStorage.setItem('ohc_kds_events', JSON.stringify(events));
-  },
-  clearEvents: () => localStorage.setItem('ohc_kds_events', '[]'),
-};
+import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function KDSPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -26,15 +16,16 @@ export default function KDSPage() {
     const handleOffline = () => setIsOffline(true);
 
     // Set initial state safely
-    setIsOffline(!navigator.onLine);
+    if (typeof window !== 'undefined') {
+        setIsOffline(!navigator.onLine);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+    }
   }, []);
 
   // Initial Data Load
@@ -43,51 +34,7 @@ export default function KDSPage() {
     fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
-  // Background sync
-  useEffect(() => {
-    const syncInterval = setInterval(async () => {
-      const events = OfflineStore.getEvents();
-      if (events.length > 0 && navigator.onLine) {
-        setSyncing(true);
-        try {
-          const orderEvents = events.filter((e: any) => e.type === 'UPDATE_ORDER_STATUS');
-          const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
-
-          const tasks = [];
-          if (orderEvents.length > 0) {
-            tasks.push(
-              fetch("/api/pos/orders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(orderEvents)
-              })
-            );
-          }
-          if (inventoryEvents.length > 0) {
-            tasks.push(
-              fetch("/api/pos/inventory", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(inventoryEvents)
-              })
-            );
-          }
-          if (tasks.length > 0) {
-              await Promise.all(tasks);
-          }
-          OfflineStore.clearEvents();
-        } catch (e) {
-          console.error("Sync failed", e);
-        } finally {
-          setSyncing(false);
-        }
-      }
-    }, 5000); // Try syncing every 5 seconds
-
-    return () => clearInterval(syncInterval);
-  }, []);
-
-  const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     // Optimistic UI Update
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
 
@@ -97,10 +44,10 @@ export default function KDSPage() {
       timestamp: new Date().toISOString(),
     };
 
-    OfflineStore.addEvent(event);
+    await SyncManager.getInstance().enqueue(event);
   };
 
-  const handleToggleSoldOut = (itemId: string, isSoldOut: boolean) => {
+  const handleToggleSoldOut = async (itemId: string, isSoldOut: boolean) => {
     // Optimistic UI Update
     setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i));
 
@@ -110,7 +57,7 @@ export default function KDSPage() {
       timestamp: new Date().toISOString(),
     };
 
-    OfflineStore.addEvent(event);
+    await SyncManager.getInstance().enqueue(event);
   };
 
   const toggleLanguage = () => {

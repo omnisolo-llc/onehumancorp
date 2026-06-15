@@ -1390,9 +1390,8 @@ impl HubService for MyHubService {
             0.0
         };
 
-        let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        let cost_per_gb = auditor.get_cost_per_gb_month();
-        let storage_cost_f64 = storage_gb * cost_per_gb;
+        let storage_cost_cents = crate::pricing::calculator::calculate_storage_cost_cents(storage_bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+        let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
         let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
         let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
@@ -1418,7 +1417,7 @@ impl HubService for MyHubService {
             total_costs: (total_costs_f64 * 100.0).round() as i64,
             projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
             llm_cost: llm_cost_cents,
-            storage_cost: (storage_cost_f64 * 100.0).round() as i64,
+            storage_cost: storage_cost_cents,
             payment_fees: (payment_fees_f64 * 100.0).round() as i64,
             network_cost: (network_cost_f64 * 100.0).round() as i64,
             compute_cost: (compute_cost_f64 * 100.0).round() as i64,
@@ -3064,6 +3063,181 @@ pub async fn list_ui_triage_handler(
     (axum::http::StatusCode::OK, axum::Json(items)).into_response()
 }
 
+
+async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                .bind(tenant_id)
+                .fetch_all(&db.pool)
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "sender_id": row.get::<String, _>("sender_id"),
+                        "created_at": row.get::<String, _>("created_at")
+                    })
+                }).collect())
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                .bind(tenant_id)
+                .fetch_all(pool)
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "sender_id": row.get::<String, _>("sender_id"),
+                        "created_at": row.get::<String, _>("created_at")
+                    })
+                }).collect())
+        }
+    }
+}
+
+pub async fn list_ui_omni_inbox_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+
+    let items = match load_ui_omni_inbox_from_db(&db, &tenant_id).await {
+        Ok(items) => items,
+        Err(e) => {
+            tracing::error!("Failed to fetch omni inbox items: {:?}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
+        }
+    };
+
+    (axum::http::StatusCode::OK, axum::Json(items)).into_response()
+}
+
+#[derive(serde::Deserialize)]
+pub struct OmniInboxActionPayload {
+    pub message_id: String,
+    pub approved: bool,
+    pub edited_reply: Option<String>,
+}
+
+pub async fn update_ui_omni_inbox_action_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::extract::Json(payload): axum::extract::Json<OmniInboxActionPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let status = if payload.approved { "resolved" } else { "dismissed" };
+
+    // In a real system, we'd send the payload.edited_reply over the corresponding channel here.
+    // For now, we update the status in the DB.
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(status).bind(&payload.message_id).bind(&tenant_id)
+                .execute(&mut *tx).await {
+                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            if payload.approved {
+                if let Some(reply) = &payload.edited_reply {
+                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                    let _ = sqlx::query(
+                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'sent')"
+                    )
+                    .bind(&new_msg_id)
+                    .bind(&tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(&mut *tx)
+                    .await;
+                }
+            }
+            let _ = tx.commit().await;
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(status).bind(&payload.message_id).bind(&tenant_id)
+                .execute(pool).await {
+                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            if payload.approved {
+                if let Some(reply) = &payload.edited_reply {
+                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                    let _ = sqlx::query(
+                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'sent')"
+                    )
+                    .bind(&new_msg_id)
+                    .bind(&tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(pool)
+                    .await;
+                }
+            }
+        }
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+}
+
+#[derive(serde::Deserialize)]
+pub struct MockOmniInboxPayload {
+    pub source: String,
+    pub sender_id: String,
+    pub message: String,
+}
+
+pub async fn mock_omni_inbox_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::extract::Json(payload): axum::extract::Json<MockOmniInboxPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let id = format!("mock-{}", uuid::Uuid::new_v4());
+
+    // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
+    let draft_reply = format!("Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?");
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW())")
+                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
+                .execute(&db.pool).await;
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, CURRENT_TIMESTAMP)")
+                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
+                .execute(pool).await;
+        }
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": id}))).into_response()
+}
+
 pub async fn update_ui_triage_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3088,16 +3262,44 @@ pub async fn update_ui_triage_action_handler(
             let status = if payload.approved { "resolved" } else { "dismissed" };
 
             if payload.approved {
-                            // Check if there is a proposed action to execute
+                let mut action_type_opt = None;
+                let mut action_payload_opt = None;
+
+                // Check if there is a proposed action to execute from legacy triage
                 if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
                     .bind(&payload.triage_item_id)
                     .bind(&tenant_id)
                     .fetch_optional(&mut *tx)
                     .await
                 {
-                    let action_type = row.try_get::<String, _>("action_type").unwrap_or_default();
-                    let action_payload = row.try_get::<String, _>("payload").unwrap_or_default();
+                    action_type_opt = Some(row.try_get::<String, _>("action_type").unwrap_or_default());
+                    action_payload_opt = Some(row.try_get::<String, _>("payload").unwrap_or_default());
+                } else {
+                    // Try agent feed items
+                    if let Ok(Some(row)) = sqlx::query("SELECT proposed_action FROM agent_feed_items WHERE id = $1 AND tenant_id = $2")
+                        .bind(&payload.triage_item_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                            Ok(j) => Some(j.0),
+                            Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                Ok(s) => serde_json::from_str(&s).ok(),
+                                Err(_) => None
+                            }
+                        };
 
+                        if let Some(action) = proposed_action {
+                            action_type_opt = action.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            action_payload_opt = action.get("draft_reply").and_then(|v| v.as_str()).map(|s| s.to_string()).or_else(|| {
+                                Some(action.to_string())
+                            });
+                        }
+                    }
+                }
+
+                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
@@ -3232,6 +3434,14 @@ pub async fn update_ui_triage_action_handler(
                 }
             }
 
+            let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -3246,7 +3456,93 @@ pub async fn update_ui_triage_action_handler(
                 }
             }
         }
-        _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Unsupported store"}))).into_response(),
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let mut tx = match sqlite_pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin sqlite transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+
+            let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            if payload.approved {
+                let mut action_type_opt = None;
+                let mut action_payload_opt = None;
+
+                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = ? AND tenant_id = ?")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                {
+                    action_type_opt = Some(row.try_get::<String, _>("action_type").unwrap_or_default());
+                    action_payload_opt = Some(row.try_get::<String, _>("payload").unwrap_or_default());
+                } else {
+                    if let Ok(Some(row)) = sqlx::query("SELECT proposed_action FROM agent_feed_items WHERE id = ? AND tenant_id = ?")
+                        .bind(&payload.triage_item_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                            Ok(j) => Some(j.0),
+                            Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                Ok(s) => serde_json::from_str(&s).ok(),
+                                Err(_) => None
+                            }
+                        };
+
+                        if let Some(action) = proposed_action {
+                            action_type_opt = action.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            action_payload_opt = action.get("draft_reply").and_then(|v| v.as_str()).map(|s| s.to_string()).or_else(|| {
+                                Some(action.to_string())
+                            });
+                        }
+                    }
+                }
+
+                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
+                    if action_type == "Draft Reply" {
+                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        let _ = sqlx::query(
+                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
+                        )
+                        .bind(&new_msg_id)
+                        .bind(&tenant_id)
+                        .bind("Triage Action")
+                        .bind(&action_payload)
+                        .bind("")
+                        .bind("sent")
+                        .execute(&mut *tx)
+                        .await;
+                    }
+                }
+            }
+
+            let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
+                .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                Ok(_) => {
+                    let _ = tx.commit().await;
+                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update triage item (sqlite): {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
+            }
+        }
     }
 }
 
@@ -5021,6 +5317,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+        .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
