@@ -26,8 +26,7 @@ pub fn minify_json_string(input: &str) -> String {
     }
 
     // Quick check to see if it even looks like JSON
-    if !(trimmed.starts_with('{') && trimmed.ends_with('}')) &&
-       !(trimmed.starts_with('[') && trimmed.ends_with(']')) {
+    if !(trimmed.starts_with('{') && trimmed.ends_with('}') || trimmed.starts_with('[') && trimmed.ends_with(']')) {
         return input.to_string();
     }
 
@@ -97,11 +96,7 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
         let msg_words = msg.content.split_whitespace().count();
         if current_words + msg_words > max_history_words && !truncated_messages.is_empty() {
             // If this message would put us over budget, truncate it or stop
-            let remaining_budget = if max_history_words > current_words {
-                max_history_words - current_words
-            } else {
-                0
-            };
+            let remaining_budget = max_history_words.saturating_sub(current_words);
             if remaining_budget > 20 {
                 let mut truncated_msg = msg;
                 truncated_msg.content = truncate_by_word_count(&truncated_msg.content, remaining_budget);

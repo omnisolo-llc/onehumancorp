@@ -112,7 +112,7 @@
             const refCard = document.getElementById('referral-success-card');
             const refLink = document.getElementById('referral-success-link');
             refCard.style.display = 'block';
-            refLink.href = `https://ohc.app/onboarding?ref=${encodeURIComponent(tenantId)}&source=success_page`;
+            refLink.href = `/onboarding?ref=${encodeURIComponent(tenantId)}&source=success_page`;
             return;
         }
 

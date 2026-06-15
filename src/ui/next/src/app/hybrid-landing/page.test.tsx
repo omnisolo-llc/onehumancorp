@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HybridLandingPage from './page';
 
@@ -37,7 +37,7 @@ describe('HybridLandingPage', () => {
     expect(downloadButton).toBeDefined();
 
     // Click the button
-    fireEvent.click(downloadButton);
+    await act(async () => { fireEvent.click(downloadButton); });
 
     // Verify downloading state
     await waitFor(() => {
@@ -45,9 +45,11 @@ describe('HybridLandingPage', () => {
     });
 
     // Wait for async operations
-    await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
-    }, { timeout: 2000 });
+    await act(async () => {
+      await vi.waitFor(() => {
+          expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
+      }, { timeout: 2000 });
+    });
 
     // Cleanup mocks
     mockAlert.mockRestore();

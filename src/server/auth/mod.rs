@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;

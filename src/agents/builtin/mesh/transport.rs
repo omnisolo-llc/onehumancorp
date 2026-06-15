@@ -1565,7 +1565,7 @@ mod tests {
                 use tokio::io::AsyncReadExt;
                 use tokio::io::AsyncWriteExt;
                 let mut buf = [0; 4096];
-                if let Ok(_) = stream.read(&mut buf).await {
+                if stream.read(&mut buf).await.is_ok() {
                     let response = "HTTP/1.1 200 OK
 Content-Length: 0
 
@@ -1588,7 +1588,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
         // In this test, we just ensure it handles the dummy DB gracefully without panicking if it times out
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
@@ -1631,7 +1631,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport_checkpoints() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
 
         if let Ok(transport) = transport_res {
             let msg = Message {
@@ -1663,7 +1663,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport_locking() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
             tokio::spawn(async move {
@@ -1714,7 +1714,7 @@ Content-Length: 0
     async fn test_create_transport_standalone() {
         let _transport = create_transport(None, false).await.unwrap();
         // Since InProcessTransport isn't easily castable back without Any, we just ensure it didn't err
-        assert!(true);
+
     }
 
     #[tokio::test]
