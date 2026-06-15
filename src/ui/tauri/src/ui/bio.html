@@ -136,6 +136,7 @@
         const linksEl = document.getElementById('links');
         const appEl = document.getElementById('app');
         const poweredByLink = document.getElementById('powered-by-link');
+        poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
 
         let data = {
             store_name: 'My Store',

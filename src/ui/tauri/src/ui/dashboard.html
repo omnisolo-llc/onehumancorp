@@ -756,7 +756,7 @@
 
       <div class="ohc-growth-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
-        <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
+        <p>Invite a fellow business owner to OHC. They get 1 month free, you get a 1-month trial extension.</p>
         <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
           Get My Invite Link
         </button>
@@ -1367,6 +1367,31 @@
         });
       }
 
+
+      async function claimTrialExtensionForReferral() {
+        try {
+          let url = '/api/v1/growth/trial-extension/claim';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+          }
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'authorization': `Bearer ${localStorage.getItem('ohc_token')}`
+            }
+          });
+
+          if (response.ok) {
+            // Optional: show a toast or change a widget to success state
+            console.log("Trial extension claimed successfully!");
+            document.getElementById('invite-earn-section').innerHTML = '<h2>You unlocked 1 Free Month of Pro!</h2><p>Thank you for sharing your referral link.</p>';
+          }
+        } catch (error) {
+          console.error('Error claiming trial extension:', error);
+        }
+      }
+
       const linkContainer = document.getElementById('link-container');
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
@@ -1408,7 +1433,12 @@
 
       copyBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        const text = `Join my team on OHC! Here is your invite link:
+
+${link}
+
+⚡ Powered by OHC`;
+        claimTrialExtensionForReferral();
 
         navigator.clipboard.writeText(text).then(() => {
           copyBtn.innerText = "Copied!";
@@ -1437,14 +1467,24 @@
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
       shareWhatsAppBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        const text = `Join my team on OHC! Here is your invite link:
+
+${link}
+
+⚡ Powered by OHC`;
+        claimTrialExtensionForReferral();
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
 
       const shareXBtn = document.getElementById('share-x-btn');
       shareXBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        const text = `Join my team on OHC! Here is your invite link:
+
+${link}
+
+⚡ Powered by OHC`;
+        claimTrialExtensionForReferral();
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                 localStorage.setItem(dismissedKey, 'true');
                 document.getElementById('milestone-container').style.display = 'none';
@@ -2253,14 +2293,14 @@ document.addEventListener('DOMContentLoaded', () => {
         copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(linkInput.value);
             copyBtn.innerText = 'Copied!';
+            claimTrialExtensionForReferral();
             setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
         });
 
         shareXBtn.addEventListener('click', () => {
             const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OHC`;
+            claimTrialExtensionForReferral();
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                localStorage.setItem(dismissedKey, 'true');
-                document.getElementById('milestone-container').style.display = 'none';
         });
     }
 });
