@@ -33,7 +33,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Step Context
-    await page.locator('input[value="Local Service"]').check({ force: true });
+    await page.locator('label[data-testid="context-local"]').click();
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-categories')).toHaveClass(/active/);
 
@@ -50,6 +50,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
 
     // Step Assistant
     await page.locator('#assistant-name').fill('Jarvis');
+    await page.locator('#assistant-tone').selectOption('Friendly');
     await page.locator('#assistant-name').press('Enter');
     await expect(page.locator('#step-admin')).toHaveClass(/active/);
 

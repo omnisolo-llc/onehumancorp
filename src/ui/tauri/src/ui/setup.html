@@ -818,7 +818,7 @@
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')" data-testid="instant-build-btn">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
@@ -1197,7 +1197,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState)
+                state = Object.assign({}, state, apiState);
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
@@ -1351,9 +1351,10 @@
           if (stepId === 'step-context') {
               const selected = document.querySelector('input[name="work_context"]:checked');
               if (!selected) {
-                  errors.context.style.display = 'block';
+                  if (errors.context) errors.context.style.display = 'block';
                   isValid = false;
               } else {
+                  if (errors.context) errors.context.style.display = 'none';
                   state.work_context = selected.value;
               }
           }
@@ -1388,10 +1389,10 @@
               }
 
               if (!inputs.assistantTone.value) {
-                  errors.assistantTone.style.display = 'block';
+                  if (errors.assistantTone) errors.assistantTone.style.display = 'block';
                   isValid = false;
               } else {
-                  errors.assistantTone.style.display = 'none';
+                  if (errors.assistantTone) errors.assistantTone.style.display = 'none';
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
@@ -1487,7 +1488,7 @@
           'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
-
+      };
 
       function populateCategories() {
           const context = state.work_context;
@@ -1649,7 +1650,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
-
+                  };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
@@ -1771,7 +1772,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
-
+                  };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1923,8 +1924,7 @@
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General"
-
-
+               };
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
@@ -1971,17 +1971,6 @@
         });
       }
 
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
-          input.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const step = e.target.closest('.step');
-                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
-                  if (nextBtn) nextBtn.click();
-              }
-          });
-      });
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -2144,17 +2133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => { console.error(e); });
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -2623,17 +2603,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => { console.error(e); });
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -2731,7 +2702,7 @@ function initWalkthrough() {
             `;
 
             document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
             document.getElementById('wt-next').onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
@@ -2739,6 +2710,7 @@ function initWalkthrough() {
                     currentStep++;
                     renderStep();
                 }
+            };
 
 
             if (target) {
@@ -2775,7 +2747,7 @@ function initWalkthrough() {
         }
 
         renderStep();
-
+    }
 }
 initWalkthrough();
 </script>
@@ -3147,16 +3119,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => { console.error(e); });
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -3246,7 +3210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
                 document.getElementById('wt-next').onclick = () => {
                     if (currentStep === steps.length - 1) {
                         closeWalkthrough();
@@ -3288,7 +3252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             renderStep();
-
+        }
     }
 });
 </script>
