@@ -1,0 +1,177 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { SyncManager } from '../../../lib/sync/SyncManager';
+
+export default function QuoteToCashPage() {
+  const [intakeText, setIntakeText] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
+  const [quoteDraft, setQuoteDraft] = useState<any>(null);
+  const [savedOffline, setSavedOffline] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    setIsOffline(!navigator.onLine);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const handleGenerateQuote = () => {
+    // Mock local edge AI parsing logic
+    let total = 0;
+    let deposit = 0;
+    let items = [];
+
+    const lowerText = intakeText.toLowerCase();
+
+    if (lowerText.includes("water heater")) {
+      total = 50000; // $500.00
+      deposit = 10000; // $100.00
+      items.push({
+        description: "Water Heater Repair Labor",
+        unit_price_cents: 30000,
+        quantity: 1,
+        is_optional: false
+      });
+      items.push({
+        description: "Replacement Parts",
+        unit_price_cents: 20000,
+        quantity: 1,
+        is_optional: false
+      });
+    } else {
+      total = 15000; // $150.00 base dispatch
+      deposit = 5000; // $50.00
+      items.push({
+        description: "General Service Call",
+        unit_price_cents: 15000,
+        quantity: 1,
+        is_optional: false
+      });
+    }
+
+    setQuoteDraft({
+      total_amount: total,
+      required_deposit: deposit,
+      line_items: items,
+      customer_id: "12345678-1234-1234-1234-123456789012"
+    });
+    setSavedOffline(false);
+  };
+
+  const handleCollectDeposit = async () => {
+    if (!quoteDraft) return;
+
+    // Queue offline sync payload
+    await SyncManager.getInstance().enqueue({
+      type: 'offline_quote_deposit',
+      amount: quoteDraft.required_deposit,
+      payload: quoteDraft
+    });
+
+    setSavedOffline(true);
+    setQuoteDraft(null);
+    setIntakeText("");
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50 font-inter">
+      <header className="px-6 py-4 bg-white border-b sticky top-0 z-10 flex items-center justify-between shadow-sm">
+        <h1 className="text-xl font-bold font-outfit text-gray-900">New Job Quote</h1>
+        {isOffline && (
+          <div data-testid="offline-indicator" className="text-sm px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full font-medium border border-yellow-200">
+            Offline Mode
+          </div>
+        )}
+      </header>
+
+      <main className="p-6 md:p-10 flex-1 max-w-3xl mx-auto w-full flex flex-col gap-6">
+
+        {savedOffline && (
+          <div data-testid="saved-offline-msg" className="p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col items-center justify-center text-center">
+            <span className="text-green-600 text-3xl mb-2">✅</span>
+            <h3 className="text-lg font-bold text-green-800">Saved Offline</h3>
+            <p className="text-green-700 text-sm mt-1">
+              Deposit collected via Tap-to-Pay. Data will sync automatically when connection restores.
+            </p>
+          </div>
+        )}
+
+        <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-sm p-6 flex flex-col gap-4">
+          <label className="text-gray-900 font-semibold text-lg">Tell OHC about the job</label>
+          <textarea
+            data-testid="intake-textarea"
+            className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] outline-none resize-none h-32 text-gray-800"
+            placeholder="e.g. Fix water heater in the basement..."
+            value={intakeText}
+            onChange={(e) => setIntakeText(e.target.value)}
+          />
+          <button
+            data-testid="generate-quote-btn"
+            onClick={handleGenerateQuote}
+            className="py-3 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-md transition-all text-lg flex items-center justify-center"
+            disabled={!intakeText}
+          >
+            Generate Quote
+          </button>
+        </div>
+
+        {quoteDraft && (
+          <div data-testid="draft-quote-card" className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-[rgba(0,0,0,0.05)]">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-1">Draft Estimate</h2>
+              <p className="text-gray-500 text-sm">Generated by Edge AI</p>
+            </div>
+
+            <div className="p-6 flex flex-col gap-4">
+              {quoteDraft.line_items.map((item: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center pb-4 border-b border-[rgba(0,0,0,0.05)] last:border-0 last:pb-0">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{item.description}</h4>
+                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    ${(item.unit_price_cents / 100).toFixed(2)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-6 bg-[rgba(0,102,255,0.05)] flex justify-between items-center border-t border-[rgba(0,102,255,0.1)]">
+              <span className="text-lg font-semibold text-gray-900">Total</span>
+              <span className="text-2xl font-bold text-[#0066FF] font-outfit">
+                ${(quoteDraft.total_amount / 100).toFixed(2)}
+              </span>
+            </div>
+
+            <div className="p-6">
+              <button
+                data-testid="collect-deposit-btn"
+                onClick={handleCollectDeposit}
+                className="w-full py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-xl shadow-md transition-all text-lg flex items-center justify-center gap-2"
+              >
+                <span>Collect ${(quoteDraft.required_deposit / 100).toFixed(2)} Deposit</span>
+                <span className="text-sm opacity-80">(Tap to Pay)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+      `}} />
+    </div>
+  );
+}

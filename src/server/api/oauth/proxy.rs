@@ -29,8 +29,8 @@ pub async fn handle_oauth_callback(
             let tunnel_id = parts[1];
 
             // Strictly validate tunnel_id to prevent Open Redirect/SSRF
-            // It should only contain alphanumeric characters and hyphens.
-            if tunnel_id.is_empty() || !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || tunnel_id.starts_with('-') || tunnel_id.ends_with('-') {
+            // It must be a valid UUID.
+            if uuid::Uuid::parse_str(tunnel_id).is_err() {
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     "Invalid tunnel_id format.",
@@ -78,7 +78,7 @@ mod tests {
 
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
-            state: "standalone_valid-tunnel-id-123_actualState123".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
             extra,
         };
 
