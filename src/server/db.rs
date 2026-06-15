@@ -814,6 +814,7 @@ impl DB {
                         owner_id TEXT,
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
+                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
