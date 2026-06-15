@@ -173,11 +173,23 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
     }
 
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(self, topic_name).await
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let path = self.topics_dir.join(format!("{}.md", safe_name));
+        if path.exists() {
+            tokio::fs::read_to_string(&path)
+                .await
+                .map_err(|e| e.to_string())
+        } else {
+            Err(format!("Topic '{}' not found", safe_name))
+        }
     }
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(self, query, limit).await
+        <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::search_transcripts(
+            self, query, limit,
+        )
+        .await
     }
 }
 
@@ -273,18 +285,25 @@ impl crate::memory_store::LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
+        let query_lower = query.to_lowercase();
         let mut dir = tokio::fs::read_dir(&self.transcripts_dir)
             .await
             .map_err(|e| e.to_string())?;
-        while let Ok(Some(entry)) = dir.next_entry().await {
+
+        'outer: while let Ok(Some(entry)) = dir.next_entry().await {
             let content = tokio::fs::read_to_string(entry.path())
                 .await
                 .map_err(|e| e.to_string())?;
-            if content.to_lowercase().contains(&query.to_lowercase()) {
-                let filename = entry.file_name().to_string_lossy().to_string();
-                results.push(format!("Transcript {}:\n{}", filename, content));
-                if results.len() >= limit {
-                    break;
+
+            let filename = entry.file_name().to_string_lossy().to_string();
+
+            // Chunk by paragraphs (double newline) to avoid loading huge files
+            for chunk in content.split("\n\n") {
+                if chunk.to_lowercase().contains(&query_lower) {
+                    results.push(format!("Transcript {} snippet:\n{}", filename, chunk.trim()));
+                    if results.len() >= limit {
+                        break 'outer;
+                    }
                 }
             }
         }
@@ -376,5 +395,60 @@ mod tests {
         // Search no match
         let results3 = memory.search_transcripts("bananas").await.unwrap();
         assert_eq!(results3.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_anthropic_3_tier_memory_flow() {
+        let dir = tempfile::tempdir().unwrap();
+        let memory = Anthropic3TierMemoryStore::new(dir.path()).unwrap();
+
+        // 1. Write an explicit topic
+        crate::tools::anthropic_memory::MemoryAccessor::write_topic(
+            &memory,
+            "architecture",
+            "The system uses a 3-tier architecture with Rust and React.",
+        )
+        .await
+        .unwrap();
+
+        // 2. Add long-term memory (stores index + files)
+        <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::store(
+            &memory,
+            "User prefers Postgres over MySQL.",
+            vec!["db".to_string()],
+        )
+        .await
+        .unwrap();
+
+        // 3. Store a conversation turn
+        <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::store_session_message(
+            &memory,
+            "sess-123",
+            "User",
+            "How do I scale the DB?",
+        )
+        .await
+        .unwrap();
+
+        // Check index
+        let index = <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::get_lightweight_index(&memory)
+            .await
+            .unwrap();
+        assert!(index.contains("architecture: The system uses a 3-tier"));
+        assert!(index.contains("User prefers Postgres"));
+
+        // Check retrieval
+        let retrieved = <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::retrieve(&memory, "architecture", 5)
+            .await
+            .unwrap();
+        assert!(!retrieved.is_empty());
+        assert!(retrieved[0].contains("3-tier architecture"));
+
+        // Search transcripts
+        let trans = <Anthropic3TierMemoryStore as crate::memory_store::LongTermMemory>::search_session_messages(&memory, "sess-123", "scale", 5, false)
+            .await
+            .unwrap();
+        assert!(!trans.is_empty());
+        assert!(trans[0].contains("scale the DB"));
     }
 }

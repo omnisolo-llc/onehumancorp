@@ -1117,15 +1117,6 @@ impl LongTermMemory for PersistentMemoryStore {
     }
 }
 
-
-}
-
-
-
-
-
-
-
 /// A simple implementation that stores memory in Redis using its list or sorted set capabilities.
 /// In a production system, this would likely use Redis Vector Search (RediSearch) or a dedicated vector DB.
 pub struct RedisMemoryStore {
