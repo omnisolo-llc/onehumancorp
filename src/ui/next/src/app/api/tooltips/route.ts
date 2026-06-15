@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ error: 'Backend failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Backend failed/empty' }, { status: 500 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch tooltips from backend:", e);
-    return NextResponse.json({ error: 'Backend failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Backend failed/empty' }, { status: 500 });
   }
 }
