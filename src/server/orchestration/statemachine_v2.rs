@@ -107,7 +107,7 @@ impl StateMachine {
 
     pub async fn start_mesh_listener(self: Arc<Self>, mesh: Arc<dyn TeammateMesh>) -> Result<(), String> {
         let pattern = "*:mesh:tasks".to_string();
-        mesh.subscribe_pattern(&pattern, Box::new(move |msg| {
+        let _ = mesh.subscribe_pattern(&pattern, Box::new(move |msg| {
             let sm = self.clone();
             tokio::spawn(async move {
                 if let Ok(payload) = String::from_utf8(msg.payload.clone()) {

@@ -51,7 +51,7 @@ pub async fn handle_omnichannel_webhook(
     let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
 
     let id = Uuid::new_v4().to_string();
-    let target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
+    let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
     let pool = &state.db.pool;
 

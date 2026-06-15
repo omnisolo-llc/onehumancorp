@@ -184,7 +184,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
@@ -282,7 +282,7 @@ async fn test_shared_task_orchestrator_update_and_list_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
@@ -456,7 +456,7 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
     .await
     .unwrap();
 
-    let db = crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
+    let db = crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
     let db = std::sync::Arc::new(db);
     let orchestrator = std::sync::Arc::new(SharedTaskOrchestrator::new(db.clone()));
 
