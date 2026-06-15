@@ -21,6 +21,6 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
   test('login setup action opens the guided setup process', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: /Start Business Setup/ }).click();
-    await expect(page.getByRole('heading', { name: 'Setup' })).toBeVisible();
+    await expect(page.locator('#setup-screen').getByRole('heading', { name: 'Setup', exact: true })).toBeVisible();
   });
 });
