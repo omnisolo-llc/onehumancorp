@@ -857,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Extract article ID from link for Tauri routing
                     const articleId = article.link.split('/').pop();
                     html += `
-                      <a href="help_article.html?id=${articleId}" class="card">
+                      <a href="help_article.html?id=${articleId}" class="article-card">
                         <h3>${article.title}</h3>
                         <p>${article.desc}</p>
                       </a>
@@ -872,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `<h2 class="section-title">Video Guides</h2><div class="videos-grid">`;
             filteredVideos.forEach(v => {
                 html += `
-                  <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
+                  <div class="article-card video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
                     <div class="play-btn">
                       <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                     </div>
@@ -1014,7 +1014,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 99999; max-width: 320px; display: flex; flex-direction: column; gap: 12px; font-family: Outfit, sans-serif; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 99999; max-width: 320px; display: flex; flex-direction: column; gap: 12px; font-family: Outfit, sans-serif; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -1516,7 +1516,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 99999; max-width: 320px; display: flex; flex-direction: column; gap: 12px; font-family: Outfit, sans-serif; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 99999; max-width: 320px; display: flex; flex-direction: column; gap: 12px; font-family: Outfit, sans-serif; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);';
             document.body.appendChild(bubble);
 
             function renderStep() {
