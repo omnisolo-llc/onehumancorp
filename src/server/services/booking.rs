@@ -314,14 +314,14 @@ mod tests {
 
         let mut quote = BookingService::create_draft_quote(tenant_id, customer_id, amount, required_deposit, expires_at);
 
-        let new_amount = Some(20000);
+        let new_amount = Some(23000);
         let result = BookingService::approve_quote(&mut quote, new_amount);
 
         assert!(result.is_ok());
         let (time_slot, stripe_link) = result.unwrap();
 
         assert_eq!(quote.status, "approved");
-        assert_eq!(quote.amount, 20000);
+        assert_eq!(quote.amount, 23000);
         assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert!(time_slot.start_time < time_slot.end_time);
     }

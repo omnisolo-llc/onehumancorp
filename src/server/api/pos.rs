@@ -55,7 +55,7 @@ async fn sync_offline_handler(
         pool: hub.pool.clone(),
         store: DbStore::Postgres,
     });
-    let service = MyPosService::new(db);
+    let service = MyPosService::new(db, crate::get_redis_client());
 
     let mut transactions = Vec::new();
     for mutation in payload.mutations {
@@ -120,9 +120,11 @@ async fn start_session_handler(
         pool: hub.pool.clone(),
         store: DbStore::Postgres,
     });
-    let service = MyPosService::new(db);
+    let service = MyPosService::new(db, crate::get_redis_client());
 
     let req = StartTerminalSessionRequest {
+        product_id: None,
+        quantity: None,
         tenant_id: tenant_id.clone(),
         device_id: payload.device_id,
     };
@@ -169,7 +171,7 @@ async fn update_session_status_handler(
         pool: hub.pool.clone(),
         store: DbStore::Postgres,
     });
-    let service = MyPosService::new(db);
+    let service = MyPosService::new(db, crate::get_redis_client());
 
     let req = UpdateTerminalSessionStatusRequest {
         tenant_id: tenant_id.clone(),
@@ -212,7 +214,7 @@ async fn end_session_handler(
         pool: hub.pool.clone(),
         store: DbStore::Postgres,
     });
-    let service = MyPosService::new(db);
+    let service = MyPosService::new(db, crate::get_redis_client());
 
     let req = EndTerminalSessionRequest {
         tenant_id: tenant_id.clone(),
