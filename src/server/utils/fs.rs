@@ -105,20 +105,41 @@ mod tests {
 }
 
 pub fn cleanup_stale_temp_files() {
-    let mut tmp_dir = std::env::temp_dir();
-    tmp_dir.push("ohc-atomic-writes");
-    if let Ok(entries) = std::fs::read_dir(&tmp_dir) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(modified) = meta.modified() {
-                    if let Ok(duration) = now.duration_since(modified) {
-                        if duration.as_secs() > 3600 {
-                            let _ = std::fs::remove_file(entry.path());
+    let now = std::time::SystemTime::now();
+
+    // Helper to cleanup a directory
+    let cleanup_dir = |dir: &std::path::PathBuf, max_age_secs: u64| {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                if let Ok(meta) = entry.metadata() {
+                    if meta.is_file() {
+                        if let Ok(modified) = meta.modified() {
+                            if let Ok(duration) = now.duration_since(modified) {
+                                if duration.as_secs() > max_age_secs {
+                                    let _ = std::fs::remove_file(entry.path());
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-    }
+    };
+
+    // Clean up atomic writes temporary directory
+    let mut tmp_dir = std::env::temp_dir();
+    tmp_dir.push("ohc-atomic-writes");
+    cleanup_dir(&tmp_dir, 3600);
+
+    // Clean up local data fs directory temp files created in standalone execution
+    let local_fs_dir = if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home).join(".ohc-local-data/fs")
+    } else {
+        std::env::temp_dir().join(".ohc-local-data/fs")
+    };
+    cleanup_dir(&local_fs_dir, 86400 * 7); // 7 days
+
+    // Clean up proxy blobs
+    let proxy_blobs_dir = std::path::PathBuf::from("/var/tmp/ohc/blobs");
+    cleanup_dir(&proxy_blobs_dir, 86400); // 1 day
 }
