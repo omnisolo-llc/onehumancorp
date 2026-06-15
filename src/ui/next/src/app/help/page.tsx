@@ -90,7 +90,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-col">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="backdrop-blur-xl bg-white/50 border border-white/20 p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
+                          <div className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
                             <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>

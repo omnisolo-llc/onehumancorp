@@ -24,13 +24,13 @@ export async function GET(request: NextRequest) {
     if (res && res.ok) {
       const data = await res.json();
       if (data && Object.keys(data).length > 0) {
-          return NextResponse.json(data);
+          return NextResponse.json(data, { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } });
       }
     }
 
-    return NextResponse.json(fallbackTooltips, { status: 200 });
+    return NextResponse.json(fallbackTooltips, { status: 200, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } });
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch tooltips from backend:", e);
-    return NextResponse.json(fallbackTooltips, { status: 200 });
+    return NextResponse.json(fallbackTooltips, { status: 200, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } });
   }
 }
