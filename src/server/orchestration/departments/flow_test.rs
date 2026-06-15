@@ -500,6 +500,63 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_customer_success_agent_predictive_restock() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        orchestrator.register_department(cs_agent).await;
+
+        let tenant_id = "test-tenant-predictive-restock".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.subscription.predictive_restock".to_string(),
+            payload: serde_json::json!({
+                "customer_id": "customer_1",
+                "schedule_id": "sched_123"
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_restock_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            if pending.iter().any(|req| req.description.contains("Draft Restock Message")) {
+                has_restock_draft = true;
+                break;
+            }
+        }
+
+        assert!(has_restock_draft, "CustomerSuccessAgent should create a restock message approval draft.");
+    }
+
+    #[tokio::test]
     async fn test_business_advisory_agent_weekly_health_generates_review_draft() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;

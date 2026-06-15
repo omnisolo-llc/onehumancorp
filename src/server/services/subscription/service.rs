@@ -1,5 +1,5 @@
 use crate::domain::subscription::{
-    FulfillmentBatch, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
+    FulfillmentBatch, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus, FulfillmentSchedule,
 };
 use crate::db::{DB, DbStore};
 use sqlx::PgPool as DbPool;
@@ -120,6 +120,22 @@ impl SubscriptionService {
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        next_fulfillment_date DATE NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )",
+                )
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query(
@@ -134,6 +150,22 @@ impl SubscriptionService {
                 .bind(plan.amount)
                 .bind(&plan.currency)
                 .bind(&plan.interval)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        next_fulfillment_date TEXT NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )",
+                )
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -368,6 +400,115 @@ impl SubscriptionService {
         })
     }
 
+    pub async fn create_fulfillment_schedule(&self, tenant_id: &str, plan_id: &str, customer_id: &str, next_fulfillment_date: &str) -> Result<FulfillmentSchedule, String> {
+        let schedule = FulfillmentSchedule {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            plan_id: plan_id.to_string(),
+            customer_id: customer_id.to_string(),
+            status: FulfillmentStatus::Pending,
+            next_fulfillment_date: next_fulfillment_date.to_string(),
+            created_at: Utc::now().timestamp(),
+            updated_at: Utc::now().timestamp(),
+        };
+
+        self.ensure_subscription_schema().await?;
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    "INSERT INTO fulfillment_schedules
+                        (id, tenant_id, plan_id, customer_id, status, next_fulfillment_date, created_at, updated_at)
+                     VALUES ($1, $2, $3, $4, 'PENDING', $5::DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                )
+                .bind(&schedule.id)
+                .bind(&schedule.tenant_id)
+                .bind(&schedule.plan_id)
+                .bind(&schedule.customer_id)
+                .bind(&schedule.next_fulfillment_date)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO fulfillment_schedules
+                        (id, tenant_id, plan_id, customer_id, status, next_fulfillment_date, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, 'PENDING', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                )
+                .bind(&schedule.id)
+                .bind(&schedule.tenant_id)
+                .bind(&schedule.plan_id)
+                .bind(&schedule.customer_id)
+                .bind(&schedule.next_fulfillment_date)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(schedule)
+    }
+
+    pub async fn get_predictive_schedules(&self, tenant_id: &str, date: &str) -> Result<Vec<FulfillmentSchedule>, String> {
+        let mut schedules = Vec::new();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rows = sqlx::query(
+                    "SELECT id, tenant_id, plan_id, customer_id, status, TO_CHAR(next_fulfillment_date, 'YYYY-MM-DD') as next_fulfillment_date
+                     FROM fulfillment_schedules
+                     WHERE tenant_id = $1 AND next_fulfillment_date <= $2::DATE AND status = 'PENDING'",
+                )
+                .bind(tenant_id)
+                .bind(date)
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    schedules.push(FulfillmentSchedule {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        plan_id: row.get("plan_id"),
+                        customer_id: row.get("customer_id"),
+                        status: FulfillmentStatus::Pending,
+                        next_fulfillment_date: row.get("next_fulfillment_date"),
+                        created_at: 0,
+                        updated_at: 0,
+                    });
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, tenant_id, plan_id, customer_id, status, next_fulfillment_date
+                     FROM fulfillment_schedules
+                     WHERE tenant_id = ? AND next_fulfillment_date <= ? AND status = 'PENDING'",
+                )
+                .bind(tenant_id)
+                .bind(date)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    schedules.push(FulfillmentSchedule {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        plan_id: row.get("plan_id"),
+                        customer_id: row.get("customer_id"),
+                        status: FulfillmentStatus::Pending,
+                        next_fulfillment_date: row.get("next_fulfillment_date"),
+                        created_at: 0,
+                        updated_at: 0,
+                    });
+                }
+            }
+        }
+
+        Ok(schedules)
+    }
+
     async fn ensure_subscription_schema(&self) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
@@ -576,5 +717,32 @@ mod tests {
         assert_eq!(payload["subscription_plan_id"], plan.id);
         assert_eq!(payload["subscriber_count"], 2);
         assert_eq!(payload["fulfillment_date"], "2026-06-15");
+    }
+
+    #[tokio::test]
+    async fn test_create_and_get_predictive_schedules() {
+        let service = sqlite_subscription_service().await;
+        let tenant_id = "tenant-predictive";
+        let plan = service
+            .create_plan(
+                tenant_id,
+                "Weekly Coffee",
+                "Physical coffee subscription",
+                1500,
+                "USD",
+                "weekly",
+            )
+            .await
+            .unwrap();
+
+        service.create_fulfillment_schedule(tenant_id, &plan.id, "customer_1", "2026-06-20").await.unwrap();
+        service.create_fulfillment_schedule(tenant_id, &plan.id, "customer_2", "2026-06-25").await.unwrap();
+
+        let schedules = service.get_predictive_schedules(tenant_id, "2026-06-22").await.unwrap();
+        assert_eq!(schedules.len(), 1);
+        assert_eq!(schedules[0].customer_id, "customer_1");
+
+        let schedules_later = service.get_predictive_schedules(tenant_id, "2026-06-26").await.unwrap();
+        assert_eq!(schedules_later.len(), 2);
     }
 }

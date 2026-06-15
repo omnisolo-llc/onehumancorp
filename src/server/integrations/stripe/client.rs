@@ -53,6 +53,35 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
+    pub async fn create_payment_intent(&self, customer_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+        let key = self.require_api_key()?;
+        let client = reqwest::Client::new();
+        let res = client.post(&format!("{}/v1/payment_intents", Self::api_base()))
+            .basic_auth(key, Some(""))
+            .form(&[
+                ("amount", amount_cents.to_string()),
+                ("currency", currency.to_string()),
+                ("customer", customer_id.to_string()),
+                ("confirm", "true".to_string()),
+                ("off_session", "true".to_string()),
+            ])
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if res.status().is_success() {
+            let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse JSON: {}", e))?;
+            if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                Ok(id.to_string())
+            } else {
+                Err("Failed to parse PaymentIntent ID".to_string())
+            }
+        } else {
+            let err_text = res.text().await.unwrap_or_default();
+            Err(format!("Stripe API Error: {}", err_text))
+        }
+    }
+
     pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);

@@ -53,3 +53,15 @@ pub struct FulfillmentBatch {
     pub label_url: Option<String>,
     pub created_at: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FulfillmentSchedule {
+    pub id: String,
+    pub tenant_id: String,
+    pub plan_id: String,
+    pub customer_id: String,
+    pub status: FulfillmentStatus,
+    pub next_fulfillment_date: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+}

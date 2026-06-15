@@ -35,6 +35,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.subscription.predictive_restock".to_string(),
         ]
     }
 
@@ -255,6 +256,58 @@ impl Department for CustomerSuccessAgent {
                 risk.clone(),
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
+
+            if risk == ActionRisk::AutoExecute {
+                let approved_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "agent:customer_success:approved".to_string(),
+                    payload: serde_json::json!({
+                        "original_payload": action_payload,
+                        "approval_id": approval_req.id
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(approved_event).await;
+            }
+
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.subscription.predictive_restock" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let schedule_id = event.payload.get("schedule_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            let draft_message = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    crate::minimax::MinimaxClient::new(api_key)
+                        .reason("Draft a short, friendly SMS message asking the customer if they want to restock their subscription item that might be running low soon. Keep it under 160 characters. Tell them to reply 'Yes' to confirm.")
+                        .await
+                        .unwrap_or_else(|_| "Hi, it looks like you might be running low on your subscription item. Want me to process a refill and ship it tomorrow? Reply 'Yes' to confirm.".to_string())
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new()
+                        .reason("Draft a short, friendly SMS message asking the customer if they want to restock their subscription item that might be running low soon. Keep it under 160 characters. Tell them to reply 'Yes' to confirm.")
+                        .await
+                        .unwrap_or_else(|_| "Hi, it looks like you might be running low on your subscription item. Want me to process a refill and ship it tomorrow? Reply 'Yes' to confirm.".to_string())
+                }
+            };
+
+            let action_payload = serde_json::json!({
+                "action": "Draft Reply",
+                "generated_response": draft_message,
+                "customer_id": customer_id,
+                "schedule_id": schedule_id,
+                "source": "sms", // Assume SMS for proactive restock prompts
+            });
+
+            let approval_req = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Draft Restock Message".to_string(),
+                event.tenant_id.clone(),
+                risk.clone(),
+                action_payload.clone(),
+            ).await?;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
