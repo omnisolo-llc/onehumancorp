@@ -60,8 +60,8 @@ impl PromptCache {
             });
 
             let pricing = super::calculator::get_pricing(model);
-            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.input_cost;
-            (cost_dollars * 100.0).round() as i64
+            let cost_cents = (r.token_count as f64 / 1_000_000.0) * pricing.input_cost * 100.0;
+            cost_cents.round() as i64
         } else {
             0
         };
