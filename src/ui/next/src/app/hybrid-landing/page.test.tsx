@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HybridLandingPage from './page';
 
@@ -28,6 +28,7 @@ describe('HybridLandingPage', () => {
   });
 
   it('downloads desktop app when CTA is clicked', async () => {
+    vi.useFakeTimers();
     // The handleDownload function calls window.alert
     const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
@@ -37,18 +38,23 @@ describe('HybridLandingPage', () => {
     expect(downloadButton).toBeDefined();
 
     // Click the button
-    fireEvent.click(downloadButton);
+    act(() => {
+      fireEvent.click(downloadButton);
+    });
 
     // Verify downloading state
     expect(screen.getByText('Downloading...')).toBeDefined();
 
     // Wait for async operations
-    await vi.waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
-    }, { timeout: 2000 });
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
 
     // Cleanup mocks
     mockAlert.mockRestore();
+    vi.useRealTimers();
   });
 
   it('navigates to dashboard for cloud trial', () => {
