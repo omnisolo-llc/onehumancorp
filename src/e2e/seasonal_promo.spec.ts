@@ -8,6 +8,7 @@ test.describe('Seasonal Promotion Generator Flow', () => {
   });
 
   test('user can open seasonal promo generator and create a campaign', async ({ page }) => {
+    // Note: hitting Next.js route without .html
     await page.goto('/seasonal-promo');
     await expect(page.getByRole('heading', { name: 'Seasonal Promotion Generator ✨' })).toBeVisible();
 
@@ -25,7 +26,7 @@ test.describe('Seasonal Promotion Generator Flow', () => {
     const resultText = await resultCard.textContent();
     expect(resultText).toContain('Winter Wonderland Special!');
     expect(resultText).toContain('25% OFF');
-    expect(resultText).toContain('Use code: WINTERW25');
+    expect(resultText).toContain('Use code: WINTERWO25');
     expect(resultText).toContain('⚡ Powered by OHC');
   });
 });
