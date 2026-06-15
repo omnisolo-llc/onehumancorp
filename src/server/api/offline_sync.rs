@@ -64,10 +64,38 @@ pub async fn offline_sync_handler(
                 .bind(&tenant_id_clone)
                 .bind(serde_json::json!({
                     "source": "offline_app",
-                    "message": mutation.payload.unwrap_or_default()
+                    "message": mutation.payload.clone().unwrap_or_default()
                 }).to_string())
                 .execute(&mut *db_tx)
                 .await;
+
+                // Extract amount from payload if available
+                let parsed_amount = mutation.amount.unwrap_or(0);
+                let customer_id = uuid::Uuid::new_v4(); // Generate a placeholder customer for offline quoting
+                let quote_id = uuid::Uuid::new_v4();
+
+                if parsed_amount > 0 {
+                    let _ = sqlx::query(
+                        "INSERT INTO quotes (id, tenant_id, customer_id, status)
+                         VALUES ($1, $2, $3, 'ACCEPTED')"
+                    )
+                    .bind(quote_id)
+                    .bind(&tenant_id_clone)
+                    .bind(customer_id)
+                    .execute(&mut *db_tx)
+                    .await;
+
+                    let _ = sqlx::query(
+                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity)
+                         VALUES ($1, $2, $3, $4, 1)"
+                    )
+                    .bind(uuid::Uuid::new_v4())
+                    .bind(quote_id)
+                    .bind(mutation.payload.clone().unwrap_or_else(|| "Offline Quote".to_string()))
+                    .bind(parsed_amount)
+                    .execute(&mut *db_tx)
+                    .await;
+                }
                 db_tx.commit().await.unwrap();
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
             continue;
