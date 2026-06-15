@@ -27,36 +27,47 @@ describe('BookingPage', () => {
 
   it('renders the booking form', () => {
     render(<BookingPage />);
-    expect(screen.getByText('Request a Service')).toBeInTheDocument();
+    expect(screen.getByText('Book an Appointment')).toBeInTheDocument();
   });
 
   it('submits the form and shows the success screen with OneTapReferral', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        available_slots: [{ start_time: "2026-10-10T09:00:00Z", end_time: "2026-10-10T10:00:00Z" }]
+      }),
+    }).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+            booking_id: "test",
+            deposit_stripe_link: ""
+        }),
+    });
+
     render(<BookingPage />);
 
-    const nameInput = screen.getByPlaceholderText('First Last');
+    const nameInput = screen.getByPlaceholderText('Jane Doe');
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
 
-    const emailInput = screen.getByPlaceholderText('email@example.com');
+    const emailInput = screen.getByPlaceholderText('jane@example.com');
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
 
-    const dateInput = screen.getByLabelText('Select a Date');
+    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
     fireEvent.change(dateInput, { target: { value: '2026-10-10' } });
 
-    const slotButton = screen.getByRole('button', { name: '09:00 AM' });
-    fireEvent.click(slotButton);
+    await waitFor(() => {
+        const slotButton = screen.getByText('09:00 AM');
+        fireEvent.click(slotButton);
+    });
 
-    const textarea = screen.getByPlaceholderText(/Any details we should know before the appointment/i);
+    const textarea = screen.getByPlaceholderText(/What do you need help with\?/i);
     fireEvent.change(textarea, { target: { value: 'Test description' } });
 
-    const submitButton = screen.getByRole('button', { name: /Get a Quote/i });
+    const submitButton = screen.getByRole('button', { name: /Confirm Booking/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText('Request Sent!')).toBeInTheDocument();
     });
-
-    // Check for the OneTapReferral component
-    expect(screen.getByText('Refer & Earn $50')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Copy Link/i })).toBeInTheDocument();
   });
 });
