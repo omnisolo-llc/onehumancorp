@@ -3,9 +3,8 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
-    "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
 
-    "//src/ui/next:src/e2e/ai-usage-paywall.spec.ts",
+
     "//src/ui/next:src/e2e/morning-briefing.spec.ts",
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
     "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
@@ -15,7 +14,6 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
     "//src/ui/next:src/e2e/changelog.spec.ts",
     "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
-    "//src/ui/next:src/e2e/plan.spec.ts",
     "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
@@ -96,6 +94,5 @@ define_playwright_tests(
 sh_test(
     name = "verify_artifacts_test",
     srcs = ["verify_artifacts.sh"],
-    data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )

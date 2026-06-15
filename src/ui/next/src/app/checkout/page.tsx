@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
-import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
-
 
 function CheckoutContent() {
   const router = useRouter();
@@ -90,7 +88,6 @@ function CheckoutContent() {
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
-  const isSuccess = searchParams.get("success") === "true";
 
 
   const handlePayment = async (isSub = false) => {
@@ -134,7 +131,7 @@ function CheckoutContent() {
           defaultText="Review your order or plan details before securely completing your purchase."
         >
           <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-            {isSuccess ? "Order Successful" : (tier ? "Plan Upgrade" : "Secure Checkout")}
+            {tier ? "Plan Upgrade" : "Secure Checkout"}
           </h1>
         </WithTooltip>
       </header>
@@ -143,29 +140,7 @@ function CheckoutContent() {
         id="checkout-screen"
         className="p-4 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col justify-center"
       >
-        {isSuccess ? (
-          <div className="flex flex-col gap-6">
-            <div className="p-8 flex flex-col justify-center items-center bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Thank you for your order!</h2>
-              <p className="text-gray-600 mb-6">Your payment was successful and your order is being processed.</p>
-
-              <button
-                onClick={() => router.push('/')}
-                className="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Return to Store
-              </button>
-            </div>
-
-            <PostPurchaseShareWidget tenantId={tenant || "default-store"} orderId={searchParams.get("orderId") || "success"} />
-            <div className="flex justify-center">
-              <PoweredByOHC tenantId={tenant} />
-            </div>
-          </div>
-        ) : tier ? (
+        {tier ? (
             <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px]">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">OHC {tier} Plan</h3>

@@ -123,7 +123,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+          className="fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
           style={{
             zIndex: 9999,
             top: targetRect.top - 4,
@@ -138,17 +138,16 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       <div
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
-        id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 backdrop-blur-2xl saturate-[210%] border border-white/60 rounded-2xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
+        className="fixed z-[10000] bg-white/70 backdrop-blur-xl saturate-[210%] border border-white/50 rounded-2xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white/90', 'white/80')}`}></div>
+           <div className={`absolute w-0 h-0 border-solid ${arrowClass}`}></div>
         )}
 
         <div className="flex justify-between items-start mb-3">
-          <h4 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} className="ohc-walkthrough-close text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
+          <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h3>
+          <button onClick={handleSkip} className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -160,7 +159,6 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
             Step {currentStepIndex + 1} of {steps.length}
           </span>
           <button
-            id="wt-next"
             onClick={handleNext}
             className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all"
           >

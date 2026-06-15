@@ -28,27 +28,5 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     if (box) {
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
-
-    // Since triage items are now part of UnifiedAgentFeed, verify interaction
-    // We will wait for at least one triage card to appear, or mock if we have to, but since it's E2E it should hit db.
-    // If we have a triage item (like "Proactive Context Agent" or normal), let's find the first approve button
-    const approveBtn = page.getByTestId(/triage-approve-/).first();
-    const btnCount = await approveBtn.count();
-
-    if (btnCount > 0) {
-      // Check touch target for the action button
-      const btnBox = await approveBtn.boundingBox();
-      expect(btnBox).not.toBeNull();
-      if (btnBox) {
-        expect(btnBox.height).toBeGreaterThanOrEqual(44);
-        expect(btnBox.width).toBeGreaterThanOrEqual(44);
-      }
-
-      const testId = await approveBtn.getAttribute('data-testid');
-      await approveBtn.click();
-
-      // Wait to verify it's removed from DOM optimally
-      await expect(page.getByTestId(testId as string)).toHaveCount(0);
-    }
   });
 });

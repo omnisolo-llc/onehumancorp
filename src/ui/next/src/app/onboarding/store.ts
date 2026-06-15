@@ -25,7 +25,6 @@ interface OnboardingState {
   isLoading: boolean;
   error: string;
   startResult: any;
-  instantImageUrl: string;
   setStep: (step: number) => void;
   setChatStep: (step: number) => void;
   setBio: (bio: string) => void;
@@ -49,7 +48,6 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
-  setInstantImageUrl: (url: string) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -78,7 +76,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       isLoading: false,
       error: '',
       startResult: null,
-      instantImageUrl: '',
       setStep: (step) => set({ step }),
       setChatStep: (chatStep) => set({ chatStep }),
       setBio: (bio) => set({ bio }),
@@ -102,7 +99,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
-      setInstantImageUrl: (instantImageUrl) => set({ instantImageUrl }),
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure

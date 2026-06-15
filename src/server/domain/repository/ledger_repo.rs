@@ -118,7 +118,7 @@ impl LedgerRepository {
             DbStore::Postgres => {
                 let result = sqlx::query(
                     r#"
-                    UPDATE invoices SET payment_status = $1, updated_at = $2
+                    UPDATE invoices SET status = $1, updated_at = $2
                     WHERE tenant_id = $3 AND id = $4
                     RETURNING id
                     "#
@@ -137,7 +137,7 @@ impl LedgerRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 let result = sqlx::query(
                     r#"
-                    UPDATE invoices SET payment_status = ?, updated_at = ?
+                    UPDATE invoices SET status = ?, updated_at = ?
                     WHERE tenant_id = ? AND id = ?
                     RETURNING id
                     "#
@@ -225,7 +225,7 @@ impl LedgerRepository {
                     }
                 }
 
-                sqlx::query(r#"UPDATE invoices SET payment_status = 'paid', updated_at = $1 WHERE tenant_id = $2 AND id = $3"#)
+                sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = $1 WHERE tenant_id = $2 AND id = $3"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -293,7 +293,7 @@ impl LedgerRepository {
                     }
                 }
 
-                sqlx::query(r#"UPDATE invoices SET payment_status = 'paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
+                sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 

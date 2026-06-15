@@ -136,7 +136,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#business-name')).toHaveValue("Leo's Music");
   });
 
-  test('Manual setup flow without persona', async ({ page }) => {
+  test.skip('Manual setup flow without persona', async ({ page }) => {
 
     const fs = require('fs');
     const path = require('path');

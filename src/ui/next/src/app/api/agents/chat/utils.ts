@@ -49,14 +49,6 @@ export function routeIntent(message: string): { department_assigned: string, age
         };
     }
 
-    if (lowerMessage.includes('urgent') || lowerMessage.includes('emergency')) {
-        return {
-            department_assigned: 'triage',
-            agent: 'The Coordinator',
-            description: 'Urgent task prioritization'
-        };
-    }
-
     return {
         department_assigned: 'operations',
         agent: 'The Manager',

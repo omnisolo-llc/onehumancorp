@@ -30,7 +30,7 @@ test.describe('Onboarding Flow E2E', () => {
 
     // We expect a short loading process while it talks to the "backend" intake API
     // The intake API is mocked or local, but we just click Generate.
-    await page.click('text=Next');
+    await page.click('text=Generate My Business');
 
     // It should progress to Step 2: Review Details
     await expect(page.getByText('Review Details')).toBeVisible();

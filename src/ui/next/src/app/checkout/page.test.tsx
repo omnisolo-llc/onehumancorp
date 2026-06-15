@@ -25,11 +25,6 @@ vi.mock('../components/OneTapReferral', () => ({
   OneTapReferral: () => <div data-testid="one-tap-referral" />,
 }));
 
-vi.mock('../components/PostPurchaseShareWidget', () => ({
-  PostPurchaseShareWidget: () => <div data-testid="post-purchase-share-widget" />,
-  OneTapReferral: () => <div data-testid="one-tap-referral" />,
-}));
-
 describe('CheckoutPage', () => {
   afterEach(() => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));

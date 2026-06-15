@@ -13,7 +13,7 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Wait for the feed to be visible
-    const feedSection = page.locator('div#triage-queue');
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
     await expect(feedSection).toBeVisible();
 
     // In a real environment, we would first create a product.
@@ -52,15 +52,15 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     // 4. Verify the Promoter Card exists in the feed
     // The feed title is "Draft Social Post: Artisan Cupcake"
     // And content has "New product detected!"
-    const promoterDraft = page.locator('div.triage-item:has-text("New product detected!")');
+    const promoterDraft = page.locator('div.app-card:has-text("New product detected!")');
     await expect(promoterDraft).toBeVisible({ timeout: 15000 }); // give worker time to process
 
     // Check content details
-    await expect(promoterDraft).toContainText('Instagram:');
-    await expect(promoterDraft).toContainText('TikTok:');
+    await expect(promoterDraft).toContainText('Schedule a post?');
+    await expect(promoterDraft).toContainText('Instagram / TikTok Draft');
 
     // 5. Approve & Schedule
-    const approveBtn = promoterDraft.locator('button[data-testid="approve-btn"]');
+    const approveBtn = promoterDraft.locator('button[data-testid="approve-social-post"]');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 

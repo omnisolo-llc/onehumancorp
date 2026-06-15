@@ -17,8 +17,7 @@ cd src/ui/next
 npm run dev &
 
 # 3. In a third terminal, run the tests
-# Note: DATABASE_URL must point to your active test database
-DATABASE_URL=postgres://ohc:ohc@127.0.0.1:<PORT>/ohc npx playwright test src/e2e/viral_growth_loops.spec.ts
+DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc npx playwright test src/e2e/viral_growth_loops.spec.ts
 ```
 
 In CI, the tests will fallback to basic smoke verification when appropriate or automatically handle environment orchestration via Bazel.

@@ -28,7 +28,6 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct DecisionRequest {
     pub approved: bool,
-    pub edited_payload: Option<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -231,7 +230,7 @@ async fn decide_approval(
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved, payload.edited_payload).await {
+    match orchestrator.decide_approval(&id, &tenant_id, payload.approved).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
     }

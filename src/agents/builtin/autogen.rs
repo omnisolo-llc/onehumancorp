@@ -80,7 +80,7 @@ impl GroupChatManager {
 
         let req = ohc_builtin_agent_core::types::ChatRequest {
             model: "default".to_string(), // The mock or underlying LLM determines this
-            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+            system: system_prompt,
             messages: vec![Message::user(format!(
                 "History:\n{}\n\nWho should speak next?",
                 history

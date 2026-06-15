@@ -177,7 +177,7 @@ mod tests {
         assert!(has_draft, "Should generate a draft for review");
 
         // 2. Approve the draft
-        let decide_res = orchestrator.decide_approval(&draft_request_id, &tenant_id, true, None).await;
+        let decide_res = orchestrator.decide_approval(&draft_request_id, &tenant_id, true).await;
         assert!(decide_res.is_ok());
 
         // Wait a bit for the approved event to propagate and be processed by the CustomerSuccessAgent

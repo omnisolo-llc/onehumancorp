@@ -11,14 +11,9 @@ import { MasterMenu } from './components/MasterMenu';
 import { useOrchestrator } from './hooks/useOrchestrator';
 
 export const App = () => {
-  const { status, tools, error, runAgent, output } = useOrchestrator();
+  const { status, tools, error } = useOrchestrator();
   const [inputs, setInputs] = useState<string[]>([]);
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
-
-  const handleSubmit = async (val: string) => {
-    setInputs([...inputs, val]);
-    await runAgent(val);
-  };
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="blue" padding={2} width={100} dimColor>
@@ -39,22 +34,14 @@ export const App = () => {
 
           <Box flexDirection="column">
             {inputs.map((input, idx) => (
-               <Box key={idx} marginBottom={1} flexDirection="column">
-                 <Box>
-                   <Text color="green">User: </Text>
-                   <Text>{input}</Text>
-                 </Box>
-                 {idx === inputs.length - 1 && output && (
-                    <Box marginTop={1} borderStyle="single" borderColor="cyan" padding={1}>
-                      <Text color="cyan">Agent: </Text>
-                      <MarkdownText content={output} />
-                    </Box>
-                 )}
+               <Box key={idx} marginBottom={1}>
+                 <Text color="green">User: </Text>
+                 <Text>{input}</Text>
                </Box>
             ))}
           </Box>
 
-          <PromptInput onSubmit={handleSubmit} promptText="Ask Agent >" />
+          <PromptInput onSubmit={(val) => setInputs([...inputs, val])} promptText="Ask Agent >" />
         </>
       )}
     </Box>

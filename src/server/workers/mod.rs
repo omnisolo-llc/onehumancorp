@@ -9,4 +9,3 @@ pub mod booking_reengagement;
 pub mod pos_conflict_worker;
 pub mod proactive_analysis_job;
 pub mod message_triage_worker;
-pub mod pricing_analysis_worker;

@@ -21,8 +21,7 @@ test.describe('Documentation Flows', () => {
     await expect(helpBtn).toBeVisible();
 
     // Hover over the help button to trigger the tooltip
-    await page.locator('#help-btn-tooltip').dispatchEvent('touchstart');
-    await page.waitForTimeout(600); // 500ms for long press
+    await helpBtn.hover();
 
     // Verify the tooltip loads with expected content
     // We expect the tooltip to fetch from the API which defaults to "Need help? Click here for guides, videos, and to ask our AI." or the defaultText "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes."

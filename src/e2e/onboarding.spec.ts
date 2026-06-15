@@ -3,9 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard E2E Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Clear local storage to ensure fresh state
-    await page.addInitScript(() => {
-      window.localStorage.clear();
+    await page.route('**/api/onboarding/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        json: { step: 0, status: 'success', business_name: 'My Awesome E2E Business', business_type: 'Online Store' },
+      });
     });
   });
 
@@ -66,7 +68,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 4: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
@@ -130,7 +132,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
     await expect(nameInput).toBeVisible();
     const box = await nameInput.boundingBox();
-    expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
   // Test 3: Verifies input disabled states
@@ -183,7 +185,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 });
 
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
-    // Test 1: Verifies Instant Build successful generation flow
+  // Test 1: Verifies Instant Build successful generation flow
   test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
@@ -201,57 +203,14 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
-    const imageUrlInput = page.locator('#instant-image-url');
-    await expect(imageUrlInput).toBeVisible();
-    await imageUrlInput.fill("https://example.com/logo.png");
-
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
     await expect(page.locator('#setup-screen')).toBeVisible();
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
 
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
-  });
-
-  test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
-    await page.goto('/onboarding');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
-    await instantBuildButton.click();
-
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
-    await bioInput.fill("Test business description.");
-
-    const imageUrlInput = page.locator('#instant-image-url');
-    await expect(imageUrlInput).toBeVisible();
-    await expect(imageUrlInput).toHaveAttribute('type', 'url');
-    await imageUrlInput.fill("https://example.com/logo.png");
-
-    const generateButton = page.getByRole('button', { name: 'Next' });
-    await generateButton.click();
-
-    const successHeading = page.getByRole('heading', { name: "You're Live!" });
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
-  });
-
-  test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
-    await page.goto('/onboarding');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
-    await instantBuildButton.click();
-
-    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
-    await bioInput.fill("Test business description without image.");
-
-    const imageUrlInput = page.locator('#instant-image-url');
-    await expect(imageUrlInput).toBeVisible();
-    // leave empty
-
-    const generateButton = page.getByRole('button', { name: 'Next' });
-    await generateButton.click();
-
-    const successHeading = page.getByRole('heading', { name: "You're Live!" });
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
+    await expect(successHeading).toBeVisible({ timeout: 30000 });
   });
 
   // Test 2: Verifies Instant Build handles network error gracefully
@@ -269,13 +228,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
 
-    await page.route('**/api/onboarding/**', route => route.abort('failed'));
+    await page.context().setOffline(true);
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.locator('.animate-shake').first();
+    const errorBlock = page.getByText(/Failed to fetch|Failed to launch|Network Error|Failed to analyze|Backend connection failed/i).first();
     await expect(errorBlock).toBeVisible();
     await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
@@ -287,7 +246,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await bioInput.fill("New text");
     await expect(bioInput).not.toHaveClass(/border-\[#FF3B30\]/);
 
-    await page.unroute('**/api/onboarding/**');
+    await page.context().setOffline(false);
   });
 
   // Test 3: Verifies empty input behavior
@@ -296,13 +255,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
 
     // Button should be disabled when input is empty.
     await expect(generateButton).toBeDisabled();
 
     // We shouldn't see a loading state.
-    const loadingState = page.getByText('Building Your Business...');
+    const loadingState = page.getByText('Generating...');
     await expect(loadingState).not.toBeVisible();
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
   });
@@ -317,11 +276,11 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
     await generateButton.click();
 
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
+    await expect(successHeading).toBeVisible({ timeout: 30000 });
   });
 
   // Test 5: Mobile responsiveness of the Instant Build component
@@ -334,11 +293,11 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     const box = await bioInput.boundingBox();
-    expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
     const btnBox = await generateButton.boundingBox();
-    expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
+    expect(btnBox?.height).toBeGreaterThanOrEqual(44);
   });
 });

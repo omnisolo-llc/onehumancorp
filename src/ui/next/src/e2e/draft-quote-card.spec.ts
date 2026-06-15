@@ -27,27 +27,12 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await expect(page.getByText('Draft Quote: Plumbing Fix for Customer')).toBeVisible();
     await expect(page.getByText('Calculated Total:')).toBeVisible();
 
-    // 5. Tap "Edit"
-    const editBtn = page.getByRole('button', { name: 'Edit' }).first();
-    await editBtn.waitFor({ state: 'visible' });
-    await editBtn.click();
-
-    // 6. Edit the price
-    const priceInput = page.getByTestId('edit-quote-price');
-    await expect(priceInput).toBeVisible();
-    await priceInput.fill('350');
-
-    // 7. Edit the scope
-    const scopeInput = page.getByTestId('edit-quote-scope');
-    await expect(scopeInput).toBeVisible();
-    await scopeInput.fill('Updated Plumbing Fix including labor and standard materials plus extra parts.');
-
-    // 8. Tap "Approve & Send" in modal
-    const approveBtn = page.getByTestId('modal-approve-btn');
+    // 5. Tap "Approve & Send"
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send' }).first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
 
-    // 9. Optimistic UI update should remove the card from the feed
+    // 6. Optimistic UI update should remove the card from the feed
     await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
   });
 });

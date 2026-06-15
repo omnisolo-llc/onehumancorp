@@ -775,63 +775,48 @@ impl VectorRepository {
                 } else {
                     // Fallback for tests environments without sqlite-vec loaded:
                     // Optimize by fetching only id, tenant_id, and embedding to minimize memory usage
-                    struct MinimalRecord {
-                        id: String,
-                        #[allow(dead_code)]
-                        tenant_id: String,
-                        embedding: Vec<f32>,
-                    }
-
-                    let batch_size = 1000;
-                    let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
-                    let mut match_count = 0;
-
-                    // Fetch distinct tenant_ids to process one by one
-                    let tenant_rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                    let query = "SELECT id, tenant_id, embedding FROM consolidated_memory";
+                    let rows = sqlx::query(query)
                         .fetch_all(pool)
                         .await
                         .map_err(|e| e.to_string())?;
 
-                    let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
+                    struct MinimalRecord {
+                        id: String,
+                        tenant_id: String,
+                        embedding: Vec<f32>,
+                    }
 
-                    'outer: for current_tenant_id in tenant_ids {
-                        let mut offset = 0;
-                        let mut records_in_tenant: Vec<MinimalRecord> = Vec::new();
+                    let mut all_records = Vec::with_capacity(rows.len());
+                    for row in rows {
+                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                .unwrap_or_default()
+                        });
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str).unwrap_or_default();
 
-                        loop {
-                            let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY id LIMIT ? OFFSET ?";
-                            let rows = sqlx::query(query)
-                                .bind(&current_tenant_id)
-                                .bind(batch_size)
-                                .bind(offset)
-                                .fetch_all(pool)
-                                .await
-                                .map_err(|e| e.to_string())?;
+                        let record = MinimalRecord {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            embedding,
+                        };
+                        all_records.push(record);
+                    }
 
-                            if rows.is_empty() {
-                                break;
-                            }
+                    use std::collections::HashMap;
+                    let mut grouped_records: HashMap<String, Vec<MinimalRecord>> = HashMap::new();
+                    for record in all_records {
+                        grouped_records
+                            .entry(record.tenant_id.clone())
+                            .or_default()
+                            .push(record);
+                    }
 
-                            for row in rows {
-                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                        .unwrap_or_default()
-                                });
-                                let embedding: Vec<f32> =
-                                    serde_json::from_str(&emb_str).unwrap_or_default();
+                    let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
+                    let mut match_count = 0;
 
-                                let record = MinimalRecord {
-                                    id: row.get("id"),
-                                    tenant_id: row.get("tenant_id"),
-                                    embedding,
-                                };
-                                records_in_tenant.push(record);
-                            }
-
-                            offset += batch_size;
-                        }
-
-                        let records = records_in_tenant;
+                    'outer: for (_, records) in grouped_records {
                         let magnitudes: Vec<f32> = records
                             .iter()
                             .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())

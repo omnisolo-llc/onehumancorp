@@ -3,9 +3,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 enum AuthMode {
-    #[allow(dead_code)]
     Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
@@ -117,7 +115,7 @@ fn hmac_token(tok: &str) -> Vec<u8> {
     mac.finalize().into_bytes().to_vec()
 }
 
-pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
+fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let lower = id.to_lowercase();
     if lower.contains("%2f") || lower.contains("%25") {
         return Err(Status::permission_denied(format!("invalid SPIFFE ID: encoded slashes: {}", id)));
@@ -187,12 +185,7 @@ mod tests {
 
     #[test]
     fn test_check_token() {
-        // Try to read secret, otherwise set it via env
-        if std::env::var("JWT_SECRET").is_err() {
-            unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
-        }
-
-        let token = "test_token";
+        let token = "secret_token";
         let hash = hmac_token(token);
         let cfg = AuthConfig { mode: AuthMode::Token(hash) };
 

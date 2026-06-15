@@ -25,7 +25,6 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 #[derive(serde::Deserialize)]
 pub struct IntakeRequest {
     pub description: String,
-    pub image_url: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -37,11 +36,7 @@ async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
-    let mut combined_input = payload.description.clone();
-    if let Some(image_url) = &payload.image_url {
-        combined_input.push_str(&format!("\nImage provided: {}", image_url));
-    }
-    match agent.process_intake(&combined_input).await {
+    match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
@@ -98,10 +93,7 @@ async fn save_draft(
 
     match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
-        Err(e) => {
-            tracing::error!("Failed to save onboarding draft: {}", e);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
-        },
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
@@ -111,10 +103,7 @@ async fn start_onboarding(
 ) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
     match agent.start_onboarding(payload).await {
         Ok(res) => Ok(Json(res)),
-        Err(e) => {
-            tracing::error!("Failed to start onboarding: {}", e);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
-        },
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 

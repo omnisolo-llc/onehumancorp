@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test_parse_spec_approved() {
         let content = "branch=feature-1,details=Implement feature 1";
-        let event = Orchestrator::parse_spec_approved(content).expect("failed to unwrap");
+        let event = Orchestrator::parse_spec_approved(content).unwrap();
         assert_eq!(event.branch, "feature-1");
         assert_eq!(event.details, "Implement feature 1");
     }
@@ -116,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_spec_approved() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").expect("failed to unwrap");
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").unwrap();
         let hub = Arc::new(Hub::new(tx, pool));
         let orchestrator = Orchestrator::new(hub.clone());
         
@@ -130,9 +130,9 @@ mod tests {
             meeting_id: String::new(),
         };
         
-        orchestrator.handle_spec_approved(msg).await.expect("failed to unwrap");
+        orchestrator.handle_spec_approved(msg).await.unwrap();
         
-        let state = orchestrator.get_pipeline_state("feature-2").expect("failed to unwrap");
+        let state = orchestrator.get_pipeline_state("feature-2").unwrap();
         assert_eq!(state, PipelineState::Implementing);
     }
 }

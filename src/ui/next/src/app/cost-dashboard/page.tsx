@@ -54,45 +54,6 @@ export default function CostDashboardPage() {
   const [data, setData] = useState<CostDashboardData | null>(null);
   const [myPlanData, setMyPlanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-
-  const handleDownloadInvoice = async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/billing/download-invoice', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            setActionMessage('Invoice download is ready for your current billing period.');
-        } else {
-            setActionMessage('Failed to download invoice.');
-        }
-    } catch (e) {
-        setActionMessage('An error occurred while downloading invoice.');
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!window.confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.")) {
-        return;
-    }
-    setActionMessage('Cancellation review started. Confirm account ownership before changing subscription status.');
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/billing/cancel-subscription', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            setActionMessage('Subscription canceled successfully.');
-        } else {
-            setActionMessage('Failed to cancel subscription.');
-        }
-    } catch (e) {
-        setActionMessage('An error occurred while canceling subscription.');
-    }
-  };
 
   useEffect(() => {
     async function fetchCostData() {
@@ -131,7 +92,7 @@ export default function CostDashboardPage() {
       return (
           <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8" data-testid="cost-dashboard-loading">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
-                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/2 md:w-1/4"></div>
+                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
                   <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
                   <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
               </div>
@@ -155,7 +116,7 @@ export default function CostDashboardPage() {
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Cost Transparency Dashboard</h1>
         <div className="flex gap-2">
-            <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
+            <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
             Back to My Plan
             </button>
         </div>
@@ -203,25 +164,6 @@ export default function CostDashboardPage() {
                       <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
               </div>
-              <div className="mt-6 flex flex-col md:flex-row gap-4">
-                  <button
-                      onClick={handleDownloadInvoice}
-                      className="px-4 py-2 bg-white/70 backdrop-blur-xl saturate-200 border border-indigo-200 text-indigo-700 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-indigo-50"
-                  >
-                      Download Invoice
-                  </button>
-                  <button
-                      onClick={handleCancelSubscription}
-                      className="px-4 py-2 bg-red-50/60 backdrop-blur-lg border border-red-100/50 text-red-600 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-red-100"
-                  >
-                      Cancel Subscription
-                  </button>
-              </div>
-              {actionMessage && (
-                  <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm font-medium text-indigo-800 shadow-sm" role="status">
-                      {actionMessage}
-                  </div>
-              )}
           </div>
         </section>
 

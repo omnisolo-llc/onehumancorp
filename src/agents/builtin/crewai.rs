@@ -135,7 +135,7 @@ impl Flow {
             );
 
             let mut run_cfg = self.crew.config.clone();
-            run_cfg.server_system_message = ::server_pricing::compression::reduce_tokens(&system_prompt);
+            run_cfg.server_system_message = system_prompt;
 
             // Gather context from dependencies
             let mut context_str = String::new();

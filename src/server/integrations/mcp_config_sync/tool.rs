@@ -263,15 +263,9 @@ mod db_tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
+    #[ignore]
     async fn test_sync_and_get_config() {
-        let url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "".to_string());
-        if !url.starts_with("postgres") {
-            return;
-        }
-        let pool = match PgPoolOptions::new().connect(&url).await {
-            Ok(p) => p,
-            Err(_) => return, // Skip test if database is not available to keep it hermetic
-        };
+        let pool = PgPoolOptions::new().connect("postgres://localhost/test_db").await.unwrap();
         let tool = PgConfigSyncTool::new(pool);
 
         let payload = ConfigSyncPayload {

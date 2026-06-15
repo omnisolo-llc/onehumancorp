@@ -5,7 +5,7 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     // Navigate to a safe api route first to set local storage before loading the main page
     await page.goto('/api/staff');
 
-    // Setup local storage for offline staff, rules, and inventory
+    // Setup local storage mock for offline staff, rules, and inventory
     await page.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
         localStorage.setItem('ohc_offline_rules', JSON.stringify([

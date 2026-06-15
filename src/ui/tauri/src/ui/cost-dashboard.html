@@ -38,16 +38,10 @@
         }
         h1, h2, h3 { color: #f5f5f7; }
         p { color: #a1a1aa; }
-        .ohc-growth-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        color: #1d1d1f;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      }
+        .card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
       }
 
       h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; text-align: center; }
@@ -62,12 +56,11 @@
         .grid { grid-template-columns: 1fr; }
       }
 
-      .ohc-growth-card {
+      .card {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        color: #1d1d1f;
         border-radius: 16px;
         padding: 24px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
@@ -91,24 +84,6 @@
       }
 
       .btn-primary {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        border-radius: 16px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        min-height: 44px;
-      }
-      .btn-primary.dummy {
         background-color: #0066FF;
         color: white;
         border: none;
@@ -152,47 +127,7 @@
       @media (prefers-color-scheme: dark) {
         .metric-box { background: rgba(255, 255, 255, 0.05); }
       }
-
-      .btn-outline {
-        background-color: transparent;
-        color: #1d1d1f;
-        border: 1px solid rgba(0,0,0,0.2);
-        padding: 14px 24px;
-        border-radius: 16px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        min-height: 44px;
-        box-sizing: border-box;
-      }
-      @media (prefers-color-scheme: dark) {
-        .btn-outline {
-          color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.2);
-        }
-        .btn-outline:hover {
-          background-color: rgba(255,255,255,0.05);
-        }
-      }
-      .btn-outline:hover {
-        background-color: rgba(0,0,0,0.05);
-      }
-      .btn-outline:active {
-        transform: scale(0.98);
-      }
-      @media (prefers-color-scheme: dark) {
-        .ohc-growth-card {
-          background: rgba(22, 22, 26, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-      }
-</style>
+    </style>
   </head>
   <body>
     <div style="width: 100%; max-width: 800px; text-align: left;">
@@ -208,7 +143,7 @@
       <div id="content" style="display: none;">
         <div class="grid">
           <!-- My Plan Widget -->
-          <div class="ohc-growth-card" id="my-plan-widget">
+          <div class="card" id="my-plan-widget">
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
 
             <div style="margin-bottom: 24px;">
@@ -233,11 +168,11 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
-            <button class="btn-outline" onclick="window.location.href='dashboard.html'" style="margin-top: 12px;">Back to My Plan</button>
+            <button class="btn-outline" onclick="window.location.href='dashboard.html'" style="margin-top: 12px;">Back to Dashboard</button>
           </div>
 
           <!-- Cost Dashboard Widget -->
-          <div class="ohc-growth-card" id="cost-dashboard-widget">
+          <div class="card" id="cost-dashboard-widget">
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h2>
             <h2 style="display:none">Business Advisory Dashboard</h2>
             <div style="display:none">Advisory Summary</div>
@@ -257,7 +192,7 @@
                </div>
             </div>
 
-            <div id="budget-health-alert" style="display: flex; margin-top: 20px; padding: 16px; background: rgba(255, 251, 235, 0.7); border: 1px solid rgba(253, 230, 138, 1); border-radius: 12px; align-items: flex-start; gap: 12px; backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);">
+            <div id="budget-health-alert" style="display: none; margin-top: 20px; padding: 16px; background: rgba(255, 251, 235, 0.7); border: 1px solid rgba(253, 230, 138, 1); border-radius: 12px; align-items: flex-start; gap: 12px; backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);">
                 <svg style="width: 20px; height: 20px; color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -287,10 +222,6 @@
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Compute Usage</span>
                 <span id="compute-cost" style="font-weight: 500;">$0.00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Network Cost</span>
-                <span id="network-cost" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Email Sends</span>
@@ -373,7 +304,7 @@
                     document.getElementById('budget-health-alert').style.display = 'flex';
                     document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
                 } else {
-                    document.getElementById('budget-health-alert').style.display = 'flex';
+                    document.getElementById('budget-health-alert').style.display = 'none';
                 }
 
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
@@ -381,7 +312,6 @@
                 document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
                 document.getElementById('bandwidth-savings').innerText = formatCents(costData.bandwidth_savings || 0);
                 document.getElementById('compute-cost').innerText = formatCents(costData.compute_cost || 0);
-                document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('email-cost').innerText = formatCents(costData.email_cost || 0);
                 document.getElementById('api-cost').innerText = formatCents(costData.api_cost || 0);
 
@@ -730,14 +660,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
 
@@ -838,60 +767,19 @@ document.addEventListener('DOMContentLoaded', () => {
 .ohc-tooltip.visible {
     opacity: 1;
 }
-
-      .btn-outline {
-        background-color: transparent;
-        color: #1d1d1f;
-        border: 1px solid rgba(0,0,0,0.2);
-        padding: 14px 24px;
-        border-radius: 16px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        min-height: 44px;
-        box-sizing: border-box;
-      }
-      @media (prefers-color-scheme: dark) {
-        .btn-outline {
-          color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.2);
-        }
-        .btn-outline:hover {
-          background-color: rgba(255,255,255,0.05);
-        }
-      }
-      .btn-outline:hover {
-        background-color: rgba(0,0,0,0.05);
-      }
-      .btn-outline:active {
-        transform: scale(0.98);
-      }
-      @media (prefers-color-scheme: dark) {
-        .ohc-growth-card {
-          background: rgba(22, 22, 26, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-      }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -967,8 +855,8 @@ function initWalkthrough() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1023,8 +911,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1410,13 +1298,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1485,8 +1372,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -1538,8 +1425,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';

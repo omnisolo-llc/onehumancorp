@@ -1,0 +1,11 @@
+--- src/e2e/viral_standalone_bridge.spec.ts
++++ src/e2e/viral_standalone_bridge.spec.ts
+@@ -13,7 +13,7 @@
+
+     // Wait for navigation
+     // We should be on dashboard.html
+-    /.*dashboard(\.html)?/);
++    await expect(page).toHaveURL(/.*dashboard(\.html)?/);
+
+     // Verify standalone mode badge
+     await expect(page.getByText('Standalone Mode (Zero Data Leakage)')).toBeVisible();

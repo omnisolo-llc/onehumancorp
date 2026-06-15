@@ -16,11 +16,11 @@ backend:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "1000m"
-      memory: "1Gi"
+      cpu: "500m"
+      memory: "512Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -61,11 +61,11 @@ ohcCore:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "1000m"
-      memory: "1Gi"
+      cpu: "500m"
+      memory: "512Mi"
 
 # Valkey - Redis-compatible cache and pub/sub service
 valkey:
@@ -179,11 +179,11 @@ powersync:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "1000m"
-      memory: "1Gi"
+      cpu: "500m"
+      memory: "512Mi"
 
 # Kube-Prometheus-Stack for Cloud Observability
 kube-prometheus-stack:

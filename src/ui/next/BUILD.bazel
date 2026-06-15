@@ -58,7 +58,7 @@ sh_test(
         "vitest.setup.ts",
         ":node_modules",
         "//deploy:hybrid_telemetry_dashboard_mirrors",
-        "//src/server/monitoring:dashboards/ohc-hybrid-telemetry.json",
+        "//src/server/monitoring:dashboards/hybrid-telemetry.json",
         "@nodejs//:node",
     ],
 )

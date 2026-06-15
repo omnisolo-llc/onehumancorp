@@ -9,7 +9,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
 
-type HelpArticle = { title: string; desc: string; link?: string; category?: string };
+type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
@@ -229,7 +229,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/80 backdrop-blur-2xl saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/70 backdrop-blur-[30px] saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
@@ -250,29 +250,15 @@ export function HelpWidget() {
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
-                <div className="space-y-6 mb-8">
-                  {Array.from(
-                    filteredArticles.reduce((acc, article) => {
-                      const cat = article.category || "Other";
-                      if (!acc.has(cat)) acc.set(cat, []);
-                      acc.get(cat)!.push(article);
-                      return acc;
-                    }, new Map<string, HelpArticle[]>())
-                  ).map(([category, articles], cIdx) => (
-                    <div key={cIdx}>
-                      <h4 className="font-bold font-outfit text-gray-800 mb-3 text-lg">{category}</h4>
-                      <div className="space-y-3">
-                        {articles.map((a, aIdx) => (
-                          <div key={aIdx} className="bg-white/80 backdrop-blur-xl saturate-200 p-5 rounded-2xl shadow-sm border border-white/60 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
-                            {a.link ? (
-                              <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
-                            ) : (
-                              <h4 className="font-bold font-outfit text-gray-800 text-base">{a.title}</h4>
-                            )}
-                            <p className="text-sm text-gray-600 mt-2 leading-relaxed">{a.desc}</p>
-                          </div>
-                        ))}
-                      </div>
+                <div className="space-y-3 mb-8">
+                  {filteredArticles.map((a, idx) => (
+                    <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                      {a.link ? (
+                        <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
+                      ) : (
+                        <h4 className="font-bold font-outfit text-gray-800 text-base">{a.title}</h4>
+                      )}
+                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">{a.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -336,7 +322,7 @@ export function HelpWidget() {
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/80 backdrop-blur-md shadow-sm min-h-[44px]"
+                    className="flex-1 p-3 border border-white/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/70 backdrop-blur-md shadow-sm min-h-[44px]"
                   />
                   <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-md text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>

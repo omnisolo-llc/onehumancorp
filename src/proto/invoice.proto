@@ -19,10 +19,6 @@ message Invoice {
   int64 due_date = 5;
   string currency = 6;
   double total_amount = 7;
-  int32 total_amount_cents = 13;
-  string payment_status = 14;
-  int32 view_count = 15;
-  int32 amount_paid_cents = 16;
   string stripe_invoice_id = 8;
   string stripe_payment_link = 9;
   repeated InvoiceLineItem line_items = 10;

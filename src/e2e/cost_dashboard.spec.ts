@@ -12,7 +12,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 3. Check for My Plan components
     await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
-    await expect(page.locator('.ohc-growth-card').first()).toBeVisible();
+    await expect(page.locator('.card').first()).toBeVisible();
     await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("AI actions used this month")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("Storage used")').first()).toBeVisible();
@@ -40,10 +40,10 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
-    await expect(proPage.locator('div.stat-value', { hasText: /.*\/ Unlimited/ }).nth(0)).toBeVisible();
+    await expect(proPage.locator('div.stat-value', { hasText: '/ Unlimited' }).nth(0)).toBeVisible();
 
     // Ensure the page renders / 50 GB for Storage
-    await expect(proPage.locator('div.stat-value', { hasText: /.*\/ 50 GB/ }).first()).toBeVisible();
+    await expect(proPage.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -58,7 +58,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'AI actions used this month' }) }).first();
-    await expect(aiActionsCard.locator('div.stat-value', { hasText: /.*\/ Unlimited/ }).first()).toBeVisible();
+    await expect(aiActionsCard.locator('div.stat-value', { hasText: '/ Unlimited' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -73,7 +73,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'Storage used' }) }).first();
-    await expect(storageCard.locator('div.stat-value', { hasText: /.*\/ 50 GB/ }).first()).toBeVisible();
+    await expect(storageCard.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -92,7 +92,6 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Bandwidth Savings' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Network Cost' }).first()).toBeVisible();
   });
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {

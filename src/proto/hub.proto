@@ -1690,8 +1690,6 @@ message CostDashboardResponse {
   int64 compute_cost = 11;
   double cache_hit_rate = 12;
   double cost_per_1k_tokens = 13;
-  int64 email_cost = 14;
-  int64 api_cost = 15;
 }
 
 message SelectPlanRequest {

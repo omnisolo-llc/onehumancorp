@@ -150,8 +150,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           existingTxs.push(tx);
           localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
 
-          setStatus('Synced locally. Will push to cloud when network is restored.');
-          setTimeout(() => setStatus('Terminal ready.'), 3000);
+          setStatus('Payment saved offline. Will sync when network is restored.');
           setReserving(false);
        }, 1500);
        return;
@@ -258,7 +257,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 min-h-[44px] rounded-[8px] font-bold shadow-md shadow-blue-500/20 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:bg-[#005CE6] active:scale-[0.98]'}`}>
+          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 min-h-[44px] rounded-[8px] font-bold shadow-md shadow-blue-500/20 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
         </div>

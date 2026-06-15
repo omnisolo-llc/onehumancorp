@@ -106,6 +106,10 @@ mod tests {
             return;
         }
 
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
         // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -165,6 +169,10 @@ mod tests {
             return;
         }
 
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://dummy")
             .unwrap();
@@ -201,6 +209,10 @@ mod tests {
         if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
+
+        let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://dummy")

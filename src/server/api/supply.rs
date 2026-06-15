@@ -59,25 +59,9 @@ async fn list_vendors(
 
     let rows: Vec<Vendor> = match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
-            }
-            let res = sqlx::query_as::<_, Vendor>("SELECT id, name, contact_info FROM vendors WHERE tenant_id = $1")
+            sqlx::query_as::<_, Vendor>("SELECT id, name, contact_info FROM vendors WHERE tenant_id = $1")
                 .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
-            }
-            res
+                .fetch_all(&db.pool).await.unwrap_or_default()
         }
         DbStore::Sqlite(pool) => {
             sqlx::query_as::<_, Vendor>("SELECT id, name, contact_info FROM vendors WHERE tenant_id = ?")
@@ -107,26 +91,8 @@ async fn create_vendor(
 
     match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = sqlx::query("INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES ($1, $2, $3, $4)")
-                .bind(&payload.id).bind(&tenant_id).bind(&payload.name).bind(&contact_info).execute(&mut *tx).await {
-                tracing::error!("Failed to insert vendor: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
+            let _ = sqlx::query("INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES ($1, $2, $3, $4)")
+                .bind(&payload.id).bind(&tenant_id).bind(&payload.name).bind(&contact_info).execute(&db.pool).await;
         }
         DbStore::Sqlite(pool) => {
             let _ = sqlx::query("INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES (?, ?, ?, ?)")
@@ -148,25 +114,9 @@ async fn list_raw_materials(
 
     let rows: Vec<RawMaterial> = match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
-            }
-            let res = sqlx::query_as::<_, RawMaterial>("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1")
+            sqlx::query_as::<_, RawMaterial>("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1")
                 .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
-            }
-            res
+                .fetch_all(&db.pool).await.unwrap_or_default()
         }
         DbStore::Sqlite(pool) => {
             sqlx::query_as::<_, RawMaterial>("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ?")
@@ -194,26 +144,8 @@ async fn create_raw_material(
 
     match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = sqlx::query("INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES ($1, $2, $3, $4, $5)")
-                .bind(&payload.id).bind(&tenant_id).bind(&payload.name).bind(payload.current_quantity).bind(payload.reorder_threshold).execute(&mut *tx).await {
-                tracing::error!("Failed to insert raw material: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
+            let _ = sqlx::query("INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES ($1, $2, $3, $4, $5)")
+                .bind(&payload.id).bind(&tenant_id).bind(&payload.name).bind(payload.current_quantity).bind(payload.reorder_threshold).execute(&db.pool).await;
         }
         DbStore::Sqlite(pool) => {
             let _ = sqlx::query("INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES (?, ?, ?, ?, ?)")
@@ -235,25 +167,9 @@ async fn list_bom_items(
 
     let rows: Vec<BomItem> = match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
-            }
-            let res = sqlx::query_as::<_, BomItem>("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1")
+            sqlx::query_as::<_, BomItem>("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1")
                 .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
-            }
-            res
+                .fetch_all(&db.pool).await.unwrap_or_default()
         }
         DbStore::Sqlite(pool) => {
             sqlx::query_as::<_, BomItem>("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ?")
@@ -281,26 +197,8 @@ async fn create_bom_item(
 
     match &db.store {
         DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = sqlx::query("INSERT INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES ($1, $2, $3, $4, $5)")
-                .bind(&payload.id).bind(&tenant_id).bind(&payload.finished_good_id).bind(&payload.raw_material_id).bind(payload.quantity_required).execute(&mut *tx).await {
-                tracing::error!("Failed to insert bom item: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(payload)).into_response();
-            }
+            let _ = sqlx::query("INSERT INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES ($1, $2, $3, $4, $5)")
+                .bind(&payload.id).bind(&tenant_id).bind(&payload.finished_good_id).bind(&payload.raw_material_id).bind(payload.quantity_required).execute(&db.pool).await;
         }
         DbStore::Sqlite(pool) => {
             let _ = sqlx::query("INSERT INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES (?, ?, ?, ?, ?)")

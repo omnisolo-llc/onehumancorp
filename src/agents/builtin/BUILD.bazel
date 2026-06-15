@@ -28,7 +28,6 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/pricing:server_pricing",
         "@crates//:chrono",
         "@crates//:futures",
         "@crates//:hmac",
@@ -68,7 +67,6 @@ rust_library(
         "in_memory_store.rs",
         "langgraph.rs",
         "lib.rs",
-        "llm_condensation.rs",
         "aider_repomap.rs",
         "local_provider.rs",
         "marketplace.rs",

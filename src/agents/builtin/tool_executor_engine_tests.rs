@@ -4,6 +4,39 @@ use tool_executor_engine::ToolExecutionEngine;
 #[cfg(test)]
 mod tests {
 
+    #[tokio::test(start_paused = true)]
+    async fn test_transient_retry_jitter_calc() {
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TransientRetryExecutor {
+                call_count: call_count.clone(),
+                fail_until: 1,
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let handle = tokio::spawn(async move {
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+        });
+
+        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
+
+        let res = handle.await.unwrap();
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "success");
+        assert_eq!(call_count.load(Ordering::SeqCst), 2);
+    }
+
     use super::*;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
@@ -40,39 +73,6 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_transient_retry_jitter_calc() {
-        let call_count = Arc::new(AtomicUsize::new(0));
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(TransientRetryExecutor {
-                call_count: call_count.clone(),
-                fail_until: 1,
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-
-        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
-
-        let res = handle.await.unwrap();
-
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
-        assert_eq!(call_count.load(Ordering::SeqCst), 2);
-    }
-
-    #[tokio::test]
     async fn test_transient_retry_immediate_success() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -169,6 +169,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
     }
 
+
     #[tokio::test]
     async fn test_pydantic_to_engine_integration() {
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
@@ -246,6 +247,7 @@ mod tests {
         }
     }
 
+
     #[tokio::test]
     async fn test_llm_recoverable_pydantic_integration_loop() {
         // This test simulates the orchestrator loop receiving an LlmRecoverable error and returning it to the LLM.
@@ -272,6 +274,7 @@ mod tests {
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+                // The main orchestration loop in agent.rs uses this exact error string to feed back to the LLM
             },
             _ => panic!("Expected LlmRecoverable error"),
         }

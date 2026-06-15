@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 import { randomUUID } from 'crypto';
 
 test.describe('Omni-Inbox Auto-Reply Agent', () => {
@@ -7,25 +7,33 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
     const senderId = `user_${randomUUID()}@example.com`;
     const messageContent = 'Hello, do you fix sinks?';
 
-    const response = await request.post('/api/v1/webhooks/omni_inbox', {
+    // Instead of mocking the network in E2E, we'll actually fire a test webhook
+    // against the local running backend.
+    const res = await request.post('/api/inbox/webhook', {
       data: {
-        tenant_id: 'e2e-tenant',
         source: 'email',
-        sender_id: senderId,
-        message: messageContent
+        sender: senderId,
+        content: messageContent,
+        tenant_id: 'default'
       }
     });
 
-    expect(response.ok()).toBeTruthy();
+    // Check that our backend accepted it
+    expect(res.ok()).toBeTruthy();
 
-    // 2. Load the inbox UI
+    // 2. Navigate to the UI and ensure the message appears
     await page.goto('/inbox');
-    await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
 
-    await expect(page.getByText('Message Queue')).toBeVisible();
-    await expect(page.getByText('Conversation Detail')).toBeVisible();
+    // No explicit mock delays, wait for real network request and rendering
+    const messageCard = page.locator('.inbox-message', { hasText: messageContent });
+    await expect(messageCard).toBeVisible({ timeout: 10000 });
 
-    // Give it a moment, but do not strictly wait for an item because it depends on event mesh / DB sync
-    await page.waitForTimeout(1000);
+    // 3. Verify the AI auto-reply draft feature
+    await messageCard.click();
+    const draftText = page.locator('.draft-reply-content');
+
+    // The backend AI should have prepared a draft reply. We wait for it.
+    await expect(draftText).toBeVisible({ timeout: 15000 });
+    await expect(draftText).toContainText('sink');
   });
 });

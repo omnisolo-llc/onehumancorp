@@ -38,14 +38,14 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl">
+            <p className="text-center text-gray-500 font-medium py-8 glassmorphism">
               No changelog available.
             </p>
           ) : (
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all"
+                className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all"
               >
                 <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}

@@ -189,7 +189,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         let detailed_error = if parse_error_msg.contains("Validation Error") {
                             parse_error_msg.clone()
                         } else {
-                            crate::types::format_pydantic_error_string(&parse_error_msg, None, None)
+                            format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}\nPlease strictly follow the tool's JSON schema and try again.", parse_error_msg)
                         };
                         let tool_results = msg
                             .tool_calls
@@ -215,9 +215,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
                             msg.content, parse_error_msg
                         );
-                        let mut error_msg = Message::user(error_context);
-                        error_msg.previous_response_id = msg.response_id.clone();
-                        current_req.messages.push(error_msg);
+                        current_req.messages.push(Message::user(error_context));
                     }
                     attempt += 1;
                 }

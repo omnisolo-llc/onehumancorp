@@ -35,8 +35,6 @@ pub struct IntakeProduct {
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,13 +71,7 @@ impl OnboardingAgent {
             });
         }
 
-        let combined_input = user_messages.iter().map(|m| {
-            let mut text = m.content.clone();
-            if let Some(url) = &m.image_url {
-                text.push_str(&format!("\nImage provided: {}", url));
-            }
-            text
-        }).collect::<Vec<String>>().join("\n");
+        let combined_input = user_messages.iter().map(|m| m.content.clone()).collect::<Vec<String>>().join("\n");
         let intake_data = self.process_intake(&combined_input).await?;
 
         Ok(ChatResponse {
@@ -473,16 +465,11 @@ impl OnboardingAgent {
             }
         });
 
-        let (product_res_res, seed_res_res, events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
 
         let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
-
-        let events_res = events_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        if let Err(e) = events_res {
-            tracing::warn!("Failed to publish onboarding events (non-fatal): {}", e);
-        }
 
         product_res?;
         seed_res?;

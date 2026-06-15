@@ -22,7 +22,7 @@ test.describe('Growth Cloud Bridge Loop', () => {
 
     // The link should not be the fallback or error link
     const linkInput = page.locator('#referral-link');
-    await expect(linkInput).toHaveValue(/https:\/\/(ohc\.app|cloud\.ohc\.network)\/invite\//);
+    await expect(linkInput).toHaveValue(/https:\/\/ohc\.app\/invite\//);
 
     // The copy button should work
     const copyBtn = page.locator('#copy-btn');
@@ -32,11 +32,5 @@ test.describe('Growth Cloud Bridge Loop', () => {
     // but we can verify the button text changes indicating success.
     await copyBtn.click();
     await expect(copyBtn).toHaveText('Copied!');
-
-    // Verify share on WhatsApp is available
-    await expect(page.locator('#share-whatsapp-btn')).toBeVisible();
-
-    // Verify share on X (Twitter) is available
-    await expect(page.locator('#share-twitter-btn')).toBeVisible();
   });
 });

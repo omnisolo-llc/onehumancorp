@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Query, Form},
+    extract::{Extension, State},
     response::IntoResponse,
     http::StatusCode,
     routing::post,
@@ -10,17 +10,11 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
-
-#[derive(Deserialize)]
-pub struct TenantQuery {
-    pub tenant: Option<String>,
-}
+use ::server_common::Claims;
 
 #[derive(Deserialize)]
 pub struct ClientIntakeRequest {
-    pub name: String,
-    pub email: String,
-    pub details: String,
+    pub inquiry: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,10 +42,13 @@ where
 
 async fn handle_client_intake(
     State(state): State<ClientIntakeState>,
-    Query(query): Query<TenantQuery>,
-    Form(payload): Form<ClientIntakeRequest>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ClientIntakeRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(ClientIntakeResponse { success: false, proposal_drafted: false })).into_response(),
+    };
 
     // Analyze the unstructured inquiry and extract parameters (mock logic for AI generation)
     // Create a drafted proposal
@@ -60,14 +57,12 @@ async fn handle_client_intake(
 
     let drafted_message = format!(
         "Hi there! Based on your request for '{}', I've put together a drafted proposal. The estimated scope will cost around ${}, including standard services.",
-        payload.details, suggested_price
+        payload.inquiry, suggested_price
     );
 
     let action_payload = serde_json::json!({
         "feature_type": "quote_draft",
-        "customer_inquiry": payload.details,
-        "client_name": payload.name,
-        "client_email": payload.email,
+        "customer_inquiry": payload.inquiry,
         "suggested_price": suggested_price,
         "scope": format!("{} with custom requirements.", service_name),
         "suggested_time": "Next Week",

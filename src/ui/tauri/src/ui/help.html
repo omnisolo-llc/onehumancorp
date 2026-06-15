@@ -309,39 +309,7 @@
         .empty-state p { color: #a1a1a6; }
         .video-card { border-color: rgba(255,255,255,0.1); }
       }
-
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            color: #1d1d1f;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            z-index: 100000;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 250px;
-            line-height: 1.4;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-        }
-</style>
+    </style>
   </head>
   <body>
     <div class="container">
@@ -380,19 +348,53 @@
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
-
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -929,20 +931,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
+<style>
+.ohc-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1011,15 +1032,15 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1074,8 +1095,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1291,7 +1312,27 @@ document.addEventListener('DOMContentLoaded', () => {
             color: #64748b;
         }
 
-        `;
+        /* Tooltip Styles */
+        .ohc-tooltip {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: Outfit, sans-serif;
+            z-index: 100000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 250px;
+            line-height: 1.4;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+        }
+    `;
     document.head.appendChild(style);
 
     // Create the button
@@ -1440,13 +1481,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1509,14 +1549,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -1568,8 +1608,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';

@@ -193,18 +193,14 @@ async fn handle_create_product(
             .to_lowercase();
         let discount = payload.subscription_discount.unwrap_or(0);
 
-        let price_cents = (payload.price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
         let insert_plan = sqlx::query(
-            "INSERT INTO subscription_plans (id, tenant_id, product_id, interval, discount_percentage, name, price_cents, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+            "INSERT INTO subscription_plans (id, tenant_id, product_id, interval, discount_percentage) VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&plan_id)
         .bind(&tenant_id)
         .bind(&product_id)
         .bind(&interval)
         .bind(discount)
-        .bind(&payload.name)
-        .bind(price_cents)
-        .bind(&interval)
         .execute(&mut *conn)
         .await;
 

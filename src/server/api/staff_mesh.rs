@@ -112,17 +112,6 @@ pub async fn create_staff_handler(
             }
         }
         crate::db::DbStore::Postgres => {
-             let mut tx = match db.pool.begin().await {
-                 Ok(tx) => tx,
-                 Err(e) => {
-                     tracing::error!("Failed to begin transaction: {:?}", e);
-                     return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                 }
-             };
-             if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                 tracing::error!("Failed to set org context: {:?}", e);
-                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-             }
              let res = sqlx::query(
                 "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES ($1, $2, $3, $4, $5)",
             )
@@ -131,17 +120,9 @@ pub async fn create_staff_handler(
             .bind(&payload.name)
             .bind(&payload.phone_number)
             .bind(&payload.role)
-            .execute(&mut *tx)
+            .execute(&db.pool)
             .await;
-             if let Err(e) = res {
-                tracing::error!("Failed to insert staff member: {:?}", e);
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "db_error"})),
-                ).into_response();
-            }
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
+             if res.is_err() {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({"error": "db_error"})),
@@ -185,34 +166,15 @@ pub async fn set_staff_pin_handler(
             }
         }
         crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-            }
             let res = sqlx::query(
                 "UPDATE ohc_staff_member SET pin_hash = $1 WHERE id = $2 AND tenant_id = $3",
             )
             .bind(&pin_hash)
             .bind(&id)
             .bind(&tenant_id)
-            .execute(&mut *tx)
+            .execute(&db.pool)
             .await;
-            if let Err(e) = res {
-                tracing::error!("Failed to set staff pin: {:?}", e);
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "db_error"})),
-                ).into_response();
-            }
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
+            if res.is_err() {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({"error": "db_error"})),
@@ -247,30 +209,12 @@ pub async fn get_staff_handler(
             }).collect()
         }
         crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-            }
             let rows: Result<Vec<(String, String, String, String)>, _> = sqlx::query_as(
                 "SELECT id, name, phone_number, role FROM ohc_staff_member WHERE tenant_id = $1",
             )
             .bind(&tenant_id)
-            .fetch_all(&mut *tx)
+            .fetch_all(&db.pool)
             .await;
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "db_error"})),
-                ).into_response();
-            }
 
             rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role)| {
                 StaffMember { id, name, phone_number, role }
@@ -306,18 +250,7 @@ pub async fn sync_timecard_handler(
                 .await;
             }
             crate::db::DbStore::Postgres => {
-                let mut tx = match db.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(e) => {
-                        tracing::error!("Failed to begin transaction: {:?}", e);
-                        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                    }
-                };
-                if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                    tracing::error!("Failed to set org context: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                }
-                let res = sqlx::query(
+                let _ = sqlx::query(
                     "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES ($1, $2, $3, $4, $5::timestamp)",
                 )
                 .bind(&event.id)
@@ -325,22 +258,8 @@ pub async fn sync_timecard_handler(
                 .bind(&event.staff_id)
                 .bind(&event.event_type)
                 .bind(&event.offline_timestamp)
-                .execute(&mut *tx)
+                .execute(&db.pool)
                 .await;
-                if let Err(e) = res {
-                    tracing::error!("Failed to insert timecard event: {:?}", e);
-                    return (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({"error": "db_error"})),
-                    ).into_response();
-                }
-                if let Err(e) = tx.commit().await {
-                    tracing::error!("Failed to commit transaction: {:?}", e);
-                    return (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({"error": "db_error"})),
-                    ).into_response();
-                }
             }
         }
     }
@@ -377,31 +296,12 @@ pub async fn get_timecard_handler(
             }).collect::<Vec<_>>()).unwrap_or_default()
         }
         crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
-            }
             let rows = sqlx::query(
                 "SELECT id, staff_id, event_type, event_time::text AS offline_timestamp, created_at::text AS created_at FROM ohc_timecard_event WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100",
             )
             .bind(&tenant_id)
-            .fetch_all(&mut *tx)
+            .fetch_all(&db.pool)
             .await;
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "db_error"})),
-                ).into_response();
-            }
-
             rows.map(|rows| rows.into_iter().map(|row| {
                 use sqlx::Row;
                 serde_json::json!({

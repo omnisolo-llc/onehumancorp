@@ -1,4 +1,6 @@
 use tonic::{Request, Response, Status};
+#[allow(unused_imports)]
+use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::chat_service_server::ChatService;
 use crate::integrations::registry::IntegrationsRegistry;
 

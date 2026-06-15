@@ -5,7 +5,6 @@ use std::sync::Arc;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TeamInvite {
     pub id: String,
-    pub tenant_id: String,
     pub team_id: String,
     pub inviter_id: String,
     pub invitee_id: String,
@@ -25,11 +24,10 @@ impl InviteRepository {
 
     pub async fn create_invite(&self, invite: &TeamInvite) -> Result<(), String> {
         sqlx::query(
-            "INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            "INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         )
         .bind(&invite.id)
-        .bind(&invite.tenant_id)
         .bind(&invite.team_id)
         .bind(&invite.inviter_id)
         .bind(&invite.invitee_id)
@@ -43,7 +41,7 @@ impl InviteRepository {
 
     pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
         let rows = if let Some(c) = cursor {
-            sqlx::query("SELECT id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 AND created_at <= (SELECT created_at FROM team_invites WHERE id = $2) AND id < $2 ORDER BY created_at DESC, id DESC LIMIT $3")
+            sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 AND created_at <= (SELECT created_at FROM team_invites WHERE id = $2) AND id < $2 ORDER BY created_at DESC, id DESC LIMIT $3")
                 .bind(team_id)
                 .bind(c)
                 .bind(limit)
@@ -51,7 +49,7 @@ impl InviteRepository {
                 .await
                 .map_err(|e| e.to_string())?
         } else {
-            sqlx::query("SELECT id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2")
+            sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2")
                 .bind(team_id)
                 .bind(limit)
                 .fetch_all(&self.pool)
@@ -61,7 +59,6 @@ impl InviteRepository {
 
         let invites = rows.into_iter().map(|row| TeamInvite {
             id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
             team_id: row.get("team_id"),
             inviter_id: row.get("inviter_id"),
             invitee_id: row.get("invitee_id"),
@@ -85,7 +82,7 @@ impl InviteRepository {
     }
 
     pub async fn get_invite(&self, invite_id: &str) -> Result<Option<TeamInvite>, String> {
-        let row = sqlx::query("SELECT id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE id = $1")
+        let row = sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE id = $1")
             .bind(invite_id)
             .fetch_optional(&self.pool)
             .await
@@ -94,7 +91,6 @@ impl InviteRepository {
         if let Some(row) = row {
             Ok(Some(TeamInvite {
                 id: row.get("id"),
-                tenant_id: row.get("tenant_id"),
                 team_id: row.get("team_id"),
                 inviter_id: row.get("inviter_id"),
                 invitee_id: row.get("invitee_id"),
@@ -121,9 +117,8 @@ impl InviteRepository {
         Ok(())
     }
 
-    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
-        let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE tenant_id = $1")
-            .bind(tenant_id)
+    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
+        let row = sqlx::query("SELECT COUNT(*) FROM team_invites")
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -137,11 +132,10 @@ impl InviteRepository {
 
         for invite in invites {
             sqlx::query(
-                "INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
-                 VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                "INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(&invite.id)
-            .bind(&invite.tenant_id)
             .bind(&invite.team_id)
             .bind(&invite.inviter_id)
             .bind(&invite.invitee_id)
@@ -168,7 +162,6 @@ impl InviteTracker {
     pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<TeamInvite, String> {
         let invite = TeamInvite {
             id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
-            tenant_id: team_id.to_string(), // Ensure isolation mapping
             team_id: team_id.to_string(),
             inviter_id: inviter_id.to_string(),
             invitee_id: invitee_id.to_string(),
@@ -194,8 +187,8 @@ impl InviteTracker {
         self.repo.accept_invite(invite_id).await
     }
 
-    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
-        self.repo.get_total_invites_count(tenant_id).await
+    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
+        self.repo.get_total_invites_count().await
     }
 
     pub async fn record_invites(&self, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
@@ -203,7 +196,6 @@ impl InviteTracker {
         for invitee_id in invitee_ids {
             invites.push(TeamInvite {
                 id: format!("inv-{}-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0), invitee_id),
-                tenant_id: team_id.to_string(),
                 team_id: team_id.to_string(),
                 inviter_id: inviter_id.to_string(),
                 invitee_id: invitee_id.clone(),
@@ -229,7 +221,6 @@ mod tests {
         let now = Utc.with_ymd_and_hms(2026, 4, 26, 0, 0, 0).unwrap();
         let invite = TeamInvite {
             id: "inv1".to_string(),
-            tenant_id: "team1".to_string(),
             team_id: "team1".to_string(),
             inviter_id: "user1".to_string(),
             invitee_id: "user2".to_string(),

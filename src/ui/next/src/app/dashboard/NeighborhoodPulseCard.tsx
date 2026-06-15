@@ -51,7 +51,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
 
   return (
     <div
-      className="glassmorphism p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-white"
+      className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-white"
       style={{
         background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9))',
         backdropFilter: 'blur(30px) saturate(210%)',

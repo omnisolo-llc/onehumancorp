@@ -719,7 +719,7 @@ export default function WebsiteBuilderPage() {
                         }
                       }}
                     >
-                      Next
+                      Generate Storefront
                     </button>
                   </div>
                 </>

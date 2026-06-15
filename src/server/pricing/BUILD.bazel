@@ -8,7 +8,6 @@ rust_library(
         "calculator.rs",
         "compression.rs",
         "dynamic.rs",
-        "engine.rs",
         "mod.rs",
         "payment_routing.rs",
         "prompt_caching.rs",
@@ -35,7 +34,6 @@ rust_library(
         "@crates//:hex",
         "@crates//:image",
         "@crates//:sqlx",
-        "@crates//:uuid",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",

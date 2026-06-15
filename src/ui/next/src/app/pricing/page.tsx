@@ -9,28 +9,8 @@ import { PoweredByOHC } from '../components/PoweredByOHC';
 export default function PricingPage() {
   const router = useRouter();
 
-  const handleUpgrade = async (tier: string) => {
-    try {
-      const response = await fetch('/api/billing/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tier }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
-
-      const data = await response.json();
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
-      }
-    } catch (error) {
-      console.error('Error upgrading plan:', error);
-      alert('Failed to initiate upgrade. Please try again.');
-    }
+  const handleUpgrade = (tier: string) => {
+    router.push('/checkout?tier=' + tier);
   };
 
   return (
@@ -82,7 +62,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
+              Upgrade to Starter
             </button>
           </div>
 
@@ -99,7 +79,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
+              Upgrade to Pro
             </button>
           </div>
 
@@ -116,7 +96,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
+              Upgrade to Business
             </button>
           </div>
         </div>

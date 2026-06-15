@@ -60,7 +60,7 @@ async fn get_plans(
     };
 
     let result = sqlx::query(
-        "SELECT sp.id as id, COALESCE(p.title, sp.name) as name, COALESCE(p.description, sp.description) as description, COALESCE(p.price_cents, sp.price_cents) as amount, COALESCE(sp.interval, sp.frequency) as interval, sp.status = 'active' as active FROM subscription_plans sp LEFT JOIN products p ON sp.product_id = p.id WHERE sp.tenant_id = $1"
+        "SELECT sp.id as id, p.title as name, p.description as description, COALESCE(p.price_cents, 0) as amount, sp.interval as interval, sp.status = 'active' as active FROM subscription_plans sp JOIN products p ON sp.product_id = p.id WHERE sp.tenant_id = $1"
     )
     .bind(tenant_id)
     .fetch_all(&mut *conn)

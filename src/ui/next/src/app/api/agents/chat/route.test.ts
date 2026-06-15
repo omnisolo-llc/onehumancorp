@@ -58,13 +58,6 @@ describe('routeIntent', () => {
     expect(result.description.toLowerCase()).toContain('dm');
   });
 
-  it('should route urgent messages to triage department', () => {
-    const result = routeIntent('This is an urgent emergency');
-    expect(result.department_assigned).toBe('triage');
-    expect(result.agent).toBe('The Coordinator');
-    expect(result.description).toContain('Urgent');
-  });
-
   it('should default to operations department for unrecognized messages', () => {
     const result = routeIntent('Update the schedule for tomorrow');
     expect(result.department_assigned).toBe('operations');

@@ -3,66 +3,7 @@ use serde::{Deserialize, Serialize};
 use reqwest::Client;
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
-
-use std::sync::Mutex;
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
 use super::LlmClient;
-
-
-#[allow(dead_code)]
-struct CircuitBreaker {
-    failures: Mutex<usize>,
-    last_failure: Mutex<Option<Instant>>,
-    max_failures: usize,
-    reset_timeout: Duration,
-}
-
-#[allow(dead_code)]
-impl CircuitBreaker {
-    fn new(max_failures: usize, reset_timeout: Duration) -> Self {
-        CircuitBreaker {
-            failures: Mutex::new(0),
-            last_failure: Mutex::new(None),
-            max_failures,
-            reset_timeout,
-        }
-    }
-
-    fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
-        if *failures >= self.max_failures {
-            let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    return true;
-                }
-                return false;
-            }
-        }
-        true
-    }
-
-    fn record_success(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures = 0;
-    }
-
-    fn record_failure(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures += 1;
-        let mut last_failure = self.last_failure.lock().unwrap();
-        *last_failure = Some(Instant::now());
-    }
-}
-
-#[allow(dead_code)]
-static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
-
-#[allow(dead_code)]
-fn get_circuit_breaker() -> &'static CircuitBreaker {
-    GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
-}
 
 pub struct OllamaClient {
     endpoint: String,
@@ -126,16 +67,10 @@ struct OllamaResponseMessage {
 
 #[async_trait]
 impl LlmClient for OllamaClient {
-
     async fn chat(
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let cb = get_circuit_breaker();
-        if !cb.allow() {
-            return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
-        }
-
         let req = super::minify_chat_request(req);
         let mut messages = Vec::new();
 
@@ -165,32 +100,21 @@ impl LlmClient for OllamaClient {
             }),
         };
 
-        let resp_result = self
+        let resp = self
             .client
             .post(&self.endpoint)
             .header("Content-Type", "application/json")
             .json(&payload)
             .send()
-            .await;
-
-        let resp = match resp_result {
-            Ok(r) => r,
-            Err(e) => {
-                cb.record_failure();
-                return Err(e.into());
-            }
-        };
-
+            .await?;
 
         if !resp.status().is_success() {
-            cb.record_failure();
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("ollama api error (status {}): {}", status, body).into());
         }
 
         let result: OllamaResponse = resp.json().await?;
-        cb.record_success();
 
         Ok(ChatResponse {
             message: Message {

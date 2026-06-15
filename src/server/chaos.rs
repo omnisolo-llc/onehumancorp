@@ -464,8 +464,8 @@ mod tests {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
         let result = tokio::time::timeout(std::time::Duration::from_millis(50), async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<(), String>(());
-            pending
+            let pending = std::future::pending::<Result<(), String>>();
+            pending.await
         }).await;
 
         assert!(result.is_err(), "Mobile API read operations must fail-safe when backend latency spikes >2s (returning cached data)");
@@ -494,8 +494,8 @@ mod tests {
 
         // 2. Simulate read operation degradation via pending
         let read_result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<String, String>("".to_string());
-            pending
+            let pending = std::future::pending::<Result<String, String>>();
+            pending.await
         }).await;
 
         // Verify timeout was hit
@@ -511,8 +511,8 @@ mod tests {
 
         // 3. Simulate write operation queueing locally on failure via pending
         let write_result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<(), String>(());
-            pending
+            let pending = std::future::pending::<Result<(), String>>();
+            pending.await
         }).await;
 
         assert!(write_result.is_err(), "Write operation must timeout after latency spike");
@@ -911,27 +911,27 @@ mod tests {
         assert!(result.is_ok(), "Daemon should not panic when reading corrupted offline memory files.");
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<(), String>(());
-            pending
+            let pending = std::future::pending::<Result<(), String>>();
+            pending.await
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
     }
 }
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_ml_resilience_inference_timeout_with_db_lag() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let inference_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<&str, String>("");
-            pending
+            let pending = std::future::pending::<Result<&str, String>>();
+            pending.await
         };
 
         let inference_result = tokio::time::timeout(timeout_duration, inference_future).await;

@@ -8,7 +8,7 @@ test.describe('Wizard Cross Device E2E', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('website-builder-storage');
     }, 'storefront');
-    await page.goto('/onboarding');
+    await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
 
     // 2. Click Start My Business to advance to step 1
@@ -52,7 +52,7 @@ test.describe('Wizard Cross Device E2E', () => {
         localStorage.setItem('user_id', 'storefront');
     }, wizardState);
 
-    await newPage.goto('/onboarding');
+    await newPage.goto('/website-builder');
 
     // 5. Verify the business name and step was properly restored
     await expect(newPage.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();

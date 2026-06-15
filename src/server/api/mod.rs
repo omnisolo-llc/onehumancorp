@@ -37,4 +37,3 @@ pub mod incidents;
 pub mod cart;
 
 pub mod quotes;
-pub mod inbox;

@@ -54,7 +54,7 @@ mod tests {
 
         let request_id = pending[0].id.clone();
 
-        let res = orchestrator.decide_approval(&request_id, &tenant_id, true, None).await;
+        let res = orchestrator.decide_approval(&request_id, &tenant_id, true).await;
         assert!(res.is_ok());
 
         let pending_after = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;

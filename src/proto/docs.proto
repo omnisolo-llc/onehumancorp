@@ -46,7 +46,6 @@ message VideoTutorial {
   int32 id = 1;
   string title = 2;
   string duration = 3;
-  string video_url = 4;
 }
 
 message GetVideoTutorialsRequest {}

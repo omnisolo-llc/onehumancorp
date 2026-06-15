@@ -251,19 +251,11 @@ pub async fn add_cart_item_handler(
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Failed to add item to cart" }))).into_response();
     }
 
-    // Apply Dynamic Pricing
-    let final_unit_price = crate::pricing::engine::apply_dynamic_pricing(
-        &pool,
-        &tenant_id,
-        &req_data.product_id,
-        req_data.unit_price_cents,
-    ).await;
-
     // Update cart total
     let _ = sqlx::query(
         "UPDATE carts SET total_amount_cents = total_amount_cents + $1 WHERE id = $2 AND tenant_id = $3"
     )
-    .bind(final_unit_price * (req_data.quantity as i64))
+    .bind(req_data.unit_price_cents * (req_data.quantity as i64))
     .bind(&cart_id)
     .bind(&tenant_id)
     .execute(&pool)

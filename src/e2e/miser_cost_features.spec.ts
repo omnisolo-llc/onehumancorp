@@ -37,7 +37,7 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    const freeCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Free', exact: true }) });
+    const freeCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Free', exact: true }) });
     await expect(freeCard).toBeVisible({ timeout: 15000 });
     await expect(freeCard.locator('text=$0')).toBeVisible();
     await expect(freeCard.locator('text=1 Agent Limit').first()).toBeVisible();
@@ -55,7 +55,7 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    const starterCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
+    const starterCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
     await expect(starterCard).toBeVisible({ timeout: 15000 });
     await expect(starterCard.locator('text=$29').first()).toBeVisible();
     await expect(starterCard.locator('text=3 Agents Limit').first()).toBeVisible();
@@ -76,7 +76,7 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    const proCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Pro', exact: true }) });
+    const proCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Pro', exact: true }) });
     await expect(proCard).toBeVisible({ timeout: 15000 });
     await expect(proCard.locator('text=$79').first()).toBeVisible();
     await expect(proCard.locator('text=10 Agents Limit').first()).toBeVisible();
@@ -97,7 +97,7 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    const businessCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Business', exact: true }) });
+    const businessCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Business', exact: true }) });
     await expect(businessCard).toBeVisible({ timeout: 15000 });
     await expect(businessCard.locator('text=$299').first()).toBeVisible();
     await expect(businessCard.locator('text=Unlimited Agents').first()).toBeVisible();

@@ -13,12 +13,12 @@ pub struct LocalLLMProvider {
 }
 
 impl LocalLLMProvider {
-    pub fn new(endpoint: String, embed_endpoint: String, model: String, cache_ttl: Duration) -> Self {
+    pub fn new(endpoint: String, embed_endpoint: String, model: String) -> Self {
         LocalLLMProvider {
             endpoint,
             embed_endpoint,
             model,
-            cache: PromptCache::new(cache_ttl),
+            cache: PromptCache::new(Duration::from_secs(600)), // 10 minute TTL
             client: reqwest::Client::new(),
         }
     }
@@ -30,11 +30,7 @@ impl LocalLLMProvider {
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
-        let ttl_secs = std::env::var("OHC_PROMPT_CACHE_TTL")
-            .ok()
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(600); // 10 minute TTL default
-        Self::new(endpoint, embed_endpoint, model, Duration::from_secs(ttl_secs))
+        Self::new(endpoint, embed_endpoint, model)
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {

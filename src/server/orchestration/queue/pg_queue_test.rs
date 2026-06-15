@@ -10,7 +10,11 @@ async fn test_pg_fail_backoff() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .unwrap();
 
     let queue = PgTaskQueue::new(Arc::new(pool.clone()));
 
@@ -64,7 +68,11 @@ async fn test_pg_fail_max_retries_dead_letter() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .unwrap();
 
     let queue = PgTaskQueue::new(Arc::new(pool.clone()));
 
@@ -124,8 +132,9 @@ async fn test_pg_queue_concurrent_workers() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&database_url).await;
-    let pool = match pool { Ok(p) => p, Err(_) => return, };
+        .connect(&database_url)
+        .await
+        .unwrap();
 
     let queue = Arc::new(PgTaskQueue::new(Arc::new(pool.clone())));
 

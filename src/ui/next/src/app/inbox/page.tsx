@@ -106,15 +106,15 @@ function InboxContent() {
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
-        <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
-            <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
+        <div className="app-grid two">
+          <section className="app-panel">
+            <div className="app-panel-header">
               <div>
-                <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
-                <div className="app-list-subtitle text-xs text-gray-500">Loaded securely via PowerSync local embedded DB.</div>
+                <div className="app-panel-title">Message Queue</div>
+                <div className="app-list-subtitle">Loaded securely via PowerSync local embedded DB.</div>
               </div>
             </div>
-            <div id="messages-list" className="app-list p-2">
+            <div id="messages-list" className="app-list">
               {!messages || messages.length === 0 ? (
                 <div className="app-empty">No inbox messages found offline. Connect to sync.</div>
               ) : messages.map((message) => (
@@ -125,7 +125,8 @@ function InboxContent() {
                     setSelectedId(message.id);
                     setShowOriginal(false);
                   }}
-                  className={`app-list-item w-full text-left p-3 mb-2 rounded-[12px] transition-all ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5"}`}
+                  className="app-list-item w-full text-left"
+                  style={{ background: selected?.id === message.id ? "#f8fafc" : "transparent" }}
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
@@ -137,14 +138,14 @@ function InboxContent() {
             </div>
           </section>
 
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
-            <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
-              <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
+          <section className="app-panel">
+            <div className="app-panel-header">
+              <div className="app-panel-title">Conversation Detail</div>
             </div>
             {!selected ? (
-              <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
+              <div className="app-empty">Select a database-backed message to inspect it.</div>
             ) : (
-              <div className="app-panel-body p-5">
+              <div className="app-panel-body">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <div className="app-metric-label">Source</div>
@@ -198,7 +199,7 @@ function InboxContent() {
                 {badgeTone(selected.status) === "warn" && (
                   <div className="mt-6">
                     <button
-                      className="app-button primary w-full"
+                      className="app-btn-primary w-full"
                       onClick={() => handleApproveAndSend(selected.id)}
                     >✨ Approve &amp; Send Draft</button>
                   </div>

@@ -318,10 +318,6 @@
         <button class="primary-btn" id="submit-btn" onclick="submitQuote()">Request Final Quote</button>
     </div>
 
-    <footer style="text-align: center; margin: 24px 0 100px 0;">
-        <a id="powered-by-link" href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" target="_blank" style="text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 600;">⚡ Powered by OHC</a>
-    </footer>
-
     <script>
         // Store rules fetched from edge/backend
         let pricingRules = [];
@@ -335,12 +331,6 @@
                 // In a real app, tenantId would be injected via subdomain or token
                 // We use default for local testing
                 const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'e2e-tenant';
-
-                // Update powered-by-link
-                const poweredByLink = document.getElementById('powered-by-link');
-                if (poweredByLink) {
-                    poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
-                }
 
                 // For demonstration, we'll mock the fetch if it fails (offline mode)
                 // or if we're running without backend.

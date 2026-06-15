@@ -76,16 +76,15 @@
       font-size: 14px;
     }
 
-    .ohc-growth-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        color: #1d1d1f;
-        border-radius: 16px;
-        padding: 32px 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      padding: 32px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
 
     .form-group {
       margin-bottom: 20px;
@@ -319,7 +318,7 @@
   </div>
 
   <div class="container">
-    <div class="ohc-growth-card">
+    <div class="card">
       <h2>Card Details</h2>
       <p style="color: var(--secondary-text); font-size: 14px; margin-bottom: 24px;">
         Generate a shareable public card for your AI agent to build trust with your customers.
@@ -739,14 +738,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
 
@@ -853,14 +851,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -936,8 +933,8 @@ function initWalkthrough() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -992,8 +989,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1377,13 +1374,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+            };
         });
     }
     const tooltipEl = document.createElement('div');
@@ -1452,8 +1448,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -1505,8 +1501,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';

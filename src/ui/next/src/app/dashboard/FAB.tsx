@@ -26,7 +26,7 @@ export function FloatingActionButton() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="glassmorphism w-14 h-14 min-w-[44px] min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center text-3xl transition-transform hover:scale-105"
+        className="w-14 h-14 min-w-[44px] min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center text-3xl transition-transform hover:scale-105"
         style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}
       >
         +

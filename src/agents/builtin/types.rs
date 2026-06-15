@@ -90,18 +90,6 @@ pub struct ToolResult {
     pub error: String,
 }
 
-impl ToolResult {
-    /// Creates a standard LLM-Recoverable ToolResult for the LangGraph 4-tier error handling mechanic.
-    /// This strictly standardizes how self-correcting feedback is structured to the model.
-    pub fn new_llm_recoverable(tool_call_id: String, msg: &str) -> Self {
-        Self {
-            tool_call_id,
-            content: String::new(),
-            error: format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg),
-        }
-    }
-}
-
 /// Request to the LLM.
 #[derive(Debug, Clone)]
 pub struct ChatRequest {

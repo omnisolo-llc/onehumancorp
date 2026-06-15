@@ -263,9 +263,9 @@ impl SyncService for MySyncService {
             }
 
             let query = "INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
-                          VALUES ($1, $2, $3, $4, $5, $6)
+                          VALUES ($1, $2, $3, $4, $5, true)
                           ON CONFLICT(tenant_id, id) DO UPDATE SET
-                          data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = $6
+                          data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = true
                           WHERE crdt_deltas.updated_at < excluded.updated_at";
 
             match sqlx::query(query)
@@ -274,7 +274,6 @@ impl SyncService for MySyncService {
                 .bind(&delta.entity_id)
                 .bind(&delta.data)
                 .bind(&delta.updated_at)
-                .bind(true)
                 .execute(&mut *tx)
                 .await
             {

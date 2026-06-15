@@ -14,11 +14,13 @@ export async function GET(req: Request) {
     headers.authorization = authHeader;
   }
 
+  try {
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? "/" + id : ""}`, {
+    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? `/${id}` : ''}`, {
       method: 'GET',
       headers,
     });
@@ -47,16 +49,14 @@ export async function POST(req: Request) {
     headers.authorization = authHeader;
   }
 
-  let body = {};
   try {
-    body = await req.json();
-  } catch (e) {}
+    const body = await req.json();
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? "/" + id : ""}`, {
+    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? `/${id}` : ''}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

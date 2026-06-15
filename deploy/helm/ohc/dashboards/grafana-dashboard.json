@@ -26,22 +26,6 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 4,
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -99,7 +83,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "id": 2,
       "options": {
@@ -129,7 +113,7 @@
       "title": "",
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 8,
         "w": 12,
         "h": 3
       },
