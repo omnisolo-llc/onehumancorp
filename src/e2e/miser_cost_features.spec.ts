@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Miser Cost Features E2E', () => {
-  test('Cost Dashboard displays Cost Transparency and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+  test('Cost Dashboard displays Cost Transparency Dashboard and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
     // Log in as an admin user
     await loginAs(page, adminUser);
 
@@ -12,7 +12,7 @@ test.describe('Miser Cost Features E2E', () => {
     // Wait for the main headings
     await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
 
-    // Verify Cost Transparency section
+    // Verify Cost Transparency Dashboard section
     await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
@@ -28,7 +28,7 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Click the button and verify URL changes to /plan
     await myPlanButton.click();
-    await page.waitForURL('**/dashboard', { timeout: 10000 });
+    await page.waitForURL('**/plan', { timeout: 10000 });
     await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 

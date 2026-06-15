@@ -84,8 +84,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.goto('/cost-dashboard');
     await page.waitForLoadState('networkidle');
 
-    // Verify Cost Transparency headers and text
-    await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible({ timeout: 15000 });
+    // Verify Cost Transparency Dashboard headers and text
+    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('div.stat-title', { hasText: 'Total Costs' }).first()).toBeVisible();
     await expect(page.locator('div:has-text("Cost Breakdown")').first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
