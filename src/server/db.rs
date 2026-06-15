@@ -452,7 +452,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (original_content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -464,7 +464,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -526,7 +526,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -537,7 +537,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
