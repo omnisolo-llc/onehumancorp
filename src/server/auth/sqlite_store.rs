@@ -282,7 +282,6 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -334,6 +333,9 @@ impl UserRepository for SqliteUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
@@ -348,10 +350,17 @@ impl UserRepository for SqliteUserRepository {
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
-            .bind(org_id)
-            .execute(&self.pool)
-            .await;
+        let query = if should_bypass {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP"
+        } else {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1"
+        };
+
+        let _ = if should_bypass {
+            sqlx::query(query).execute(&self.pool).await
+        } else {
+            sqlx::query(query).bind(org_id).execute(&self.pool).await
+        };
 
         Ok(())
     }
