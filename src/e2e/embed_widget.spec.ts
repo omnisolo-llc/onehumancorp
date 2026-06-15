@@ -4,7 +4,7 @@ test.describe('Growth Loop: Interactive Embed Widget Builder', () => {
   test('Should render the embed builder, reflect inputs, and serve the backend embed endpoint', async ({ page, request, baseURL }) => {
     // Navigate to the dashboard first to ensure discoverability
     // Resolve dynamically for bazel environment compatibility
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Verify link exists
     const builderLink = page.locator('text=Open Widget Builder');

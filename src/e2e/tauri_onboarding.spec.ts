@@ -320,7 +320,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
-    await page.route('/dashboard.html', async route => {
+    await page.route('/dashboard', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
@@ -353,7 +353,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
       };
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');

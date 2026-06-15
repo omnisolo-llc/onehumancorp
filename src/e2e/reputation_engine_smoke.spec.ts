@@ -11,7 +11,7 @@ test.describe('Autonomous Reputation and Referral Engine', () => {
     await loginAs(page, adminUser);
 
     // 1. Go to dashboard and find the Reputation Engine link
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
     const engineLink = page.locator('#reputation-engine-link');

@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Viral Referral Tier Widget', () => {
   test('should display the referral tier progress on the dashboard based on real application flow', async ({ page }) => {
     // Navigate to the Tauri dashboard
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Wait for the tier section to be visible
     const tierSection = page.locator('#referral-tier-section');

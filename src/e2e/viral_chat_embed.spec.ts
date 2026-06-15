@@ -8,7 +8,7 @@ test.describe('Viral Chat Embed Loop', () => {
 
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-    const dashboardHtml = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
+    const dashboardHtml = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/dashboard'), 'utf-8');
     await page.setContent(dashboardHtml);
 
     // Bypass clipboard mock limitations entirely for test

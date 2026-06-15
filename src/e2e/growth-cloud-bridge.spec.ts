@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Growth Cloud Bridge Loop', () => {
   test('User can generate and copy a cloud bridge invite link', async ({ page }) => {
     // Navigate to the dashboard
-    await page.goto('/api/ui/dashboard.html');
+    await page.goto('/api/ui/dashboard');
 
     // Ensure the dashboard has loaded
     await expect(page.locator('text=Dashboard').first()).toBeVisible();

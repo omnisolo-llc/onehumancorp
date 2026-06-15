@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Visual Workflow Builder', () => {
   test('should load workflow builder from dashboard', async ({ page }) => {
     // Start at dashboard (already logged in via fixtures)
-    await page.goto('/ui/dashboard.html');
+    await page.goto('/ui/dashboard');
 
     // Check if the button exists and click it
     const workflowBtn = page.locator('button:has-text("Workflow Builder")');

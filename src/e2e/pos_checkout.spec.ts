@@ -18,7 +18,7 @@ test.describe('Tap to Pay / POS Checkout API Flow', () => {
     );
 
     const adminPage = await browser.newPage();
-    await adminPage.goto('/dashboard.html');
+    await adminPage.goto('/dashboard');
     // Call create intent API using the auth from the admin page
     const intentRes = await adminPage.request.post('/api/v1/payments/terminal/intent', {
       data: {

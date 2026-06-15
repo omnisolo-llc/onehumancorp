@@ -7,7 +7,7 @@ test.describe('Share-to-Unlock Growth Loop', () => {
         await loginAs(page, adminUser);
 
         // Step 2: Navigate to Dashboard
-        await page.goto('/dashboard.html');
+        await page.goto('/dashboard');
 
         // Verify the new dashboard link exists and click it
         const unlockLink = page.locator('a[id="share-to-unlock-link"]');
