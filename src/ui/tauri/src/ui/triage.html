@@ -342,7 +342,7 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId())}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
@@ -368,12 +368,21 @@
         }, 3000);
       }
 
+
       async function handleDecision(id, approved) {
+        let editedReply = null;
+        if (approved) {
+           const textarea = document.getElementById('edit-draft-reply');
+           if (textarea) {
+               editedReply = textarea.value;
+           }
+        }
+
         try {
-          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+          const res = await fetch(`/api/ui/omni_inbox/action?tenant_id=${encodeURIComponent(tenantId())}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ triage_item_id: id, approved })
+            body: JSON.stringify({ message_id: id, approved, edited_reply: editedReply })
           });
 
           if (!res.ok) throw new Error("Failed to update action");
@@ -391,6 +400,7 @@
           showStatus("Error updating action.", false);
         }
       }
+
 
       function renderUI() {
         // Badges
@@ -422,9 +432,9 @@
             >
               <div style="min-width: 0;">
                 <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.context || item.original_message || "No context provided"}</div>
+                <div class="app-list-subtitle">${item.original_content || "No content"}</div>
               </div>
-              ${item.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>`}
+              <span class="app-badge neutral">${item.status || "unread"}</span>
             </button>
           `).join('');
         }
@@ -434,54 +444,42 @@
         const selected = items.find(i => i.id === selectedId);
 
         if (!selected) {
-          detailEl.innerHTML = `<div class="app-empty">Select a triage item to review it.</div>`;
+          detailEl.innerHTML = `<div class="app-empty">Select a message to review it.</div>`;
         } else {
           const dateStr = selected.created_at
             ? new Date(selected.created_at).toLocaleString()
             : new Date().toLocaleString();
 
           let actionHtml = '';
-          if (selected.status === 'auto_replied') {
+          if (selected.draft_reply) {
             actionHtml = `
+
               <div class="detail-group">
-                <div class="app-metric-label">AI Handled Reply</div>
-                <div class="detail-value proposed-action">
-                  ${selected.generated_response || selected.draft_reply || "No reply generated."}
-                </div>
+                <div class="app-metric-label">AI Draft Reply (Edit before sending)</div>
+                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical;">${selected.draft_reply}</textarea>
               </div>
-            `;
-          } else if (selected.action_type) {
-            actionHtml = `
-              <div class="detail-group">
-                <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
-                <div class="detail-value proposed-action">
-                  ${selected.action_payload || "No specific payload"}
-                </div>
-              </div>
+
             `;
           }
 
-          let buttonsHtml = '';
-          if (selected.status !== 'auto_replied') {
-             buttonsHtml = `
-              <div class="btn-group">
-                <button
-                  class="btn-primary"
-                  data-testid="approve-btn"
-                  onclick="handleDecision('${selected.id}', true)"
-                >
-                  ✨ Approve & Send
-                </button>
-                <button
-                  class="btn-secondary"
-                  data-testid="dismiss-btn"
-                  onclick="handleDecision('${selected.id}', false)"
-                >
-                  Dismiss
-                </button>
-              </div>
-             `;
-          }
+          let buttonsHtml = `
+            <div class="btn-group">
+              <button
+                class="btn-primary"
+                data-testid="approve-btn"
+                onclick="handleDecision('${selected.id}', true)"
+              >
+                ✨ Send Reply
+              </button>
+              <button
+                class="btn-secondary"
+                data-testid="dismiss-btn"
+                onclick="handleDecision('${selected.id}', false)"
+              >
+                Dismiss
+              </button>
+            </div>
+          `;
 
           detailEl.innerHTML = `
             <div class="detail-group">
@@ -490,9 +488,9 @@
             </div>
 
             <div class="detail-group">
-              <div class="app-metric-label">Context</div>
+              <div class="app-metric-label">Message</div>
               <div class="detail-value">
-                ${selected.context || selected.original_message || "No context"}
+                ${selected.original_content || "No message content"}
               </div>
             </div>
 
@@ -501,7 +499,7 @@
             <div style="display: flex; gap: 16px; margin-bottom: 16px;">
               <div>
                 <div class="app-metric-label">Status</div>
-                <div style="margin-top: 8px;">${selected.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(selected.priority)}">${selected.priority || "Normal"}</span>`}</div>
+                <div style="margin-top: 8px;"><span class="app-badge neutral">${selected.status || "unread"}</span></div>
               </div>
               <div>
                 <div class="app-metric-label">Created</div>
