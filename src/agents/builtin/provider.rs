@@ -1,3 +1,5 @@
+
+
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -139,13 +141,12 @@ async fn execute_in_isolation(
 
     let mut actual_transport = transport;
     if actual_transport.is_none()
-        && let Ok(redis_url) = std::env::var("REDIS_URL")
-    {
-        let topic = format!("agent_harness_output:{}", agent_type);
-        if let Ok(t) = RedisIsolationTransport::new(&redis_url, &topic).await {
-            actual_transport = Some(Arc::new(t));
+        && let Ok(redis_url) = std::env::var("REDIS_URL") {
+            let topic = format!("agent_harness_output:{}", agent_type);
+            if let Ok(t) = RedisIsolationTransport::new(&redis_url, &topic).await {
+                actual_transport = Some(Arc::new(t));
+            }
         }
-    }
 
     strategy
         .run_in_isolation(command, agent_type, worktree, actual_transport)

@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use crate::llm::LlmClient;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 /// Master Catalog B.10. Verification Loops
@@ -141,10 +142,7 @@ impl VerificationManager {
     }
 
     pub async fn run_computational_guides(&self, code: &str, context: &str) -> Result<(), String> {
-        let futures = self
-            .computational
-            .iter()
-            .map(|guide| guide.verify(code, context));
+        let futures = self.computational.iter().map(|guide| guide.verify(code, context));
         let results = futures::future::join_all(futures).await;
         let errors: Vec<String> = results.into_iter().filter_map(|r| r.err()).collect();
         if !errors.is_empty() {
@@ -154,10 +152,7 @@ impl VerificationManager {
     }
 
     pub async fn run_visual_verifiers(&self, ui_state_path: &str) -> Result<(), String> {
-        let futures = self
-            .visual
-            .iter()
-            .map(|verifier| verifier.verify_visual(ui_state_path));
+        let futures = self.visual.iter().map(|verifier| verifier.verify_visual(ui_state_path));
         let results = futures::future::join_all(futures).await;
         let errors: Vec<String> = results.into_iter().filter_map(|r| r.err()).collect();
         if !errors.is_empty() {
@@ -167,10 +162,7 @@ impl VerificationManager {
     }
 
     pub async fn run_inferential_sensors(&self, output: &str, task: &str) -> Result<(), String> {
-        let futures = self
-            .inferential
-            .iter()
-            .map(|sensor| sensor.verify_inferential(output, task));
+        let futures = self.inferential.iter().map(|sensor| sensor.verify_inferential(output, task));
         let results = futures::future::join_all(futures).await;
         let errors: Vec<String> = results.into_iter().filter_map(|r| r.err()).collect();
         if !errors.is_empty() {

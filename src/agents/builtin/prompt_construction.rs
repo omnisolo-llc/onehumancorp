@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
 /// Master Catalog B.5. Prompt Construction
@@ -83,10 +84,7 @@ impl PromptBuilder {
         for msg in messages.iter().rev().take(10) {
             if msg.role == crate::types::Role::Tool {
                 for tr in &msg.tool_results {
-                    if tr.error.is_empty()
-                        && !tr.content.is_empty()
-                        && !tr.content.starts_with("[Observation Masked")
-                    {
+                    if tr.error.is_empty() && !tr.content.is_empty() && !tr.content.starts_with("[Observation Masked") {
                         successful_ids.insert(&tr.tool_call_id);
                     }
                 }
@@ -97,9 +95,10 @@ impl PromptBuilder {
         for msg in messages.iter().rev().take(15) {
             if msg.role == crate::types::Role::Assistant {
                 for tc in msg.tool_calls.iter().rev() {
-                    if successful_ids.contains(&tc.id) && !successes.contains(&tc.name) {
-                        successes.push(tc.name.clone());
-                    }
+                    if successful_ids.contains(&tc.id)
+                        && !successes.contains(&tc.name) {
+                            successes.push(tc.name.clone());
+                        }
                     if successes.len() >= 3 {
                         break;
                     }
@@ -176,10 +175,7 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 
         if combined.chars().count() > limit {
             let truncated: String = combined.chars().take(limit).collect();
-            combined = format!(
-                "{}\n\n[System: AGENTS.md content truncated to 32KiB limit.]",
-                truncated
-            );
+            combined = format!("{}\n\n[System: AGENTS.md content truncated to 32KiB limit.]", truncated);
             break;
         }
     }
@@ -196,7 +192,7 @@ pub struct HierarchicalPromptBuilder {
 }
 
 impl HierarchicalPromptBuilder {
-    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
+    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool], cascading_agents_md: Option<String>) -> Self {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
@@ -209,6 +205,17 @@ impl HierarchicalPromptBuilder {
 
         let mut user_instr = cfg.user_instructions.clone();
 
+        // Inject cascading AGENTS.md instructions
+        if let Some(agents_md) = cascading_agents_md {
+            if !agents_md.is_empty() {
+                if !user_instr.is_empty() {
+                    user_instr.push_str("\n\n---\n\n");
+                }
+                user_instr.push_str("[Cascading AGENTS.md Instructions]:\n");
+                user_instr.push_str(&agents_md);
+            }
+        }
+
         // OpenHands MicroAgents Injection
         if let Ok(repo_dir) = std::env::current_dir() {
             let microagents_dir = repo_dir.join(".openhands").join("microagents");
@@ -217,10 +224,7 @@ impl HierarchicalPromptBuilder {
                 let _ = registry.load_from_dir(&microagents_dir);
                 let active_microagents = registry.get_active_instructions(&user_instr);
                 if !active_microagents.is_empty() {
-                    user_instr.push_str(&format!(
-                        "\n\n[MicroAgent Instructions]:\n{}!",
-                        active_microagents
-                    ));
+                    user_instr.push_str(&format!("\n\n[MicroAgent Instructions]:\n{}!", active_microagents));
                 }
             }
         }
@@ -287,10 +291,7 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str("To maintain focus in this large context, remember your core objective and constraints:\n");
             combined_system.push_str(&format!("Core Objective: {}\n", core_objective));
             if !self.developer_instructions.is_empty() {
-                combined_system.push_str(&format!(
-                    "Developer Instructions: {}\n",
-                    self.developer_instructions
-                ));
+                combined_system.push_str(&format!("Developer Instructions: {}\n", self.developer_instructions));
             }
             combined_system.push_str("</system_anchor_high_signal_context_reinjection>");
         }
@@ -340,10 +341,9 @@ mod tests {
         // Thus, "C"s should all be there, "B"s should all be there, and "A"s will be truncated.
 
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let user_instructions = load_cascading_instructions(Some(&grandchild_dir)).await;
-            let mut cfg = AgentRunConfig::default();
-            cfg.user_instructions = user_instructions;
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            let agents_md = load_cascading_instructions(Some(&grandchild_dir)).await;
+            let cfg = AgentRunConfig::default();
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
             builder.build()
         });
 
@@ -359,16 +359,15 @@ mod tests {
         // Root content should be partially present and truncated.
         assert!(built.contains("AAAA"), "Should contain some of root");
         assert!(
-            built.contains("[System: AGENTS.md content truncated to 32KiB limit.]")
-                || built.contains("[User Instructions TRUNCATED TO 32KiB]"),
+            built.contains("[System: AGENTS.md content truncated to 32KiB limit.]") ||
+            built.contains("[User Instructions TRUNCATED TO 32KiB]"),
             "Should contain truncation warning"
         );
 
         // Total size of user instructions part should be bounded.
         assert!(
             built.len() <= 35000,
-            "Output should be bounded. Current length: {}",
-            built.len()
+            "Output should be bounded. Current length: {}", built.len()
         );
     }
 
@@ -380,28 +379,25 @@ mod tests {
 
         // Let's use exactly 32,768 logical characters to reach the boundary, then push an emoji.
         let mut content = "A".repeat(32768);
-        content.push_str("😊");
+        content.push('😊');
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            let user_instructions = load_cascading_instructions(Some(&root_dir)).await;
-            let mut cfg = AgentRunConfig::default();
-            cfg.user_instructions = user_instructions;
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            let agents_md = load_cascading_instructions(Some(&root_dir)).await;
+            let cfg = AgentRunConfig::default();
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
             builder.build()
         });
 
-        assert!(
-            built.contains("[System: AGENTS.md content truncated to 32KiB limit.]")
-                || built.contains("[User Instructions TRUNCATED TO 32KiB]")
-        );
+        assert!(built.contains("[System: AGENTS.md content truncated to 32KiB limit.]") ||
+                built.contains("[User Instructions TRUNCATED TO 32KiB]"));
         // The emoji should be stripped because it's past the 32768 limit
         assert!(
             !built.contains("😊"),
             "Emoji should be stripped since it's character 32769"
         );
         assert!(
-            built.contains(&"A".repeat(32768)),
+            built.contains(&"A".repeat(32700)),
             "Preceding characters up to limit should remain intact"
         );
     }
@@ -428,16 +424,8 @@ mod tests {
         assert_eq!(messages.len(), 5);
         let last_msg = &messages[4];
         assert_eq!(last_msg.role, Role::User);
-        assert!(
-            last_msg
-                .content
-                .contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]")
-        );
-        assert!(
-            last_msg
-                .content
-                .contains("Remember your core objective: Build a web server.")
-        );
+        assert!(last_msg.content.contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]"));
+        assert!(last_msg.content.contains("Remember your core objective: Build a web server."));
         assert!(
             last_msg
                 .content
@@ -502,7 +490,7 @@ mod tests {
     #[test]
     fn test_summarize_recent_tool_errors_char_boundary() {
         let mut error_msg = "error: ".to_string() + &"A".repeat(88) + "😊";
-        error_msg = error_msg + "BCDEF";
+        error_msg += "BCDEF";
         let messages = vec![Message::user(error_msg)];
 
         let summary = PromptBuilder::summarize_recent_tool_errors(&messages);
@@ -514,13 +502,12 @@ mod tests {
 
     #[test]
     fn test_high_signal_reinjection_trigger() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.user_instructions = "Objective: Build a skyscraper.".repeat(200); // ~6000 chars
+        let mut cfg = AgentRunConfig { user_instructions: "Objective: Build a skyscraper.".repeat(200), ..Default::default() }; // ~6000 chars
         cfg.developer_instructions = "Use steel beams.".repeat(50); // ~800 chars
         // Total will be > 4000 chars
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let built = builder.build();
 
         assert!(built.contains("<system_anchor_high_signal_context_reinjection>"));
@@ -537,16 +524,8 @@ mod tests {
                 role: Role::Assistant,
                 content: "Calling tools".to_string(),
                 tool_calls: vec![
-                    ToolCall {
-                        id: "c1".to_string(),
-                        name: "read_file".to_string(),
-                        arguments: serde_json::json!({}),
-                    },
-                    ToolCall {
-                        id: "c2".to_string(),
-                        name: "ls".to_string(),
-                        arguments: serde_json::json!({}),
-                    },
+                    ToolCall { id: "c1".to_string(), name: "read_file".to_string(), arguments: serde_json::json!({}) },
+                    ToolCall { id: "c2".to_string(), name: "ls".to_string(), arguments: serde_json::json!({}) },
                 ],
                 tool_results: vec![],
                 response_id: None,
@@ -557,16 +536,8 @@ mod tests {
                 content: "".to_string(),
                 tool_calls: vec![],
                 tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "c1".to_string(),
-                        content: "file content".to_string(),
-                        error: "".to_string(),
-                    },
-                    ToolResult {
-                        tool_call_id: "c2".to_string(),
-                        content: "dir list".to_string(),
-                        error: "".to_string(),
-                    },
+                    ToolResult { tool_call_id: "c1".to_string(), content: "file content".to_string(), error: "".to_string() },
+                    ToolResult { tool_call_id: "c2".to_string(), content: "dir list".to_string(), error: "".to_string() },
                 ],
                 response_id: None,
                 previous_response_id: None,

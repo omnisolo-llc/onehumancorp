@@ -16,7 +16,6 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
-import { WrappedWidget } from "./WrappedWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -154,7 +153,7 @@ function InviteAndEarnWidget() {
             id="dashboard-invite-btn"
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full min-h-[44px] min-w-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="w-full min-h-[44px] min-w-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             {loading ? 'Generating...' : 'Get My Invite Link'}
           </button>
@@ -476,7 +475,7 @@ export default function Dashboard() {
           Offline - changes saved locally
         </div>
         {isSyncing && (
-          <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
+          <div className="fixed bottom-4 right-4 bg-[#0f766e] text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -494,13 +493,12 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6">
+        <div className="order-first md:order-last mb-6 w-full overflow-hidden">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
           <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
         </div>
 
         <div className="order-last md:order-first">
-          <WrappedWidget />
           <SuccessMilestoneAlert />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
@@ -602,16 +600,16 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[8px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-[12px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm">
-                ✨
+              <div className="w-11 h-11 rounded-[8px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
+                <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Open WorkBuddy Assistant</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Your AI workspace for managing tasks, messages, scheduling, and operations.</p>
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Assistant Tasks</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
-              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+              <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
               </div>
             </div>
@@ -690,7 +688,7 @@ export default function Dashboard() {
                   navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
                   setActionMessage("Reward claimed. Invite link copied.");
                 }}
-                className="px-4 py-2 min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+                className="px-4 py-2 min-h-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-lg font-medium shadow-sm transition-colors"
               >
                 Share & Claim Reward
               </button>
@@ -700,7 +698,7 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
-              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/unified-feed`.</p>
+              <p className="app-list-subtitle">Live performance, orders, and inbox activity.</p>
             </div>
             <Link href="/business-analytics" className="app-button min-h-[44px]">Business Analytics</Link>
           </div>

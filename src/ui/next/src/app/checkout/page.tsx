@@ -6,7 +6,7 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
-import { SubscriptionUpsellWidget } from "../components/SubscriptionUpsellWidget";
+import { ShareAndSaveWidget } from "../components/ShareAndSaveWidget";
 
 
 function CheckoutContent() {
@@ -21,6 +21,7 @@ function CheckoutContent() {
   const [tenant, setTenant] = useState("my-store");
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
+  const [shareDiscountApplied, setShareDiscountApplied] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -131,24 +132,6 @@ function CheckoutContent() {
       setCheckoutStatus("Checkout is temporarily unavailable.");
       setIsProcessing(false);
     }
-  };
-
-  const handleMercadoPago = async () => {
-    setIsMercadoPagoProcessing(true);
-    setCheckoutStatus("Preparing Mercado Pago Checkout...");
-    try {
-      const response = await fetch("/api/checkout/mercadopago", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity }),
-      });
-      const data = await response.json();
-      if (data.init_point) window.location.assign(data.init_point);
-      else setCheckoutStatus("Mercado Pago checkout failed.");
-    } catch {
-      setCheckoutStatus("Mercado Pago unavailable.");
-    }
-    setIsMercadoPagoProcessing(false);
   };
 
   return (
@@ -286,7 +269,24 @@ function CheckoutContent() {
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
 
-          <SubscriptionUpsellWidget isSubscription={isSubscription} setIsSubscription={setIsSubscription} />
+          <div className="flex items-center mb-4">
+            <label htmlFor="subscribe" className="flex items-center cursor-pointer group">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  id="subscribe"
+                  className="sr-only"
+                  checked={isSubscription}
+                  onChange={(e) => setIsSubscription(e.target.checked)}
+                />
+                <div className={`block w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${isSubscription ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-300'}`}></div>
+                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                Subscribe & Save 10%
+              </div>
+            </label>
+          </div>
 
           <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
             <div className="flex justify-between items-center">
@@ -298,11 +298,17 @@ function CheckoutContent() {
             </p>
           </div>
 
+          <ShareAndSaveWidget
+            tenantId={tenant}
+            discountPercentage={10}
+            onShareComplete={() => setShareDiscountApplied(true)}
+          />
+
           {deliveryFee !== null && (
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${(((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
@@ -310,7 +316,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${((45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
@@ -325,16 +331,6 @@ function CheckoutContent() {
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               {isProcessing ? "Processing..." : "Pay"}
-            </button>
-          </WithTooltip>
-
-          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
-            <button
-              onClick={handleMercadoPago}
-              disabled={isMercadoPagoProcessing || isProcessing}
-              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#008ACB] transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              {isMercadoPagoProcessing ? "Processing..." : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 
@@ -401,7 +397,13 @@ function CheckoutContent() {
               </div>
               <p className="text-indigo-800 text-xs font-medium">
                 Give a 20% discount to friends and get a 10% commission when they
-                make their first purchase! <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}&source=checkout_affiliate`} target="_blank" className="font-bold hover:underline">⚡ Powered by OHC</a>
+                make their first purchase! <a href={`/onboarding?ref=${tenant}&source=checkout_affiliate`} target="_blank" className="font-bold hover:underline" onClick={(e) => {
+                  fetch('/api/v1/growth/referrals/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ referrer_id: tenant, source: 'checkout_affiliate' })
+                  }).catch(err => console.error('Failed to track referral click:', err));
+                }}>⚡ Powered by OHC</a>
               </p>
             </div>
 

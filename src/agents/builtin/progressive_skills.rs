@@ -30,13 +30,11 @@ impl ProgressiveSkillManager {
         for entry in fs::read_dir(&self.skills_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file()
-                && path.extension().and_then(|s| s.to_str()) == Some("md")
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md")
                 && let Ok(content) = fs::read_to_string(&path)
-                && let Some(skill) = Self::parse_markdown_skill(&content)
-            {
-                skills.push(skill);
-            }
+                    && let Some(skill) = Self::parse_markdown_skill(&content) {
+                        skills.push(skill);
+                    }
         }
         Ok(skills)
     }

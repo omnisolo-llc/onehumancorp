@@ -770,3 +770,56 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
     });
     Json(spec)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::extract::Json as AxumJson;
+
+
+    #[tokio::test]
+    async fn test_list_articles() {
+        let res = list_articles().await;
+        assert!(!res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_articles_found() {
+        let res = search_articles(axum::extract::Query(SearchQuery { q: "getting".to_string() })).await;
+        assert!(!res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_articles_not_found() {
+        let res = search_articles(axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string() })).await;
+        assert!(res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_videos() {
+        let res = list_videos().await;
+        assert!(!res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_tooltips_api() {
+        // Prepare the payload to update a tooltip
+        let payload = TooltipPayload {
+            id: "test-tooltip-id".to_string(),
+            text: "This is a test tooltip".to_string(),
+        };
+
+        // Update the tooltip
+        let res = update_tooltip(AxumJson(payload)).await;
+        assert!(res.0.success);
+
+        // Fetch tooltips and verify the update
+        let tooltips_res = get_tooltips().await;
+        let tooltips = tooltips_res.0;
+
+        assert_eq!(
+            tooltips.get("test-tooltip-id").map(|s| s.as_str()),
+            Some("This is a test tooltip")
+        );
+    }
+}

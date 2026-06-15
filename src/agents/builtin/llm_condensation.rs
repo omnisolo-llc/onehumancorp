@@ -1,5 +1,6 @@
-use crate::llm::LlmClient;
+#![allow(clippy::all)]
 use crate::types::{ChatRequest, Message};
+use crate::llm::LlmClient;
 
 const TARGET_CHARS_MAX: usize = 8000;
 const CHUNK_SIZE_CHARS: usize = 20000;
@@ -28,7 +29,7 @@ pub async fn condense_summary_llm(
 
             let req = ChatRequest {
                 model: model.to_string(),
-                system: ::server_pricing::compression::reduce_tokens(system_prompt),
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                 messages: vec![Message::user(chunk)],
                 tools: vec![],
                 max_tokens: 2000,
@@ -52,7 +53,7 @@ pub async fn condense_summary_llm(
     if raw_output.len() == current_text.len() && current_text.len() > 1000 {
         let req = ChatRequest {
             model: model.to_string(),
-            system: ::server_pricing::compression::reduce_tokens(system_prompt),
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(current_text.clone())],
             tools: vec![],
             max_tokens: 2000,
@@ -65,10 +66,7 @@ pub async fn condense_summary_llm(
     if current_text.len() > TARGET_CHARS_MAX {
         current_text = format!(
             "{}\n\n[Output truncated. Subagent failed to condense summary.]",
-            current_text
-                .chars()
-                .take(TARGET_CHARS_MAX)
-                .collect::<String>()
+            current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
         );
     }
 

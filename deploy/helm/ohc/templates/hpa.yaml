@@ -1,4 +1,4 @@
-{{- if .Values.backend.autoscaling.enabled }}
+{{- if and .Values.backend.autoscaling.enabled (not .Values.backend.vpa.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -34,7 +34,7 @@ spec:
           averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
 {{- end }}
 ---
-{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled (not .Values.ohcCore.vpa.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -70,7 +70,7 @@ spec:
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
 {{- end }}
 ---
-{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
+{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled (not .Values.chatwoot.vpa.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -106,7 +106,7 @@ spec:
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
 {{- end }}
 ---
-{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
+{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled (not .Values.powersync.vpa.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

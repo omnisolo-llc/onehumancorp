@@ -214,9 +214,9 @@ impl LlmClient for GeminiClient {
         }
 
         let result = resp.json::<GeminiResponse>().await;
-        if result.is_err() {
+        if let Err(e) = result {
             cb.record_failure();
-            return Err(format!("gemini api error: failed to parse response: {:?}", result.unwrap_err()).into());
+            return Err(format!("api error: failed to parse response: {:?}", e).into());
         }
         let result = result.unwrap();
         cb.record_success();

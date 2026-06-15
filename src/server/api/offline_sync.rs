@@ -23,6 +23,7 @@ pub struct OfflineSyncRequest {
 #[derive(Serialize)]
 pub struct OfflineSyncResponse {
     pub success: bool,
+    pub failed_count: i32,
 }
 
 pub async fn offline_sync_handler(
@@ -38,14 +39,14 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse { success: false }),
+            Json(OfflineSyncResponse { success: false, failed_count: 0 }),
         ).into_response();
     }
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>> = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -69,7 +70,8 @@ pub async fn offline_sync_handler(
                 .execute(&mut *db_tx)
                 .await;
                 db_tx.commit().await.unwrap();
-            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
             continue;
         }
 
@@ -78,7 +80,7 @@ pub async fn offline_sync_handler(
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
-            let query = "SELECT inventory_count, available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
@@ -88,18 +90,15 @@ pub async fn offline_sync_handler(
             match current_stock {
                 Ok(Some(row)) => {
                     let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                    let available_stock: i32 = sqlx::Row::try_get(&row, "available_quantity").unwrap_or(stock);
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
-                    let new_available_stock = std::cmp::max(0, available_stock - mutation.quantity_deducted);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = $2 WHERE id = $3 AND tenant_id = $4")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
-                        .bind(new_available_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
                         .execute(&mut *db_tx)
@@ -174,31 +173,6 @@ pub async fn offline_sync_handler(
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
 
-                    // Enqueue a SyncEvent:JobCompleted representation into department_tasks
-                    // so OperationsWorker AI can draft invoices/follow-ups
-                    let sync_event_payload = serde_json::json!({
-                        "id": uuid::Uuid::new_v4().to_string(),
-                        "tenant_id": tenant_id_clone,
-                        "batch_id": mutation.transaction_id,
-                        "action_type": "JobCompleted",
-                        "payload": {
-                            "product_id": mutation.product_id,
-                            "quantity_deducted": mutation.quantity_deducted,
-                            "transaction_id": mutation.transaction_id
-                        },
-                        "synced_at_ms": chrono::Utc::now().timestamp_millis()
-                    });
-
-                    let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'SyncEvent:JobCompleted', $3::jsonb, 'PENDING')"
-                    )
-                    .bind(uuid::Uuid::new_v4().to_string())
-                    .bind(&tenant_id_clone)
-                    .bind(sync_event_payload.to_string())
-                    .execute(&mut *db_tx)
-                    .await;
-
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
@@ -215,22 +189,27 @@ pub async fn offline_sync_handler(
                         }).to_string().into_bytes(),
                     };
                     let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
+                    Ok(())
                 }
                 Ok(None) => {
                     tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone);
+                    Err("Product not found or unauthorized".to_string())
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+                    Err("Database error".to_string())
                 }
             }
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
     }
-    futures::future::join_all(futures).await;
+    let results = futures::future::join_all(futures).await;
+
+    let failed_count = results.into_iter().filter(|r| r.is_err()).count() as i32;
 
     (
         StatusCode::OK,
-        Json(OfflineSyncResponse { success: true }),
+        Json(OfflineSyncResponse { success: true, failed_count }),
     ).into_response()
 }
 
@@ -244,7 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().connect_lazy("postgres://127.0.0.1:1/dummy").unwrap();
+        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -257,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://127.0.0.1:1/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -307,7 +286,30 @@ mod tests {
             ],
         };
 
-        let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
+        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
+
+        // Test with a non-existent product which should fail
+        let req_fail = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx3".to_string(),
+                    product_id: "prod-offline-nonexistent".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                },
+            ],
+        };
+
+        let response_fail = offline_sync_handler(state, headers, Json(req_fail)).await.into_response();
+        assert_eq!(response_fail.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response_fail.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["failed_count"], 1);
     }
 }

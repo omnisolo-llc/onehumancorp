@@ -141,7 +141,7 @@ where
             let mut has_expired = false;
 
             // We do a small probabilistic sample instead of an O(N) iteration for eviction.
-            for item in local.iter().take(10) {
+            for item in local.iter().take(50) {
                 if item.expiry <= now {
                     removed_keys.push(item.key().clone());
                     has_expired = true;

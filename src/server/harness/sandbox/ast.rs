@@ -1,8 +1,15 @@
+#![allow(clippy::all)]
 use tree_sitter::{Node, Parser};
 use server_telemetry::record_harness_security_divergence;
 
 pub struct ASTParser {
     parser: Parser,
+}
+
+impl Default for ASTParser {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ASTParser {
@@ -44,11 +51,7 @@ impl ASTParser {
         // We look for << 'EOF' or << "EOF"
         let re_start = regex::Regex::new(r#"<<\s*(['"])([^'"]+)['"]"#).unwrap();
 
-        loop {
-            let mat = match re_start.find(&sanitized) {
-                Some(m) => m,
-                None => break,
-            };
+        while let Some(mat) = re_start.find(&sanitized) {
 
             let match_str = &sanitized[mat.start()..mat.end()];
             let caps = match re_start.captures(match_str) {
@@ -109,8 +112,8 @@ impl ASTParser {
         let node_kind = node.kind();
 
         // command checks
-        if node_kind == "command" {
-            if let Some(command_name_node) = node.child_by_field_name("name") {
+        if node_kind == "command"
+            && let Some(command_name_node) = node.child_by_field_name("name") {
                 let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
                 if name == "zmodload" {
                     return Err("Dangerous pattern detected: zmodload".to_string());
@@ -138,11 +141,10 @@ impl ASTParser {
                     }
                 }
             }
-        }
 
         // Dangerous Variables Check
-        if node_kind == "variable_assignment" {
-            if let Some(var_name_node) = node.child_by_field_name("name") {
+        if node_kind == "variable_assignment"
+            && let Some(var_name_node) = node.child_by_field_name("name") {
                 let var_name = &source[var_name_node.start_byte()..var_name_node.end_byte()];
                 let dangerous_vars = ["LD_PRELOAD", "LD_LIBRARY_PATH", "PROMPT_COMMAND", "BASH_ENV", "ENV"];
                 if dangerous_vars.contains(&var_name) {
@@ -163,7 +165,6 @@ impl ASTParser {
                     }
                 }
             }
-        }
 
         // Validate IFS Injection in expansion
         if node_kind == "expansion" || node_kind == "simple_expansion" {

@@ -674,7 +674,7 @@ impl QueueManager {
         // Update the row.
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + INTERVAL '5 seconds' WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + (INTERVAL '1 second' * POWER(2, LEAST(COALESCE(($3->>'attempts')::int, 0), 10))) WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .bind(payload_str)

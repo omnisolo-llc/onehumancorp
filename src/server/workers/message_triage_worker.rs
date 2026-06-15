@@ -116,14 +116,15 @@ Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. IMPORTANT: action_type MUST BE EXACTLY ONE OF: \"Draft Reply\", \"ProposedInvoice\", OR \"SuggestedCalendarSlot\". Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote details, or booking details.\"
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking details.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -194,16 +195,10 @@ Output JSON format:
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
             let feature_type = extracted.get("feature_type").and_then(|v| v.as_str()).unwrap_or("general");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
-            let raw_action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_type = if raw_action_type == "ProposedInvoice" || raw_action_type == "SuggestedCalendarSlot" {
-                raw_action_type
-            } else {
-                "Draft Reply"
-            };
+            let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
             let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
 
-            let triage_item_id = Uuid::new_v4().to_string();
-            let triage_action_id = Uuid::new_v4().to_string();
+            let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
             if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
                 event_source = "instagram_dm".to_string();
@@ -211,42 +206,120 @@ Output JSON format:
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+            let mut quote_id_opt: Option<String> = None;
+
+            if action_type == "Draft Quote" {
+                if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                    let draft_quote_id = Uuid::new_v4();
+                    quote_id_opt = Some(draft_quote_id.to_string());
+                    let total_amount = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let required_deposit = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
+
+                    match &self.db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Ok(mut tx) = self.db.pool.begin().await {
+                                let _ = sqlx::query(
+                                    "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+                                )
+                                .bind(draft_quote_id)
+                                .bind(&tenant_id)
+                                .bind(customer_id_uuid)
+                                .bind(total_amount)
+                                .bind(required_deposit)
+                                .execute(&mut *tx).await;
+
+                                if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                    for item in items {
+                                        let item_id = Uuid::new_v4();
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                        let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                        let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
+                                        let _ = sqlx::query(
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+                                        )
+                                        .bind(item_id)
+                                        .bind(draft_quote_id)
+                                        .bind(desc)
+                                        .bind(price)
+                                        .bind(qty)
+                                        .bind(is_opt)
+                                        .execute(&mut *tx).await;
+                                    }
+                                }
+                                let _ = tx.commit().await;
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                            let _ = sqlx::query(
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(draft_quote_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(customer_id_uuid.to_string())
+                            .bind(total_amount)
+                            .bind(required_deposit)
+                            .execute(sqlite_pool).await;
+
+                            if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                for item in items {
+                                    let item_id = Uuid::new_v4();
+                                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                    let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                    let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                    let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
+                                    let _ = sqlx::query(
+                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(item_id.to_string())
+                                    .bind(draft_quote_id.to_string())
+                                    .bind(desc)
+                                    .bind(price)
+                                    .bind(qty)
+                                    .bind(is_opt)
+                                    .execute(sqlite_pool).await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await;
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())"
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
                     )
-                    .bind(&triage_item_id)
+                    .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(&customer_id_val)
                     .bind(&event_source)
-                    .bind(&priority)
-                    .bind(&context_summary)
+                    .bind(serde_json::json!({
+                        "customer_message": customer_message,
+                        "feature_type": event_source,
+                        "priority": priority,
+                        "context": context_summary,
+                        "inbox_message_id": message_id,
+                        "customer_id": customer_id_val
+                    }))
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id,
+                        "quote_id": quote_id_opt
+                    }))
                     .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert triage item: {}", e);
+                        tracing::error!("Failed to insert agent feed item: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
                             .bind(&job_id)
                             .execute(&self.db.pool).await;
                         return Ok(false);
-                    }
-
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload, created_at) VALUES ($1, $2, $3, $4, $5, NOW())"
-                    )
-                    .bind(&triage_action_id)
-                    .bind(&triage_item_id)
-                    .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
-                    .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert triage proposed action: {}", e);
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
@@ -254,39 +327,38 @@ Output JSON format:
                         .execute(&self.db.pool).await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(sqlite_pool).await;
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)"
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     )
-                    .bind(&triage_item_id)
+                    .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(&customer_id_val)
                     .bind(&event_source)
-                    .bind(&priority)
-                    .bind(&context_summary)
+                    .bind(serde_json::json!({
+                        "customer_message": customer_message,
+                        "feature_type": event_source,
+                        "priority": priority,
+                        "context": context_summary,
+                        "inbox_message_id": message_id,
+                        "customer_id": customer_id_val
+                    }).to_string())
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id,
+                        "quote_id": quote_id_opt
+                    }).to_string())
                     .execute(sqlite_pool).await {
-                        tracing::error!("Failed to insert triage item (SQLite): {}", e);
+                        tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
                             .execute(sqlite_pool).await;
                         return Ok(false);
-                    }
-
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
-                    )
-                    .bind(&triage_action_id)
-                    .bind(&triage_item_id)
-                    .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
-                    .execute(sqlite_pool).await {
-                        tracing::error!("Failed to insert triage proposed action (SQLite): {}", e);
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

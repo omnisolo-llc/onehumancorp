@@ -484,12 +484,12 @@ export default function BuilderPage() {
 {`<div id="ohc-embed-root"></div>
 <script src="/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
 </div>`}
                 </pre>
                 <button
                     onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
                         navigator.clipboard.writeText(code);
                         setSaveMessage("Embed code copied.");
                     }}

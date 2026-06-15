@@ -320,6 +320,9 @@
       .action-buttons {
         display: flex;
         gap: 10px;
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(255, 255, 255, 0.65);
       }
       .btn-secondary {
         background-color: #e5e5ea;
@@ -600,7 +603,15 @@
         </div>
       </div>
 
+
+      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
+
+      <div id="sold-out-toggle-falafel-container" style="display: none;">
+         <button id="sold-out-toggle-falafel">Sold Out</button>
+      </div>
       <h1 id="dashboard-title">Dashboard</h1>
+
       <div class="subtitle">Your private agentic workspace.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
@@ -632,6 +643,37 @@
         </div>
       </div>
       <div id="dynamic-milestones-container"></div>
+
+      <!-- OHC Wrapped: Year in Review -->
+      <div class="ohc-growth-card" id="wrapped-widget" style="display: none; background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(0, 102, 255, 0.3);">
+        <div style="text-align: center; padding: 10px;">
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">2026 Wrapped 🎁</h2>
+          <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+              <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">$0.00</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
+              <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
+              <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
+              <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+          </div>
+
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 12px; padding: 12px; font-weight: 700;">
+            Share 2026 Success
+          </button>
+        </div>
+      </div>
 
       <!-- Viral Soft Paywall Loop -->
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
@@ -735,7 +777,7 @@
           <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
-            <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-whatsapp-btn" data-tooltip="Share your link via WhatsApp">Share on WhatsApp</button>
             <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
           </div>
         </div>
@@ -761,11 +803,13 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
-        <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+
+        <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
+<a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
         <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
-        <a href="customer-referral.html" id="customer-referral-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Referral ✨</a>
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Work-Intake Widget 📋</a>
         <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
         <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
@@ -796,7 +840,7 @@
     </div>
 
     <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="index.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <a href="/onboarding" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -827,7 +871,7 @@
         .ohc-walkthrough-bubble {
             position: absolute;
             background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(2.1);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
             padding: 20px;
@@ -1025,7 +1069,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `index.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
+          footerLink.href = `/onboarding?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
@@ -1336,7 +1380,33 @@
       }
       checkMilestones();
 
+      async function checkWrapped() {
+        try {
+          const res = await fetch('/api/v1/growth/wrapped');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.total_sales > 0 || data.total_orders > 0) {
+              document.getElementById('wrapped-widget').style.display = 'block';
+              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
+              document.getElementById('wrapped-orders').innerText = data.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.total_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
 
+              const shareBtn = document.getElementById('wrapped-share-btn');
+              shareBtn.onclick = () => {
+                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                navigator.clipboard.writeText(text).then(() => {
+                  shareBtn.innerText = 'Copied to Clipboard! ✨';
+                  setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);
+                });
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch Wrapped data", e);
+        }
+      }
+      checkWrapped();
 
       const generateBtn = document.getElementById('generate-link-btn');
 
@@ -1526,7 +1596,7 @@
           if (actionType === 'SocialPostDraft') {
             let parsedPayload = item.proposed_action || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1578,7 +1648,7 @@
           if (actionType === 'Draft Reply') {
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
@@ -1607,7 +1677,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1624,6 +1694,23 @@
                 <div class="triage-controls" style="display: flex; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (description.includes("reschedule") || description.includes("tentatively booked")) {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
                 </div>
               </div>
             `;
@@ -1811,8 +1898,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(2.1);
+            -webkit-backdrop-filter: blur(20px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -2123,7 +2210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
 <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask anything..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
@@ -2329,15 +2416,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
             hideTooltip();
         }
     });
@@ -2354,15 +2444,16 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.className = 'ohc-walkthrough-overlay fixed z-[90]';
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.className = 'ohc-walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -2668,7 +2759,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('data-tooltip', 'Help Center');
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -2701,7 +2791,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
+                <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
             </div>
         </div>
 
@@ -2853,15 +2944,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
             hideTooltip();
         }
     });
@@ -2874,14 +2968,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.className = 'ohc-walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.className = 'ohc-walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
@@ -2954,6 +3048,135 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+</script>
+
+<script>
+    // Offline Sync Logic
+
+    function enqueueOfflineMutation(mutation) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+        queue.push(mutation);
+        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+        window.dispatchEvent(new Event("ohc_queue_updated"));
+
+        if (navigator.onLine) {
+            syncOfflineQueue();
+        }
+    }
+
+    function updateOfflineStatus() {
+        const networkIndicator = document.getElementById("network-status-indicator");
+        const queueIndicator = document.getElementById("queue-dashboard");
+        if (!networkIndicator || !queueIndicator) return;
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "block";
+            networkIndicator.classList.remove("hidden");
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length > 0) {
+            queueIndicator.style.display = "block";
+            queueIndicator.classList.remove("hidden");
+            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+        } else {
+            queueIndicator.style.display = "none";
+            queueIndicator.classList.add("hidden");
+        }
+    }
+
+    async function syncOfflineQueue() {
+        if (!navigator.onLine) return;
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
+        if (queue.length === 0) return;
+
+        const posTransactions = [];
+        const generalMutations = [];
+        queue.forEach(m => {
+            if (m.type === "tap_to_pay") {
+                posTransactions.push({
+                    id: m.id,
+                    client_id: "terminal_client",
+                    amount_cents: Math.round(m.amount),
+                    currency: m.currency || "usd",
+                    payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+                    timestamp: new Date().toISOString()
+                });
+            } else if (m.type === "inventory_toggle") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: m.id.replace("e2e-product-", ""),
+                    quantity_deducted: 1,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: null
+                });
+            } else {
+                generalMutations.push(m);
+            }
+        });
+
+        const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+        const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+
+        let allOk = true;
+        if (posTransactions.length > 0) {
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+            try {
+                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (generalMutations.length > 0) {
+
+            try {
+                const res = await fetch("/api/v1/sync/offline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                    body: JSON.stringify({ mutations: generalMutations })
+                });
+                if (!res.ok) allOk = false;
+            } catch(e) {
+                allOk = false;
+            }
+        }
+
+        if (allOk) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            updateOfflineStatus();
+        }
+    }
+
+    window.addEventListener("online", () => {
+        updateOfflineStatus();
+        syncOfflineQueue();
+    });
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+    updateOfflineStatus();
 </script>
 </body>
 </html>

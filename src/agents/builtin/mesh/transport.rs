@@ -22,6 +22,15 @@ pub trait MeshTransport: Send + Sync {
         handler: Box<dyn Fn(Message) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    /// Subscribes to a pattern of topics/channels, returning a cancellation function.
+    async fn subscribe_pattern(
+        &self,
+        pattern: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe(pattern, handler).await
+    }
+
     /// Acquires a distributed lock on a resource for a specified duration.
     async fn acquire_lock(
         &self,
@@ -294,10 +303,9 @@ impl PgTransport {
                     skip_locked_counter.add(1, &[KeyValue::new("action", "poll_messages")]);
                     last_id = id;
                     if let Some(tx) = subs.get(&topic)
-                        && let Ok(message) = Message::decode(&payload[..])
-                    {
-                        let _ = tx.send(message);
-                    }
+                        && let Ok(message) = Message::decode(&payload[..]) {
+                            let _ = tx.send(message);
+                        }
                 }
 
                 if has_rows {
@@ -555,10 +563,9 @@ impl SqliteTransport {
                 for (id, topic, payload) in rows {
                     last_id = id;
                     if let Some(tx) = subs.get(&topic)
-                        && let Ok(message) = Message::decode(&payload[..])
-                    {
-                        let _ = tx.send(message);
-                    }
+                        && let Ok(message) = Message::decode(&payload[..]) {
+                            let _ = tx.send(message);
+                        }
                 }
 
                 if has_rows {
@@ -769,10 +776,9 @@ impl MeshTransport for RedisPubSubTransport {
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>()
-                    && let Ok(message) = Message::decode(&buf[..])
-                {
-                    handler(message);
-                }
+                    && let Ok(message) = Message::decode(&buf[..]) {
+                        handler(message);
+                    }
             }
         });
 
@@ -956,25 +962,24 @@ impl MeshTransport for NatsTransport {
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
             if let Some((stored_owner, stored_exp)) = entry_str.split_once(':')
-                && let Ok(exp) = stored_exp.parse::<i64>()
-            {
-                if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
-                    match self
-                        .kv
-                        .update(
-                            resource,
-                            payload.clone().into_bytes().into(),
-                            entry.revision,
-                        )
-                        .await
-                    {
-                        Ok(_) => return Ok(true),
-                        Err(_) => return Ok(false),
+                && let Ok(exp) = stored_exp.parse::<i64>() {
+                    if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
+                        match self
+                            .kv
+                            .update(
+                                resource,
+                                payload.clone().into_bytes().into(),
+                                entry.revision,
+                            )
+                            .await
+                        {
+                            Ok(_) => return Ok(true),
+                            Err(_) => return Ok(false),
+                        }
+                    } else {
+                        return Ok(false);
                     }
-                } else {
-                    return Ok(false);
                 }
-            }
         }
 
         match self.kv.create(resource, payload.into_bytes().into()).await {
@@ -993,14 +998,13 @@ impl MeshTransport for NatsTransport {
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
             if let Some((stored_owner, _)) = entry_str.split_once(':')
-                && stored_owner == owner
-            {
-                let payload = format!("{}:0", owner);
-                let _ = self
-                    .kv
-                    .update(resource, payload.into_bytes().into(), entry.revision)
-                    .await;
-            }
+                && stored_owner == owner {
+                    let payload = format!("{}:0", owner);
+                    let _ = self
+                        .kv
+                        .update(resource, payload.into_bytes().into(), entry.revision)
+                        .await;
+                }
         }
         Ok(())
     }
@@ -1028,20 +1032,18 @@ impl MeshTransport for NatsTransport {
         let now = chrono::Utc::now().timestamp();
         while let Some(Ok(key)) = keys.next().await {
             if key.starts_with("presence_")
-                && let Ok(Some(entry)) = self.kv.entry(&key).await
-            {
-                let entry_str = String::from_utf8_lossy(&entry.value);
-                if let Some((status, stored_exp)) = entry_str.split_once(':')
-                    && let Ok(exp) = stored_exp.parse::<i64>()
-                {
-                    if exp > now {
-                        let agent_id = key.strip_prefix("presence_").unwrap().to_string();
-                        agents.push((agent_id, status.to_string()));
-                    } else {
-                        let _ = self.kv.delete(&key).await;
-                    }
+                && let Ok(Some(entry)) = self.kv.entry(&key).await {
+                    let entry_str = String::from_utf8_lossy(&entry.value);
+                    if let Some((status, stored_exp)) = entry_str.split_once(':')
+                        && let Ok(exp) = stored_exp.parse::<i64>() {
+                            if exp > now {
+                                let agent_id = key.strip_prefix("presence_").unwrap().to_string();
+                                agents.push((agent_id, status.to_string()));
+                            } else {
+                                let _ = self.kv.delete(&key).await;
+                            }
+                        }
                 }
-            }
         }
         Ok(agents)
     }
@@ -1107,10 +1109,9 @@ impl MeshOverlayTransport {
                         && buf[3] == 0xDD
                     {
                         if let Ok(msg_id) = String::from_utf8(buf[4..len].to_vec())
-                            && let Some((_, tx)) = ack_map.remove(&msg_id)
-                        {
-                            let _ = tx.send(());
-                        }
+                            && let Some((_, tx)) = ack_map.remove(&msg_id) {
+                                let _ = tx.send(());
+                            }
                         continue;
                     }
 
@@ -1384,33 +1385,32 @@ pub async fn create_transport(
 
     // Standalone fallback
     if let Ok(db_url) = std::env::var("OHC_DATABASE_URL")
-        && db_url.starts_with("sqlite")
-    {
-        match sqlx::sqlite::SqlitePoolOptions::new()
-            .connect(&db_url)
-            .await
-        {
-            Ok(pool) => match SqliteTransport::new(pool).await {
-                Ok(t) => {
-                    let t_clone = t.clone();
-                    tokio::spawn(async move {
-                        t_clone.start_worker().await;
-                    });
-                    tracing::debug!("Initialized SqliteTransport (Standalone)");
-                    return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
-                }
+        && db_url.starts_with("sqlite") {
+            match sqlx::sqlite::SqlitePoolOptions::new()
+                .connect(&db_url)
+                .await
+            {
+                Ok(pool) => match SqliteTransport::new(pool).await {
+                    Ok(t) => {
+                        let t_clone = t.clone();
+                        tokio::spawn(async move {
+                            t_clone.start_worker().await;
+                        });
+                        tracing::debug!("Initialized SqliteTransport (Standalone)");
+                        return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.",
+                            e
+                        );
+                    }
+                },
                 Err(e) => {
-                    tracing::debug!(
-                        "Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.",
-                        e
-                    );
+                    tracing::debug!("Failed to connect to SQLite DB for transport: {}", e);
                 }
-            },
-            Err(e) => {
-                tracing::debug!("Failed to connect to SQLite DB for transport: {}", e);
             }
         }
-    }
 
     if let Some(url) = redis_url {
         match RedisPubSubTransport::new(url).await {
@@ -1565,7 +1565,7 @@ mod tests {
                 use tokio::io::AsyncReadExt;
                 use tokio::io::AsyncWriteExt;
                 let mut buf = [0; 4096];
-                if let Ok(_) = stream.read(&mut buf).await {
+                if stream.read(&mut buf).await.is_ok() {
                     let response = "HTTP/1.1 200 OK
 Content-Length: 0
 
@@ -1588,7 +1588,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
         // In this test, we just ensure it handles the dummy DB gracefully without panicking if it times out
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
@@ -1631,7 +1631,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport_checkpoints() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
 
         if let Ok(transport) = transport_res {
             let msg = Message {
@@ -1663,7 +1663,7 @@ Content-Length: 0
     #[tokio::test]
     async fn test_ipc_transport_locking() {
         let db_url = "postgres://dummy:dummy@localhost:5432/dummy";
-        let transport_res = PgTransport::new(&db_url).await;
+        let transport_res = PgTransport::new(db_url).await;
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
             tokio::spawn(async move {
@@ -1714,7 +1714,7 @@ Content-Length: 0
     async fn test_create_transport_standalone() {
         let _transport = create_transport(None, false).await.unwrap();
         // Since InProcessTransport isn't easily castable back without Any, we just ensure it didn't err
-        assert!(true);
+
     }
 
     #[tokio::test]

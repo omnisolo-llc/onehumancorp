@@ -16,7 +16,7 @@ impl ToolExecutor for ResticExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("restic: action is required (snapshot, restore, status)".to_string()))?;
 
-        let repo = std::env::var("RESTIC_REPOSITORY").unwrap_or_else(|_| std::env::temp_dir().join("restic-repo").to_string_lossy().into_owned());
+        let repo = std::env::var("RESTIC_REPOSITORY").unwrap_or_else(|_| "/tmp/restic-repo".to_string());
         let password = std::env::var("RESTIC_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
 
         let timeout = Duration::from_secs(300);
@@ -47,17 +47,6 @@ impl ToolExecutor for ResticExecutor {
             _ => return Err(ToolError::LlmRecoverable("Invalid action. Allowed: snapshot, restore, status".to_string()))
         }
 
-        let target_path_fallback = std::env::temp_dir().join("restore").to_string_lossy().into_owned();
-        let target_string = if action == "restore" {
-            if let Some(t) = args["target"].as_str() {
-                t.to_string()
-            } else {
-                target_path_fallback
-            }
-        } else {
-            String::new()
-        };
-
         let mut full_args = vec!["-r", repo.as_str()];
 
         match action {
@@ -67,7 +56,8 @@ impl ToolExecutor for ResticExecutor {
             }
             "restore" => {
                 let snapshot_id = args["snapshot_id"].as_str().unwrap_or("latest");
-                full_args.extend(vec!["restore", snapshot_id, "--target", &target_string]);
+                let target = args["target"].as_str().unwrap_or("/tmp/restore");
+                full_args.extend(vec!["restore", snapshot_id, "--target", target]);
             }
             "status" => {
                 full_args.extend(vec!["snapshots"]);

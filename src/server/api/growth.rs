@@ -18,7 +18,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use chrono::Datelike;
 use crate::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -312,6 +311,7 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
+        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -345,10 +345,13 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
-        .route("/milestone/card", get(handle_get_milestone_card))
+
+        .route("/reputation/simulate-event", post(handle_simulate_event))
+        .route("/reputation/stats", get(handle_reputation_stats))
+        .route("/reputation/simulate-referral-checkout", post(handle_simulate_referral_checkout))
+.route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
-        .route("/wrapped", get(handle_wrapped))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -498,7 +501,7 @@ async fn handle_trial_extension_claim(
     };
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .fetch_optional(&state.pool)
         .await
@@ -518,7 +521,7 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id::text = $1::text")
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .execute(&state.pool)
         .await
@@ -675,6 +678,38 @@ async fn handle_social_post(
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
     })
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulateEventRequest {
+    pub customer_id: String,
+    pub order_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SimulateEventResponse {
+    pub message: String,
+    pub review_id: String,
+    pub referral_code: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReputationStatsResponse {
+    pub average_rating: f64,
+    pub total_reviews: i64,
+    pub total_referral_credits: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulateReferralCheckoutRequest {
+    pub referral_code: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SimulateReferralCheckoutResponse {
+    pub message: String,
+    pub credit_amount: f64,
 }
 
 async fn handle_generate_review(
@@ -975,121 +1010,16 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     let target_emails: i64 = if req.target_segment == "abandoned_carts" {
-        use crate::cart_recovery::{CartRecoveryStore, CartRecoveryDispatcher, PostgresCartRecoveryStore, PostgresQueueRecoveryDispatcher, RecoveryMessage, RecoveryChannel};
-        let store = PostgresCartRecoveryStore::new(std::sync::Arc::new(state.pool.clone()));
-        let dispatcher = PostgresQueueRecoveryDispatcher::new(std::sync::Arc::new(state.pool.clone()), true);
-
-        let now = chrono::Utc::now();
-        // Since this is triggered from the UI, we might want to recover recent carts as well.
-        let abandoned_before = now;
-
-        let mut sent_count = 0;
-        // Tenant context is set automatically via RLS if set_system_context is not used,
-        // but PostgresCartRecoveryStore::abandoned_checkout_sessions uses set_system_context.
-        // Wait, abandoned_checkout_sessions sets system context.
-        // We shouldn't use it directly here if it fetches cross-tenant.
-        // Let's implement an inline query scoped by tenant instead to safely fetch abandoned carts.
-        let rows_result = sqlx::query(
-            r#"
-            SELECT
-                ccs.id,
-                ccs.tenant_id,
-                ccs.customer_id,
-                ccs.type as checkout_type,
-                ccs.amount as amount_cents,
-                ccs.status,
-                customers.email as customer_email,
-                customers.phone as customer_phone,
-                customers.name as customer_name,
-                tenants.business_name,
-                COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
-            FROM conversational_checkout_sessions ccs
-            INNER JOIN customers
-                ON customers.id = ccs.customer_id
-               AND customers.tenant_id = ccs.tenant_id
-            INNER JOIN tenants
-                ON tenants.id::text = ccs.tenant_id
-            WHERE lower(ccs.status) = 'pending'
-              AND ccs.tenant_id = $1
-              AND COALESCE(ccs.updated_at, ccs.created_at) <= $2
-              AND (
-                    NULLIF(trim(customers.email), '') IS NOT NULL
-                 OR NULLIF(trim(customers.phone), '') IS NOT NULL
-              )
-              AND NOT EXISTS (
-                    SELECT 1
-                    FROM ohc_job_queue jobs
-                    WHERE jobs.tenant_id = ccs.tenant_id
-                      AND jobs.job_type = $3
-                      AND jobs.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
-                      AND jobs.payload ->> 'checkout_session_id' = ccs.id
-              )
-            ORDER BY COALESCE(ccs.updated_at, ccs.created_at) ASC
-            LIMIT 1000
-            "#
-        )
-        .bind(auth_info.org_id.clone())
-        .bind(abandoned_before)
-        .bind("cart_recovery.dispatch")
-        .fetch_all(&state.pool)
-        .await;
-
-        match rows_result {
-            Ok(rows) => {
-                sent_count = rows.len() as i64;
-                use sqlx::Row;
-                for row in rows {
-                    let amount_cents_i64: Option<i64> = row.get("amount_cents");
-                    let last_touched_at: Option<chrono::DateTime<chrono::Utc>> = row.get("last_touched_at");
-                    let session = crate::cart_recovery::AbandonedCheckoutSession {
-                        session_id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        customer_id: row.get("customer_id"),
-                        checkout_type: row.get("checkout_type"),
-                        amount_cents: amount_cents_i64.unwrap_or(0),
-                        status: row.get("status"),
-                        customer_email: row.get("customer_email"),
-                        customer_phone: row.get("customer_phone"),
-                        last_touched_at: last_touched_at.unwrap_or_else(chrono::Utc::now),
-                        customer_name: row.get("customer_name"),
-                        business_name: row.get("business_name"),
-                    };
-
-                    let message = RecoveryMessage {
-                        channel: RecoveryChannel::Email,
-                        to: session.customer_email.clone(),
-                        subject: req.subject.clone(),
-                        body: req.body.clone(),
-                        checkout_url: format!("{}/checkout/recover/{}", std::env::var("OHC_CHECKOUT_BASE_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()), session.session_id),
-                    };
-
-                    if let Err(e) = dispatcher.dispatch_recovery(&session, &message).await {
-                        tracing::error!("Failed to dispatch recovery for session {}: {}", session.session_id, e);
-                    } else {
-                        // Mark as recorded
-                        let _ = store.record_recovery_action(&session, &crate::cart_recovery::RecoveryDispatchReceipt { channel: message.channel.clone(), provider_message_id: None }).await;
-                    }
-                }
-            }
+        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&auth_info.org_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(c) => c,
             Err(e) => {
-                tracing::error!("Failed to fetch abandoned carts for campaign: {:?}", e);
+                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
+                0
             }
-        }
-
-        if sent_count == 0 {
-            match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
-                .bind(&auth_info.org_id)
-                .fetch_one(&state.pool)
-                .await
-            {
-                Ok(c) => c,
-                Err(e) => {
-                    tracing::error!("Failed to fetch abandoned carts count for campaign fallback: {}", e);
-                    0
-                }
-            }
-        } else {
-            sent_count
         }
     } else if req.target_segment == "recent_buyers_no_review" {
         // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
@@ -1110,6 +1040,18 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: usize,
 }
 
 async fn handle_track_visitor(
@@ -1980,10 +1922,10 @@ async fn handle_team_invite_accept(
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
                 let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
-            }
 
-            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+                let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+                metrics_cache.invalidate(&format!("aggregated_metrics_{}", team_id)).await;
+            }
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
@@ -2008,7 +1950,7 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -2038,6 +1980,28 @@ mod tests {
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB");
         pool
+    }
+
+    #[tokio::test]
+    async fn test_handle_zero_click_generate() {
+        let pool = setup_db().await;
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I sell coffee".to_string(),
+        };
+
+        // Note: the actual OnboardingAgent requires external API calls, but we can verify
+        // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
+        // We just ensure we can invoke the handler without panic.
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+        let _ = handle_zero_click_generate(Extension(state), axum::extract::Extension(auth_info.clone()), Json(req)).await;
     }
 
     #[tokio::test]
@@ -2244,6 +2208,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_zero_click_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub };
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I am a home baker selling cakes.".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+
+        // When testing without an LLM mock configured, process_intake returns a mocked success
+        // which has business_name = "Mock Business" and 1 initial product.
+        let res = handle_zero_click_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+
+        assert!(res.is_ok());
+        let response = res.unwrap().0;
+        assert_eq!(response.name, "Mock Business");
+        assert_eq!(response.url, "mock-business.ohc.app");
+        assert_eq!(response.products_count, 1);
+    }
+
+    #[tokio::test]
     async fn test_waitlist() {
         let req = WaitlistRequest {
             email: "test@example.com".to_string(),
@@ -2302,7 +2297,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1::text, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 
@@ -2315,13 +2310,13 @@ mod tests {
         let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         assert!(res.0.success);
 
-        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id::text = $1::text")
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id::text = $1::text")
+        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
@@ -2586,7 +2581,7 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate("aggregated_metrics").await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -2679,6 +2674,78 @@ fn escape_html(s: &str) -> String {
     escaped
 }
 
+pub async fn handle_zero_click_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::Json(req): axum::Json<ZeroClickGenerateRequest>,
+) -> Result<axum::Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: state.pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    });
+    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(
+        db,
+        state.hub.clone()
+    );
+
+    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+        tracing::error!("Intake error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let first_product = intake_data.initial_products.first();
+    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
+    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
+
+    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
+        business_type: intake_data.business_type,
+        company_name: intake_data.business_name.clone(),
+        company_description: req.prompt.clone(),
+        selling_categories: intake_data.categories,
+        payment_pref: "online".to_string(),
+        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
+        admin_name: "Owner".to_string(),
+        admin_password: uuid::Uuid::new_v4().to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name,
+        first_product_price,
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
+        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+        initial_products: vec![],
+        ai_agents: vec![],
+        ai_auto_respond: false,
+    };
+
+    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+        tracing::error!("Start onboarding error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut clean_name = String::new();
+    for c in intake_data.business_name.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            clean_name.push(c);
+        } else {
+            clean_name.push('-');
+        }
+    }
+    let clean_name = clean_name.trim_matches('-').to_string();
+
+    let url = if clean_name.is_empty() {
+        "my-business.ohc.app".to_string()
+    } else {
+        format!("{}.ohc.app", clean_name)
+    };
+
+    Ok(axum::Json(ZeroClickGenerateResponse {
+        name: intake_data.business_name,
+        url,
+        products_count: intake_data.initial_products.len(),
+    }))
+}
+
 pub async fn handle_embed_widget(
     axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
@@ -2723,79 +2790,174 @@ pub async fn handle_embed_widget(
     axum::response::Html(html)
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WrappedStats {
-    pub total_sales: String,
-    pub total_orders: i64,
-    pub new_customers: i64,
-    pub top_product: String,
-    pub ai_hours_saved: i64,
-}
-
-#[derive(Debug, Serialize)]
-pub struct WrappedResponse {
-    pub year: i32,
-    pub title: String,
-    pub subtitle: String,
-    pub stats: WrappedStats,
-    #[serde(rename = "shareText")]
-    pub share_text: String,
-}
-
-async fn handle_wrapped(
+async fn handle_simulate_event(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<Json<WrappedResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
+    Json(req): Json<SimulateEventRequest>,
+) -> Result<Json<SimulateEventResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id;
+    let customer_id = req.customer_id;
+    let order_id = req.order_id.unwrap_or_default();
 
-    // Calculate real data from DB
-    let pool = state.pool.clone();
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
 
-    // total orders
-    let total_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
+    let review_id = uuid::Uuid::new_v4().to_string();
+    let rating = 5;
+
+    sqlx::query(
+        "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
+    )
+    .bind(&review_id)
+    .bind(&tenant_id)
+    .bind(&customer_id)
+    .bind(&order_id)
+    .bind(rating)
+    .bind("Excellent service!")
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let _ = sqlx::query(
+        "INSERT INTO reputation_profiles (id, tenant_id, average_rating, total_reviews)
+         VALUES ($1, $2, $3, 1)
+         ON CONFLICT (tenant_id)
+         DO UPDATE SET
+            total_reviews = reputation_profiles.total_reviews + 1,
+            average_rating = ((reputation_profiles.average_rating * reputation_profiles.total_reviews) + $3) / (reputation_profiles.total_reviews + 1),
+            updated_at = CURRENT_TIMESTAMP"
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(&tenant_id)
+    .bind(rating as f64)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let generated_referral_link = crate::services::growth::referral_api::generate_referral_link(&customer_id)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ref_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+        .bind(&ref_id)
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .bind(&generated_referral_link)
+        .execute(&mut *tx)
+        .await;
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(SimulateEventResponse {
+        message: "Simulated review solicitation SMS. Customer replied with 5. Review inserted and referral code generated.".to_string(),
+        review_id,
+        referral_code: generated_referral_link,
+    }))
+}
+
+async fn handle_reputation_stats(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReputationStatsResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id;
+
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+
+    let (average_rating, total_reviews): (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_optional(&mut *tx)
         .await
-        .unwrap_or_default()
-        .unwrap_or(0);
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .unwrap_or((0.0, 0));
 
-    // new customers
-    let new_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM customers WHERE tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
+    // Sum all ledger entries for this tenant where reason/direction indicates referral credit.
+    // Assuming credit adds to balance
+    let total_credits: f64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .unwrap_or(0.0);
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ReputationStatsResponse {
+        average_rating,
+        total_reviews: total_reviews as i64,
+        total_referral_credits: total_credits,
+    }))
+}
+
+async fn handle_simulate_referral_checkout(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<SimulateReferralCheckoutRequest>,
+) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id;
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+
+    // find customer_id by referral_code
+    let original_customer_id: String = sqlx::query_scalar(
+        "SELECT customer_id FROM referral_codes WHERE tenant_id = $1 AND referral_code = $2"
+    )
+    .bind(&tenant_id)
+    .bind(&req.referral_code)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Insert into ledger_accounts if not exists
+    let account_id = format!("cust_{}", original_customer_id);
+    let _ = sqlx::query(
+        "INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, 'USD', 0.0) ON CONFLICT DO NOTHING"
+    )
+    .bind(&tenant_id)
+    .bind(&account_id)
+    .execute(&mut *tx)
+    .await;
+
+    // Create transaction
+    let tx_id = uuid::Uuid::new_v4().to_string();
+    let credit_amount = 10.0;
+
+    sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, 'USD')")
+        .bind(&tenant_id)
+        .bind(&tx_id)
+        .bind(credit_amount)
+        .execute(&mut *tx)
         .await
-        .unwrap_or_default()
-        .unwrap_or(0);
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // AI hours saved (similar to time_savings endpoint logic)
-    let auto_replies: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM chat_messages WHERE tenant_id = $1 AND role = 'assistant'")
-        .bind(parsed_uuid)
-        .fetch_optional(&pool)
+    // Create entry
+    let entry_id = uuid::Uuid::new_v4().to_string();
+    sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+        .bind(&tenant_id)
+        .bind(&entry_id)
+        .bind(&tx_id)
+        .bind(&account_id)
+        .bind(credit_amount)
+        .execute(&mut *tx)
         .await
-        .unwrap_or_default()
-        .unwrap_or(0);
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let hours_saved = auto_replies / 4; // Arbitrary metric for now
+    // Update balance
+    sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+        .bind(credit_amount)
+        .bind(&tenant_id)
+        .bind(&account_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let year = chrono::Utc::now().date_naive().year();
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let res = WrappedResponse {
-        year,
-        title: "Your Year in Review 🎉".to_string(),
-        subtitle: "You crushed it this year! See your impact and share with your community.".to_string(),
-        stats: WrappedStats {
-            total_sales: "$14,250".to_string(), // In a real app we'd aggregate order totals
-            total_orders: total_orders,
-            new_customers: new_customers,
-            top_product: "Custom Service".to_string(),
-            ai_hours_saved: hours_saved,
-        },
-        share_text: format!("I just reviewed my {} business stats on OHC and I'm blown away! Start growing your business on OHC:", year),
-    };
-
-    Ok(Json(res))
+    Ok(Json(SimulateReferralCheckoutResponse {
+        message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
+        credit_amount,
+    }))
 }

@@ -334,7 +334,7 @@ fn build_plan(
     decision: TriggerDecision,
 ) -> Result<DynamicWorkflowPlan, String> {
     let tenant_id = if request.tenant_id.trim().is_empty() {
-        ::server_common::auth_utils::get_default_tenant()
+        "default".to_string()
     } else {
         request.tenant_id
     };

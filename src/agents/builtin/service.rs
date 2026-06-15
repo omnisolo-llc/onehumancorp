@@ -7,10 +7,10 @@ use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
 use chrono::{DateTime, Utc};
 use ohc_builtin_agent_llm::{
-    LlmClient,
     anthropic::AnthropicClient,
     ollama::OllamaClient,
     openai::{OpenAIClient, OpenAIClientConfig},
+    LlmClient,
 };
 
 #[derive(Debug, Clone)]
@@ -40,15 +40,15 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
 }
 
 use crate::consolidation_worker::ConsolidationWorker;
-use crate::departments::{Department, get_department_config};
+use crate::departments::{get_department_config, Department};
 use crate::memory_store::{EmbeddingRecord, VectorRepository};
 use crate::proto::agent_service::{
-    EventType, PingRequest, PingResponse, RunTaskEvent, RunTaskRequest, SkillConfig,
-    SubAgentRequest, SubAgentResponse, ToolsetConfig, agent_service_server::AgentService,
+    agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
+    RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
 };
 use crate::tools::{
-    SharedMailbox, SharedTaskStore, SharedTodos, Tool, sendmessage::Mailbox, task::TaskStore,
-    todowrite::TodoItem,
+    sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
+    SharedTodos, Tool,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -436,26 +436,26 @@ impl AgentServiceImpl {
             _ => {
                 // Auto-detect from env vars
                 if let Ok(key) = std::env::var("ANTHROPIC_API_KEY")
-                    && !key.is_empty()
-                {
-                    return Arc::new(AnthropicClient::new(key));
-                }
+                    && !key.is_empty() {
+                        return Arc::new(AnthropicClient::new(key));
+                    }
                 if let Ok(key) = std::env::var("OPENAI_API_KEY")
-                    && !key.is_empty()
-                {
-                    let model = self.resolve_model_for_request("openai", req_model);
-                    let mut config = OpenAIClientConfig::openai(key);
-                    config.default_model = Some(model);
-                    return Arc::new(OpenAIClient::from_config(config));
-                }
+                    && !key.is_empty() {
+                        let model = self.resolve_model_for_request("openai", req_model);
+                        let mut config = OpenAIClientConfig::openai(key);
+                        config.default_model = Some(model);
+                        return Arc::new(OpenAIClient::from_config(config));
+                    }
                 if let Ok(key) = std::env::var("MINIMAX_API_KEY")
-                    && !key.is_empty()
-                {
-                    return Arc::new(OpenAIClient::minimax(
-                        key,
-                        Self::first_non_empty_env(&["MINIMAX_BASE_URL", "MINIMAX_API_BASE_URL"]),
-                    ));
-                }
+                    && !key.is_empty() {
+                        return Arc::new(OpenAIClient::minimax(
+                            key,
+                            Self::first_non_empty_env(&[
+                                "MINIMAX_BASE_URL",
+                                "MINIMAX_API_BASE_URL",
+                            ]),
+                        ));
+                    }
                 // Fallback: Ollama
                 Arc::new(OllamaClient::new(
                     std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
@@ -617,17 +617,6 @@ impl AgentServiceImpl {
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_3_stage_anthropic_tool_gating: false,
-
-            enable_openai_hooks: false,
-            openai_input_max_length: 50000,
-            openai_input_require_patterns: vec![],
-            openai_input_deny_patterns: vec![],
-            openai_output_min_length: 0,
-            openai_output_require_json: false,
-            openai_output_deny_patterns: vec![],
-            openai_tool_allowed: vec![],
-            openai_tool_block_args: vec![],
-
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
@@ -755,6 +744,7 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = crate::tools::all_tools(
+            self.llm_override.clone(),
             None, // Pass None for LLM in tools to avoid circular dependencies for now
             None,
             todos,
@@ -769,11 +759,10 @@ impl AgentServiceImpl {
         tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty()
-            && let Ok(dep) = Department::from_str(department)
-        {
-            let dep_cfg = get_department_config(dep);
-            tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
-        }
+            && let Ok(dep) = Department::from_str(department) {
+                let dep_cfg = get_department_config(dep);
+                tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
+            }
 
         if let Some(toolset) = toolset {
             if !toolset.builtin_tools.is_empty() {
@@ -1040,12 +1029,12 @@ impl AgentService for AgentServiceImpl {
                         if (err_str.contains("timeout")
                             || err_str.contains("rate limit")
                             || err_str.contains("unavailable"))
-                            && attempt < max_attempts
-                        {
-                            last_result = Err(e);
-                            tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
-                            continue;
-                        }
+                            && attempt < max_attempts {
+                                last_result = Err(e);
+                                tokio::time::sleep(std::time::Duration::from_secs(1 << attempt))
+                                    .await;
+                                continue;
+                            }
                         last_result = Err(e);
                         break;
                     }
@@ -1115,17 +1104,6 @@ impl AgentService for AgentServiceImpl {
                 max_retries: 2,
                 enable_single_agent_maximization: false,
             enable_3_stage_anthropic_tool_gating: false,
-
-            enable_openai_hooks: false,
-            openai_input_max_length: 50000,
-            openai_input_require_patterns: vec![],
-            openai_input_deny_patterns: vec![],
-            openai_output_min_length: 0,
-            openai_output_require_json: false,
-            openai_output_deny_patterns: vec![],
-            openai_tool_allowed: vec![],
-            openai_tool_block_args: vec![],
-
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
@@ -1198,21 +1176,12 @@ impl AgentService for AgentServiceImpl {
             } else {
                 Some(std::path::PathBuf::from(&sub_req.working_dir))
             };
-
-            let anthropic_memory = self.anthropic_memory.clone();
-            let accessor = if let Some(mem) = &anthropic_memory {
-                use crate::memory_store::LongTermMemory;
-                mem.as_anthropic_accessor()
-            } else {
-                None
-            };
-
             let tools = self
                 .build_tools(
                     sub_req.toolset_config.as_ref(),
                     "",
                     working_dir,
-                    accessor,
+                    None,
                     observation_store.clone(),
                 )
                 .await;
@@ -1233,7 +1202,7 @@ impl AgentService for AgentServiceImpl {
 
         // Remote dispatch: forward to sub-agent gRPC server.
         use crate::proto::agent_service::{
-            RunTaskRequest, agent_service_client::AgentServiceClient,
+            agent_service_client::AgentServiceClient, RunTaskRequest,
         };
 
         let channel =
@@ -1635,9 +1604,7 @@ mod memory_tests {
     #[tokio::test]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
-            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
-            std::fs::create_dir_all(".test-agent-memory").unwrap();
+            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true"); std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory"); std::fs::create_dir_all(".test-agent-memory").unwrap();
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 
@@ -1663,39 +1630,4 @@ mod memory_tests {
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
     }
-
-    #[tokio::test]
-    async fn test_dispatch_to_sub_agent_injects_anthropic_memory() {
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
-        let base_dir = std::path::PathBuf::from(".test-agent-memory-subagent");
-        let store = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir).unwrap();
-        service.anthropic_memory = Some(Arc::new(store));
-
-        assert!(
-            service.anthropic_memory.is_some(),
-            "Anthropic Memory should be initialized"
-        );
-
-        // Construct a dummy SubAgentRequest.
-        let req = tonic::Request::new(crate::proto::agent_service::SubAgentRequest {
-            task: "test task".to_string(),
-            working_dir: "".to_string(),
-            sub_agent_address: "".to_string(), // Forces in-process dispatch
-            ..Default::default()
-        });
-
-        // Execute dispatch_to_sub_agent (it will run and return empty because there's no LLM override, but we check if it passes without panic).
-        // In a real scenario we'd mock the LLM and check tools, but here we just ensure the dispatch pathway doesn't crash when memory is enabled.
-        let res = service.dispatch_to_sub_agent(req).await;
-
-        // We expect it to run and not crash. Since we don't have a valid LLM setup in this simple unit test,
-        // we expect it to return an error (either LLM initialization failure or early exit). We check for an Ok or Err safely.
-        match res {
-            Ok(_) => println!("Sub-agent dispatch succeeded"),
-            Err(e) => println!("Sub-agent dispatch safely errored as expected without panic: {}", e),
-        }
-
-        let _ = tokio::fs::remove_dir_all(".test-agent-memory-subagent").await;
-    }
-
 }

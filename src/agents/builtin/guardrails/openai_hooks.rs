@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
 use ohc_builtin_agent_core::types::ToolCall;
 
@@ -85,8 +86,7 @@ impl OutputGuardrail for OpenAiOutputAuditor {
         if self.require_json {
             // A simple check to see if it starts with { or [
             let trimmed = output.trim();
-            if !(trimmed.starts_with('{') && trimmed.ends_with('}')
-                || trimmed.starts_with('[') && trimmed.ends_with(']'))
+            if !(trimmed.starts_with('{') && trimmed.ends_with('}') || trimmed.starts_with('[') && trimmed.ends_with(']'))
             {
                 return Err(
                     "OpenAI Output Guardrail tripped: Output must be a valid JSON object or array."

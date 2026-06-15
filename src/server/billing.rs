@@ -236,8 +236,7 @@ impl Tracker {
 
     pub fn get_storage_cost_cents(&self, bytes: i64) -> i64 {
         let cost_per_gb = if let Some(ref auditor) = self.auditor { auditor.get_cost_per_gb_month() } else { 0.10 };
-        let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        (gb * cost_per_gb * 100.0).round() as i64
+        crate::pricing::calculator::calculate_storage_cost_cents(bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: cost_per_gb, ..Default::default() })
     }
 
     pub fn get_total_cost_cents(&self) -> i64 {
