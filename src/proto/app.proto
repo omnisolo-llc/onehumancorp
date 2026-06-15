@@ -441,3 +441,23 @@ message CreateUnifiedBookingResponse {
     UnifiedBooking booking = 2;
     string error = 3;
 }
+
+message SyncEvent {
+    string id = 1;
+    string action_type = 2;
+    string payload = 3;
+    int64 timestamp_ms = 4;
+}
+
+message SyncBatchRequest {
+    string tenant_id = 1;
+    string batch_id = 2;
+    repeated SyncEvent events = 3;
+}
+
+message SyncBatchResponse {
+    bool success = 1;
+    int32 applied_count = 2;
+    int32 conflict_count = 3;
+    repeated string conflict_event_ids = 4;
+}
