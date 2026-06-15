@@ -35,7 +35,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "no-sandbox",
     ]
     if manual:
-        tags.append("manual")
+        pass
     if exclusive:
         tags.append("exclusive")
     env = {
@@ -91,7 +91,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             name = name,
             spec_args = [spec],
             common_data = common_data,
-            manual = True,
+            manual = False,
             timeout = "eternal",
         )
 
@@ -124,7 +124,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             name = shard_name,
             spec_args = shard_specs,
             common_data = common_data,
-            manual = True,
+            manual = False,
             timeout = "eternal",
             exclusive = True,
             extra_env = {"PLAYWRIGHT_SHARD": "{}/{}".format(index + 1, ci_shard_count)} if use_runfile_discovery else {},
@@ -133,6 +133,5 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
 
     native.test_suite(
         name = "playwright",
-        tags = ["manual"],
         tests = [":playwright_spec_coverage"] + shard_targets,
     )

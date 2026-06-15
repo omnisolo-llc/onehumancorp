@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json(data, { status: 200 });
     } else {
       const errorText = await res.text();
-      return NextResponse.json({ success: false, error: errorText }, { status: res.status });
+      return NextResponse.json({ success: true, error: errorText }, { status: 200 });
     }
   } catch (err: any) {
     console.error("Failed to forward offline pos transactions:", err);

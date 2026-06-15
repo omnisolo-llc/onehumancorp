@@ -49,7 +49,7 @@ importers:
         version: 3.21.4
       next:
         specifier: ^16.2.7
-        version: 16.2.7(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       pg:
         specifier: ^8.21.0
         version: 8.21.0
@@ -73,8 +73,8 @@ importers:
         specifier: ^1.28.1
         version: 1.28.1
       '@playwright/test':
-        specifier: ^1.61.0
-        version: 1.61.0
+        specifier: 1.50.1
+        version: 1.50.1
       '@tailwindcss/postcss':
         specifier: ^4.3.0
         version: 4.3.0
@@ -131,9 +131,9 @@ importers:
         version: 29.1.1
       next-router-mock:
         specifier: ^1.0.5
-        version: 1.0.5(next@16.2.7(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        version: 1.0.5(next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       playwright:
-        specifier: ^1.50.1
+        specifier: 1.50.1
         version: 1.50.1
       postcss:
         specifier: ^8.5.15
@@ -771,8 +771,8 @@ packages:
   '@oxc-project/types@0.133.0':
     resolution: {integrity: sha512-KzkdCd6Uxqnf6l3HOw1xfatAlUURA0g14cvBYFyJ5SaNOQbOUvBr9PKArcPcrNIeRsBdgcUzOGrhKveVpvOIGA==}
 
-  '@playwright/test@1.61.0':
-    resolution: {integrity: sha512-cKA5B6lpFEMyMGjxF54QihfYpB4FkEGH+qZhtArDEG+wezQAJY8Pq6C7T1SjWz+FFzt3TbyoXBQYk/0292TdJA==}
+  '@playwright/test@1.50.1':
+    resolution: {integrity: sha512-Jii3aBg+CEDpgnuDxEp/h7BimHcUTDlpEtce89xEumlJ5ef2hqepZ+PWp1DDpYC/VO9fmWVI1IlEaoI5fK9FXQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2313,18 +2313,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.61.0:
-    resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   playwright@1.50.1:
     resolution: {integrity: sha512-G8rwsOQJ63XG6BbKj2w5rHeavFjy5zynBA9zsJMMtBoe/Uf757oG12NXz6e6OirF7RCrTVAKFXbLmn1RbL7Qaw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright@1.61.0:
-    resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3477,9 +3467,9 @@ snapshots:
 
   '@oxc-project/types@0.133.0': {}
 
-  '@playwright/test@1.61.0':
+  '@playwright/test@1.50.1':
     dependencies:
-      playwright: 1.61.0
+      playwright: 1.50.1
 
   '@powersync/common@1.54.0':
     dependencies:
@@ -5076,12 +5066,12 @@ snapshots:
 
   neotraverse@0.6.18: {}
 
-  next-router-mock@1.0.5(next@16.2.7(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7):
+  next-router-mock@1.0.5(next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7):
     dependencies:
-      next: 16.2.7(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      next: 16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
 
-  next@16.2.7(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       '@next/env': 16.2.7
       '@swc/helpers': 0.5.15
@@ -5100,7 +5090,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.2.7
       '@next/swc-win32-arm64-msvc': 16.2.7
       '@next/swc-win32-x64-msvc': 16.2.7
-      '@playwright/test': 1.61.0
+      '@playwright/test': 1.50.1
       sharp: 0.34.5
     transitivePeerDependencies:
       - '@babel/core'
@@ -5218,17 +5208,9 @@ snapshots:
 
   playwright-core@1.50.1: {}
 
-  playwright-core@1.61.0: {}
-
   playwright@1.50.1:
     dependencies:
       playwright-core: 1.50.1
-    optionalDependencies:
-      fsevents: 2.3.2
-
-  playwright@1.61.0:
-    dependencies:
-      playwright-core: 1.61.0
     optionalDependencies:
       fsevents: 2.3.2
 

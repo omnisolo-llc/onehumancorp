@@ -1,9 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
-  test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
+  test('should queue mutations locally when offline and sync when online', async ({ page, context, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+
     // Navigate to the dashboard
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Set network to offline
     await context.setOffline(true);
@@ -42,9 +44,6 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
             btn.classList.add('bg-red-100', 'text-red-700');
 
             let queue = [];
-            try {
-              queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-            } catch(e) {}
             queue.push({
                 id: 'e2e-product-falafel',
                 type: 'inventory_toggle',

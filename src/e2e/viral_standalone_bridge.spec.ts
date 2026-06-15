@@ -44,7 +44,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
 
     // Verify the clipboard content includes the link and the "Powered by OHC" branding
     // Playwright evaluates clipboard via API in headed mode or context config but we can check visual drift here
-    // since the original test skips clipboard API evaluation due to permissions in headless mode sometimes.
+    // since the original tests clipboard API evaluation due to permissions in headless mode sometimes.
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
       expect(clipboardText).toContain('Join my team on OHC!');
