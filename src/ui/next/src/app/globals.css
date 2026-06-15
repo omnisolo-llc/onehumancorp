@@ -94,7 +94,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   color: #b9c2d0;
   font-size: 13px;
   font-weight: 600;
@@ -114,7 +114,7 @@ body {
 .app-nav-marker {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.08);
@@ -334,7 +334,7 @@ body {
   justify-content: center;
   gap: 7px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #cbd5e1;
   background: #fff;
   color: #263244;
@@ -344,8 +344,8 @@ body {
 }
 
 .app-button.primary {
-  border-color: #1f78e5;
-  background: #1f78e5;
+  border-color: #0071E3;
+  background: #0071E3;
   color: #fff;
 }
 
@@ -354,7 +354,7 @@ body {
 }
 
 .app-button.primary:hover {
-  background: #1768ca;
+  background: #005bb5;
 }
 
 .app-table-wrap {
