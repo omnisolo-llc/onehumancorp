@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use super::locks::DistributedLock;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
@@ -31,15 +30,18 @@ pub trait Repository: Send + Sync {
     fn update_task_state(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String>;
 }
 
+use crate::orchestration::mesh::TeammateMesh;
+use serde_json::json;
+
 pub struct StateMachine {
     repo: Arc<dyn Repository>,
     lock: Arc<dyn DistributedLock>,
+    mesh: Option<Arc<dyn TeammateMesh>>,
     allowed_transitions: HashMap<State, Vec<State>>,
-    transport: Option<Arc<dyn MeshTransport>>,
 }
 
 impl StateMachine {
-    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>, transport: Option<Arc<dyn MeshTransport>>) -> Self {
+    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>, mesh: Option<Arc<dyn TeammateMesh>>) -> Self {
         let mut allowed_transitions = HashMap::new();
         allowed_transitions.insert(State::Pending, vec![State::Ready]);
         allowed_transitions.insert(State::Ready, vec![State::InProgress]);
@@ -49,12 +51,12 @@ impl StateMachine {
         Self {
             repo,
             lock,
+            mesh,
             allowed_transitions,
-            transport,
         }
     }
 
-    pub async fn transition(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String> {
+    pub async fn transition(&self, tenant_id: &str, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String> {
         let _guard = self.lock.acquire(task_id).await?;
 
         let current_state = self.repo.get_task_state(task_id)?;
@@ -69,57 +71,66 @@ impl StateMachine {
         self.repo.update_task_state(task_id, new_state.clone(), agent_id)?;
 
         // Publish to Teammate Mesh here
-        if let Some(transport) = &self.transport {
-            let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                agent_id: if agent_id.is_empty() { "system".to_string() } else { agent_id.to_string() },
-                action: format!("state_transition_to_{}", new_state.as_str()),
-                status: "ok".to_string(),
-                payload: task_id.as_bytes().to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
-            let _ = transport.publish("mesh:tasks", event).await;
+        if let Some(mesh) = &self.mesh {
+            let topic = format!("{}:mesh:tasks", tenant_id);
+            let payload = json!({
+                "tenant_id": tenant_id,
+                "task_id": task_id,
+                "state": new_state.as_str(),
+                "agent_id": agent_id
+            }).to_string().into_bytes();
+            let _ = mesh.publish(&topic, payload).await;
         }
 
         Ok(())
     }
 
-    pub async fn transition_to_ready(&self, task_id: &str) -> Result<(), String> {
-        self.transition(task_id, State::Ready, "").await
+    pub async fn transition_to_ready(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {
+        self.transition(tenant_id, task_id, State::Ready, "").await
     }
 
-    pub async fn transition_to_in_progress(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
-        self.transition(task_id, State::InProgress, agent_id).await
+    pub async fn transition_to_in_progress(&self, tenant_id: &str, task_id: &str, agent_id: &str) -> Result<(), String> {
+        self.transition(tenant_id, task_id, State::InProgress, agent_id).await
     }
 
-    pub async fn transition_to_completed(&self, task_id: &str) -> Result<(), String> {
-        self.transition(task_id, State::Completed, "").await
+    pub async fn transition_to_completed(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {
+        self.transition(tenant_id, task_id, State::Completed, "").await
     }
 
-    pub async fn transition_to_blocked(&self, task_id: &str) -> Result<(), String> {
-        self.transition(task_id, State::Blocked, "").await
+    pub async fn transition_to_blocked(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {
+        self.transition(tenant_id, task_id, State::Blocked, "").await
     }
 
-    pub async fn transition_to_failed(&self, task_id: &str) -> Result<(), String> {
-        self.transition(task_id, State::Failed, "").await
+    pub async fn transition_to_failed(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {
+        self.transition(tenant_id, task_id, State::Failed, "").await
     }
 
-    pub async fn start_mesh_listener(self: Arc<Self>) -> Result<(), String> {
-        if let Some(transport) = &self.transport {
-            let sm_clone = self.clone();
-            let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
-                use prost::Message;
-                if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
-                    if event.action == "task_completed" {
-                        let task_id = String::from_utf8_lossy(&event.payload).to_string();
-                        let sm = sm_clone.clone();
-                        tokio::spawn(async move {
-                            let _ = sm.transition_to_completed(&task_id).await;
-                        });
+    pub async fn start_mesh_listener(self: Arc<Self>, mesh: Arc<dyn TeammateMesh>) -> Result<(), String> {
+        let pattern = "*:mesh:tasks".to_string();
+        mesh.subscribe_pattern(&pattern, Box::new(move |msg| {
+            let sm = self.clone();
+            tokio::spawn(async move {
+                if let Ok(payload) = String::from_utf8(msg.payload.clone()) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&payload) {
+                        if let (Some(tenant), Some(task_id), Some(action)) = (
+                            json.get("tenant_id").and_then(|v| v.as_str()),
+                            json.get("task_id").and_then(|v| v.as_str()),
+                            json.get("action").and_then(|v| v.as_str())
+                        ) {
+                            let agent_id = msg.agent_id.as_str();
+                            let _ = match action {
+                                "ready" => sm.transition_to_ready(tenant, task_id).await,
+                                "in_progress" => sm.transition_to_in_progress(tenant, task_id, agent_id).await,
+                                "completed" => sm.transition_to_completed(tenant, task_id).await,
+                                "blocked" => sm.transition_to_blocked(tenant, task_id).await,
+                                "failed" => sm.transition_to_failed(tenant, task_id).await,
+                                _ => Ok(()),
+                            };
+                        }
                     }
                 }
             });
-            transport.subscribe("mesh:tasks", handler).await?;
-        }
+        })).await?;
         Ok(())
     }
 }

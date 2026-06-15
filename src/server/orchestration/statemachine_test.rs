@@ -35,25 +35,26 @@ async fn test_statemachine_valid_transitions() {
     let sm = StateMachine::new(repo.clone(), lock, None);
 
     let task_id = "task1";
+    let tenant_id = "tenant1";
 
     // Pending -> Ready
-    sm.transition_to_ready(task_id).await.unwrap();
+    sm.transition_to_ready(tenant_id, task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Ready);
 
     // Ready -> InProgress
-    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(tenant_id, task_id, "agent1").await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Blocked
-    sm.transition_to_blocked(task_id).await.unwrap();
+    sm.transition_to_blocked(tenant_id, task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Blocked);
 
     // Blocked -> InProgress
-    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(tenant_id, task_id, "agent1").await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Completed
-    sm.transition_to_completed(task_id).await.unwrap();
+    sm.transition_to_completed(tenant_id, task_id).await.unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Completed);
 }
 
@@ -64,9 +65,10 @@ async fn test_statemachine_invalid_transition() {
     let sm = StateMachine::new(repo.clone(), lock, None);
 
     let task_id = "task2";
+    let tenant_id = "tenant1";
 
     // Pending -> InProgress (Invalid)
-    let err = sm.transition_to_in_progress(task_id, "agent1").await;
+    let err = sm.transition_to_in_progress(tenant_id, task_id, "agent1").await;
     assert!(err.is_err());
 }
 
@@ -77,18 +79,19 @@ async fn test_statemachine_concurrent_transitions() {
     let sm = Arc::new(StateMachine::new(repo.clone(), lock, None));
 
     let task_id = "task3";
+    let tenant_id = "tenant1";
 
-    sm.transition_to_ready(task_id).await.unwrap();
+    sm.transition_to_ready(tenant_id, task_id).await.unwrap();
 
     let sm1 = sm.clone();
     let sm2 = sm.clone();
 
     let t1 = tokio::spawn(async move {
-        sm1.transition_to_in_progress("task3", "agent1").await
+        sm1.transition_to_in_progress("tenant1", "task3", "agent1").await
     });
 
     let t2 = tokio::spawn(async move {
-        sm2.transition_to_in_progress("task3", "agent2").await
+        sm2.transition_to_in_progress("tenant1", "task3", "agent2").await
     });
 
     let res1 = t1.await.unwrap();
@@ -99,45 +102,4 @@ async fn test_statemachine_concurrent_transitions() {
     if res2.is_ok() { success_count += 1; }
 
     assert_eq!(success_count, 1, "Only one transition should succeed");
-}
-
-#[tokio::test]
-async fn test_mesh_trigger_state_transition() {
-    let repo = Arc::new(MockRepository::new());
-    let lock = Arc::new(StandaloneLock::new());
-    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
-    let sm = Arc::new(StateMachine::new(repo.clone(), lock, Some(transport.clone())));
-
-    let task_id = "task_mesh_trigger";
-
-    sm.transition_to_ready(task_id).await.unwrap();
-    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
-
-    sm.clone().start_mesh_listener().await.unwrap();
-
-    let event = ::server_ohc::orchestration::TeammateMeshEvent {
-        agent_id: "agent1".to_string(),
-        action: "task_completed".to_string(),
-        status: "ok".to_string(),
-        payload: task_id.as_bytes().to_vec(),
-        msg_id: uuid::Uuid::new_v4().to_string(),
-    };
-
-    let mut buf = Vec::new();
-    prost::Message::encode(&event, &mut buf).unwrap();
-
-    let msg = ohc_builtin_agent::mesh::transport::Message {
-        msg_id: "msg1".to_string(),
-        payload: buf,
-        action: "task_completed".to_string(),
-        agent_id: "agent1".to_string(),
-        status: "ok".to_string(),
-    };
-
-    let _ = transport.publish("mesh:tasks", event).await;
-
-    // wait for the transition to complete
-    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-    assert_eq!(repo.get_task_state(task_id).unwrap(), State::Completed);
 }

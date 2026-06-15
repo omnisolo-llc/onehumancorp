@@ -22,10 +22,10 @@ export function TeammateSyncIndicator() {
           if (data.action && data.agent_id) {
             let readableMessage = `Agent ${data.agent_id} completed an action: ${data.action}`;
 
-            if (data.action === "task_completed" && data.agent_id === "Marketing Agent") {
+            if (data.action === "completed" && data.agent_id === "Marketing Agent") {
                 readableMessage = "The Promoter is briefing The Manager";
             }
-            if (data.action === "task_completed" && data.agent_id === "Operations Agent") {
+            if (data.action === "completed" && data.agent_id === "Operations Agent") {
                 readableMessage = "Operations has updated the system";
             }
             if (data.action.startsWith("state_transition")) {

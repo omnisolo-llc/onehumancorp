@@ -32,7 +32,7 @@ describe('TeammateSyncIndicator', () => {
     act(() => {
       mockWebSocket.onmessage({
         data: JSON.stringify({
-          action: 'task_completed',
+          action: 'completed',
           agent_id: 'Marketing Agent'
         })
       });
