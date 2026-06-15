@@ -1,10 +1,11 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, State, Extension},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post, put},
     Json, Router,
 };
+use crate::common::Claims;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -21,6 +22,7 @@ where
         .route("/{id}", get(get_quote))
         .route("/{id}", put(update_quote))
         .route("/{id}/accept", post(accept_quote))
+        .route("/{id}/approve", axum::routing::patch(approve_quote))
 }
 
 #[derive(Serialize)]
@@ -245,6 +247,41 @@ async fn accept_quote(
         Ok(_) => (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
         Err(e) => {
             tracing::error!("Failed to accept quote: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response()
+        }
+    }
+}
+
+async fn approve_quote(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let quote_id = match Uuid::parse_str(&id) {
+        Ok(uid) => uid,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    match sqlx::query("UPDATE quotes SET status = 'APPROVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+        .bind(quote_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await
+    {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+            } else {
+                (StatusCode::NOT_FOUND, Json(serde_json::json!({"success": false, "error": "Quote not found or unauthorized"}))).into_response()
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to approve quote: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response()
         }
     }
