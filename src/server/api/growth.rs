@@ -2329,6 +2329,38 @@ mod tests {
         assert!(res_json.message.contains("Powered by OHC"));
     }
 
+
+    #[tokio::test]
+    async fn test_aggregated_team_invites_metrics() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test-org/agent1".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "agent1".to_string(),
+        };
+
+        // Insert dummy invite
+        let invite_id = "test-invite-agg-123";
+        sqlx::query("INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at) VALUES ($1, 'test-org', 'test-org', 'inviter1', 'invitee1', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING")
+            .bind(invite_id)
+            .execute(&pool).await.unwrap();
+
+        let res = handle_aggregated_team_invites_metrics(Extension(state.clone()), axum::extract::Extension(auth_info)).await;
+        assert!(res.is_ok());
+        let metrics_res_json = res.unwrap().0;
+        assert_eq!(metrics_res_json.total_invites, 1);
+        assert_eq!(metrics_res_json.metrics.active_referrals, 0);
+    }
+
     #[tokio::test]
     async fn test_team_invite_accept() {
         let pool = setup_db().await;

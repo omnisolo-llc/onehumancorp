@@ -534,3 +534,5 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO team_invites (id, tenant_id, team_id, inviter_id, invitee_id, status) VALUES ('inv-e2e', 'e2e-tenant', 'e2e-tenant', 'owner', 'pending-user', 'PENDING') ON CONFLICT DO NOTHING;

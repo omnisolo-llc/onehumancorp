@@ -6,6 +6,7 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
+import { ShareAndSaveWidget } from "../components/ShareAndSaveWidget";
 
 
 function CheckoutContent() {
@@ -20,6 +21,7 @@ function CheckoutContent() {
   const [tenant, setTenant] = useState("my-store");
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
+  const [shareDiscountApplied, setShareDiscountApplied] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -296,11 +298,17 @@ function CheckoutContent() {
             </p>
           </div>
 
+          <ShareAndSaveWidget
+            tenantId={tenant}
+            discountPercentage={10}
+            onShareComplete={() => setShareDiscountApplied(true)}
+          />
+
           {deliveryFee !== null && (
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${(((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
@@ -308,7 +316,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${((45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
