@@ -403,7 +403,7 @@ async fn list_invoices_handler(
     Query(query): Query<InvoiceListQuery>,
 ) -> impl IntoResponse {
     let pool = &hub.pool;
-    let tenant_id = query.tenant.unwrap_or_else(|| "default-tenant".to_string());
+    let tenant_id = query.tenant.unwrap_or_else(|| "test-tenant".to_string());
 
     use sqlx::Row;
     let invoices_res = sqlx::query("SELECT id, client_id, client_name, status, due_date, currency, total_amount, stripe_invoice_id, stripe_payment_link FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC")
