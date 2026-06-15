@@ -21,6 +21,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
@@ -50,7 +51,24 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
+            "tenant.order.created" => {
+                let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
+                if !notes.is_empty() {
+                    // Extract tenant language preference here if available, defaulting to English/Arabic for now.
+                    format!("Translate order notes to the tenant's preferred language for the kitchen: {}", notes)
+                } else {
+                    "Process Order & Update Inventory".to_string()
+                }
+            },
+            "tenant.order.updated" => {
+                let status = event.payload.get("status").and_then(|v| v.as_str()).unwrap_or("");
+                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                if status == "Ready" {
+                    format!("Notify customer that order {} is ready for pickup via SMS/WhatsApp", order_id)
+                } else {
+                    format!("Order {} status updated to {}", order_id, status)
+                }
+            },
             "LowStockAlert" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if !msg.is_empty() {
