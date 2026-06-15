@@ -11,4 +11,5 @@ CREATE TABLE IF NOT EXISTS business_milestones (
 CREATE INDEX IF NOT EXISTS idx_business_milestones_tenant_id ON business_milestones(tenant_id);
 
 ALTER TABLE business_milestones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_business_milestones ON business_milestones;
 CREATE POLICY tenant_isolation_business_milestones ON business_milestones USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
