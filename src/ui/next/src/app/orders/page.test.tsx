@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import OrdersPage from "./page";
@@ -15,17 +15,19 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-test("does not expose backend API route names in the orders UI", () => {
+test("does not expose backend API route names in the orders UI", async () => {
   global.fetch = vi.fn(() => Promise.resolve({
     ok: true,
     json: () => Promise.resolve([]),
   })) as any;
 
-  render(
-    <TooltipProvider>
-      <OrdersPage />
-    </TooltipProvider>,
-  );
+  await act(async () => {
+    render(
+      <TooltipProvider>
+        <OrdersPage />
+      </TooltipProvider>
+    );
+  });
 
   expect(screen.getByText("Order List")).toBeDefined();
   expect(screen.queryByText(/\/api\/ui\/orders/)).toBeNull();
