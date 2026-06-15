@@ -47,6 +47,7 @@ static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<V
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
+static GET_INBOX_MESSAGES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
@@ -2868,9 +2869,79 @@ async fn generate_manychat_draft_handler() -> axum::response::Response {
     }))).into_response()
 }
 
-async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
+async fn get_inbox_messages_handler(
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
+
+    let org_id = user.organization_id.unwrap_or_default();
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let cache_key = format!("inbox_messages:{}:mobile:{}", org_id, mobile_optimized);
+    let cache = GET_INBOX_MESSAGES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let org_id_bg = org_id.clone();
+        let cache_key_bg = cache_key.clone();
+        let pool_bg = pool.clone();
+        tokio::spawn(async move {
+            let mut tx = match pool_bg.begin().await {
+                Ok(t) => t,
+                Err(_) => return,
+            };
+            if crate::common::auth_utils::set_org_context(&mut *tx, &org_id_bg).await.is_err() {
+                return;
+            }
+            if let Ok(rows) = sqlx::query(
+                "SELECT id, tenant_id, source, content,
+                        COALESCE(original_content, content) AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        draft_reply, status, created_at
+                 FROM inbox_messages
+                 ORDER BY created_at DESC"
+            ).fetch_all(&mut *tx).await {
+                let _ = tx.commit().await;
+                let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                    let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                    let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "original_message": row.get::<String, _>("original_content"),
+                            "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": created_at_str,
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "original_message": row.get::<String, _>("original_content"),
+                            "translated_from_language": row.get::<String, _>("translated_from_language"),
+                            "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": created_at_str,
+                        })
+                    }
+                }).collect();
+                if let Some(c) = GET_INBOX_MESSAGES_CACHE.get() {
+                    c.set(&cache_key_bg, messages, std::time::Duration::from_secs(5)).await;
+                }
+            }
+        });
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let mut tx = match pool.begin().await {
         Ok(t) => t,
@@ -2881,7 +2952,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     };
 
-    let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
         ::server_telemetry::record_error_signal("[INFRA] Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
@@ -2902,20 +2972,34 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         Ok(rows) => {
             let _ = tx.commit().await;
             let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
-                            let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
                 let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
-                serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "source": row.get::<String, _>("source"),
-                    "content": row.get::<String, _>("content"),
-                    "original_message": row.get::<String, _>("original_content"),
-                    "translated_from_language": row.get::<String, _>("translated_from_language"),
-                    "generated_response": row.get::<String, _>("draft_reply"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": created_at_str,
-                })
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "original_message": row.get::<String, _>("original_content"),
+                        "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": created_at_str,
+                    })
+                } else {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "original_message": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
+                        "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": created_at_str,
+                    })
+                }
             }).collect();
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
@@ -3760,7 +3844,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                             "content": row.get::<String, _>("content"),
                             "original_message": row.get::<String, _>("original_content"),
                             "translated_from_language": row.get::<String, _>("translated_from_language"),
-                            "generated_response": row.get::<String, _>("draft_reply"),
+                            "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
@@ -4845,7 +4929,7 @@ async fn list_ui_inbox_handler(
                                 "content": row.get::<String, _>("content"),
                                 "original_message": row.get::<String, _>("original_content"),
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
-                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -4878,6 +4962,8 @@ async fn list_ui_inbox_handler(
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
                                 "content": row.get::<String, _>("content"),
+                                "original_message": row.get::<String, _>("original_content"),
+                                "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -4888,7 +4974,7 @@ async fn list_ui_inbox_handler(
                                 "content": row.get::<String, _>("content"),
                                 "original_message": row.get::<String, _>("original_content"),
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
-                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "generated_response": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
