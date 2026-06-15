@@ -644,6 +644,37 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <!-- OHC Wrapped: Year in Review -->
+      <div class="ohc-growth-card" id="wrapped-widget" style="display: none; background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(0, 102, 255, 0.3);">
+        <div style="text-align: center; padding: 10px;">
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">2026 Wrapped 🎁</h2>
+          <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+              <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">$0.00</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
+              <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
+              <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
+              <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+          </div>
+
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 12px; padding: 12px; font-weight: 700;">
+            Share 2026 Success
+          </button>
+        </div>
+      </div>
+
       <!-- Viral Soft Paywall Loop -->
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1348,7 +1379,33 @@
       }
       checkMilestones();
 
+      async function checkWrapped() {
+        try {
+          const res = await fetch('/api/v1/growth/wrapped');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.total_sales > 0 || data.total_orders > 0) {
+              document.getElementById('wrapped-widget').style.display = 'block';
+              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
+              document.getElementById('wrapped-orders').innerText = data.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.total_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
 
+              const shareBtn = document.getElementById('wrapped-share-btn');
+              shareBtn.onclick = () => {
+                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                navigator.clipboard.writeText(text).then(() => {
+                  shareBtn.innerText = 'Copied to Clipboard! ✨';
+                  setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);
+                });
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch Wrapped data", e);
+        }
+      }
+      checkWrapped();
 
       const generateBtn = document.getElementById('generate-link-btn');
 
