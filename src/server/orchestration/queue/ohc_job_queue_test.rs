@@ -1,6 +1,5 @@
 use super::{OHCJobQueue, RedisLock, TaskQueue};
 use std::sync::Arc;
-use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::test]
@@ -104,7 +103,7 @@ async fn test_ohc_job_queue_fail_backoff() {
 }
 
 use super::worker_pool::{WorkerPool, JobHandler};
-use super::ohc_universal_ledger::{OHCUniversalLedger, OHCLedgerEntry};
+use super::ohc_universal_ledger::{OHCUniversalLedger};
 
 struct TestHandler {
     ledger: Arc<OHCUniversalLedger>,

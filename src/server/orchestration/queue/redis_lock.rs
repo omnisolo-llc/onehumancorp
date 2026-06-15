@@ -1,6 +1,4 @@
-use std::time::Duration;
 use uuid::Uuid;
-use redis::AsyncCommands;
 
 pub struct RedisLock {
     client: redis::Client,
