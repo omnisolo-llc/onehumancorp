@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
