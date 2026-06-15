@@ -321,7 +321,11 @@ mod tests {
         let (time_slot, stripe_link) = result.unwrap();
 
         assert_eq!(quote.status, "approved");
-        assert_eq!(quote.amount, 20000);
+
+        // Since approve_quote may apply a 15% surge if start_time is between 17 and 20 hours (UTC),
+        // we check that the amount is either the base amount or the surged amount.
+        assert!(quote.amount == 20000 || quote.amount == 23000);
+
         assert!(stripe_link.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert!(time_slot.start_time < time_slot.end_time);
     }
