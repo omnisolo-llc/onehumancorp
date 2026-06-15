@@ -278,30 +278,37 @@ pub struct ChangelogSection {
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    vec![
-        ChangelogSection {
-            version: "Version 1.1 (Latest)".to_string(),
-            screenshot_url: None,
-            content_lines: vec![
-                "### 🌟 New Features".to_string(),
-                "- **Help Center:** Fully searchable help center with video tutorials and articles.".to_string(),
-                "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you.".to_string(),
-            ]
-        },
-        ChangelogSection {
-            version: "Version 1.0".to_string(),
-            screenshot_url: Some("/dashboard_with_charts.png".to_string()),
-            content_lines: vec![
-                "### 🌟 New Features".to_string(),
-                "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.".to_string(),
-                "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.".to_string(),
-                "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.".to_string(),
-                "### 🛠️ Improvements".to_string(),
-                "- Faster loading times for product images.".to_string(),
-                "- Simplified checkout process for your customers.".to_string(),
-            ]
+    let mut sections = Vec::new();
+    let content = std::include_str!("../../../CHANGELOG.md");
+
+    let mut current_version = String::new();
+    let mut current_lines = Vec::new();
+
+    for line in content.lines() {
+        if line.starts_with("## ") {
+            if !current_version.is_empty() {
+                sections.push(ChangelogSection {
+                    version: current_version.clone(),
+                    screenshot_url: None,
+                    content_lines: current_lines.clone(),
+                });
+            }
+            current_version = line.trim_start_matches("## ").trim().to_string();
+            current_lines = Vec::new();
+        } else if !current_version.is_empty() && !line.trim().is_empty() {
+            current_lines.push(line.to_string());
         }
-    ]
+    }
+
+    if !current_version.is_empty() {
+        sections.push(ChangelogSection {
+            version: current_version,
+            screenshot_url: None,
+            content_lines: current_lines,
+        });
+    }
+
+    sections
 }
 
 pub async fn get_changelog() -> Json<Vec<ChangelogSection>> {

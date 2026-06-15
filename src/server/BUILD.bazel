@@ -336,6 +336,7 @@ rust_library(
     compile_data = [
         "//src/ui/tauri/src/ui:all_files",
         "//src/ui/next/public/api/ui:all_files",
+        "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
