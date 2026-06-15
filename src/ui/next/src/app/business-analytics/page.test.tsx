@@ -1,5 +1,4 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import BusinessAnalytics from './page';
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 
@@ -8,12 +7,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  usePathname: () => '/business-analytics',
-}));
-
-vi.mock('../../components/TooltipRegistry', () => ({
-  TooltipProvider: ({ children }: any) => children,
-  WithTooltip: ({ children }: any) => children,
 }));
 
 beforeEach(() => {
@@ -36,8 +29,9 @@ test('renders Business Analytics heading', () => {
 
 test('navigates back to dashboard', () => {
   render(<BusinessAnalytics />);
-  const backButton = screen.getByText('Back to Dashboard').closest('a');
-  expect(backButton).toHaveAttribute('href', '/dashboard');
+  const backButton = screen.getByText('Back to Dashboard');
+  fireEvent.click(backButton);
+  expect(mockPush).toHaveBeenCalledWith('/dashboard');
 });
 
 test('shows locked predictive AI insights when not pro', () => {
