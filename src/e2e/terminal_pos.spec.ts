@@ -21,8 +21,26 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Wait for the UI to be ready
     await expect(page.getByRole('button', { name: 'New Order' })).toBeVisible();
 
+    // Set up request interception to verify the correct API calls are made for the connection token and payment intent
+    const tokenPromise = page.waitForRequest(
+      (request) => request.url().includes('/api/v1/payments/terminal/token') && request.method() === 'POST'
+    );
+
+    const intentPromise = page.waitForRequest(
+      (request) => request.url().includes('/api/v1/payments/terminal/intent') && request.method() === 'POST'
+    );
+
     // Click New Order
     await page.getByRole('button', { name: 'New Order' }).click();
+
+    // Wait for the token request to occur and assert it was successful
+    const tokenRequest = await tokenPromise;
+    expect(tokenRequest).toBeTruthy();
+
+    // Ensure intent is created with the expected currency
+    const intentRequest = await intentPromise;
+    const postData = intentRequest.postDataJSON();
+    expect(postData.currency).toBe('usd');
 
     // Check loading/processing state
     await expect(page.getByRole('status')).toBeVisible({ timeout: 10000 });
