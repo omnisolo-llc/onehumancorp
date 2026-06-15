@@ -117,3 +117,7 @@ pub fn webfetch_tool() -> Tool {
         })),
     }
 }
+
+#[cfg(test)]
+#[path = "webfetch_test.rs"]
+mod webfetch_test;
