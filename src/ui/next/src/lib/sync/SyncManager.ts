@@ -89,13 +89,14 @@ export class SyncManager {
 
     try {
       // Separate POS transactions from general offline sync
-      const posTransactions = queue.filter(m => m.type === 'tap_to_pay').map(m => {
+      const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'CASH_SALE').map(m => {
+        const amount = m.amount !== undefined ? m.amount : (m.payload?.amount_cents || 0);
         return {
           id: m.id,
           client_id: 'terminal_client', // Default fallback
-          amount_cents: Math.round(m.amount),
-          currency: m.currency || 'usd',
-          payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+          amount_cents: Math.round(Number(amount)),
+          currency: m.currency || m.payload?.currency || 'usd',
+          payload: m.payload ? JSON.stringify(m.payload) : JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString()
         };
       });
@@ -154,8 +155,27 @@ export class SyncManager {
         }
       }
 
+      // Sync Drawer Operations & Session starts
+      const drawerEvents = queue.filter(m => m.type === 'DRAWER_OP' || m.type === 'START_TERMINAL_SESSION' || m.type === 'END_TERMINAL_SESSION');
+      for (const event of drawerEvents) {
+        let endpoint = '';
+        if (event.type === 'DRAWER_OP') endpoint = '/api/v1/pos/cash/movement';
+        if (event.type === 'START_TERMINAL_SESSION') endpoint = '/api/v1/pos/sessions/start';
+        if (event.type === 'END_TERMINAL_SESSION') endpoint = '/api/v1/pos/sessions/end';
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-spiffe-id': spiffeId },
+          body: JSON.stringify(event.payload)
+        });
+        if (!res.ok) {
+          allOk = false;
+          console.error(`Failed to sync ${event.type}`);
+        }
+      }
+
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'DRAWER_OP' && m.type !== 'START_TERMINAL_SESSION' && m.type !== 'END_TERMINAL_SESSION' && m.type !== 'CASH_SALE');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
