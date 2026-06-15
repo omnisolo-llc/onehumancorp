@@ -14,7 +14,7 @@ impl TeamsClient {
     }
 
     pub async fn create_meeting(&self, subject: &str) -> Result<String, String> {
-        let url = format!("https://graph.microsoft.com/v1.0/me/onlineMeetings");
+        let url = "https://graph.microsoft.com/v1.0/me/onlineMeetings".to_string();
         let payload = serde_json::json!({
             "startDateTime": "2025-01-01T10:00:00Z",
             "endDateTime": "2025-01-01T11:00:00Z",

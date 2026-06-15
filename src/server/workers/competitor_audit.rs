@@ -118,6 +118,6 @@ mod tests {
         let worker = CompetitorAuditWorker::new(db);
         worker.start();
         // Since it spawns a task, just make sure it doesn't crash on start
-        assert!(true);
+
     }
 }

@@ -390,7 +390,7 @@ mod tests {
     async fn test_record_sync_latency_called() {
         // Just verify that the service compiles successfully when calling record_sync_latency metrics.
         // True validation happens during integration tests where a mock PgPool is observed for insertion events.
-        assert!(true);
+
     }
 
     #[tokio::test]

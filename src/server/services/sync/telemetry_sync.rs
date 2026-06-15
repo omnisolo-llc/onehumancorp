@@ -183,7 +183,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_telemetry_metrics_update() {
-        assert!(true);
+
     }
 
     #[tokio::test]

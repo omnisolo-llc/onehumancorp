@@ -606,7 +606,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
 
         let original_bytes = 1024 * 1024 * 1024 * 2; // 2GB
-        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+        let compressed_bytes = 1024 * 1024 * 1024; // 1GB
 
         let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
@@ -628,7 +628,7 @@ mod tests {
         let auditor = CostAuditor::new(config);
 
         let original_bytes = 1024 * 1024 * 1024 * 3; // 3GB
-        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+        let compressed_bytes = 1024 * 1024 * 1024; // 1GB
 
         let savings = auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);
         // (3GB - 1GB) = 2GB saved. 2 * 0.05 = 0.10

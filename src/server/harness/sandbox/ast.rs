@@ -5,6 +5,12 @@ pub struct ASTParser {
     parser: Parser,
 }
 
+impl Default for ASTParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ASTParser {
     pub fn new() -> Self {
         let mut parser = Parser::new();
@@ -44,11 +50,7 @@ impl ASTParser {
         // We look for << 'EOF' or << "EOF"
         let re_start = regex::Regex::new(r#"<<\s*(['"])([^'"]+)['"]"#).unwrap();
 
-        loop {
-            let mat = match re_start.find(&sanitized) {
-                Some(m) => m,
-                None => break,
-            };
+        while let Some(mat) = re_start.find(&sanitized) {
 
             let match_str = &sanitized[mat.start()..mat.end()];
             let caps = match re_start.captures(match_str) {

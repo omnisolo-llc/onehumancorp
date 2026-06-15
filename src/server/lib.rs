@@ -3220,7 +3220,7 @@ pub async fn mock_omni_inbox_handler(
     let id = format!("mock-{}", uuid::Uuid::new_v4());
 
     // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
-    let draft_reply = format!("Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?");
+    let draft_reply = "Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?".to_string();
 
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -5965,14 +5965,14 @@ mod tests {
         store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
 
         let current = store.get();
-        assert_eq!(current.voice_receptionist_enabled, true);
+        assert!(current.voice_receptionist_enabled);
         assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
         assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
 
         // Test unsetting
         store.set_voice_settings(true, None, None).unwrap();
         let updated = store.get();
-        assert_eq!(updated.voice_receptionist_enabled, true);
+        assert!(updated.voice_receptionist_enabled);
         assert_eq!(updated.voice_receptionist_number, None);
         assert_eq!(updated.voice_receptionist_persona, None);
     }
@@ -6009,7 +6009,7 @@ async fn test_api_settings_voice() {
     settings_store.set_voice_settings(enabled, number, persona).unwrap();
 
     let updated = settings_store.get();
-    assert_eq!(updated.voice_receptionist_enabled, false);
+    assert!(!updated.voice_receptionist_enabled);
     assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
     assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
 }

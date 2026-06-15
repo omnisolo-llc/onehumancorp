@@ -60,7 +60,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        assert!(true, "Worker started successfully");
+
     }
 
     #[tokio::test]
@@ -274,7 +274,7 @@ mod additional_tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         // The worker will fail queries internally but shouldn't panic
-        assert!(true, "Worker didn't panic when schema is missing");
+
     }
 
     #[tokio::test]
