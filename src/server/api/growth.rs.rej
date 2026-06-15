@@ -1,10 +1,103 @@
---- src/server/api/growth.rs
-+++ src/server/api/growth.rs
-@@ -2190,7 +2190,7 @@
-         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+--- growth.rs
++++ growth.rs
+@@ -2745,86 +2745,6 @@ pub async fn handle_record_search_click(
+     }))
+ }
 
-         let tenant_id = "55555555-5555-5555-5555-555555555555";
--        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
-+        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1::text, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
-             .bind(tenant_id)
-             .execute(&pool).await.unwrap();
+-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+-pub struct ZeroClickGenerateRequest {
+-    pub prompt: String,
+-}
+-
+-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+-pub struct ZeroClickGenerateResponse {
+-    pub generated_text: String,
+-}
+-
+-/// Handles generating zero-click marketing content using an LLM.
+-pub async fn handle_zero_click_generate(
+-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+-    axum::Json(req): axum::Json<ZeroClickGenerateRequest>,
+-) -> impl axum::response::IntoResponse {
+-    use tracing::{error, info};
+-
+-    info!("Received zero-click generate request for tenant: {}", auth_info.tenant_id);
+-
+-    if req.prompt.trim().is_empty() {
+-        error!("Prompt is empty");
+-        return axum::response::IntoResponse::into_response((
+-            axum::http::StatusCode::BAD_REQUEST,
+-            axum::Json(serde_json::json!({
+-                "error": "Prompt cannot be empty"
+-            })),
+-        ));
+-    }
+-
+-    let llm_client = &state.deps.llm_client;
+-    let system_prompt = "You are an expert marketing assistant. Generate a short, compelling piece of marketing copy based on the user's prompt. Keep it under 200 words.";
+-
+-    let req_body = serde_json::json!({
+-        "messages": [
+-            {"role": "system", "content": system_prompt},
+-            {"role": "user", "content": req.prompt}
+-        ],
+-        "temperature": 0.7,
+-        "max_tokens": 300,
+-    });
+-
+-    match llm_client
+-        .post("https://api.openai.com/v1/chat/completions") // Example URL, replace with actual
+-        .json(&req_body)
+-        .send()
+-        .await
+-    {
+-        Ok(res) => {
+-            if res.status().is_success() {
+-                match res.json::<serde_json::Value>().await {
+-                    Ok(json) => {
+-                        let generated_text = json["choices"][0]["message"]["content"]
+-                            .as_str()
+-                            .unwrap_or("Failed to parse response")
+-                            .to_string();
+-                        axum::response::IntoResponse::into_response(axum::Json(ZeroClickGenerateResponse { generated_text }))
+-                    }
+-                    Err(e) => {
+-                        error!("Failed to parse LLM response: {}", e);
+-                        axum::response::IntoResponse::into_response((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to parse LLM response"))
+-                    }
+-                }
+-            } else {
+-                error!("LLM request failed with status: {}", res.status());
+-                axum::response::IntoResponse::into_response((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "LLM request failed"))
+-            }
+-        }
+-        Err(e) => {
+-            error!("Error communicating with LLM service: {}", e);
+-            axum::response::IntoResponse::into_response((
+-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+-                axum::Json(serde_json::json!({
+-                    "error": format!("LLM service error: {}", e)
+-                })),
+-            ))
+-        }
+-    }
+-}
+-
+ // ============================================================================
+ // Tests
+ // ============================================================================
+@@ -2300,10 +2220,9 @@ mod tests {
+         let state = test_state().await;
+         let req = ZeroClickGenerateRequest { prompt: "test prompt".to_string() };
+         let auth_info = AuthInfo { tenant_id: "test_tenant".to_string(), ..Default::default() };
+-        let res = handle_zero_click_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
++        let res = handle_zero_click_generate(Extension(state.clone()), Json(req)).await;
+
+-        assert!(res.is_ok());
+-        let response = res.unwrap().0;
+-        assert_eq!(response.generated_text, "test generated text");
++        let res_into = res.into_response();
++        assert_eq!(res_into.status(), axum::http::StatusCode::OK);
+     }
+ }
