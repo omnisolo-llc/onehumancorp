@@ -176,13 +176,11 @@
         });
 
 
-      // Initial fetch to get services could be done via builder edge, but we'll mock services for this view or hardcode for now
-      // assuming the page gets a ?service=XXX param or similar.
       const serviceSelect = document.getElementById('service-select');
       const slotSelect = document.getElementById('slot-select');
       const urlService = urlParams.get('service_id') || 'test_service';
 
-      serviceSelect.innerHTML = `<option value="${urlService}">Standard Service</option>`;
+      serviceSelect.innerHTML = `<option value="${urlService}">Selected Service</option>`;
 
       fetch(`/api/v1/booking/available_slots/${urlService}`, { headers: { 'x-tenant-id': tenantId }})
         .then(res => res.json())
