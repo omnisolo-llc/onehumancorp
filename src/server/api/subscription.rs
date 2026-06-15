@@ -174,7 +174,7 @@ async fn create_fulfillment_batch(
         .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
     let service = SubscriptionService::new(Arc::new(hub.pool.clone()));
     let batch = match service
-        .generate_fulfillment_batch(
+        .generate_fulfillment_schedule(
             &tenant_id,
             &payload.subscription_plan_id,
             &payload.fulfillment_date,
@@ -189,7 +189,7 @@ async fn create_fulfillment_batch(
         }
     };
 
-    let event_payload = service.fulfillment_batch_event_payload(&batch);
+    let event_payload = service.fulfillment_schedule_event_payload(&batch);
     if let Some(orchestrator) = orchestrator {
         let event = DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),

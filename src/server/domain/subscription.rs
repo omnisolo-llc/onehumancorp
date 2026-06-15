@@ -32,6 +32,7 @@ pub struct Subscriber {
     pub status: SubscriptionStatus,
     pub current_period_end: i64,
     pub created_at: i64,
+    pub predicted_restock_date: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -43,7 +44,7 @@ pub enum FulfillmentStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FulfillmentBatch {
+pub struct FulfillmentSchedule {
     pub id: String,
     pub tenant_id: String,
     pub plan_id: String,
