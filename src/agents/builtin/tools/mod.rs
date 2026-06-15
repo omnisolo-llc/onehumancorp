@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 
 pub mod runner;
 pub mod bash;
+pub mod python;
 pub mod read;
 pub mod write;
 pub mod edit;
@@ -41,7 +42,6 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
-pub mod llm_judge;
 pub mod marketplace;
 pub mod marketplace_tool;
 pub mod expert_team_tool;
@@ -104,7 +104,6 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
-    agent_llm: Option<std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
@@ -119,6 +118,7 @@ pub fn all_tools(
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
+        python::python_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
@@ -162,14 +162,9 @@ pub fn all_tools(
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
+        quote::draft_estimate_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
-
-];
-
-    if let Some(llm) = agent_llm {
-        tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
-    }
-
+    ];
 
     if let Some(env) = native_env {
         tools.push(native_state::native_memory_stash_tool(env));

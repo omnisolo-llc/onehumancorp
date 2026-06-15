@@ -525,7 +525,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -582,7 +582,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -616,7 +616,7 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 

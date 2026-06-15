@@ -1,6 +1,17 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 
+fn ai_agent_timeout() -> std::time::Duration {
+    crate::config::get().ai_agent_timeout_ms.map(std::time::Duration::from_millis).unwrap_or(std::time::Duration::from_secs(60))
+}
+
+fn ai_retry_backoff(attempts: u32) -> std::time::Duration {
+    if let Some(ms) = crate::config::get().ai_retry_backoff_ms {
+        return std::time::Duration::from_millis(ms);
+    }
+    std::time::Duration::from_secs(2u64.pow(attempts))
+}
+
 pub struct BusinessAdvisoryAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
@@ -89,7 +100,7 @@ impl Department for BusinessAdvisoryAgent {
                     Err("AI call failed".to_string())
                 };
 
-                match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                match tokio::time::timeout(ai_agent_timeout(), ai_op).await {
                     Ok(Ok(content)) => {
                         drafted_msg = content;
                         _ai_call_succeeded = true;
@@ -106,7 +117,7 @@ impl Department for BusinessAdvisoryAgent {
                                 serde_json::json!({"error": "The AI agent responsible for answering questions is paused because the AI service is unavailable."})
                             ).await;
                         } else {
-                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }
@@ -206,13 +217,13 @@ impl BaseAgent for BusinessAdvisoryAgent {
                         Err("Hub call failed".to_string())
                     };
 
-                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                    match tokio::time::timeout(ai_agent_timeout(), ai_op).await {
                         Ok(Ok(_)) => {
                             break;
                         },
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }
                 }

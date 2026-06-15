@@ -313,6 +313,11 @@ impl InventoryService {
                     .unwrap_or(Some(product_id.to_string()))
                     .unwrap_or_else(|| product_id.to_string());
 
+                let message = if new_stock == 0 {
+                    format!("{} sold out. Would you like to draft a restock order?", product_title)
+                } else {
+                    format!("Stock for {} has dropped to {}.", product_title, new_stock)
+                };
 
                 let job_id = Uuid::new_v4().to_string();
 

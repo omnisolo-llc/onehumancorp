@@ -102,6 +102,12 @@ impl PosSyncWorker {
 
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
+                    let _ai_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                    }).to_string();
 
                     let notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
@@ -263,26 +269,32 @@ impl PosSyncWorker {
 
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
+                                let _ai_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": qty,
+                        "actual_stock": stock,
+                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                    }).to_string();
 
-                                let notification_id = uuid::Uuid::new_v4().to_string();
-                                let notification_payload = serde_json::json!({
-                                    "product_id": product_id,
-                                    "expected_stock": qty,
-                                    "actual_stock": stock,
-                                    "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
-                                }).to_string();
+                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let notification_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "expected_stock": qty,
+                        "actual_stock": stock,
+                        "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                    }).to_string();
 
-                                let _ = sqlx::query(
-                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
-                                )
-                                .bind(&notification_id)
-                                .bind(&job.tenant_id)
-                                .bind(&notification_payload)
-                                .execute(&mut *tx)
-                                .await;
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&notification_id)
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
 
-                                let ai_payload = serde_json::json!({
+                    let ai_payload = serde_json::json!({
                                     "transaction_id": transaction_id,
                                     "product_id": product_id,
                                     "expected_stock": qty,

@@ -57,9 +57,15 @@ test.describe('Documentation Pages', () => {
     await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
   });
 
+  test('should display Changelog page', async ({ page }) => {
+    await page.goto('/changelog');
+    await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
+  });
 
-
-
+  test('should display API Docs page', async ({ page }) => {
+    await page.goto('/api-docs');
+    await expect(page.locator('text=Advanced:')).toBeVisible();
+  });
 
   test('should display Video Tutorials page', async ({ page }) => {
     await page.goto('/help/videos');

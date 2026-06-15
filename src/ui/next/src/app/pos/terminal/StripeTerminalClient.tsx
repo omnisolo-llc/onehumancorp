@@ -1,23 +1,14 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
-import { SyncManager } from '../../../lib/sync/SyncManager';
 
-interface StripeTerminalClientProps {
-  amount: number;
-  productId: string;
-  tenantId: string;
-  onOptimisticReserve?: () => void;
-  onOptimisticRollback?: () => void;
-}
-
-export default function StripeTerminalClient({ amount, productId, tenantId, onOptimisticReserve, onOptimisticRollback }: StripeTerminalClientProps) {
+export default function StripeTerminalClient({ amount, productId, tenantId, onOptimisticReserve, onOptimisticRollback }: { amount: number, productId: string, tenantId: string, onOptimisticReserve?: () => void, onOptimisticRollback?: () => void }) {
   const [terminal, setTerminal] = useState<any>(null);
+  const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
-  const [status, setStatus] = useState<string>('Initializing...');
-  const [reserving, setReserving] = useState(false);
+  const [reserving, setReserving] = useState<boolean>(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,14 +72,13 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
       }
     };
 
-    if (typeof window !== 'undefined') {
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-        };
-    }
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [sessionId, connectedReader]);
 
   const discoverReaders = async () => {
@@ -146,22 +136,20 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
        setStatus('Processing offline payment...');
        onOptimisticReserve?.();
        // Mock the terminal process for offline
-       setTimeout(async () => {
+       setTimeout(() => {
           const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const tx = {
              id: transactionId,
-             type: 'tap_to_pay',
              client_id: 'terminal_1',
              amount_cents: amount,
-             amount: amount,
              currency: 'usd',
-             product_id: productId,
-             quantity: 1,
              payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
              timestamp: new Date().toISOString()
           };
-
-          await SyncManager.getInstance().enqueue(tx);
+          // Also sync with OfflineStore directly to match page.tsx expectations
+          const existingTxs = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+          existingTxs.push(tx);
+          localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
 
           setStatus('Synced locally. Will push to cloud when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);

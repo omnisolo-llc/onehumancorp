@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
   test('should process an offline payment and sync it when online', async ({ page, context }) => {
     // Navigate to terminal
-    await page.goto('/pos.html');
+    await page.goto('/pos/terminal');
 
     // Simulate terminal setup logic, we will just click the new order and pretend it's connected
     // This is simplified as the UI needs a pin to unlock.
@@ -49,7 +49,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
   test('should trigger Operations Agent reconciliation card on negative inventory conflict', async ({ page, context }) => {
     // Navigate to terminal
-    await page.goto('/pos.html');
+    await page.goto('/pos/terminal');
 
     await page.getByText('0').click();
     await page.getByText('0').click();

@@ -55,6 +55,7 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct UpdateStateRequest {
     pub state: String,
+    pub payload: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -171,7 +172,13 @@ async fn list_feed_items(
 
         tokio::spawn(async move {
             let repo = AgentFeedRepository::new(pool_bg);
-            if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
+            if let Ok(mut items) = repo.list(&tenant_id_bg, limit, offset).await {
+                if mobile_optimized {
+                    for item in items.iter_mut() {
+                        item.context_payload = None;
+                        item.proposed_action = None;
+                    }
+                }
                 let response = AgentFeedListResponse { items };
                 let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
                 cache_bg.set_with_tags(&cache_key_bg, response, vec![tag], std::time::Duration::from_secs(60)).await;
@@ -183,8 +190,14 @@ async fn list_feed_items(
 
     let repo = AgentFeedRepository::new(pool);
 
-    match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
-        Ok(items) => {
+    match repo.list(&tenant_id, limit, offset).await {
+        Ok(mut items) => {
+            if mobile_optimized {
+                for item in items.iter_mut() {
+                    item.context_payload = None;
+                    item.proposed_action = None;
+                }
+            }
             let response = AgentFeedListResponse { items };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
@@ -260,6 +273,11 @@ async fn update_feed_item_state(
 
     let repo = AgentFeedRepository::new(pool.clone());
 
+    // First update the action payload if provided
+    if let Some(new_payload) = payload.payload.clone() {
+        let _ = repo.update_action(&tenant_id, &id, new_payload).await;
+    }
+
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
             // Trigger legacy execution by synchronizing the agent_approvals table
@@ -289,6 +307,22 @@ async fn update_feed_item_state(
                     }
 
                     if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("instagram_dm") {
+                            if let Some(msg_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                                tracing::info!("Approved instagram_dm reply for message: {}", msg_id);
+                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'auto_replied' WHERE id = $1 AND tenant_id = $2")
+                                    .bind(msg_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied' WHERE id = $1 AND tenant_id = $2")
+                                    .bind(msg_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
                         if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
                             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                             // Real implementation would buffer post here to AYRSHARE.
@@ -299,6 +333,17 @@ async fn update_feed_item_state(
                                 tracing::info!("Approved quote draft: {}", quote_id);
                                 let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
                                     .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
+
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("instagram_dm") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("omnichannel_reply") {
+                            if let Some(message_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                                tracing::info!("Approved omnichannel reply: {}", message_id);
+                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'replied', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                    .bind(message_id)
                                     .bind(&tenant_id)
                                     .execute(&pool)
                                     .await;

@@ -46,7 +46,7 @@ export default function MyPlanPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(amount / 100);
   };
 
   if (loading) {
@@ -60,9 +60,9 @@ export default function MyPlanPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm w-full">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-white/70 backdrop-blur-2xl saturate-200 border-b border-white/40 shadow-sm w-full">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
+          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-white/50 backdrop-blur-xl rounded-xl text-sm font-medium text-gray-800 border border-white/60 hover:bg-white/70 transition-all shadow-sm flex items-center justify-center">
             Back
           </button>
           <WithTooltip id="my-plan-tooltip" defaultText="View and manage your subscription plan and usage.">
@@ -74,7 +74,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm p-6">
+        <section className="app-panel bg-white/70 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl shadow-sm p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -92,7 +92,7 @@ export default function MyPlanPage() {
                 <button
                     onClick={() => router.push('/pricing')}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
-                    View Upgrade Plans
+                    Upgrade
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
@@ -103,7 +103,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm mt-4">
+        <section className="app-panel bg-white/70 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl shadow-sm mt-4">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>

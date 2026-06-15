@@ -15,13 +15,6 @@
 #   kind, helm, kubectl, docker, curl
 set -euo pipefail
 
-if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  echo "Skipping test in CI environment due to infrastructure limitations."
-  exit 0
-fi
-
-
-
 CLUSTER_NAME="ohc-e2e-$$"
 NAMESPACE="ohc-e2e"
 CLOUD_RELEASE_NAME="ohc-cloud"

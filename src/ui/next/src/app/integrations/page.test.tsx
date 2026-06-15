@@ -6,12 +6,6 @@ const push = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/integrations",
-}));
-
-vi.mock('../../components/TooltipRegistry', () => ({
-  TooltipProvider: ({ children }: any) => children,
-  WithTooltip: ({ children }: any) => children,
 }));
 
 describe("Integrations", () => {

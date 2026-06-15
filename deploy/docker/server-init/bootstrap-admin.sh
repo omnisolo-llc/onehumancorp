@@ -29,7 +29,7 @@ fi
 # ── Wait for the server to be reachable ──────────────────────────────────────
 echo "[bootstrap] Waiting for server at ${SERVER_URL} ..."
 count=0
-until wget -q --spider --tries=1 --timeout=4 "${SERVER_URL}/readyz" >/dev/null 2>&1; do
+until wget -q --spider --tries=1 --timeout=4 "${SERVER_URL}/health" >/dev/null 2>&1; do
     count=$((count + 1))
     if [ "$count" -ge "$MAX_RETRIES" ]; then
         echo "[bootstrap] ERROR: Server did not become ready after $((MAX_RETRIES * RETRY_INTERVAL))s. Aborting."
@@ -43,14 +43,12 @@ echo "[bootstrap] Server is ready."
 # ── Create the initial admin account ─────────────────────────────────────────
 echo "[bootstrap] Creating admin account for user '${USERNAME}' ..."
 
-HTTP_STATUS=$(
-    wget -q -O /tmp/bootstrap_response.json \
-        --server-response \
-        --header "Content-Type: application/json" \
-        --post-data "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\",\"role\":\"admin\"}" \
-        "${SERVER_URL}/api/setup/admin" 2>/tmp/bootstrap_headers.txt || true
-    awk '/^[[:space:]]*HTTP\// { status = $2 } END { print status ? status : "000" }' /tmp/bootstrap_headers.txt
-)
+HTTP_STATUS=$(wget -q -O /tmp/bootstrap_response.json \
+    --server-response \
+    --header "Content-Type: application/json" \
+    --post-data "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\",\"role\":\"admin\"}" \
+    "${SERVER_URL}/api/setup/admin" 2>/tmp/bootstrap_headers.txt; \
+    grep "HTTP/" /tmp/bootstrap_headers.txt | tail -1 | awk '{print $2}' || echo "000")
 
 RESPONSE_BODY=""
 if [ -f /tmp/bootstrap_response.json ]; then

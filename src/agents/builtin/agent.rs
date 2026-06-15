@@ -434,16 +434,9 @@ impl Agent {
             } else {
                 phase_cfg.server_system_message = format!("You are in the {} phase.", phase_prompt);
             }
-            let agents_md = if let Ok(cwd) = std::env::current_dir() {
-                Some(crate::prompt_construction::load_cascading_instructions(Some(&cwd)).await)
-            } else {
-                None
-            };
-
             let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
                 &phase_cfg,
                 session_tools,
-                agents_md
             )
             .build();
 
@@ -740,14 +733,8 @@ impl Agent {
         let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
-        let agents_md = if let Ok(cwd) = std::env::current_dir() {
-            Some(crate::prompt_construction::load_cascading_instructions(Some(&cwd)).await)
-        } else {
-            None
-        };
-
         let mut system_prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools, agents_md).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
 
         if let Some(store) = &self.memory_store
             && let Ok(index_content) = store.get_lightweight_index().await
@@ -1423,14 +1410,9 @@ impl Agent {
         let tools_def_arc = std::sync::Arc::new(tools_def);
         let session_tools_arc = std::sync::Arc::new(session_tools);
 
-        // (Note: LangGraph runs synchronously within the setup, so we block_on here,
-        // or just don't inject AGENTS.md dynamically into the node state setup to avoid async blocking.
-        // But since this setup is sync, we use a simple empty string for now, or fetch synchronously.
-        // For simplicity, we pass None to avoid panics in setup).
         let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
             &cfg_arc,
             &session_tools_arc,
-            None
         )
         .build();
 
@@ -2033,14 +2015,8 @@ impl Agent {
             planner_cfg.server_system_message = planner_instructions;
         }
 
-        let agents_md = if let Ok(cwd) = std::env::current_dir() {
-            Some(crate::prompt_construction::load_cascading_instructions(Some(&cwd)).await)
-        } else {
-            None
-        };
-
         let planner_system =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&planner_cfg, &[], agents_md).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&planner_cfg, &[]).build();
 
         let plan_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2399,14 +2375,8 @@ impl Agent {
             replier_cfg.server_system_message = replier_instructions;
         }
 
-        let agents_md = if let Ok(cwd) = std::env::current_dir() {
-            Some(crate::prompt_construction::load_cascading_instructions(Some(&cwd)).await)
-        } else {
-            None
-        };
-
         let replier_system =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&replier_cfg, &[], agents_md).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&replier_cfg, &[]).build();
 
         let replier_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2987,14 +2957,8 @@ impl Agent {
             final_cfg.max_iterations
         };
 
-        let agents_md = if let Ok(cwd) = std::env::current_dir() {
-            Some(crate::prompt_construction::load_cascading_instructions(Some(&cwd)).await)
-        } else {
-            None
-        };
-
         let mut combined_system =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools, agents_md)
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools)
                 .build();
 
         // Long-Term Memory Retrieval
@@ -7317,7 +7281,7 @@ mod tests {
         };
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool]).build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
@@ -7332,7 +7296,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7347,7 +7311,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7358,7 +7322,7 @@ mod tests {
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
         let prompt2 =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[]).build();
         assert_eq!(
             prompt2,
             "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
@@ -7373,7 +7337,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji);
 
         // This should safely truncate without panicking using char counts
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
@@ -7394,7 +7358,7 @@ mod tests {
         cfg.user_instructions = "a".repeat(32768);
         cfg.user_instructions.push('€');
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
         let user_part = prompt.replace(notice, "");
@@ -9395,7 +9359,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
         let prompt = builder.build();
 
         assert!(
@@ -9413,7 +9377,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
         let prompt = builder.build();
 
         assert!(

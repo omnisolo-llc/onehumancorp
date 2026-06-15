@@ -492,8 +492,7 @@
         }
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -587,8 +586,7 @@
         }
       ],
       "title": "RAG Escalation Rate",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -682,8 +680,68 @@
         }
       ],
       "title": "Token Budget Alerts (last 1h)",
+      "type": "timeseries"
+    },
+    {
+      "id": 103,
+      "title": "Task Claim Contention Rate by Mode",
       "type": "timeseries",
-      "transparent": true
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}} - Contention Rate",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)"
+      }
+    },
+    {
+      "id": 104,
+      "title": "AutoDream Memory Consolidation Throughput",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_autodream_consolidation_total[5m]))",
+          "legendFormat": "Consolidation Rate",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_autodream_sync_errors_total[5m])) by (error)",
+          "legendFormat": "Error - {{error}}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)"
+      }
     }
   ],
   "schemaVersion": 38,

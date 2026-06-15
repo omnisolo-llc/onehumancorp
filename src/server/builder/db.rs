@@ -23,7 +23,10 @@ pub(crate) async fn acquire_tenant_conn(
     tenant_id: Uuid,
 ) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
     let mut tx = pool.begin().await?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
+    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+        .bind(tenant_id.to_string())
+        .execute(&mut *tx)
+        .await?;
     Ok(tx)
 }
 

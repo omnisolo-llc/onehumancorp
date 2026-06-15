@@ -90,7 +90,9 @@ async fn save_draft(
     let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
-    let step = payload.get("step")
+    let step = payload.get("wizardState")
+        .and_then(|w| w.get("step"))
+        .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
@@ -167,7 +169,9 @@ async fn save_state(
     let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
-    let step = payload.get("step")
+    let step = payload.get("wizardState")
+        .and_then(|w| w.get("step"))
+        .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 

@@ -459,9 +459,10 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS revoked_tokens (
-                jti TEXT PRIMARY KEY,
+                jti TEXT,
                 tenant_id TEXT,
-                expires_at TIMESTAMPTZ
+                expires_at TIMESTAMPTZ,
+                PRIMARY KEY (jti, tenant_id)
             )"
         )
         .execute(&pool)

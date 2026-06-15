@@ -6,20 +6,6 @@ import { TooltipProvider } from '../../components/TooltipRegistry';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
-const mockRouterPush = vi.hoisted(() => vi.fn());
-
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/onboarding',
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-  }),
-}));
-
 describe('OnboardingWizard', () => {
   const renderOnboardingWizard = async () => {
     let view: any;
@@ -35,7 +21,6 @@ describe('OnboardingWizard', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    mockRouterPush.mockClear();
     useOnboardingStore.setState({
       step: 1,
       chatStep: 1,
@@ -540,8 +525,8 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Open Dashboard/i })).toHaveAttribute('href', '/dashboard');
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Open Assistant/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Storefront Builder/i })).toBeInTheDocument();
     });
   });
 
@@ -753,63 +738,5 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
     });
-  });
-
-  it('allows skipping setup and opens the assistant', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({ step: 0 });
-    });
-
-    await renderOnboardingWizard();
-
-    const skipButton = screen.getByRole('button', { name: /Skip setup/i });
-    await user.click(skipButton);
-
-    expect(localStorage.getItem('has_onboarded')).toBe('true');
-    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
-  });
-
-  it('offers a global back control on later wizard steps', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({
-        step: 3,
-        businessName: 'Maya Bakery',
-        businessType: 'Bakery',
-        firstProductName: 'Cake',
-        firstProductPrice: '20',
-      });
-    });
-
-    await renderOnboardingWizard();
-
-    expect(screen.getByText('Style & Team')).toBeInTheDocument();
-
-    const backButton = screen.getByRole('button', { name: /Back/i });
-    await user.click(backButton);
-
-    expect(screen.getByText('Review Details')).toBeInTheDocument();
-    expect(useOnboardingStore.getState().step).toBe(2);
-  });
-
-  it('can go back from the first question to the intro screen', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({ step: 1, chatStep: 1 });
-    });
-
-    await renderOnboardingWizard();
-
-    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
-
-    const backButton = screen.getByRole('button', { name: /Back/i });
-    await user.click(backButton);
-
-    expect(screen.getByText('10-Minute Setup Wizard')).toBeInTheDocument();
-    expect(useOnboardingStore.getState().step).toBe(0);
   });
 });

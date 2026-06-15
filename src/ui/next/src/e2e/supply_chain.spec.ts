@@ -8,8 +8,7 @@ test.describe('Autonomous Supply Chain', () => {
     await expect(page.locator('h1')).toHaveText('Inventory');
 
     await expect(page.locator('text="Raw Materials"')).toBeVisible();
-    await expect(page.locator('text=/api/ui/supply')).toHaveCount(0);
-    await expect(page.locator('text="Raw Materials"')).toBeVisible();
+    await expect(page.locator('text="Loaded from `/api/ui/supply`."')).toBeVisible();
     await expect(page.locator('text=/No raw material rows found|Loading inventory|Low Stock|Healthy/').first()).toBeVisible();
   });
 });

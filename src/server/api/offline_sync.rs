@@ -171,6 +171,31 @@ pub async fn offline_sync_handler(
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
 
+                    // Enqueue a SyncEvent:JobCompleted representation into department_tasks
+                    // so OperationsWorker AI can draft invoices/follow-ups
+                    let sync_event_payload = serde_json::json!({
+                        "id": uuid::Uuid::new_v4().to_string(),
+                        "tenant_id": tenant_id_clone,
+                        "batch_id": mutation.transaction_id,
+                        "action_type": "JobCompleted",
+                        "payload": {
+                            "product_id": mutation.product_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "transaction_id": mutation.transaction_id
+                        },
+                        "synced_at_ms": chrono::Utc::now().timestamp_millis()
+                    });
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'SyncEvent:JobCompleted', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id_clone)
+                    .bind(sync_event_payload.to_string())
+                    .execute(&mut *db_tx)
+                    .await;
+
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
@@ -216,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 

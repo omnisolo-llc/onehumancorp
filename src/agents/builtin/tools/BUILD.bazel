@@ -1,5 +1,3 @@
-exports_files(["Cargo.toml"])
-
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
@@ -9,6 +7,7 @@ rust_library(
         "agent_tool.rs",
         "anthropic_memory.rs",
         "bash.rs",
+        "python.rs",
         "booking.rs",
         "checkout.rs",
         "quote.rs",
@@ -22,7 +21,6 @@ rust_library(
         "head.rs",
         "hybrid_blob.rs",
         "lazy_load.rs",
-        "llm_judge.rs",
         "local_fs_sync.rs",
         "magentic.rs",
         "marketing.rs",

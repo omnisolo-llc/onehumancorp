@@ -149,7 +149,6 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
         admin_email: None,
         admin_password: None,
         first_offer: None,
-        step: None,
     })
 }
 
@@ -169,7 +168,7 @@ struct IntakeData {
 }
 
 #[tauri::command]
-async fn process_intake(input: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+async fn process_intake(input: String, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/intake", backend_url);
 
@@ -180,7 +179,7 @@ async fn process_intake(input: String, image_url: Option<String>, _app_handle: t
 
     let response = client.post(&url)
         .header("Content-Type", "application/json")
-        .json(&serde_json::json!({ "description": input, "image_url": image_url }))
+        .json(&serde_json::json!({ "description": input }))
         .send().await
         .map_err(|err| err.to_string())?;
 
@@ -192,15 +191,8 @@ async fn process_intake(input: String, image_url: Option<String>, _app_handle: t
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct StartOnboardingResponse {
-    success: bool,
-    message: String,
-    organization_id: String,
-}
-
 #[tauri::command]
-async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<StartOnboardingResponse, String> {
+async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<(), String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/start", backend_url);
 
@@ -212,15 +204,9 @@ async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHa
         .header("Content-Type", "application/json")
         .json(&req);
 
-    let res = request.send().await.map_err(|err| err.to_string())?;
+    let _ = request.send().await;
 
-    if !res.status().is_success() {
-        return Err(format!("Failed to start onboarding: {}", res.status()));
-    }
-
-    let resp_data = res.json::<StartOnboardingResponse>().await.map_err(|err| err.to_string())?;
-
-    Ok(resp_data)
+    Ok(())
 }
 
 #[tauri::command]

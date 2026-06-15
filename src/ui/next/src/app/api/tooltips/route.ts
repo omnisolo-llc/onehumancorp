@@ -13,19 +13,7 @@ export async function GET(request: NextRequest) {
     "orders-tooltip": "See what customers bought and track order fulfillment.",
     "help-btn-tooltip": "Need help? Click here to access our Help Center and tutorials.",
     "ask-ai-tooltip": "Open AI Help Chat to get answers instantly. It can guide you to the right article.",
-    "pricing-tier-tooltip": "Select the plan that best fits your business needs.",
-    "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
-    "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
-    "change-vibe-tooltip": "Change the theme and colors of your website.",
-    "remove-branding-tooltip": "Upgrade to Premium to remove OHC branding.",
-    "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
-    "settings-verify-tooltip": "Verify your number to receive critical notifications.",
-    "settings-otp-tooltip": "Click to confirm the code sent to your phone.",
-    "settings-delivery-tooltip": "Turn this on to offer local delivery to your customers.",
-    "morning-briefing": "Your AI Decision Assistant's daily summary.",
-    "checkout-cancel-tooltip": "Go back to the previous screen without subscribing.",
-    "department-card-tooltip": "Click to view and manage pending approvals for this department.",
-    "my-plan-tooltip": "View and manage your subscription plan and usage."
+    "pricing-tier-tooltip": "Select the plan that best fits your business needs."
   };
 
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';

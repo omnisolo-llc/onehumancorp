@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AppShell } from '../components/AppShell';
 
 interface FeedItem {
@@ -20,7 +20,8 @@ export default function FeedPage() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
+  const [editContent, setEditContent] = useState<string>('');
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     async function fetchFeed() {
@@ -89,47 +90,52 @@ export default function FeedPage() {
     };
   }, []);
 
-  const startEditing = (item: FeedItem) => {
+
+  const handleEditClick = (item: FeedItem) => {
     setEditingId(item.id);
-    setEditValue(item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+    setEditContent(item.context_payload?.summary || item.proposed_action?.description || '');
+    setTimeout(() => {
+      editInputRef.current?.focus();
+    }, 50);
   };
 
-  const saveEdit = (id: string) => {
-    setItems((prev) => prev.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          proposed_action: {
-            ...item.proposed_action,
-            description: editValue,
-          },
-          context_payload: {
-            ...item.context_payload,
-            summary: editValue,
-          }
-        };
-      }
-      return item;
-    }));
+  const handleSaveEdit = (item: FeedItem) => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          return {
+            ...i,
+            proposed_action: {
+              ...i.proposed_action,
+              description: editContent,
+            },
+            context_payload: {
+              ...i.context_payload,
+              summary: editContent,
+            }
+          };
+        }
+        return i;
+      })
+    );
     setEditingId(null);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const handleAction = async (id: string, state: string) => {
+  const handleAction = async (item: FeedItem, state: string) => {
     try {
-      setProcessingId(id);
-      const res = await fetch(`/api/agent-feed/${id}`, {
+      setProcessingId(item.id);
+      const res = await fetch(`/api/agent-feed/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({
+          state,
+          payload: item.proposed_action || item.context_payload || {}
+        }),
       });
       if (!res.ok) throw new Error('Action failed');
 
       // Update UI optimistically or refetch
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -170,6 +176,7 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isEditing = editingId === item.id;
 
             return (
               <div
@@ -191,63 +198,69 @@ export default function FeedPage() {
                   {item.proposed_action?.title || 'Review Required'}
                 </h3>
 
-                {editingId === item.id ? (
+                {isEditing ? (
                   <div className="mb-5">
                     <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
-                      rows={3}
+                      ref={editInputRef}
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full min-h-[100px] p-3 text-[13px] text-gray-800 dark:text-gray-100 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF] dark:focus:ring-[#0071E3] transition-all resize-none"
+                      placeholder="Edit action details..."
                       data-testid="feed-edit-input"
                     />
-                    <div className="flex gap-2">
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
+                    {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  {isEditing ? (
+                    <div className="flex gap-3">
                       <button
-                        onClick={() => saveEdit(item.id)}
-                        className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-1 rounded"
+                        onClick={() => handleSaveEdit(item)}
+                        className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
                         data-testid="feed-save-edit-btn"
                       >
                         Save
                       </button>
                       <button
-                        onClick={cancelEdit}
-                        className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded"
+                        onClick={() => setEditingId(null)}
+                        className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
+                        data-testid="feed-cancel-edit-btn"
                       >
                         Cancel
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="mb-5">
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                      {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                    </p>
-                    <button
-                      onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
-                      data-testid="feed-edit-btn"
-                    >
-                      Edit Action
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : 'Approve'}
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
-                    data-testid="feed-dismiss-btn"
-                  >
-                    Dismiss
-                  </button>
+                  ) : (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleAction(item, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        disabled={isProcessing}
+                        className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

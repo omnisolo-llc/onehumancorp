@@ -51,7 +51,7 @@ pub async fn handle_omnichannel_webhook(
     let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
 
     let id = Uuid::new_v4().to_string();
-    let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
+    let _ = payload.target_language.unwrap_or_else(|| "English".to_string());
 
     let pool = &state.db.pool;
 
@@ -98,12 +98,16 @@ pub async fn handle_omnichannel_webhook(
     }
 
     let job_id = Uuid::new_v4().to_string();
-    let payload_json = serde_json::json!({
+    let mut payload_json = serde_json::json!({
         "message_id": id,
         "source": payload.source,
         "content": payload.message,
         "sender_id": payload.sender_id
     });
+
+    if let Some(ref c_id) = customer_id {
+        payload_json["customer_id"] = serde_json::json!(c_id);
+    }
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {

@@ -81,7 +81,7 @@ echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
 # Launch the UI Desktop wrapper
 echo -e "${DIM}  Waiting for backend to be ready...${RESET}"
-until curl -s http://localhost:8080/readyz > /dev/null 2>&1; do
+until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
