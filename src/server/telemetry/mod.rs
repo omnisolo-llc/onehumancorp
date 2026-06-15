@@ -186,13 +186,14 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
     );
 }
 
-pub fn record_sandbox_violation(reason: &str, command: &str) {
+pub fn record_sandbox_violation(reason: &str, command: &str, env_mode: &str) {
     let gauge = get_sandbox_violation_total();
     gauge.add(
         1,
         &[
             opentelemetry::KeyValue::new("reason", reason.to_string()),
             opentelemetry::KeyValue::new("command", command.to_string()),
+            opentelemetry::KeyValue::new("EnvMode", env_mode.to_string()),
         ],
     );
 }
