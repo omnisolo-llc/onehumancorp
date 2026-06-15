@@ -29,7 +29,7 @@ export default defineConfig({
   retries: Number.isFinite(retries) ? retries : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter,
-  outputDir: './test-results/screenshots',
+  outputDir: '/tmp/test-results/screenshots',
   timeout: Number.isFinite(timeout) ? timeout : 60000,
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
