@@ -37,6 +37,7 @@ exports_files(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
+        "storefront_delivery.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -79,6 +80,7 @@ rust_library(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
+        "storefront_delivery.rs",
         "//src/server/api/inbox:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",

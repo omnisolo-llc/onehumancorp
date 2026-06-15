@@ -1,11 +1,11 @@
 use axum::{
-    extract::{Extension, Path, State},
+    extract::{Path, State},
+    http::StatusCode,
     response::{Html, IntoResponse},
     routing::{get, post},
     Json, Router,
 };
-use http::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::builder::edge::{get_edge_cache, regenerate_cache};
@@ -17,7 +17,7 @@ pub struct DeliveryState {
 
 pub fn router() -> Router<DeliveryState> {
     Router::new()
-        .route("/:tenant_id/:product_id", get(get_storefront_product))
+        .route("/{tenant_id}/{product_id}", get(get_storefront_product))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
 }
 
@@ -27,7 +27,7 @@ pub struct InvalidateRequest {
 }
 
 async fn invalidate_cache_webhook(
-    State(state): State<DeliveryState>,
+    State(_state): State<DeliveryState>,
     Json(payload): Json<InvalidateRequest>,
 ) -> impl IntoResponse {
     let cache = get_edge_cache();
@@ -51,7 +51,7 @@ async fn get_storefront_product(
         if !is_stale {
             let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
-                http::header::CACHE_CONTROL,
+                axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
@@ -78,7 +78,7 @@ async fn get_storefront_product(
                 }
             }
             response.headers_mut().insert(
-                http::header::CACHE_CONTROL,
+                axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
@@ -88,7 +88,7 @@ async fn get_storefront_product(
     // Fallback simple HTML
     let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
     response.headers_mut().insert(
-        http::header::CACHE_CONTROL,
+        axum::http::header::CACHE_CONTROL,
         "public, max-age=10".parse().unwrap(),
     );
     Ok(response)

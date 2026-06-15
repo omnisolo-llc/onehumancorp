@@ -48,6 +48,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
     "//src/server/api:meta_webhook.rs",
+    "//src/server/api:storefront_delivery.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
