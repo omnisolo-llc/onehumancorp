@@ -3087,16 +3087,44 @@ pub async fn update_ui_triage_action_handler(
             let status = if payload.approved { "resolved" } else { "dismissed" };
 
             if payload.approved {
-                            // Check if there is a proposed action to execute
+                let mut action_type_opt = None;
+                let mut action_payload_opt = None;
+
+                // Check if there is a proposed action to execute from legacy triage
                 if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
                     .bind(&payload.triage_item_id)
                     .bind(&tenant_id)
                     .fetch_optional(&mut *tx)
                     .await
                 {
-                    let action_type = row.try_get::<String, _>("action_type").unwrap_or_default();
-                    let action_payload = row.try_get::<String, _>("payload").unwrap_or_default();
+                    action_type_opt = Some(row.try_get::<String, _>("action_type").unwrap_or_default());
+                    action_payload_opt = Some(row.try_get::<String, _>("payload").unwrap_or_default());
+                } else {
+                    // Try agent feed items
+                    if let Ok(Some(row)) = sqlx::query("SELECT proposed_action FROM agent_feed_items WHERE id = $1 AND tenant_id = $2")
+                        .bind(&payload.triage_item_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                            Ok(j) => Some(j.0),
+                            Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                Ok(s) => serde_json::from_str(&s).ok(),
+                                Err(_) => None
+                            }
+                        };
 
+                        if let Some(action) = proposed_action {
+                            action_type_opt = action.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            action_payload_opt = action.get("draft_reply").and_then(|v| v.as_str()).map(|s| s.to_string()).or_else(|| {
+                                Some(action.to_string())
+                            });
+                        }
+                    }
+                }
+
+                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
@@ -3231,6 +3259,14 @@ pub async fn update_ui_triage_action_handler(
                 }
             }
 
+            let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -3245,7 +3281,93 @@ pub async fn update_ui_triage_action_handler(
                 }
             }
         }
-        _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Unsupported store"}))).into_response(),
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let mut tx = match sqlite_pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin sqlite transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+
+            let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            if payload.approved {
+                let mut action_type_opt = None;
+                let mut action_payload_opt = None;
+
+                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = ? AND tenant_id = ?")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                {
+                    action_type_opt = Some(row.try_get::<String, _>("action_type").unwrap_or_default());
+                    action_payload_opt = Some(row.try_get::<String, _>("payload").unwrap_or_default());
+                } else {
+                    if let Ok(Some(row)) = sqlx::query("SELECT proposed_action FROM agent_feed_items WHERE id = ? AND tenant_id = ?")
+                        .bind(&payload.triage_item_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                            Ok(j) => Some(j.0),
+                            Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                Ok(s) => serde_json::from_str(&s).ok(),
+                                Err(_) => None
+                            }
+                        };
+
+                        if let Some(action) = proposed_action {
+                            action_type_opt = action.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            action_payload_opt = action.get("draft_reply").and_then(|v| v.as_str()).map(|s| s.to_string()).or_else(|| {
+                                Some(action.to_string())
+                            });
+                        }
+                    }
+                }
+
+                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
+                    if action_type == "Draft Reply" {
+                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        let _ = sqlx::query(
+                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
+                        )
+                        .bind(&new_msg_id)
+                        .bind(&tenant_id)
+                        .bind("Triage Action")
+                        .bind(&action_payload)
+                        .bind("")
+                        .bind("sent")
+                        .execute(&mut *tx)
+                        .await;
+                    }
+                }
+            }
+
+            let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
+                .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                Ok(_) => {
+                    let _ = tx.commit().await;
+                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update triage item (sqlite): {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
+            }
+        }
     }
 }
 
