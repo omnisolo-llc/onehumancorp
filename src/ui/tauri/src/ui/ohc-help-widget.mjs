@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', () => {
     // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
@@ -363,9 +364,6 @@
     // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -408,14 +406,11 @@
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
