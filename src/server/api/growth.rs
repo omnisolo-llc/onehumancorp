@@ -348,6 +348,7 @@ where
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
         .route("/reputation/simulate-referral-checkout", post(handle_simulate_referral_checkout))
+        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
 .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
@@ -2821,5 +2822,87 @@ async fn handle_simulate_referral_checkout(
     Ok(Json(SimulateReferralCheckoutResponse {
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: i32,
+}
+
+async fn handle_zero_click_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<ZeroClickGenerateRequest>,
+) -> Result<axum::response::Json<ZeroClickGenerateResponse>, StatusCode> {
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let llm = crate::minimax::MinimaxClient::new(api_key);
+
+    // Generate business details from prompt
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "A catchy name for the business"},
+            "slug": {"type": "string", "description": "A short, URL-friendly slug for the business (lowercase, no spaces)"},
+            "products": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"}
+                    },
+                    "required": ["name"]
+                },
+                "minItems": 3,
+                "maxItems": 5
+            }
+        },
+        "required": ["name", "slug", "products"]
+    });
+
+    let prompt = format!("Generate a realistic business configuration for the following description. Produce JSON matching the schema.\nDescription: {}\nSchema: {}", req.prompt, schema);
+
+    let response_str = llm.reason(&prompt).await.unwrap_or_else(|_| "{}".to_string());
+
+    #[derive(Deserialize)]
+    struct GeneratedBusiness {
+        name: Option<String>,
+        slug: Option<String>,
+        products: Option<Vec<serde_json::Value>>,
+    }
+
+    let business: GeneratedBusiness = serde_json::from_str(&response_str).unwrap_or(GeneratedBusiness {
+        name: None,
+        slug: None,
+        products: None,
+    });
+
+    let final_name = business.name.unwrap_or_else(|| "Mock Business".to_string());
+    let final_slug = business.slug.unwrap_or_else(|| "mockbusiness".to_string());
+    let final_products = business.products.unwrap_or_else(|| vec![serde_json::json!({"name": "Product 1"}), serde_json::json!({"name": "Product 2"}), serde_json::json!({"name": "Product 3"})]);
+
+    let tenant_id = format!("tenant_{}_{}", final_slug, uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string());
+    let url = format!("https://{}.ohc.app", final_slug);
+    let products_count = final_products.len() as i32;
+
+    // Insert minimal DB row for this new tenant
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Insert organization
+    let _ = sqlx::query("INSERT INTO organizations (id, name, slug, created_at, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING")
+        .bind(&tenant_id).bind(&final_name).bind(&final_slug).execute(&mut *tx).await;
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(axum::response::Json(ZeroClickGenerateResponse {
+        name: final_name,
+        url,
+        products_count,
     }))
 }
