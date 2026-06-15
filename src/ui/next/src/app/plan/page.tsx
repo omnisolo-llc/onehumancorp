@@ -21,7 +21,10 @@ export default function MyPlanPage() {
   useEffect(() => {
     const fetchPlanData = async () => {
       try {
-        const response = await fetch('/api/billing/my-plan');
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/billing/my-plan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         if (response.ok) {
           const json = await response.json();
           setData(json);
