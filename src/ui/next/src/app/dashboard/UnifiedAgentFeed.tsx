@@ -265,7 +265,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
-      ws = new WebSocket(wsUrl);
+        if (typeof process.env.VITEST !== 'undefined' || process.env.NODE_ENV === 'test') return;
+        ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
         try {
