@@ -793,10 +793,22 @@ function ResourceActions({
     );
   }
 
+  if (section === 'data' && item.archived && item.id) {
+    return (
+      <div className={styles.actionRow}>
+        <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'unarchive', id: item.id })}>Unarchive</button>
+      </div>
+    );
+  }
+
   if (section === 'data' && item.access === 'shared' && item.id) {
     return (
       <div className={styles.actionRow}>
         <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'unshare', id: item.id })}>Queue Unshare</button>
+        <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'cancel', id: item.id })}>Cancel Share</button>
+        <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'revoke', id: item.id })}>Revoke</button>
+        <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'download', id: item.id })}>Download</button>
+        <button type="button" className={styles.smallButton} onClick={() => onAction(section, { action: 'copy_link', id: item.id })}>Copy Link</button>
       </div>
     );
   }

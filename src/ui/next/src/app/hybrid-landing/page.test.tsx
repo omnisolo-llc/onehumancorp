@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HybridLandingPage from './page';
 
@@ -9,7 +9,7 @@ describe('HybridLandingPage', () => {
   });
 
   it('renders the hybrid landing page with two main cards', () => {
-    render(<HybridLandingPage />);
+    act(() => { render(<HybridLandingPage />); });
 
     // Check main headings
     expect(screen.getByText('OHC Hybrid OS')).toBeDefined();
@@ -31,13 +31,13 @@ describe('HybridLandingPage', () => {
     // The handleDownload function calls window.alert
     const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-    render(<HybridLandingPage />);
+    act(() => { render(<HybridLandingPage />); });
 
     const downloadButton = screen.getByText('Download Desktop');
     expect(downloadButton).toBeDefined();
 
     // Click the button
-    fireEvent.click(downloadButton);
+    act(() => { fireEvent.click(downloadButton); });
 
     // Verify downloading state
     expect(screen.getByText('Downloading...')).toBeDefined();
@@ -52,7 +52,7 @@ describe('HybridLandingPage', () => {
   });
 
   it('navigates to dashboard for cloud trial', () => {
-    render(<HybridLandingPage />);
+    act(() => { render(<HybridLandingPage />); });
 
     const startTrialLink = screen.getByText('Start Web Trial');
     expect(startTrialLink).toBeDefined();
