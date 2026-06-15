@@ -637,7 +637,7 @@ mod tests {
             &self,
             req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let last_user = req.messages.last().unwrap().content.clone();
+            let last_user = req.messages.last().expect("Expected at least one message in request").content.clone();
             Ok(ChatResponse {
                 message: Message::assistant(format!("Processed: {}", last_user)),
                 usage: Usage::default(),
@@ -887,7 +887,7 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "raw_data".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected executor to complete successfully");
         assert_eq!(result, "Tool echo: Processed: Please format: raw_data");
     }
 
@@ -951,7 +951,7 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected true branch execution to complete successfully");
         assert_eq!(result, "Processed: True branch");
     }
 
@@ -1071,10 +1071,10 @@ mod tests {
 
         // Verify that the executor gracefully bubbles up the LLM error instead of panicking
         assert!(result.is_ok(), "Workflow execution should not hang indefinitely");
-        let inner_result = result.unwrap();
+        let inner_result = result.expect("Timeout should have been Ok");
         assert!(inner_result.is_err(), "Workflow execution must fail when LLM times out");
         // The error message is formatted as "LLM node {} failed: {}"
-        assert!(inner_result.unwrap_err().contains("LLM Request Timed Out"));
+        assert!(inner_result.expect_err("Expected an error from inner result").contains("LLM Request Timed Out"));
     }
 
     #[tokio::test]
@@ -1118,7 +1118,7 @@ mod tests {
                 &self,
                 req: ChatRequest,
             ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let last_user = req.messages.last().unwrap().content.clone();
+                let last_user = req.messages.last().expect("Expected at least one message for SubAgent").content.clone();
                 Ok(ChatResponse {
                     message: Message::assistant(format!("SubAgent Output: {}", last_user)),
                     usage: Usage::default(),
@@ -1141,7 +1141,7 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "my_task_data".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected subagent workflow to complete successfully");
         assert_eq!(result, "SubAgent Output: Run task: my_task_data");
     }
 
@@ -1198,7 +1198,7 @@ mod tests {
         inputs.insert("in1".to_string(), "val1".to_string());
         inputs.insert("in2".to_string(), "val2".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected merge workflow to complete successfully");
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
     }
 
@@ -1280,7 +1280,7 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "init_data".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected fork join workflow to complete successfully");
 
         assert!(result.contains("Processed: Final: [\"Processed: A Processed: init_data\",\"Processed: B Processed: init_data\"]"),
                 "Result was: {}", result);
@@ -1408,7 +1408,7 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "root_data".to_string());
 
-        let result = executor.execute(inputs).await.unwrap();
+        let result = executor.execute(inputs).await.expect("Expected nested fork workflow to complete successfully");
 
         assert!(
             result.contains("Processed: Final Nested: "),
