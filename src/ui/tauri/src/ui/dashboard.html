@@ -566,6 +566,16 @@
       }
 
     </style>
+    <style>
+      @media (min-width: 600px) {
+        .paywall-actions {
+          flex-direction: row !important;
+        }
+        .paywall-actions a, .paywall-actions button {
+          width: auto !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <!-- Omnibox Modal -->
@@ -693,7 +703,7 @@
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
@@ -708,6 +718,30 @@
         </div>
       </div>
 
+
+      <!-- AI Feature Paywall Widget -->
+      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+        <div id="ai-feature-paywall-locked">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px;">
+            <span>✨</span> Pro Feature
+          </div>
+          <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #1d1d1f;">Unlock Advanced AI Analytics</h2>
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: #86868b; line-height: 1.5;">See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.</p>
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;">Upgrade to Pro</a>
+            <span style="color: #86868b; font-size: 14px; text-align: center;">or</span>
+            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;">Refer a Friend to Unlock</button>
+          </div>
+        </div>
+        <div id="ai-feature-paywall-unlocked" style="display: none; align-items: center; gap: 16px;">
+          <div style="font-size: 32px; background: rgba(52, 199, 89, 0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">✨</div>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #1d1d1f;">Advanced AI Analytics Unlocked!</h3>
+            <p style="margin: 0; font-size: 14px; color: #86868b;">You have 7 days of free access to Smart Cross-Selling and Deep Insights.</p>
+          </div>
+          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;">View Insights</a>
+        </div>
+      </div>
 
       <!-- Viral Loop Performance Widget -->
       <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
@@ -1112,6 +1146,43 @@
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
         let currentHoursSaved = 0;
+
+        // AI Feature Paywall Logic
+        const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
+        const aiPaywallLocked = document.getElementById("ai-feature-paywall-locked");
+        const aiPaywallUnlocked = document.getElementById("ai-feature-paywall-unlocked");
+        const aiPaywallContainer = document.getElementById("ai-feature-paywall");
+
+        if (aiReferBtn) {
+          aiReferBtn.addEventListener("click", () => {
+            aiReferBtn.innerText = "Generating...";
+            aiReferBtn.disabled = true;
+            aiReferBtn.style.opacity = "0.7";
+
+            setTimeout(() => {
+              aiReferBtn.innerText = "Copy Link";
+              aiReferBtn.disabled = false;
+              aiReferBtn.style.opacity = "1";
+
+              // Once it is "Copy Link", next click will copy and unlock
+              aiReferBtn.onclick = () => {
+                const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
+                const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
+                navigator.clipboard.writeText(link).then(() => {
+                  aiReferBtn.innerText = "Copied Link!";
+                  aiReferBtn.style.background = "#34C759";
+
+                  setTimeout(() => {
+                    aiPaywallLocked.style.display = "none";
+                    aiPaywallUnlocked.style.display = "flex";
+                    aiPaywallContainer.style.background = "rgba(52, 199, 89, 0.05)";
+                    aiPaywallContainer.style.borderColor = "rgba(52, 199, 89, 0.3)";
+                  }, 1500);
+                });
+              };
+            }, 800);
+          });
+        }
 
         // Soft Paywall Logic
         const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
