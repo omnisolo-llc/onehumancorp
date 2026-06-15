@@ -86,6 +86,18 @@ export class SyncManager {
               payment_intent_id: null,
               currency: null
            };
+        } else if (m.type === 'offline_quote_deposit') {
+          return {
+             transaction_id: m.id,
+             product_id: 'offline_quote_deposit',
+             quantity_deducted: 0,
+             amount: m.amount,
+             payment_method: 'card_present',
+             payment_intent_id: null,
+             currency: 'usd',
+             mutation_type: 'offline_quote_deposit',
+             payload: JSON.stringify(m.quoteDetails)
+          };
         } else if (m.type === 'draft_quote') {
           return {
              transaction_id: m.id,

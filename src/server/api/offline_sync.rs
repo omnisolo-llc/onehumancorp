@@ -53,6 +53,95 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
+        if mutation.mutation_type.as_deref() == Some("offline_quote_deposit") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.unwrap();
+                let quote_id = uuid::Uuid::new_v4().to_string();
+
+                let mut payload_json: serde_json::Value = serde_json::json!({});
+                if let Some(payload_str) = &mutation.payload {
+                    if let Ok(parsed) = serde_json::from_str(payload_str) {
+                        payload_json = parsed;
+                    }
+                }
+
+                let total_amount = payload_json["total_amount"].as_i64().unwrap_or(0);
+                let required_deposit = payload_json["required_deposit"].as_i64().unwrap_or(0);
+
+                let _ = sqlx::query(
+                    "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at)
+                     VALUES ($1, $2, $3, 'ACCEPTED', $4, $5, NULL, NOW(), NOW())"
+                )
+                .bind(&quote_id)
+                .bind(&tenant_id_clone)
+                .bind(uuid::Uuid::new_v4().to_string()) // placeholder customer id for offline
+                .bind(total_amount)
+                .bind(required_deposit)
+                .execute(&mut *db_tx)
+                .await;
+
+                if let Some(line_items) = payload_json["line_items"].as_array() {
+                    for item in line_items {
+                        let desc = item["description"].as_str().unwrap_or("Service");
+                        let unit_price = item["unit_price_cents"].as_i64().unwrap_or(0);
+                        let quantity = item["quantity"].as_i64().unwrap_or(1) as i32;
+
+                        let _ = sqlx::query(
+                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at)
+                             VALUES ($1, $2, $3, $4, $5, false, NOW(), NOW())"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&quote_id)
+                        .bind(desc)
+                        .bind(unit_price)
+                        .bind(quantity)
+                        .execute(&mut *db_tx)
+                        .await;
+                    }
+                }
+
+                // Add to job queue for POS sync (records the transaction in ledger)
+                let job_id = uuid::Uuid::new_v4().to_string();
+                let job_payload = serde_json::json!({
+                    "transaction_id": mutation.transaction_id,
+                    "product_id": "quote_deposit",
+                    "quote_id": quote_id,
+                    "quantity_deducted": 0,
+                    "amount": mutation.amount,
+                    "payment_method": mutation.payment_method,
+                    "payment_intent_id": mutation.payment_intent_id,
+                    "currency": mutation.currency,
+                }).to_string();
+
+                let _ = sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                     VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(&job_payload)
+                .execute(&mut *db_tx)
+                .await;
+
+                // Department task for Finance Agent to reconcile
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                     VALUES ($1, $2, 'finance', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "source": "offline_app",
+                    "message": format!("Offline quote {} accepted and deposit of {} cents collected.", quote_id, mutation.amount.unwrap_or(0))
+                }).to_string())
+                .execute(&mut *db_tx)
+                .await;
+
+                db_tx.commit().await.unwrap();
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();
