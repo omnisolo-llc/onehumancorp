@@ -2650,7 +2650,7 @@ function initWalkthrough() {
             `;
 
             document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
             document.getElementById('wt-next').onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
@@ -3191,7 +3191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
                 document.getElementById('wt-next').onclick = () => {
                     if (currentStep === steps.length - 1) {
                         closeWalkthrough();
