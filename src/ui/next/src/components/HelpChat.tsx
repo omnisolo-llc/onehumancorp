@@ -152,9 +152,9 @@ export function HelpChat() {
   }
 
   return (
-    <div className="help-chat-wrapper">
+    <div className="help-chat-wrapper pointer-events-none">
       {/* Floating Button */}
-      <div className="fixed bottom-24 right-6 z-[9999]">
+      <div className="fixed bottom-24 right-6 z-[9999] pointer-events-auto">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
@@ -173,7 +173,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-xl saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/50 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-2xl saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/50 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
