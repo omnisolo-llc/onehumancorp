@@ -1,3 +1,4 @@
+#![allow(clippy::items_after_test_module)]
 use futures::future::join_all;
 use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;

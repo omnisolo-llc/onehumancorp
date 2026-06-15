@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
 use ohc_builtin_agent_core::types::ToolCall;
 
