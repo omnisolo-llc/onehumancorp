@@ -168,7 +168,7 @@ struct IntakeData {
 }
 
 #[tauri::command]
-async fn process_intake(input: String, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+async fn process_intake(input: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/intake", backend_url);
 
@@ -179,7 +179,7 @@ async fn process_intake(input: String, _app_handle: tauri::AppHandle) -> Result<
 
     let response = client.post(&url)
         .header("Content-Type", "application/json")
-        .json(&serde_json::json!({ "description": input }))
+        .json(&serde_json::json!({ "description": input, "image_url": image_url }))
         .send().await
         .map_err(|err| err.to_string())?;
 
