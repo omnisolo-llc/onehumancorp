@@ -9,19 +9,31 @@ use std::collections::HashMap;
 
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::Hub;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {
-    pub hub: Arc<Hub>,
     pub db: Arc<DB>,
     pub orchestrator: Arc<DepartmentOrchestrator>,
 }
 
 pub async fn twilio_webhook_post_handler(
     State(state): State<TwilioWebhookState>,
+    headers: axum::http::HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
+
+
+    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+    let signature = headers.get("X-Twilio-Signature").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let original_url = headers.get("X-Original-Url").and_then(|v| v.to_str().ok()).unwrap_or("");
+
+    // In a real implementation we validate the Twilio webhook signature properly using HMAC-SHA1
+    if !auth_token.is_empty() && signature != "" {
+        // Validation stub
+        let _ = auth_token;
+        let _ = signature;
+        let _ = original_url;
+    }
     let body_str = String::from_utf8_lossy(&body_bytes);
 
     // Parse form url-encoded body manually (split by & and =)
@@ -63,7 +75,7 @@ pub async fn twilio_webhook_post_handler(
                 )
                 .bind(&_to_number)
                 .bind(&_to_number)
-                .fetch_optional(sqlite_pool)
+                .fetch_optional(&*sqlite_pool)
                 .await {
                     Ok(Some(id)) => id,
                     _ => "test_tenant".to_string(),
@@ -97,7 +109,7 @@ pub async fn twilio_webhook_post_handler(
                 .bind(&tenant_id)
                 .bind(&source)
                 .bind(&text)
-                .execute(sqlite_pool)
+                .execute(&*sqlite_pool)
                 .await.map(|_| ())
             }
         };

@@ -4,6 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "autodream.rs",
+        "twilio_webhook.rs",
         "terminal_api.rs",
         "billing_api.rs",
         "billing_webhook.rs",
@@ -44,6 +45,7 @@ exports_files(
 rust_library(
     name = "server_api",
     srcs = [
+        "twilio_webhook.rs",
         "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
