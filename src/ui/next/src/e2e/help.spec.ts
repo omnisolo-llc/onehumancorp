@@ -74,7 +74,7 @@ test.describe('Help Center', () => {
         await expect(chatHeader).toBeVisible();
 
         // Check if the chat input is present
-        const chatInput = page.locator('input[placeholder="Ask me anything..."]');
+        const chatInput = page.locator('input[placeholder="Ask anything..."]');
         await expect(chatInput).toBeVisible();
 
         // Type a message and send it
