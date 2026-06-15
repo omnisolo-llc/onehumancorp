@@ -36,4 +36,3 @@ test.describe('Teammate Mesh Architecture', () => {
     await expect(page.getByText('TEAMMATE SYNC')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('The Promoter is briefing The Manager')).toBeVisible();
   });
-});
