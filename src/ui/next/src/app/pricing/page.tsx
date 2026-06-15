@@ -11,10 +11,12 @@ export default function PricingPage() {
 
   const handleUpgrade = async (tier: string) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ tier }),
       });
