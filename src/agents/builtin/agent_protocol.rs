@@ -86,11 +86,17 @@ pub struct TaskStepsListResponse {
 
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
+    pub tasks: std::sync::Arc<tokio::sync::RwLock<Vec<Task>>>,
+    pub steps: std::sync::Arc<tokio::sync::RwLock<Vec<Step>>>,
 }
 
 impl AgentProtocolServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        Self { runner }
+        Self {
+            runner,
+            tasks: std::sync::Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            steps: std::sync::Arc::new(tokio::sync::RwLock::new(Vec::new())),
+        }
     }
 
     /// POST /ap/v1/agent/tasks
@@ -109,21 +115,25 @@ impl AgentProtocolServer {
         let task_id = uuid::Uuid::new_v4().to_string();
 
         let resp = Task {
-            task_id,
+            task_id: task_id.clone(),
             input: req.input,
             additional_input: req.additional_input,
             artifacts: vec![],
         };
+
+        self.tasks.write().await.push(resp.clone());
 
         serde_json::to_value(&resp).unwrap()
     }
 
     /// GET /ap/v1/agent/tasks
     pub async fn list_tasks(&self) -> serde_json::Value {
+        let tasks = self.tasks.read().await.clone();
+        let total_items = tasks.len();
         let resp = TaskListResponse {
-            tasks: vec![],
+            tasks,
             pagination: Pagination {
-                total_items: 0,
+                total_items,
                 total_pages: 1,
                 current_page: 1,
                 page_size: 10,
@@ -134,6 +144,12 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}
     pub async fn get_task(&self, task_id: &str) -> serde_json::Value {
+        // First check in-memory tasks
+        let tasks = self.tasks.read().await;
+        if let Some(task) = tasks.iter().find(|t| t.task_id == task_id) {
+            return serde_json::to_value(task).unwrap();
+        }
+
         // Query the Checkpointer to see if the task exists and its state.
         let status = if let Some(cp) = &self.runner.core.agent.checkpointer {
             match cp.list_checkpoints(task_id).await {
@@ -155,10 +171,12 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}/steps
     pub async fn list_steps(&self, _task_id: &str) -> serde_json::Value {
+        let steps: Vec<Step> = self.steps.read().await.iter().filter(|s| s.task_id == _task_id).cloned().collect();
+        let total_items = steps.len();
         let resp = TaskStepsListResponse {
-            steps: vec![],
+            steps,
             pagination: Pagination {
-                total_items: 0,
+                total_items,
                 total_pages: 1,
                 current_page: 1,
                 page_size: 10,
@@ -194,6 +212,7 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
+                self.steps.write().await.push(resp.clone());
                 serde_json::to_value(&resp).unwrap()
             }
             Err(e) => {
@@ -207,6 +226,7 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
+                self.steps.write().await.push(resp.clone());
                 serde_json::to_value(&resp).unwrap()
             }
         }

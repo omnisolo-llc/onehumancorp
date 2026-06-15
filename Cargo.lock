@@ -5659,6 +5659,7 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
+ "lazy_static",
  "ohc_builtin_agent_core",
  "ohc_builtin_agent_llm",
  "ohc_builtin_agent_tools",

@@ -17,6 +17,7 @@ futures-util = "0.3.32"
 glob = "0.3"
 hex = "0.4"
 hmac = "0.12"
+lazy_static = "1.4"
 ohc_builtin_agent_core = { path = "core" }
 ohc_builtin_agent_llm = { path = "llm" }
 ohc_builtin_agent_tools = { path = "tools" }

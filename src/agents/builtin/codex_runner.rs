@@ -1102,7 +1102,8 @@ mod tests {
         let resp_json_ap_list = app_server.handle_request(&req_json_ap_list).await;
         let resp_ap_list: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list).unwrap();
         assert!(resp_ap_list.error.is_none());
-        assert!(resp_ap_list.result.unwrap().get("tasks").is_some());
+        let list_result = resp_ap_list.result.unwrap();
+        assert!(list_result.get("tasks").is_some());
 
         // Test Agent Protocol ap_list_steps method
         let req_json_ap_list_steps = format!(
