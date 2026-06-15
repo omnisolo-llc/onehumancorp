@@ -311,6 +311,7 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
+        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -1039,6 +1040,18 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroClickGenerateResponse {
+    pub name: String,
+    pub url: String,
+    pub products_count: usize,
 }
 
 async fn handle_track_visitor(
@@ -1970,6 +1983,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handle_zero_click_generate() {
+        let pool = setup_db().await;
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I sell coffee".to_string(),
+        };
+
+        // Note: the actual OnboardingAgent requires external API calls, but we can verify
+        // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
+        // We just ensure we can invoke the handler without panic.
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+        let _ = handle_zero_click_generate(Extension(state), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+    }
+
+    #[tokio::test]
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -2170,6 +2205,37 @@ mod tests {
 
         assert!(res_json2.response.contains("noticed you have"), "Response should contain 'noticed you have', but was: {}", res_json2.response);
         assert_eq!(res_json2.draft_action.unwrap().action_type, "recover_abandoned_carts");
+    }
+
+    #[tokio::test]
+    async fn test_zero_click_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub };
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I am a home baker selling cakes.".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+
+        // When testing without an LLM mock configured, process_intake returns a mocked success
+        // which has business_name = "Mock Business" and 1 initial product.
+        let res = handle_zero_click_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+
+        assert!(res.is_ok());
+        let response = res.unwrap().0;
+        assert_eq!(response.name, "Mock Business");
+        assert_eq!(response.url, "mock-business.ohc.app");
+        assert_eq!(response.products_count, 1);
     }
 
     #[tokio::test]
@@ -2606,6 +2672,78 @@ fn escape_html(s: &str) -> String {
         }
     }
     escaped
+}
+
+pub async fn handle_zero_click_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::Json(req): axum::Json<ZeroClickGenerateRequest>,
+) -> Result<axum::Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: state.pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    });
+    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(
+        db,
+        state.hub.clone()
+    );
+
+    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+        tracing::error!("Intake error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let first_product = intake_data.initial_products.first();
+    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
+    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
+
+    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
+        business_type: intake_data.business_type,
+        company_name: intake_data.business_name.clone(),
+        company_description: req.prompt.clone(),
+        selling_categories: intake_data.categories,
+        payment_pref: "online".to_string(),
+        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
+        admin_name: "Owner".to_string(),
+        admin_password: uuid::Uuid::new_v4().to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name,
+        first_product_price,
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
+        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+        initial_products: vec![],
+        ai_agents: vec![],
+        ai_auto_respond: false,
+    };
+
+    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+        tracing::error!("Start onboarding error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut clean_name = String::new();
+    for c in intake_data.business_name.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            clean_name.push(c);
+        } else {
+            clean_name.push('-');
+        }
+    }
+    let clean_name = clean_name.trim_matches('-').to_string();
+
+    let url = if clean_name.is_empty() {
+        "my-business.ohc.app".to_string()
+    } else {
+        format!("{}.ohc.app", clean_name)
+    };
+
+    Ok(axum::Json(ZeroClickGenerateResponse {
+        name: intake_data.business_name,
+        url,
+        products_count: intake_data.initial_products.len(),
+    }))
 }
 
 pub async fn handle_embed_widget(
