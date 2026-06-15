@@ -369,15 +369,17 @@ async fn geo_score(
     Json(payload): Json<GeoScoreRequest>,
 ) -> Result<Json<GeoScoreResponse>, axum::http::StatusCode> {
     use ohc_builtin_agent::tools::ToolExecutor;
+    use ohc_builtin_agent::tools::pydantic::PydanticAdapter;
 
     let executor = ohc_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor;
+    let adapter = PydanticAdapter::new(executor);
 
     let args = serde_json::json!({
         "content": payload.content,
         "url": payload.url.unwrap_or_default(),
     });
 
-    let res_str = executor.execute(args).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let res_str = adapter.execute(args).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let parsed: serde_json::Value = serde_json::from_str(&res_str).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let score = parsed["generative_score"].as_i64().unwrap_or(50) as i32;
