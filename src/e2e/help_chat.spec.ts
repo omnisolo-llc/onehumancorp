@@ -6,25 +6,30 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display Help Chat floating button', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('button[aria-label="Help"]');
     await expect(chatButton).toBeVisible();
   });
 
   test('should open chat interface and display initial agent message', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('button[aria-label="Help"]');
     await chatButton.click({ force: true });
 
-    const chatHeader = page.locator('h3', { hasText: 'Ask AI Help' });
+    const chatHeader = page.locator('h3', { hasText: 'Help Center' });
+    await expect(chatHeader).toBeVisible();
+    const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+    await askAiTab.click();
     await expect(chatHeader).toBeVisible();
 
-    const initialMessage = page.locator('text=Need help setting up your store');
+    const initialMessage = page.locator('text=Hi! I\\'m your Help Agent.');
     await expect(initialMessage).toBeVisible();
   });
 
   test('should enable send button when typing a question', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('button[aria-label="Help"]');
     await chatButton.click({ force: true });
 
+    const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+    await askAiTab.click();
     const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
@@ -34,9 +39,11 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display user message in the chat window upon submission', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('button[aria-label="Help"]');
     await chatButton.click({ force: true });
 
+    const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+    await askAiTab.click();
     const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
@@ -48,9 +55,11 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display agent reply after user submits a message', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('button[aria-label="Help"]');
     await chatButton.click({ force: true });
 
+    const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+    await askAiTab.click();
     const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
