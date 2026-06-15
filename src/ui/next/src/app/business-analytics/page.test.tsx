@@ -1,9 +1,11 @@
+import { TooltipProvider } from "../../components/TooltipRegistry";
 import { render, screen, fireEvent } from '@testing-library/react';
 import BusinessAnalytics from './page';
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
+  usePathname: () => "/business-analytics",
   useRouter: () => ({
     push: mockPush,
   }),
@@ -16,6 +18,7 @@ beforeEach(() => {
   global.window.open = vi.fn();
   // Mock alert
   global.alert = vi.fn();
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
 });
 
 afterEach(() => {
@@ -23,39 +26,38 @@ afterEach(() => {
 });
 
 test('renders Business Analytics heading', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   expect(screen.getByRole('heading', { name: /Business Analytics/i })).toBeInTheDocument();
 });
 
 test('navigates back to dashboard', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   const backButton = screen.getByText('Back to Dashboard');
-  fireEvent.click(backButton);
-  expect(mockPush).toHaveBeenCalledWith('/dashboard');
+  expect(backButton.closest('a')).toHaveAttribute('href', '/dashboard');
 });
 
 test('shows locked predictive AI insights when not pro', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   expect(screen.getByText('See The Future')).toBeInTheDocument();
   expect(screen.getByText('Unlock Predictions')).toBeInTheDocument();
 });
 
 test('shows predictive AI insights when pro is active', () => {
   localStorage.setItem('pro_plan', 'true');
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   expect(screen.queryByText('See The Future')).not.toBeInTheDocument();
   expect(screen.getByText('Revenue Forecast')).toBeInTheDocument();
 });
 
 test('opens soft paywall modal when clicking Unlock Predictions', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   const unlockButton = screen.getByText('Unlock Predictions');
   fireEvent.click(unlockButton);
   expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeInTheDocument();
 });
 
 test('closes soft paywall modal', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   const unlockButton = screen.getByText('Unlock Predictions');
   fireEvent.click(unlockButton);
   const closeButton = screen.getByText('×');
@@ -64,7 +66,7 @@ test('closes soft paywall modal', () => {
 });
 
 test('upgrades to pro via pricing page', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   const unlockButton = screen.getByText('Unlock Predictions');
   fireEvent.click(unlockButton);
   const upgradeButton = screen.getByText('Upgrade to Pro ($79/mo)');
@@ -73,7 +75,7 @@ test('upgrades to pro via pricing page', () => {
 });
 
 test('claims trial extension via social share', () => {
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   const unlockButton = screen.getByText('Unlock Predictions');
   fireEvent.click(unlockButton);
   const shareButton = screen.getByText(/Share on X to unlock 7 Days Free/i);
@@ -87,6 +89,6 @@ test('claims trial extension via social share', () => {
 
 test('shows pro view when trial is active', () => {
   localStorage.setItem('trial_active', 'true');
-  render(<BusinessAnalytics />);
+  render(<TooltipProvider><BusinessAnalytics /></TooltipProvider>);
   expect(screen.queryByText('See The Future')).not.toBeInTheDocument();
 });
