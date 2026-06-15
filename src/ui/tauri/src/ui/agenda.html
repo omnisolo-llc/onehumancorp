@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda</title>
+    <style>
+        :root {
+            --bg-color: #F5F5F7;
+            --surface-color: #FFFFFF;
+            --text-primary: #1D1D1F;
+            --text-secondary: #86868B;
+            --accent-color: #0066CC;
+            --border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .add-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 24px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .content {
+            padding: 16px;
+        }
+
+        .date-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 24px 0 12px 0;
+        }
+
+        .date-header:first-child {
+            margin-top: 8px;
+        }
+
+        .appointment-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .appointment-time {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+
+        .appointment-title {
+            font-size: 17px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .appointment-customer {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge {
+            align-self: flex-start;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: capitalize;
+        }
+
+        .status-confirmed {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-pending {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        /* Bottom Sheet */
+        .sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface-color);
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 101;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        }
+
+        .sheet.active {
+            transform: translateY(0);
+        }
+
+        .sheet-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sheet-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: #FAFAFA;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        /* Mobile specific adjustments */
+        @media (min-width: 768px) {
+            body {
+                display: flex;
+                justify-content: center;
+                background: #E5E5EA;
+            }
+            .mobile-container {
+                width: 375px;
+                min-height: 100vh;
+                background: var(--bg-color);
+                position: relative;
+                box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            }
+            .sheet {
+                position: absolute;
+            }
+            .sheet-overlay {
+                position: absolute;
+            }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    <header class="header">
+        <h1>Agenda</h1>
+        <button class="add-btn" id="open-sheet-btn">+</button>
+    </header>
+
+    <div class="content" id="agenda-content">
+        <div class="empty-state" id="loading-state">Loading appointments...</div>
+    </div>
+
+    <!-- Add Availability Sheet -->
+    <div class="sheet-overlay" id="sheet-overlay"></div>
+    <div class="sheet" id="add-sheet">
+        <div class="sheet-header">
+            <h2>Add Availability</h2>
+            <button class="close-btn" id="close-sheet-btn">&times;</button>
+        </div>
+        <form id="add-availability-form">
+            <div class="form-group">
+                <label for="date-picker">Date</label>
+                <input type="date" id="date-picker" required>
+            </div>
+            <div class="form-group">
+                <label for="start-time">Start Time</label>
+                <input type="time" id="start-time" required>
+            </div>
+            <div class="form-group">
+                <label for="end-time">End Time</label>
+                <input type="time" id="end-time" required>
+            </div>
+            <button type="submit" class="submit-btn" id="save-availability-btn">Save Availability</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const openBtn = document.getElementById('open-sheet-btn');
+        const closeBtn = document.getElementById('close-sheet-btn');
+        const sheet = document.getElementById('add-sheet');
+        const overlay = document.getElementById('sheet-overlay');
+        const form = document.getElementById('add-availability-form');
+        const contentContainer = document.getElementById('agenda-content');
+
+        // Set default date to today
+        document.getElementById('date-picker').valueAsDate = new Date();
+
+        function toggleSheet() {
+            sheet.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        openBtn.addEventListener('click', toggleSheet);
+        closeBtn.addEventListener('click', toggleSheet);
+        overlay.addEventListener('click', toggleSheet);
+
+        // Fetch and display appointments (mocked for frontend demo, would connect to real API)
+        async function fetchAppointments() {
+            try {
+                // In a real app this would be: await fetch('/api/v1/appointments');
+                const mockData = [
+                    {
+                        id: '1',
+                        title: 'Guitar Lesson',
+                        customer_name: 'Sarah Jenkins',
+                        start_time: new Date().setHours(14, 0, 0, 0),
+                        end_time: new Date().setHours(15, 0, 0, 0),
+                        status: 'confirmed'
+                    },
+                    {
+                        id: '2',
+                        title: 'Intro Session',
+                        customer_name: 'Mark T.',
+                        start_time: new Date().setHours(16, 30, 0, 0),
+                        end_time: new Date().setHours(17, 0, 0, 0),
+                        status: 'pending'
+                    }
+                ];
+
+                renderAppointments(mockData);
+            } catch (err) {
+                contentContainer.innerHTML = `<div class="empty-state">Failed to load appointments.</div>`;
+            }
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function renderAppointments(appointments) {
+            if (!appointments || appointments.length === 0) {
+                contentContainer.innerHTML = `<div class="empty-state">No appointments today.</div>`;
+                return;
+            }
+
+            let html = `<div class="date-header">Today</div>`;
+
+            appointments.forEach(apt => {
+                html += `
+                    <div class="appointment-card" data-id="${apt.id}">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div class="appointment-time">${formatTime(apt.start_time)} - ${formatTime(apt.end_time)}</div>
+                            <span class="status-badge status-${apt.status}">${apt.status}</span>
+                        </div>
+                        <h3 class="appointment-title">${apt.title}</h3>
+                        <div class="appointment-customer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            ${apt.customer_name}
+                        </div>
+                    </div>
+                `;
+            });
+
+            contentContainer.innerHTML = html;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const date = document.getElementById('date-picker').value;
+            const start = document.getElementById('start-time').value;
+            const end = document.getElementById('end-time').value;
+
+            const btn = document.getElementById('save-availability-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                toggleSheet();
+
+                // Add a notification or refresh the list
+                const notification = document.createElement('div');
+                notification.style.cssText = 'position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; font-size: 14px;';
+                notification.innerText = 'Availability saved successfully.';
+                document.body.appendChild(notification);
+
+                setTimeout(() => notification.remove(), 3000);
+            }, 800);
+        });
+
+        // Initial load
+        fetchAppointments();
+    });
+</script>
+</body>
+</html>
