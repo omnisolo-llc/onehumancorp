@@ -487,7 +487,7 @@ pub async fn stripe_webhook_handler(
 
                 let res = match &webhook_state.db.store {
                     DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
+                        sqlx::query("UPDATE tenants SET tier = ? WHERE id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
                             .execute(pool)
@@ -495,7 +495,7 @@ pub async fn stripe_webhook_handler(
                             .map(|_| ())
                     }
                     DbStore::Postgres => {
-                        sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
+                        sqlx::query("UPDATE tenants SET tier = $1 WHERE id = $2")
                             .bind(tier_string)
                             .bind(tenant_id)
                             .execute(&webhook_state.db.pool)
@@ -530,7 +530,7 @@ pub async fn stripe_webhook_handler(
                 // Update DB
                 let res = match &webhook_state.db.store {
                     DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
+                        sqlx::query("UPDATE tenants SET tier = ? WHERE id = ?")
                             .bind("Free")
                             .bind(tenant_id)
                             .execute(pool)
@@ -538,7 +538,7 @@ pub async fn stripe_webhook_handler(
                             .map(|_| ())
                     }
                     DbStore::Postgres => {
-                        sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
+                        sqlx::query("UPDATE tenants SET tier = $1 WHERE id = $2")
                             .bind("Free")
                             .bind(tenant_id)
                             .execute(&webhook_state.db.pool)
