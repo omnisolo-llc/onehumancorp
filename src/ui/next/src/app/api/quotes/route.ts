@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/quotes${id ? "/" + id : ""}`, {
-      method: 'POST',
+      method: id ? 'PUT' : 'POST',
       headers,
       body: JSON.stringify(body),
     });
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       return NextResponse.json(await res.json());
     }
 
-    return NextResponse.json({ error: 'Failed to create quote' }, { status: res.status });
+    return NextResponse.json({ error: id ? 'Failed to update quote' : 'Failed to create quote' }, { status: res.status });
   } catch {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
