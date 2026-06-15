@@ -91,6 +91,8 @@ struct StartOnboardingRequest {
     price_type: Option<String>,
     location: Option<String>,
     target_audience: Option<String>,
+    ai_agents: Option<Vec<String>>,
+    ai_auto_respond: Option<bool>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {
