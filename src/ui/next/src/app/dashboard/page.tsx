@@ -25,8 +25,6 @@ import { ReviewFeedCard } from './ReviewFeedCard';
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
-import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
-import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
 
@@ -501,8 +499,6 @@ export default function Dashboard() {
 
         <div className="order-last md:order-first">
           <WrappedWidget />
-          <SuccessMilestoneAlert />
-          <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
           <div className="mb-6">
             <div className="mb-4"><CartRecoveryWidget /></div>

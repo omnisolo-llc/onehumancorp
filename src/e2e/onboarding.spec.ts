@@ -358,7 +358,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
     });
 
     test('Cross-device resume correctly navigates to the saved step', async ({ page, browser }) => {
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         // Go to step 2 (categories)
@@ -387,7 +387,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
             localStorage.setItem('user_id', 'test-user');
         }, testTenantId);
 
-        await newPage.goto('/ui/setup.html');
+        await newPage.goto('/onboarding');
         await newPage.waitForLoadState('networkidle');
 
         // It should resume to step-name
@@ -398,7 +398,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
     });
 
     test('Form fields populate correctly after resume', async ({ page, browser }) => {
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         // Fill data
@@ -420,7 +420,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
             localStorage.setItem('user_id', 'test-user');
         }, testTenantId);
 
-        await newPage.goto('/ui/setup.html');
+        await newPage.goto('/onboarding');
         await newPage.waitForLoadState('networkidle');
 
         await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible({ timeout: 10000 });
@@ -436,7 +436,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
     });
 
     test('Save Draft explicit button functionality works and shows visual feedback', async ({ page }) => {
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         await page.getByText('Local Service').click();
@@ -451,7 +451,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
     });
 
     test('Caching logic via API preserves state correctly across reloads', async ({ page }) => {
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         await page.getByText('Storefront').click();
@@ -464,7 +464,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
         await expect(page.getByRole('heading', { name: "What's your assistant's name?" })).toBeVisible({ timeout: 10000 });
 
         // Simulate reload without clearing local storage
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         await expect(page.getByRole('heading', { name: "What's your assistant's name?" })).toBeVisible({ timeout: 10000 });
@@ -475,7 +475,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
 
     test('Draft overrides local state if API state exists', async ({ page, browser }) => {
         // Device 1: Advance to step 3 and save draft
-        await page.goto('/ui/setup.html');
+        await page.goto('/onboarding');
         await page.waitForLoadState('networkidle');
 
         await page.getByText('Storefront').click();
@@ -499,7 +499,7 @@ test.describe('Onboarding Cross-Device Resume (No Mock)', () => {
             }));
         }, testTenantId);
 
-        await newPage.goto('/ui/setup.html');
+        await newPage.goto('/onboarding');
         await newPage.waitForLoadState('networkidle');
 
         // It should jump to step-name and have the API business name

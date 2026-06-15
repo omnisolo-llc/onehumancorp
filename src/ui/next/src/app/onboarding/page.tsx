@@ -429,8 +429,8 @@ export default function OnboardingWizard() {
         fetch(`${backendUrl}/api/onboarding/launch`, { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
         // Optional, but required by E2E test
-        if (typeof window !== 'undefined' && window.location.href.includes('setup.html')) {
-           window.location.href = '/success.html';
+        if (typeof window !== 'undefined' && window.location.href.includes('onboarding')) {
+           window.location.href = '/success';
         }
       }
     } catch (err: any) {
