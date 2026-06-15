@@ -5446,7 +5446,33 @@ async fn create_ui_bom_item_handler(
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
                                     .bind("Draft Reply")
-                                    .bind("Send deposit link to Maya")
+                                    .bind("Hi Maya! I can definitely help with the custom cake. It will be $50.")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Website Form")
+                                    .bind("Medium")
+                                    .bind("Question about delivery times")
+                                    .bind("pending")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("action-test-2")
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("We deliver between 9 AM and 5 PM on weekdays.")
                                     .execute(pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
@@ -5536,7 +5562,33 @@ async fn create_ui_bom_item_handler(
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
                                     .bind("Draft Reply")
-                                    .bind("Send deposit link to Maya")
+                                    .bind("Hi Maya! I can definitely help with the custom cake. It will be $50.")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Website Form")
+                                    .bind("Medium")
+                                    .bind("Question about delivery times")
+                                    .bind("pending")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("action-test-2")
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("We deliver between 9 AM and 5 PM on weekdays.")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
