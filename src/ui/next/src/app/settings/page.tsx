@@ -195,55 +195,58 @@ export default function SettingsPage() {
 
   return (
     <AppShell title="Settings">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold font-outfit text-gray-900">Workspace Settings</h1>
-          <p className="app-list-subtitle">Manage integrations, local routing, and security.</p>
+      <div className="mx-auto max-w-4xl space-y-8 font-inter">
+        <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
+          <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and system security.</p>
         </header>
 
-        <section className="app-panel">
-          <div className="app-panel-header">
+        {/* SMS Notifications Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title">SMS Notifications & Security</div>
-              <div className="app-list-subtitle">Get texts for critical events. Verify your phone number to enable.</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
-          <div className="app-panel-body">
+          <div className="app-panel-body p-6 space-y-6">
             <div className="space-y-4">
-              <label className="block text-sm font-semibold text-gray-700">Mobile Number</label>
-              <input
-                aria-label="Mobile Number"
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={isVerified}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
-              />
-              {!isVerifying && !isVerified && (
-                <WithTooltip id="settings-verify-tooltip" defaultText="Verify your number to receive critical notifications.">
-                  <button onClick={handleVerify} className="app-button primary" type="button">
-                    Verify Number
-                  </button>
-                </WithTooltip>
-              )}
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">Mobile Number</label>
+              <div className="flex gap-3 max-w-md">
+                <input
+                  aria-label="Mobile Number"
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={isVerified}
+                  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                />
+                {!isVerifying && !isVerified && (
+                  <WithTooltip id="settings-verify-tooltip" defaultText="Verify your number to receive critical notifications.">
+                    <button onClick={handleVerify} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                      Verify Number
+                    </button>
+                  </WithTooltip>
+                )}
+              </div>
 
-              {smsStatus && <p className="text-sm font-medium text-blue-700" role="status">{smsStatus}</p>}
+              {smsStatus && <p className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd]" role="status">⚡ {smsStatus}</p>}
 
               {isVerifying && !isVerified && (
-                <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
-                  <p className="mb-2 text-sm text-blue-800">A 6-digit code has been sent. Enter it below:</p>
-                  <div className="flex gap-2">
+                <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-4 max-w-md animate-fade-in">
+                  <p className="mb-3 text-xs font-semibold text-teal-800 dark:text-teal-200">A 6-digit code has been sent. Enter it below:</p>
+                  <div className="flex gap-3">
                     <input
                       aria-label="Verification code"
                       type="text"
                       placeholder="123456"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
-                      className="w-28 rounded-md border border-gray-300 px-3 py-2 text-center text-sm text-gray-800"
+                      className="w-28 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-mono text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                     />
                     <WithTooltip id="settings-otp-tooltip" defaultText="Click to confirm the code sent to your phone.">
-                      <button onClick={handleConfirm} className="app-button primary" type="button">
+                      <button onClick={handleConfirm} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs" type="button">
                         Confirm OTP
                       </button>
                     </WithTooltip>
@@ -251,194 +254,199 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {isVerified && <span className="app-badge good">Number Verified</span>}
+              {isVerified && <span className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold border border-green-200">✓ Number Verified</span>}
 
-              <div className="space-y-2 border-t border-gray-200 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
                 {[
                   ["urgent_booking", "Urgent Bookings"],
                   ["failed_payment", "Failed Payments"],
                   ["new_order", "New Orders"],
                 ].map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-3">
+                  <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isVerified ? 'border-gray-100 hover:border-teal-200 bg-gray-50/30' : 'border-gray-100 opacity-60 cursor-not-allowed'}`}>
                     <input
                       aria-label={label}
                       type="checkbox"
                       disabled={!isVerified}
                       checked={(preferences as any)[key]}
                       onChange={(e) => handlePreferenceChange(key, e.target.checked)}
-                      className="rounded"
+                      className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <span className={`text-sm ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
+                    <span className={`text-sm font-medium ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-3">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
                     aria-label="Enable Email Notifications"
                     type="checkbox"
                     checked={(preferences as any)["email_notifications"] || false}
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
-                    className="rounded"
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm text-gray-800">Enable Email Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Email Notifications</span>
                 </label>
-                <label className="flex items-center gap-3">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
                     aria-label="Enable Push Notifications"
                     type="checkbox"
                     checked={(preferences as any)["push_notifications"] || false}
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
-                    className="rounded"
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm text-gray-800">Enable Push Notifications</span>
-
+                  <span className="text-sm font-medium text-gray-800">Push Notifications</span>
                 </label>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="app-grid two">
-          <div className="app-panel">
-            <div className="app-panel-header">
-              <div>
-                <div className="app-panel-title">Local Delivery Setup</div>
-                <div className="app-list-subtitle">Configure delivery radius and rates.</div>
+        {/* Local Delivery and Voice Receptionist side-by-side */}
+        <section className="app-grid two gap-6">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+                <div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery Setup</div>
+                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure delivery radius and rates.</div>
+                </div>
               </div>
-            </div>
-            <div className="app-panel-body space-y-4">
-              <WithTooltip id="settings-delivery-tooltip" defaultText="Turn this on to offer local delivery to your customers.">
-                <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700 cursor-pointer">
-                  <span>Enable Local Delivery</span>
-                  <input
-                    aria-label="Enable Local Delivery"
-                    type="checkbox"
-                    checked={deliverySettings.delivery_enabled}
-                    onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
-                    className="rounded cursor-pointer"
-                  />
-                </label>
-              </WithTooltip>
+              <div className="app-panel-body p-6 space-y-4">
+                <WithTooltip id="settings-delivery-tooltip" defaultText="Turn this on to offer local delivery to your customers.">
+                  <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
+                    <span>Enable Local Delivery</span>
+                    <input
+                      aria-label="Enable Local Delivery"
+                      type="checkbox"
+                      checked={deliverySettings.delivery_enabled}
+                      onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
+                      className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
+                    />
+                  </label>
+                </WithTooltip>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="app-metric-label">Delivery Radius (miles)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={deliverySettings.delivery_radius}
-                    onChange={(e) => handleDeliverySettingChange('delivery_radius', parseFloat(e.target.value))}
-                    disabled={!deliverySettings.delivery_enabled}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
-                  />
-                </label>
-                <label className="block">
-                  <span className="app-metric-label">Flat Delivery Fee ($)</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={deliverySettings.delivery_fee}
-                    onChange={(e) => handleDeliverySettingChange('delivery_fee', parseFloat(e.target.value))}
-                    disabled={!deliverySettings.delivery_enabled}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
-                  />
-                </label>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Radius (miles)</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={deliverySettings.delivery_radius}
+                      onChange={(e) => handleDeliverySettingChange('delivery_radius', parseFloat(e.target.value))}
+                      disabled={!deliverySettings.delivery_enabled}
+                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Fee ($)</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={deliverySettings.delivery_fee}
+                      onChange={(e) => handleDeliverySettingChange('delivery_fee', parseFloat(e.target.value))}
+                      disabled={!deliverySettings.delivery_enabled}
+                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 disabled:bg-gray-50 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="app-panel">
-            <div className="app-panel-header">
-              <div>
-                <div className="app-panel-title">AI Voice Receptionist</div>
-                <div className="app-list-subtitle">Let OHC handle your business calls.</div>
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+                <div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">AI Voice Receptionist</div>
+                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OHC handle your business calls.</div>
+                </div>
               </div>
-            </div>
-            <div className="app-panel-body">
-              <div className="space-y-4">
-              <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
-                <span>Enable AI Voice Receptionist</span>
-                <input
-                  type="checkbox"
-                  checked={voiceSettings.voice_receptionist_enabled}
-                  onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
-                  className="rounded"
-                />
-              </label>
+              <div className="app-panel-body p-6 space-y-4">
+                <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
+                  <span>Enable AI Voice Receptionist</span>
+                  <input
+                    type="checkbox"
+                    checked={voiceSettings.voice_receptionist_enabled}
+                    onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
+                  />
+                </label>
 
-              {voiceSettings.voice_receptionist_enabled && (
-                <div className="space-y-4 border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="block">
-                      <span className="app-metric-label">Voice Persona</span>
-                      <select
-                        value={voiceSettings.voice_receptionist_persona}
-                        onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
-                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
-                      >
-                        <option value="Friendly">Friendly & Casual</option>
-                        <option value="Professional">Professional & Crisp</option>
-                        <option value="Efficient">Fast & Efficient</option>
-                      </select>
-                    </label>
+                {voiceSettings.voice_receptionist_enabled && (
+                  <div className="space-y-4 border-t border-gray-100 pt-4 animate-fade-in">
+                    <div className="grid grid-cols-1 gap-4">
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Voice Persona</span>
+                        <select
+                          value={voiceSettings.voice_receptionist_persona}
+                          onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
+                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
+                        >
+                          <option value="Friendly">Friendly & Casual</option>
+                          <option value="Professional">Professional & Crisp</option>
+                          <option value="Efficient">Fast & Efficient</option>
+                        </select>
+                      </label>
 
-                    <div className="block">
-                      <span className="app-metric-label">Assigned Phone Number</span>
-                      <div className="mt-2 flex gap-2">
-                        <input
-                          aria-label="Assigned Phone Number"
-                          type="text"
-                          readOnly
-                          value={voiceSettings.voice_receptionist_number || "Not assigned"}
-                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
-                        />
-                        {!voiceSettings.voice_receptionist_number && (
-                          <button onClick={handleProvisionVoiceNumber} className="app-button secondary whitespace-nowrap" type="button">
-                            Get Number
-                          </button>
-                        )}
+                      <div className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Assigned Number</span>
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            aria-label="Assigned Phone Number"
+                            type="text"
+                            readOnly
+                            value={voiceSettings.voice_receptionist_number || "Not assigned"}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-55 px-4 py-2.5 text-sm text-gray-500 outline-none"
+                          />
+                          {!voiceSettings.voice_receptionist_number && (
+                            <button onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                              Get Number
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
           </div>
         </section>
 
-        <section className="app-panel">
-          <div className="app-panel-header">
+        {/* Agent Settings Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title">Agent Settings</div>
-              <div className="app-list-subtitle">Configure your AI agent's identity.</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Agent Settings</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure your AI agent's identity.</div>
             </div>
           </div>
-          <div className="app-panel-body">
-            <label className="block">
-              <span className="app-metric-label">Agent Name</span>
+          <div className="app-panel-body p-6">
+            <label className="block max-w-md">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Agent Name</span>
               <input
                 type="text"
                 value={agentName}
                 onChange={(e) => handleAgentNameChange(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
                 placeholder="Agent One"
               />
             </label>
           </div>
         </section>
 
-        <section className="app-panel">
-          <div className="app-panel-header">
+        {/* Change Password Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title">Change Password</div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Security & Credentials</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Update your account credentials regularly to keep data safe.</div>
             </div>
           </div>
-          <div className="app-panel-body grid gap-3">
-            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <button onClick={() => router.push("/dashboard")} className="app-button primary w-fit" type="button">
-              Save
+          <div className="app-panel-body p-6 grid gap-4 max-w-md">
+            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none" />
+            <button onClick={() => router.push("/dashboard")} className="px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs w-fit" type="button">
+              Save New Password
             </button>
           </div>
         </section>

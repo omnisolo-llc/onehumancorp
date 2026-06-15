@@ -41,7 +41,6 @@ message Quote {
   int64 total_amount = 4;
   int64 required_deposit = 5;
   int64 expires_at_unix = 6;
-  string checkout_url = 7;
 }
 
 message Invoice {

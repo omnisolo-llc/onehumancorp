@@ -1,0 +1,14 @@
+--- pos.rs
++++ pos.rs
+@@ -28,9 +28,9 @@
+     Router::new()
+         .route("/orders", get(get_orders_handler))
+         .route("/inventory", get(get_inventory_handler))
+         .route("/sync", post(sync_offline_handler))
+         .route("/sessions/start", post(start_session_handler))
+-        .route("/sessions/:id/status", put(update_session_status_handler).without_v07_checks())
+-        .route("/sessions/:id/end", post(end_session_handler).without_v07_checks())
++        .route("/sessions/:id/status", put(update_session_status_handler))
++        .route("/sessions/:id/end", post(end_session_handler))
+         .with_state(hub)
+ }

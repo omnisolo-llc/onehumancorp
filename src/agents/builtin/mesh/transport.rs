@@ -22,6 +22,15 @@ pub trait MeshTransport: Send + Sync {
         handler: Box<dyn Fn(Message) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    /// Subscribes to a pattern of topics/channels, returning a cancellation function.
+    async fn subscribe_pattern(
+        &self,
+        pattern: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe(pattern, handler).await
+    }
+
     /// Acquires a distributed lock on a resource for a specified duration.
     async fn acquire_lock(
         &self,

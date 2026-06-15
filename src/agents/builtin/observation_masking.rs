@@ -28,10 +28,8 @@ impl JetBrainsObservationMasker {
     ) -> bool {
         let mut modified = false;
 
-        // More elegant token-budget/byte-budget slicing method.
-        // We allow deeper recursion (up to 100) but reduce the available size limit and element limit proportionally.
-        // Prevent stack overflow with a high hard limit.
-        if depth > 100 {
+        // Prevent extremely deep recursion that could blow up the stack
+        if depth > 10 {
             match val {
                 Value::Array(arr) => {
                     let len = arr.len();
@@ -50,24 +48,11 @@ impl JetBrainsObservationMasker {
             }
         }
 
-        // Budget reduction at each depth level to ensure total output stays small
-        // We decay the size limit by 20% at each level, but ensure it doesn't drop below a minimum threshold
-        // The element limit decays more gracefully.
-        let mut current_size_limit = size_limit;
-        for _ in 0..depth {
-            current_size_limit = std::cmp::max(10, (current_size_limit * 8) / 10);
-        }
-
-        let mut current_element_limit = element_limit;
-        for _ in 0..depth {
-            current_element_limit = std::cmp::max(1, (current_element_limit * 9) / 10);
-        }
-
         match val {
             Value::String(s) => {
                 let bytes = s.len();
-                if bytes > current_size_limit {
-                    let preview_chars = std::cmp::max(10, current_size_limit / 4);
+                if bytes > size_limit {
+                    let preview_chars = std::cmp::max(10, size_limit / 4);
                     let char_count = s.chars().count();
                     if char_count > preview_chars * 2 {
                         let start_preview: String = s.chars().take(preview_chars).collect();
@@ -86,23 +71,26 @@ impl JetBrainsObservationMasker {
             Value::Array(arr) => {
                 let original_len = arr.len();
 
-                if original_len > current_element_limit {
+                // Adaptive element limit based on depth - deeper structures get truncated more aggressively
+                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+
+                if original_len > current_limit {
                     // Try to keep a mix of the beginning and end of the array
-                    if current_element_limit >= 2 {
-                        let half = current_element_limit / 2;
-                        let mut new_arr = Vec::with_capacity(current_element_limit + 1);
+                    if current_limit >= 2 {
+                        let half = current_limit / 2;
+                        let mut new_arr = Vec::with_capacity(current_limit + 1);
                         new_arr.extend_from_slice(&arr[..half]);
                         new_arr.push(Value::String(format!(
                             "[... Masked array: {} elements truncated ...]",
-                            original_len - current_element_limit
+                            original_len - current_limit
                         )));
-                        new_arr.extend_from_slice(&arr[original_len - (current_element_limit - half)..]);
+                        new_arr.extend_from_slice(&arr[original_len - (current_limit - half)..]);
                         *arr = new_arr;
                     } else {
-                        arr.truncate(current_element_limit);
+                        arr.truncate(current_limit);
                         arr.push(Value::String(format!(
                             "[Masked array: {} elements truncated]",
-                            original_len - current_element_limit
+                            original_len - current_limit
                         )));
                     }
                     modified = true;
@@ -119,9 +107,12 @@ impl JetBrainsObservationMasker {
                 let mut truncated = false;
                 let mut removed_count = 0;
 
-                if original_len > current_element_limit {
+                // Adaptive element limit based on depth
+                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+
+                if original_len > current_limit {
                     let keys_to_remove: Vec<String> =
-                        obj.keys().skip(current_element_limit).cloned().collect();
+                        obj.keys().skip(current_limit).cloned().collect();
                     removed_count = keys_to_remove.len();
                     for k in keys_to_remove {
                         obj.remove(&k);

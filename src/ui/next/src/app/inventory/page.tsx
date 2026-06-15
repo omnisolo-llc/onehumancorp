@@ -74,7 +74,7 @@ export default function InventoryDashboard() {
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Raw Materials</div>
-              <div className="app-list-subtitle">Loaded from `/api/ui/supply`.</div>
+              <div className="app-list-subtitle">Live material levels and reorder thresholds.</div>
             </div>
           </div>
           {error && <div className="app-empty">{error}</div>}

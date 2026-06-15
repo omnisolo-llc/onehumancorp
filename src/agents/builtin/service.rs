@@ -744,6 +744,7 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = crate::tools::all_tools(
+            self.llm_override.clone(),
             None, // Pass None for LLM in tools to avoid circular dependencies for now
             None,
             todos,
@@ -1175,21 +1176,12 @@ impl AgentService for AgentServiceImpl {
             } else {
                 Some(std::path::PathBuf::from(&sub_req.working_dir))
             };
-
-            let anthropic_memory = self.anthropic_memory.clone();
-            let accessor = if let Some(mem) = &anthropic_memory {
-                use crate::memory_store::LongTermMemory;
-                mem.as_anthropic_accessor()
-            } else {
-                None
-            };
-
             let tools = self
                 .build_tools(
                     sub_req.toolset_config.as_ref(),
                     "",
                     working_dir,
-                    accessor,
+                    None,
                     observation_store.clone(),
                 )
                 .await;
@@ -1638,39 +1630,4 @@ mod memory_tests {
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
     }
-
-    #[tokio::test]
-    async fn test_dispatch_to_sub_agent_injects_anthropic_memory() {
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
-        let base_dir = std::path::PathBuf::from(".test-agent-memory-subagent");
-        let store = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir).unwrap();
-        service.anthropic_memory = Some(Arc::new(store));
-
-        assert!(
-            service.anthropic_memory.is_some(),
-            "Anthropic Memory should be initialized"
-        );
-
-        // Construct a dummy SubAgentRequest.
-        let req = tonic::Request::new(crate::proto::agent_service::SubAgentRequest {
-            task: "test task".to_string(),
-            working_dir: "".to_string(),
-            sub_agent_address: "".to_string(), // Forces in-process dispatch
-            ..Default::default()
-        });
-
-        // Execute dispatch_to_sub_agent (it will run and return empty because there's no LLM override, but we check if it passes without panic).
-        // In a real scenario we'd mock the LLM and check tools, but here we just ensure the dispatch pathway doesn't crash when memory is enabled.
-        let res = service.dispatch_to_sub_agent(req).await;
-
-        // We expect it to run and not crash. Since we don't have a valid LLM setup in this simple unit test,
-        // we expect it to return an error (either LLM initialization failure or early exit). We check for an Ok or Err safely.
-        match res {
-            Ok(_) => println!("Sub-agent dispatch succeeded"),
-            Err(e) => println!("Sub-agent dispatch safely errored as expected without panic: {}", e),
-        }
-
-        let _ = tokio::fs::remove_dir_all(".test-agent-memory-subagent").await;
-    }
-
 }

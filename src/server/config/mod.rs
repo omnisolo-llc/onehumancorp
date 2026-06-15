@@ -41,8 +41,6 @@ pub struct AppConfig {
     pub jwt_secret: Option<String>,
     pub s3_endpoint: Option<String>,
     pub s3_bucket_blobs: String,
-    pub ai_agent_timeout_ms: Option<u64>,
-    pub ai_retry_backoff_ms: Option<u64>,
 }
 
 static INSTANCE: OnceLock<AppConfig> = OnceLock::new();

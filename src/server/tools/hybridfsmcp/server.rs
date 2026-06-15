@@ -147,7 +147,7 @@ impl HybridFSMcpServer {
                 .instrument(tracing::info_span!("fs_hybrid_sync"))
                 .await
             }
-            _ => Err(tonic::Status::not_found(format!("tool {} not found", req.tool_id))),
+            _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

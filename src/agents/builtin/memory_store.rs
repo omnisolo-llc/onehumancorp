@@ -1077,7 +1077,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
 
     /// 3-Tier: Pull a detailed topic file on demand
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
-        Ok(String::new())
+        Err("Not implemented".to_string())
     }
 
     /// 3-Tier: Search raw transcripts

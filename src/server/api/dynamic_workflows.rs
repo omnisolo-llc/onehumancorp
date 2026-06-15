@@ -33,7 +33,7 @@ async fn start_workflow(
             .into_response();
     }
     if request.tenant_id.trim().is_empty() {
-        request.tenant_id = ::server_common::auth_utils::get_default_tenant();
+        request.tenant_id = "default".to_string();
     }
 
     match manager.start_workflow(request).await {
