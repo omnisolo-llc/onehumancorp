@@ -26,6 +26,7 @@ test.describe('Storefront Edge Cache Invalidation & SEO', () => {
     });
 
     // In a real environment, this validates the CacheManager webhook triggers properly
-    expect([200, 404]).toContain(stockOutRes.status());
+    const status = stockOutRes.status();
+    expect(status === 200 || status === 404).toBeTruthy();
   });
 });
