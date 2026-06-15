@@ -54,6 +54,20 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
+        if mutation.mutation_type.as_deref() == Some("inventory_toggle") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.unwrap();
+                let _ = sqlx::query("UPDATE products SET available_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+                    .bind(&mutation.product_id)
+                    .bind(&tenant_id_clone)
+                    .execute(&mut *db_tx)
+                    .await;
+                db_tx.commit().await.unwrap();
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();

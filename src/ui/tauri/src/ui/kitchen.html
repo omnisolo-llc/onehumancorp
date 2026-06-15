@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OHC Kitchen View</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+      .container {
+        max-width: 400px;
+        width: 100%;
+        padding: 40px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(2.1);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+      .app-button {
+        background-color: #007aff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 12px;
+        display: block;
+        min-width: 44px;
+        min-height: 44px;
+      }
+      .app-button.secondary {
+        background-color: #e5e5ea;
+        color: #1d1d1f;
+      }
+      .hidden {
+        display: none;
+      }
+      h1 {
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      .list-section {
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .list-item {
+        background: #fff;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid #e5e5ea;
+      }
+      .list-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Kitchen Command Center</h1>
+
+      <div id="network-status-indicator" class="hidden" style="background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold;">Offline - changes saved locally</div>
+      <div id="queue-dashboard" class="hidden" style="background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold;">0 Mutations Pending Sync</div>
+
+      <div class="list-section">
+        <h3>Active Orders</h3>
+        <div id="active-orders-list">
+            <div class="list-item">
+                <strong>Order #101</strong>
+                <span>Notes: No onions (translated to Arabic: بدون بصل)</span>
+            </div>
+        </div>
+      </div>
+
+      <div class="list-section">
+        <h3>Menu</h3>
+        <div id="menu-list">
+            <button id="sold-out-toggle-falafel" class="app-button secondary" onclick="toggleSoldOut('falafel')">Mark Falafel Sold Out</button>
+            <button id="sold-out-toggle-shawarma" class="app-button secondary" onclick="toggleSoldOut('shawarma')">Mark Shawarma Sold Out</button>
+        </div>
+      </div>
+
+      <button class="app-button" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+    </div>
+
+    <script>
+      function enqueueOfflineMutation(mutation) {
+          let queue = [];
+          try {
+              queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+          } catch(e) {}
+          queue.push(mutation);
+          localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+          window.dispatchEvent(new Event("ohc_queue_updated"));
+
+          if (navigator.onLine) {
+              syncOfflineQueue();
+          }
+      }
+
+      function updateOfflineStatus() {
+          const networkIndicator = document.getElementById("network-status-indicator");
+          const queueIndicator = document.getElementById("queue-dashboard");
+          if (!networkIndicator || !queueIndicator) return;
+
+          if (!navigator.onLine) {
+              networkIndicator.style.display = "block";
+              networkIndicator.classList.remove("hidden");
+          } else {
+              networkIndicator.style.display = "none";
+              networkIndicator.classList.add("hidden");
+          }
+
+          let queue = [];
+          try {
+              queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+          } catch(e) {}
+
+          if (queue.length > 0) {
+              queueIndicator.style.display = "block";
+              queueIndicator.classList.remove("hidden");
+              queueIndicator.innerText = queue.length + " Mutations Pending Sync";
+          } else {
+              queueIndicator.style.display = "none";
+              queueIndicator.classList.add("hidden");
+          }
+      }
+
+      async function syncOfflineQueue() {
+          if (!navigator.onLine) return;
+          let queue = [];
+          try {
+              queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+          } catch(e) {}
+
+          if (queue.length === 0) return;
+
+          const generalMutations = [];
+          queue.forEach(m => {
+              if (m.type === "inventory_toggle") {
+                  generalMutations.push({
+                      transaction_id: m.id,
+                      product_id: m.product_id,
+                      quantity_deducted: 1,
+                      amount: null,
+                      payment_method: null,
+                      payment_intent_id: null,
+                      currency: null,
+                      mutation_type: "inventory_toggle",
+                      payload: JSON.stringify({ is_sold_out: true })
+                  });
+              } else {
+                  generalMutations.push(m);
+              }
+          });
+
+          const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+          const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+          let allOk = true;
+
+          if (generalMutations.length > 0) {
+              try {
+                  const res = await fetch("/api/v1/sync/offline", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
+                      body: JSON.stringify({ mutations: generalMutations })
+                  });
+                  if (!res.ok) allOk = false;
+              } catch(e) {
+                  allOk = false;
+              }
+          }
+
+          if (allOk) {
+              // we only clear if we successfully synced. In real app, we'd remove specific ones, but simple clearing for now.
+              localStorage.setItem("ohc_offline_queue", "[]");
+              updateOfflineStatus();
+          }
+      }
+
+      function toggleSoldOut(productId) {
+          const btn = document.getElementById("sold-out-toggle-" + productId);
+          if (btn) {
+              btn.innerText = "Sold Out!";
+              btn.style.backgroundColor = "#ff3b30";
+              btn.style.color = "white";
+          }
+          enqueueOfflineMutation({
+              id: "tx-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9),
+              type: "inventory_toggle",
+              product_id: productId,
+              timestamp: new Date().toISOString()
+          });
+      }
+
+      window.addEventListener("online", () => {
+          updateOfflineStatus();
+          syncOfflineQueue();
+      });
+      window.addEventListener("offline", updateOfflineStatus);
+      window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+      updateOfflineStatus();
+    </script>
+  </body>
+</html>

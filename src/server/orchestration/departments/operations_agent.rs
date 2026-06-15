@@ -21,6 +21,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.order.fulfillment_ready".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
@@ -49,8 +50,47 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let mut modified_payload = event.payload.clone();
+
         let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
+            "tenant.order.created" => {
+                if let Some(msg) = event.payload.get("message").and_then(|v| v.as_str()) {
+                    let pool = crate::db::get_pool();
+                    let target_languages: Vec<String> = {
+                        let prefs_row = sqlx::query(
+                            "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1"
+                        )
+                        .bind(&event.tenant_id)
+                        .fetch_optional(&pool)
+                        .await
+                        .unwrap_or(None);
+
+                        match prefs_row {
+                            Some(r) => {
+                                use sqlx::Row;
+                                let langs_val: serde_json::Value = r.get("target_languages");
+                                serde_json::from_value(langs_val).unwrap_or_default()
+                            }
+                            None => vec!["Arabic".to_string()],
+                        }
+                    };
+
+                    let target = target_languages.first().cloned().unwrap_or_else(|| "Arabic".to_string());
+
+                    if let Ok(translation) = crate::api::agents::translation::translate_inbox_message_with_llm(&event.tenant_id, "system", msg, &target).await {
+                        if let Some(obj) = modified_payload.as_object_mut() {
+                            obj.insert("translated_message".to_string(), serde_json::Value::String(translation.translated_content));
+                        }
+                    }
+                }
+                "Process Order & Update Inventory".to_string()
+            },
+            "tenant.order.fulfillment_ready" => {
+                tokio::spawn(async move {
+                    let _ = crate::dispatch_critical_sms("order_ready", "Your order is ready for pickup!").await;
+                });
+                return Ok(());
+            },
             "LowStockAlert" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if !msg.is_empty() {
@@ -69,7 +109,7 @@ impl Department for OperationsAgent {
                     let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                     let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
-                    let deficit = expected - actual; // e.g. quantity_deducted if offline stock was 0, but actually pos_sync_worker passes quantity_deducted as expected_stock
+                    let deficit = expected - actual;
 
                     let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                     let prompt = format!("Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).", expected, product_id, actual, transaction_id);
@@ -82,7 +122,6 @@ impl Department for OperationsAgent {
                     };
 
                     if llm_response.contains("AUTO_RESOLVE") {
-                        // Let's create an auto-resolution action
                         let _ = self.orchestrator.execute_action(
                             DepartmentType::Operations,
                             format!("Auto-resolving inventory conflict for {} (tx: {})", product_id, transaction_id),
@@ -120,7 +159,7 @@ impl Department for OperationsAgent {
             action_description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            modified_payload,
         ).await?;
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {
