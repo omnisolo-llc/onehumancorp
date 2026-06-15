@@ -822,4 +822,32 @@ mod tests {
             Some("This is a test tooltip")
         );
     }
+
+    #[tokio::test]
+    async fn test_get_changelog() {
+        let res = get_changelog().await;
+        assert!(!res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_api_docs_spec() {
+        let res = get_api_docs_spec().await;
+        assert!(res.0.is_object());
+    }
+
+    #[tokio::test]
+    async fn test_get_article_handler() {
+        let res = get_article_handler(axum::extract::Path("getting-started-1".to_string())).await;
+        assert!(res.is_ok());
+        let res = get_article_handler(axum::extract::Path("non-existent".to_string())).await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_walkthrough() {
+        let res = get_walkthrough(axum::extract::Path("dashboard".to_string())).await;
+        assert!(!res.0.is_empty());
+        let res = get_walkthrough(axum::extract::Path("non-existent".to_string())).await;
+        assert!(res.0.is_empty());
+    }
 }

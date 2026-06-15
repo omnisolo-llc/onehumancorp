@@ -6,14 +6,26 @@
     <title>OHC Tooltip Registry</title>
     <style>
         body { font-family: "Outfit", -apple-system, sans-serif; background-color: #f5f5f7; display: flex; justify-content: center; padding: 40px; margin: 0; }
-        .container { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .container { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 30px; width: 100%; max-width: 700px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); transition: transform 0.2s; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: rgba(255,255,255,0.4); border-radius: 8px; overflow: hidden; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 14px; }
-        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 14px; }
-        button { padding: 8px 16px; background-color: #0066FF; color: white; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 14px; transition: background-color 0.2s; }
+        th { background: rgba(0,0,0,0.03); font-weight: 600; }
+        input { width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.7); }
+        input:focus { outline: none; border-color: #0066FF; box-shadow: 0 0 0 2px rgba(0,102,255,0.2); }
+        button { padding: 10px 16px; background-color: #0066FF; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 14px; transition: background-color 0.2s; }
         button:hover { background-color: #0055cc; }
-        h1 { margin-top: 0; font-size: 24px; color: #1d1d1f; }
-        p { color: #86868b; font-size: 14px; margin-bottom: 20px; }
+        h1 { margin-top: 0; font-size: 28px; color: #1d1d1f; font-weight: 700; letter-spacing: -0.5px; }
+        p { color: #86868b; font-size: 15px; margin-bottom: 24px; line-height: 1.5; }
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #16161a; }
+            .container { background: rgba(22, 22, 26, 0.7); border-color: rgba(255, 255, 255, 0.1); }
+            h1 { color: #f5f5f7; }
+            p { color: #a1a1aa; }
+            table { background: rgba(0,0,0,0.3); }
+            th, td { border-bottom: 1px solid rgba(255,255,255,0.05); color: #e5e5ea; }
+            th { background: rgba(255,255,255,0.03); }
+            input { background: rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.1); color: #fff; }
+        }
     </style>
 </head>
 <body>
