@@ -109,7 +109,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
@@ -153,7 +153,7 @@ mod tests {
         }
 
         let db2 = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()),
         });
         let state_manager2 = crate::orchestration::state::standalone::StandaloneStateManager::new(db2, Arc::new(InstantMockMesh));
@@ -602,7 +602,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -1124,7 +1124,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
