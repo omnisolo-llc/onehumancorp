@@ -1313,7 +1313,7 @@ Additional brand/product grounding:
 {}
 
 First, synthesize the context to select an appropriate template, generate copywriting, and select relevant concepts.
-Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
+Second, act as The Promoter (SEO) to automatically generate structured JSON-LD schemas based on the tenant\'s product catalog and chosen business type.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
 You must also act as the Operations and Finance agents to generate 3 sample products (in 'sample_products'), default shipping settings, and default tax settings.
 

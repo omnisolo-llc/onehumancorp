@@ -1197,7 +1197,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState)
+                state = { ...state, ...(apiState) };
                 localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
@@ -1487,6 +1487,7 @@
           'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
+      };
 
 
       function populateCategories() {
@@ -1649,6 +1650,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
+                  };
 
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1771,6 +1773,7 @@
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
                       initialProducts: intakeData.initial_products || []
+                  };
 
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1923,6 +1926,7 @@
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General"
+               };
 
 
 
