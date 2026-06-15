@@ -35,11 +35,11 @@ interface WebsiteBuilderState {
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
   blocks: any[];
-  status: "idle" | "generating" | "draft" | "live" | "error";
+  status: "idle" | "generating" | "draft" | "live";
   liveUrl: string;
   setBlocks: (blocks: any[]) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
-  setStatus: (status: "idle" | "generating" | "draft" | "live" | "error") => void;
+  setStatus: (status: "idle" | "generating" | "draft" | "live") => void;
   setLiveUrl: (url: string) => void;
   loadState?: (state: Partial<WebsiteBuilderState>) => void;
 }

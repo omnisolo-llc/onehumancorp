@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 /// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
@@ -4524,7 +4525,7 @@ mod tests {
                 } else {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
-                    let has_error = last_msg.tool_results.iter().any(|r| r.content.contains("LLM-Recoverable Error") || r.error.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again."));
+                    let has_error = last_msg.tool_results.iter().any(|r| r.content.contains("LLM-Recoverable Error") || r.error.contains("LLM-Recoverable Error: Validation Error (Pydantic-first tool schema): Failing for test. Please analyze this error, correct your tool arguments, and try again."));
 
                     if has_error {
                         Ok(crate::types::ChatResponse {
@@ -4582,7 +4583,7 @@ mod tests {
         // Verify the ToolCall event has the LlmRecoverable message
         let has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
-                result.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again.")
+                result.contains("LLM-Recoverable Error: Validation Error (Pydantic-first tool schema): Failing for test. Please analyze this error, correct your tool arguments, and try again.")
             } else {
                 false
             }

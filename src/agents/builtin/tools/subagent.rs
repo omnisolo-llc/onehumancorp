@@ -1,3 +1,4 @@
+#![allow(clippy::needless_borrow)]
 use crate::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use server_ohc::agent::service::SubAgentResponse;

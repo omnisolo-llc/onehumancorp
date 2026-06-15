@@ -40,10 +40,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
               sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
               return null;
             } else if (cmd === 'start_onboarding') {
-              return null;
-            }
-            if (cmd === "start_onboarding") {
-              return null;
+              return { success: true, message: "OK", organization_id: "test-org" };
             }
             if (cmd === 'process_intake') {
               return {
@@ -269,7 +266,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(container).toBeVisible();
     await expect(container).toHaveClass(/glassmorphism/);
 
-    const option = page.locator('.radio-option').first();
+    const option = page.locator('.context-card').first();
     const optionBox = await option.boundingBox();
     const catInput = page.getByPlaceholder("e.g. Graphic Design");
 
@@ -336,7 +333,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
               return "https://cloud.ohc.network/invite/mock-test";
             }
             if (cmd === "start_onboarding") {
-              return null;
+              return { success: true, message: "OK", organization_id: "test-org" };
             }
             if (cmd === 'process_intake') {
               return {

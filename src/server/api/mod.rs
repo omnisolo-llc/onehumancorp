@@ -1,3 +1,4 @@
+pub mod sync;
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;

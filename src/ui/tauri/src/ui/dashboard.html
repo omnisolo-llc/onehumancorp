@@ -566,6 +566,16 @@
       }
 
     </style>
+    <style>
+      @media (min-width: 600px) {
+        .paywall-actions {
+          flex-direction: row !important;
+        }
+        .paywall-actions a, .paywall-actions button {
+          width: auto !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <!-- Omnibox Modal -->
@@ -644,6 +654,37 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <!-- OHC Wrapped: Year in Review -->
+      <div class="ohc-growth-card" id="wrapped-widget" style="display: none; background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(0, 102, 255, 0.3);">
+        <div style="text-align: center; padding: 10px;">
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">2026 Wrapped 🎁</h2>
+          <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+              <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">$0.00</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
+              <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
+              <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
+              <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+          </div>
+
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 12px; padding: 12px; font-weight: 700;">
+            Share 2026 Success
+          </button>
+        </div>
+      </div>
+
       <!-- Viral Soft Paywall Loop -->
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -662,7 +703,7 @@
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
@@ -677,6 +718,30 @@
         </div>
       </div>
 
+
+      <!-- AI Feature Paywall Widget -->
+      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+        <div id="ai-feature-paywall-locked">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px;">
+            <span>✨</span> Pro Feature
+          </div>
+          <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #1d1d1f;">Unlock Advanced AI Analytics</h2>
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: #86868b; line-height: 1.5;">See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.</p>
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;">Upgrade to Pro</a>
+            <span style="color: #86868b; font-size: 14px; text-align: center;">or</span>
+            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;">Refer a Friend to Unlock</button>
+          </div>
+        </div>
+        <div id="ai-feature-paywall-unlocked" style="display: none; align-items: center; gap: 16px;">
+          <div style="font-size: 32px; background: rgba(52, 199, 89, 0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">✨</div>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #1d1d1f;">Advanced AI Analytics Unlocked!</h3>
+            <p style="margin: 0; font-size: 14px; color: #86868b;">You have 7 days of free access to Smart Cross-Selling and Deep Insights.</p>
+          </div>
+          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;">View Insights</a>
+        </div>
+      </div>
 
       <!-- Viral Loop Performance Widget -->
       <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
@@ -775,6 +840,7 @@
 
         <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
         <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
@@ -808,7 +874,7 @@
     </div>
 
     <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="index.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <a href="/onboarding" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -1037,7 +1103,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `index.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
+          footerLink.href = `/onboarding?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
@@ -1080,6 +1146,43 @@
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
         let currentHoursSaved = 0;
+
+        // AI Feature Paywall Logic
+        const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
+        const aiPaywallLocked = document.getElementById("ai-feature-paywall-locked");
+        const aiPaywallUnlocked = document.getElementById("ai-feature-paywall-unlocked");
+        const aiPaywallContainer = document.getElementById("ai-feature-paywall");
+
+        if (aiReferBtn) {
+          aiReferBtn.addEventListener("click", () => {
+            aiReferBtn.innerText = "Generating...";
+            aiReferBtn.disabled = true;
+            aiReferBtn.style.opacity = "0.7";
+
+            setTimeout(() => {
+              aiReferBtn.innerText = "Copy Link";
+              aiReferBtn.disabled = false;
+              aiReferBtn.style.opacity = "1";
+
+              // Once it is "Copy Link", next click will copy and unlock
+              aiReferBtn.onclick = () => {
+                const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
+                const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
+                navigator.clipboard.writeText(link).then(() => {
+                  aiReferBtn.innerText = "Copied Link!";
+                  aiReferBtn.style.background = "#34C759";
+
+                  setTimeout(() => {
+                    aiPaywallLocked.style.display = "none";
+                    aiPaywallUnlocked.style.display = "flex";
+                    aiPaywallContainer.style.background = "rgba(52, 199, 89, 0.05)";
+                    aiPaywallContainer.style.borderColor = "rgba(52, 199, 89, 0.3)";
+                  }, 1500);
+                });
+              };
+            }, 800);
+          });
+        }
 
         // Soft Paywall Logic
         const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
@@ -1348,7 +1451,33 @@
       }
       checkMilestones();
 
+      async function checkWrapped() {
+        try {
+          const res = await fetch('/api/v1/growth/wrapped');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.total_sales > 0 || data.total_orders > 0) {
+              document.getElementById('wrapped-widget').style.display = 'block';
+              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
+              document.getElementById('wrapped-orders').innerText = data.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.total_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
 
+              const shareBtn = document.getElementById('wrapped-share-btn');
+              shareBtn.onclick = () => {
+                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                navigator.clipboard.writeText(text).then(() => {
+                  shareBtn.innerText = 'Copied to Clipboard! ✨';
+                  setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);
+                });
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch Wrapped data", e);
+        }
+      }
+      checkWrapped();
 
       const generateBtn = document.getElementById('generate-link-btn');
 
@@ -1538,7 +1667,7 @@
           if (actionType === 'SocialPostDraft') {
             let parsedPayload = item.proposed_action || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1590,7 +1719,7 @@
           if (actionType === 'Draft Reply') {
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
@@ -1619,7 +1748,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1636,6 +1765,23 @@
                 <div class="triage-controls" style="display: flex; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (description.includes("reschedule") || description.includes("tentatively booked")) {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
                 </div>
               </div>
             `;
@@ -2390,6 +2536,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -2423,6 +2570,7 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -2446,6 +2594,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -2911,6 +3060,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -2943,6 +3093,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
+                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -2964,6 +3115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);

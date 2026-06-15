@@ -109,7 +109,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
@@ -153,7 +153,7 @@ mod tests {
         }
 
         let db2 = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()),
         });
         let state_manager2 = crate::orchestration::state::standalone::StandaloneStateManager::new(db2, Arc::new(InstantMockMesh));
@@ -602,7 +602,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -1124,7 +1124,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
@@ -1182,11 +1182,12 @@ mod tests {
 
             handles.push(tokio::spawn(async move {
                 let id = format!("{}_mission_{}", tenant, i);
-                let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', 'data', ?)")
+                sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', 'data', ?)")
                     .bind(id)
                     .bind(tenant)
                     .execute(&*p)
-                    .await;
+                    .await
+                    .unwrap();
             }));
         }
 
@@ -1208,4 +1209,92 @@ mod tests {
         assert_eq!(count_a, 25, "Tenant A should strictly have 25 records");
         assert_eq!(count_b, 25, "Tenant B should strictly have 25 records");
         assert_eq!(count_total, 50, "Total count should be exactly the sum without leakage");
+
+        // Postgres Parity Logic
+        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+            let pg_pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await
+                .unwrap();
+
+            // Create table with IF NOT EXISTS to avoid clashes if another test created it,
+            // but we might need a unique table name or clear it. Let's use a unique table name for this test.
+            let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");
+            let table_name = format!("agent_missions_chaos_{}", table_suffix);
+
+            let create_query = format!(
+                "CREATE TABLE {} (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    tenant_id TEXT NOT NULL,
+                    mission_log TEXT
+                );", table_name
+            );
+            sqlx::query(&create_query).execute(&pg_pool).await.unwrap();
+
+            let mut pg_handles = vec![];
+            let pg_pool_arc = std::sync::Arc::new(pg_pool);
+
+            for i in 0..50 {
+                let p = pg_pool_arc.clone();
+                let tenant = if i % 2 == 0 { "tenant_a" } else { "tenant_b" };
+                let table_name_clone = table_name.clone();
+
+                pg_handles.push(tokio::spawn(async move {
+                    let id = format!("{}_mission_{}", tenant, i);
+                    let insert_query = format!("INSERT INTO {} (id, status, payload, tenant_id) VALUES ($1, 'PENDING', 'data', $2)", table_name_clone);
+                    sqlx::query(&insert_query)
+                        .bind(id)
+                        .bind(tenant)
+                        .execute(&*p)
+                        .await
+                        .unwrap();
+                }));
+            }
+
+            for h in pg_handles {
+                h.await.unwrap();
+            }
+
+            // Cleanup via drop table regardless of asserts using scopeguard or similar.
+            // We can just query the DB. Since we don't have scopeguard easily available,
+            // we will evaluate the counts, run the asserts, and drop the table.
+            // A better way is to do the assertions, but catch panics or just drop table manually inside a Drop trait.
+
+            // To ensure cleanup, let's create a struct with Drop trait.
+            struct TableDropper {
+                table_name: String,
+                pool: std::sync::Arc<sqlx::postgres::PgPool>,
+            }
+            impl Drop for TableDropper {
+                fn drop(&mut self) {
+                    let table_name = self.table_name.clone();
+                    let pool = self.pool.clone();
+                    tokio::spawn(async move {
+                        let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
+                        let _ = sqlx::query(&drop_query).execute(&*pool).await;
+                    });
+                }
+            }
+
+            let _dropper = TableDropper {
+                table_name: table_name.clone(),
+                pool: pg_pool_arc.clone(),
+            };
+
+            let count_query_a = format!("SELECT count(*) FROM {} WHERE tenant_id = 'tenant_a'", table_name);
+            let count_a_pg: i64 = sqlx::query_scalar(&count_query_a).fetch_one(&*pg_pool_arc).await.unwrap();
+
+            let count_query_b = format!("SELECT count(*) FROM {} WHERE tenant_id = 'tenant_b'", table_name);
+            let count_b_pg: i64 = sqlx::query_scalar(&count_query_b).fetch_one(&*pg_pool_arc).await.unwrap();
+
+            let count_query_total = format!("SELECT count(*) FROM {}", table_name);
+            let count_total_pg: i64 = sqlx::query_scalar(&count_query_total).fetch_one(&*pg_pool_arc).await.unwrap();
+
+            assert_eq!(count_a_pg, 25, "Postgres Tenant A should strictly have 25 records");
+            assert_eq!(count_b_pg, 25, "Postgres Tenant B should strictly have 25 records");
+            assert_eq!(count_total_pg, 50, "Postgres Total count should be exactly the sum without leakage");
+        }
     }
