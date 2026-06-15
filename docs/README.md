@@ -31,3 +31,7 @@ The docs website is generated from markdown with MkDocs.
 python3 -m pip install -r docs/requirements.txt
 mkdocs serve
 ```
+## Zero-Click Cart Recovery
+OHC implements a zero-click abandoned cart recovery engine. A background processor scans `conversational_checkout_sessions` every 5 minutes and drops them into `ohc_job_queue` if an order has been pending for an hour with customer contact info.
+
+The Salesperson agent drafts a personalized recovery message (with an optional margin-safe discount depending on backend policies) using LLMs, and presents it as a 1-tap `AgentFeedItem` in the user's Unified Activity Feed. When approved, it fires back to the queue and gets dispatched via SendGrid or Twilio.

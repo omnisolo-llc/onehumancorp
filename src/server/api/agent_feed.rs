@@ -306,6 +306,51 @@ async fn update_feed_item_state(
                             // Real implementation would buffer post here to AYRSHARE.
                         }
 
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("cart_recovery") {
+                            tracing::info!("Approved cart recovery draft: {}", id);
+                            if let Some(session_id) = payload.get("checkout_session_id").and_then(|v| v.as_str()) {
+                                if let Ok(parsed_session_id) = uuid::Uuid::parse_str(session_id) {
+                                    if let Ok(mut tx) = pool.begin().await {
+                                        let recovery_job_id = Uuid::new_v4().to_string();
+                                        let full_payload = payload.clone();
+
+                                        let update_res = sqlx::query("UPDATE conversational_checkout_sessions SET status = 'recovery_sent', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                            .bind(parsed_session_id)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *tx)
+                                            .await;
+
+                                        let insert_res = sqlx::query(
+                                            r#"
+                                            INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+                                            VALUES ($1, $2, 'cart_recovery', $3, 'PENDING', CURRENT_TIMESTAMP)
+                                            "#,
+                                        )
+                                        .bind(&recovery_job_id)
+                                        .bind(&tenant_id)
+                                        .bind(&full_payload)
+                                        .execute(&mut *tx)
+                                        .await;
+
+                                        if update_res.is_ok() && insert_res.is_ok() {
+                                            if tx.commit().await.is_ok() {
+                                                tracing::info!("Successfully marked session {} as recovery_sent and queued dispatch job {}", parsed_session_id, recovery_job_id);
+                                            } else {
+                                                tracing::error!("Failed to commit cart_recovery transaction for session {}", parsed_session_id);
+                                            }
+                                        } else {
+                                            tracing::error!("Failed to update state or queue job for cart_recovery session {}", parsed_session_id);
+                                            let _ = tx.rollback().await;
+                                        }
+                                    } else {
+                                        tracing::error!("Failed to begin transaction for cart_recovery session {}", parsed_session_id);
+                                    }
+                                } else {
+                                    tracing::error!("Invalid checkout_session_id {} in cart_recovery proposed action for tenant {}", session_id, tenant_id);
+                                }
+                            }
+                        }
+
                         if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                             if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
                                 tracing::info!("Approved quote draft: {}", quote_id);

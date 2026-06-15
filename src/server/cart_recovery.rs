@@ -653,6 +653,9 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
             "subject": message.subject,
             "body": message.body,
             "checkout_url": message.checkout_url,
+            "amount_cents": session.amount_cents,
+            "customer_name": session.customer_name.clone(),
+            "business_name": session.business_name.clone(),
         });
 
         let mut tx = self
@@ -755,10 +758,11 @@ where
 
     if job_type == "cart_recovery_agent" {
         let customer_name = payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer").to_string();
-        let cart_value = payload.get("cart_value").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
+        let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        let cart_value = format!("${:.2}", amount_cents as f64 / 100.0);
         let id = uuid::Uuid::new_v4().to_string();
         let proposed_action = serde_json::json!({
-            "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name)
+            "checkout_session_id": payload.get("checkout_session_id").and_then(|v| v.as_str()).unwrap_or_default().to_string(), "action_type": "cart_recovery.dispatch", "channel": "Email", "to": payload.get("customer_email").and_then(|v| v.as_str()).or_else(|| payload.get("customer_phone").and_then(|v| v.as_str())).unwrap_or_default().to_string(), "subject": "Finish your checkout", "body": payload.get("body").and_then(|v| v.as_str()).unwrap_or_default().to_string(), "checkout_url": payload.get("checkout_url").and_then(|v| v.as_str()).unwrap_or_default().to_string(), "amount_cents": amount_cents, "feature_type": "cart_recovery", "customer_name": payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or_default().to_string(), "business_name": payload.get("business_name").and_then(|v| v.as_str()).unwrap_or_default().to_string(), "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name)
         });
 
         let mut completion_tx = pool
