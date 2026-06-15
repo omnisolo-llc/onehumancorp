@@ -11,6 +11,7 @@ use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
 
 pub static POS_ORDERS_CACHE: OnceLock<HybridCache<Value>> = OnceLock::new();
+pub static POS_CATALOG_CACHE: OnceLock<HybridCache<Value>> = OnceLock::new();
 
 pub fn pos_routes<S>(hub: Arc<Hub>) -> Router<S>
 where
@@ -93,26 +94,96 @@ async fn get_inventory_handler(
     Query(query): Query<PosQuery>,
 ) -> Json<Value> {
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
-    let pool = crate::db::get_pool();
+    let cache_key = format!("pos_catalog:{}", tenant_id);
+    let cache = POS_CATALOG_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default();
+    let catalog_task = async {
+        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return cached;
+            }
+            let tenant_id_bg = tenant_id.clone();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                let pool = crate::db::get_pool();
+                let rows = sqlx::query("SELECT id, title, description, price_cents, currency FROM products WHERE tenant_id = $1")
+                    .bind(&tenant_id_bg)
+                    .fetch_all(&pool)
+                    .await
+                    .unwrap_or_default();
 
-    let inventory: Vec<Value> = rows.into_iter().map(|row| {
-        json!({
-            "id": row.get::<String, _>("id"),
-            "name": row.get::<String, _>("title"),
-            "description": row.get::<Option<String>, _>("description"),
-            "price_cents": row.get::<i64, _>("price_cents"),
-            "currency": row.get::<String, _>("currency"),
-            "stock": row.get::<i32, _>("inventory_count"),
-        })
-    }).collect();
+                let catalog: Vec<Value> = rows.into_iter().map(|row| {
+                    json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("title"),
+                        "description": row.get::<Option<String>, _>("description"),
+                        "price_cents": row.get::<i64, _>("price_cents"),
+                        "currency": row.get::<String, _>("currency"),
+                    })
+                }).collect();
+                let result = json!(catalog);
+                if let Some(c) = POS_CATALOG_CACHE.get() {
+                    c.set(&cache_key_bg, result, std::time::Duration::from_secs(3600)).await;
+                }
+            });
+            return cached;
+        }
 
-    Json(json!({ "inventory": inventory }))
+        let pool = crate::db::get_pool();
+        let rows = sqlx::query("SELECT id, title, description, price_cents, currency FROM products WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+
+        let catalog: Vec<Value> = rows.into_iter().map(|row| {
+            json!({
+                "id": row.get::<String, _>("id"),
+                "name": row.get::<String, _>("title"),
+                "description": row.get::<Option<String>, _>("description"),
+                "price_cents": row.get::<i64, _>("price_cents"),
+                "currency": row.get::<String, _>("currency"),
+            })
+        }).collect();
+
+        let result = json!(catalog);
+        cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(3600)).await;
+        result
+    };
+
+    let inventory_task = async {
+        let pool = crate::db::get_pool();
+        let rows = sqlx::query("SELECT id, inventory_count FROM products WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+
+        let mut inventory_map = std::collections::HashMap::new();
+        for row in rows {
+            let id: String = row.get("id");
+            let count: i32 = row.get("inventory_count");
+            inventory_map.insert(id, count);
+        }
+        inventory_map
+    };
+
+    let (mut catalog_val, inventory_map) = tokio::join!(catalog_task, inventory_task);
+
+    if let Some(catalog_array) = catalog_val.as_array_mut() {
+        for item in catalog_array.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                if let Some(id_val) = obj.get("id") {
+                    if let Some(id_str) = id_val.as_str() {
+                        let stock = inventory_map.get(id_str).copied().unwrap_or(0);
+                        obj.insert("stock".to_string(), json!(stock));
+                    }
+                }
+            }
+        }
+    }
+
+    Json(json!({ "inventory": catalog_val }))
 }
 
 #[cfg(test)]
@@ -132,5 +203,20 @@ mod tests {
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
+    }
+
+    #[tokio::test]
+    async fn test_pos_inventory_caching_strategy() {
+        let tenant_id = "test_tenant_inventory";
+        let cache_key = format!("pos_catalog:{}", tenant_id);
+        let cache = POS_CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+
+        let initial_val = cache.get(&cache_key).await;
+        assert!(initial_val.is_none(), "Catalog cache should be empty initially");
+
+        cache.set(&cache_key, json!([{"id": "prod_1", "name": "Test Product", "price_cents": 1000, "currency": "USD"}]), std::time::Duration::from_secs(60)).await;
+
+        let cached_val = cache.get(&cache_key).await;
+        assert!(cached_val.is_some(), "Catalog cache should hit after set");
     }
 }
