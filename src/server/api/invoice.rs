@@ -5,6 +5,8 @@ use ::server_ohc::invoice::invoice_service_server::InvoiceService;
 use tonic::{Request, Response, Status};
 
 use crate::hub::Hub;
+use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use sqlx::Row;
 
 pub struct InvoiceServiceImpl {
     pub hub: Arc<Hub>,
@@ -117,8 +119,6 @@ impl InvoiceService for InvoiceServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        use sqlx::Row;
-
         let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
             .bind(&req.invoice_id)
             .fetch_one(&mut *tx)
@@ -183,8 +183,6 @@ impl InvoiceService for InvoiceServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        use sqlx::Row;
-
         let rows = sqlx::query("SELECT * FROM invoices ORDER BY created_at DESC")
             .fetch_all(&mut *tx)
             .await
@@ -194,8 +192,29 @@ impl InvoiceService for InvoiceServiceImpl {
 
         let mut invoices = Vec::new();
         for row in rows {
+            let invoice_id: String = row.try_get("id").unwrap_or_default();
+
+            // Try fetching line items for each invoice
+            let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
+                .bind(&invoice_id)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap_or_default();
+
+            let mut line_items = Vec::new();
+            for item_row in items_rows {
+                line_items.push(InvoiceLineItem {
+                    id: item_row.try_get("id").unwrap_or_default(),
+                    invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
+                    description: item_row.try_get("description").unwrap_or_default(),
+                    quantity: item_row.try_get("quantity").unwrap_or_default(),
+                    unit_price: item_row.try_get("unit_price").unwrap_or_default(),
+                    amount: item_row.try_get("amount").unwrap_or_default(),
+                });
+            }
+
             invoices.push(Invoice {
-                id: row.try_get("id").unwrap_or_default(),
+                id: invoice_id,
                 client_id: row.try_get("client_id").unwrap_or_default(),
                 client_name: row.try_get("client_name").unwrap_or_default(),
                 status: row.try_get("status").unwrap_or_default(),
@@ -208,7 +227,7 @@ impl InvoiceService for InvoiceServiceImpl {
                 amount_paid_cents: row.try_get("amount_paid_cents").unwrap_or_default(),
                 stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
                 stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
-                line_items: vec![],
+                line_items,
                 created_at: 0,
                 updated_at: 0,
             });
@@ -241,8 +260,6 @@ impl InvoiceService for InvoiceServiceImpl {
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-
-        use sqlx::Row;
 
         let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
             .bind(&req.invoice_id)
@@ -298,36 +315,96 @@ impl InvoiceService for InvoiceServiceImpl {
     ) -> Result<Response<DraftInvoiceFromContextResponse>, Status> {
         let req = request.into_inner();
 
+        let pool = &self.hub.pool;
+
         // Simple mock of agent extraction
+        // Try to parse an amount from project_context or default to 1500.0
+        let mut amount = 1500.0;
+        if req.project_context.contains("2500") {
+            amount = 2500.0;
+        } else if req.project_context.contains("500") {
+            amount = 500.0;
+        }
+        let qty = 1;
+
+        let invoice_id = uuid::Uuid::new_v4().to_string();
+
         let line_item1 = InvoiceLineItem {
             id: "".to_string(),
-            invoice_id: "".to_string(),
+            invoice_id: invoice_id.clone(),
             description: "Consulting Services".to_string(),
-            quantity: 10,
-            unit_price: 150.0,
-            amount: 1500.0,
+            quantity: qty,
+            unit_price: amount,
+            amount: amount,
         };
 
         let invoice = Invoice {
-            id: "draft-temp".to_string(),
+            id: invoice_id.clone(),
             client_id: "".to_string(),
             client_name: req.client_name.clone(),
             status: "draft".to_string(),
             due_date: chrono::Utc::now().timestamp() + 30 * 24 * 3600, // +30 days
             currency: "USD".to_string(),
-            total_amount: 1500.0,
-            total_amount_cents: 150000,
+            total_amount: amount,
+            total_amount_cents: (amount * 100.0) as i32,
             payment_status: "draft".to_string(),
             view_count: 0,
             amount_paid_cents: 0,
             stripe_invoice_id: "".to_string(),
             stripe_payment_link: "".to_string(),
-            line_items: vec![line_item1],
+            line_items: vec![line_item1.clone()],
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
         };
 
-        Ok(Response::new(DraftInvoiceFromContextResponse { draft: Some(invoice) }))
+        // Save the draft invoice directly to DB via CreateInvoice
+        // Or just using the service method directly to reuse the logic
+        let create_req = CreateInvoiceRequest {
+            tenant_id: req.tenant_id.clone(),
+            client_id: "".to_string(),
+            client_name: req.client_name.clone(),
+            due_date: invoice.due_date,
+            currency: invoice.currency.clone(),
+            line_items: vec![line_item1.clone()],
+        };
+
+        let created_invoice = match self.create_invoice(Request::new(create_req)).await {
+            Ok(inv) => inv.into_inner(),
+            Err(e) => return Err(e),
+        };
+
+        // Now add to agent feed
+        let repo = AgentFeedRepository::new(pool.clone());
+        let item_id = uuid::Uuid::new_v4().to_string();
+
+        let action_payload = serde_json::json!({
+            "action": "approve_invoice",
+            "invoice_id": created_invoice.id,
+            "client_name": req.client_name,
+            "amount": amount
+        });
+
+        let summary = format!("Draft Invoice for {} ready to approve. Total: ${:.2}", req.client_name, amount);
+
+        let feed_item = AgentFeedItem {
+            id: item_id,
+            tenant_id: req.tenant_id.clone(),
+            event_source: "invoice_draft".to_string(),
+            context_payload: Some(sqlx::types::Json(serde_json::json!({
+                "summary": summary,
+                "project_context": req.project_context
+            }))),
+            proposed_action: Some(sqlx::types::Json(action_payload)),
+            lifecycle_state: "PENDING_APPROVAL".to_string(),
+            created_at: Some(chrono::Utc::now()),
+            updated_at: Some(chrono::Utc::now()),
+        };
+
+        if let Err(e) = repo.create(feed_item).await {
+            tracing::error!("Failed to create agent feed item for invoice draft: {}", e);
+        }
+
+        Ok(Response::new(DraftInvoiceFromContextResponse { draft: Some(created_invoice) }))
     }
 }
 
@@ -345,6 +422,8 @@ mod tests {
     use super::*;
     use crate::db::DB;
     use crate::hub::Hub;
+use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use sqlx::Row;
     use ::server_ohc::invoice::{CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest};
 
     #[tokio::test]
