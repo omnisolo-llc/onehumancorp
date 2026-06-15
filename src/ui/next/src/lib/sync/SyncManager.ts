@@ -5,11 +5,52 @@ export class SyncManager {
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
+  private ws: WebSocket | null = null;
+  private wsConnected = false;
 
   private constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.sync());
+      this.initWebSocket();
     }
+  }
+
+  private initWebSocket() {
+    if (typeof window === 'undefined') return;
+
+    // Connect to the new WS gateway
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/sync/ws`;
+
+    this.ws = new WebSocket(wsUrl);
+
+    this.ws.onopen = () => {
+      this.wsConnected = true;
+      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+
+      // Subscribe to inventory and order updates
+      this.ws?.send(JSON.stringify({ action: 'subscribe', topic: `inventory:${tenantId}` }));
+      this.ws?.send(JSON.stringify({ action: 'subscribe', topic: `orders:${tenantId}` }));
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.payload) {
+          const payload = JSON.parse(data.payload);
+          // Dispatch custom event for UI to consume and update state optimistically
+          window.dispatchEvent(new CustomEvent('ohc_sync_event', { detail: { topic: data.topic, payload } }));
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.wsConnected = false;
+      // Reconnect with backoff
+      setTimeout(() => this.initWebSocket(), 5000);
+    };
   }
 
   public static getInstance(): SyncManager {

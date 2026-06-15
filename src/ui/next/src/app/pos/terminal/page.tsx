@@ -103,6 +103,22 @@ export default function POSTerminal() {
     if (!locked && activeStaff) {
       loadDashboard();
     }
+
+    const handleSync = (e: any) => {
+      if (e.detail?.topic?.startsWith('inventory:')) {
+         const payload = e.detail.payload;
+         setInventory(prev => prev.map(p => {
+             if (p.id === payload.product_id) {
+                 return { ...p, stock: p.stock - (payload.quantity_deducted || 1) };
+             }
+             return p;
+         }));
+      }
+    };
+    if (typeof window !== 'undefined') {
+       window.addEventListener('ohc_sync_event', handleSync);
+       return () => window.removeEventListener('ohc_sync_event', handleSync);
+    }
   }, [locked, activeStaff]);
 
   const handleClockAction = async (action: 'CLOCK_IN' | 'CLOCK_OUT') => {

@@ -5,6 +5,7 @@ pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;
 pub mod pos;
+pub mod sync;
 pub mod staff_mesh;
 
 pub mod billing_webhook;

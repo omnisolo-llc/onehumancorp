@@ -5670,6 +5670,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
+        .nest("/api/sync", api::sync::gateway::router())
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),

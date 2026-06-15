@@ -1,44 +1,63 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('POS Inventory Sync - Optimistic UI', () => {
-  test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {
-    // Navigate to POS terminal
-    await page.goto('/pos/terminal');
+test.describe('POS Inventory Sync - Real Stack', () => {
+  test('POS terminal immediately updates stock UI on charge and syncs across sessions', async ({ browser }) => {
+    // We launch two separate browser contexts to simulate two POS terminals (or storefront and POS)
+    // using the real application stack (e2e framework)
+    const context1 = await browser.newContext();
+    const context2 = await browser.newContext();
 
-    // Wait for the pin screen to be visible
-    await expect(page.getByText('Terminal Locked')).toBeVisible();
+    const page1 = await context1.newPage();
+    const page2 = await context2.newPage();
 
-    // Login with PIN 1234
-    await page.getByRole('button', { name: '1', exact: true }).click();
-    await page.getByRole('button', { name: '2', exact: true }).click();
-    await page.getByRole('button', { name: '3', exact: true }).click();
-    await page.getByRole('button', { name: '4', exact: true }).click();
+    // Setup: Navigate to POS on both screens
+    await page1.goto('http://localhost:3000/pos/terminal');
+    await page2.goto('http://localhost:3000/pos/terminal');
 
-    // Wait for the dashboard to load
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+    // Both should reach pin lock
+    await expect(page1.getByText('Terminal Locked')).toBeVisible();
+    await expect(page2.getByText('Terminal Locked')).toBeVisible();
 
-    // Wait for the product catalog to be populated
-    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
+    // Unlock POS 1
+    await page1.getByRole('button', { name: '1', exact: true }).click();
+    await page1.getByRole('button', { name: '2', exact: true }).click();
+    await page1.getByRole('button', { name: '3', exact: true }).click();
+    await page1.getByRole('button', { name: '4', exact: true }).click();
+    await expect(page1.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
 
-    // Extract current stock from the text
-    const productButton = page.locator('button', { hasText: 'Vegan Celebration Cake' });
-    const descriptionText = await productButton.innerText();
+    // Unlock POS 2
+    await page2.getByRole('button', { name: '1', exact: true }).click();
+    await page2.getByRole('button', { name: '2', exact: true }).click();
+    await page2.getByRole('button', { name: '3', exact: true }).click();
+    await page2.getByRole('button', { name: '4', exact: true }).click();
+    await expect(page2.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
 
-    const stockMatch = descriptionText.match(/Stock: (\d+)/);
+    // Find the product and check stock
+    const productLocator1 = page1.locator('button', { hasText: 'Vegan Celebration Cake' });
+    const productLocator2 = page2.locator('button', { hasText: 'Vegan Celebration Cake' });
+
+    await expect(productLocator1).toBeVisible();
+    await expect(productLocator2).toBeVisible();
+
+    const desc1 = await productLocator1.innerText();
+    const stockMatch = desc1.match(/Stock: (\d+)/);
     expect(stockMatch).toBeTruthy();
 
     if (stockMatch) {
       const initialStock = parseInt(stockMatch[1], 10);
 
-      // Select the product
-      await productButton.click();
+      // Perform optimistic action on POS 1
+      await productLocator1.click();
+      await page1.getByRole('button', { name: /Charge \$/ }).click();
 
-      // Click the "Charge" button
-      await page.getByRole('button', { name: /Charge \$/ }).click();
+      // Verify POS 1 updates immediately
+      await expect(productLocator1).toContainText(`Stock: ${initialStock - 1}`);
 
-      // Immediately verify the stock decreased by 1 without waiting for API
-      // Since it's optimistic, it should happen instantly.
-      await expect(productButton).toContainText(`Stock: ${initialStock - 1}`);
+      // Verify POS 2 receives sync via WebSocket and updates
+      await expect(productLocator2).toContainText(`Stock: ${initialStock - 1}`);
     }
+
+    await context1.close();
+    await context2.close();
   });
 });
