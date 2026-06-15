@@ -222,6 +222,14 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_cached_tokens(&self, tenant_id: &str) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_cached_tokens(tenant_id)
+        } else {
+            0
+        }
+    }
+
     pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
         if let Some(ref auditor) = self.auditor {
             auditor.get_tenant_cost_cents(tenant_id)
@@ -259,13 +267,19 @@ impl Tracker {
         } else {
             0
         };
-        TokenSummary { total_tokens }
+        let total_cached_tokens = if let Some(auditor) = &self.auditor {
+            auditor.get_total_cached_tokens()
+        } else {
+            0
+        };
+        TokenSummary { total_tokens, total_cached_tokens }
     }
 }
 
 #[derive(Default)]
 pub struct TokenSummary {
     pub total_tokens: i64,
+    pub total_cached_tokens: i64,
 }
 
 impl Default for Tracker {
