@@ -10,6 +10,13 @@ pub struct HelpArticle {
 }
 
 #[derive(Serialize, Clone)]
+pub struct HelpArticleDetail {
+    pub title: String,
+    #[serde(rename = "contentHtml")]
+    pub content_html: String,
+}
+
+#[derive(Serialize, Clone)]
 pub struct VideoTutorial {
     pub id: i32,
     pub title: String,
@@ -32,17 +39,22 @@ pub struct WalkthroughStep {
 pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
     let steps = match page.as_str() {
         "store-setup" => vec![
-            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() }
+            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Welcome to the Store Setup guide! Let's get your business online.".to_string() },
+            WalkthroughStep { selector: "#nav-setup".to_string(), title: "Configuration".to_string(), text: "First, configure your business details here.".to_string() },
+            WalkthroughStep { selector: "#nav-store".to_string(), title: "Catalog".to_string(), text: "Then, add your first products to the store.".to_string() }
         ],
         "dashboard" => vec![
             WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
-            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() },
+            WalkthroughStep { selector: "#ohc-floating-help-btn".to_string(), title: "Need Help?".to_string(), text: "Click here anytime to access articles or talk to our AI assistant.".to_string() }
         ],
         "pos" => vec![
-            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
+            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() },
+            WalkthroughStep { selector: "#nav-settings".to_string(), title: "Payment Settings".to_string(), text: "Ensure your Stripe account is connected to receive funds.".to_string() }
         ],
         "assistant" => vec![
-            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent.".to_string() }
+            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent.".to_string() },
+            WalkthroughStep { selector: "#nav-agents".to_string(), title: "Manage Agents".to_string(), text: "You can view all your active agents and their tasks here.".to_string() }
         ],
         _ => vec![],
     };
@@ -75,15 +87,17 @@ pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<To
     Json(SuccessResponse { success: true })
 }
 
-
-
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
         HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
+        HelpArticle { category: "Getting Started".to_string(), title: "Onboarding Checklist".to_string(), desc: "Follow these simple steps to go live in under 10 minutes.".to_string(), link: "/help/getting-started-checklist".to_string() },
         HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
+        HelpArticle { category: "My Store".to_string(), title: "Inventory Management".to_string(), desc: "Keep track of stock levels and set low-stock alerts.".to_string(), link: "/help/inventory".to_string() },
         HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
         HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
+        HelpArticle { category: "AI Agents".to_string(), title: "Training Your Agent".to_string(), desc: "Teach your agent about your business for better replies.".to_string(), link: "/help/ai-training".to_string() },
         HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
+        HelpArticle { category: "Marketing".to_string(), title: "Social Media Automation".to_string(), desc: "Let AI prepare your Instagram and TikTok posts.".to_string(), link: "/help/social-automation".to_string() },
         HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() },
         HelpArticle { category: "Advanced".to_string(), title: "API Reference".to_string(), desc: "Use our OpenAPI specs to integrate with OHC.".to_string(), link: "/api-docs".to_string() },
         HelpArticle { category: "Advanced".to_string(), title: "Webhooks".to_string(), desc: "Listen to real-time events.".to_string(), link: "/help/webhooks".to_string() }
@@ -120,15 +134,6 @@ pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<HelpA
 
 pub async fn list_videos() -> Json<Vec<VideoTutorial>> {
     Json(get_videos())
-}
-
-
-#[derive(Serialize, Clone)]
-pub struct HelpArticleDetail {
-    #[serde(rename = "title")]
-    pub title: String,
-    #[serde(rename = "contentHtml")]
-    pub content_html: String,
 }
 
 pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
