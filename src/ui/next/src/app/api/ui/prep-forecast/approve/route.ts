@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/ohc",
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       // In a real system, this would queue a job for staff tasks or supply order
       // For now, let's update inventory to reflect prep or just create a task
       // We'll queue a task for the team
-      const jobId = uuidv4();
+      const jobId = randomUUID();
       await client.query(
         `INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
          VALUES ($1, $2, 'create_prep_task', $3, 'PENDING')`,
