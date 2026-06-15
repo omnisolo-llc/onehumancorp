@@ -5,163 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OHC Tooltip Registry</title>
     <style>
-        body {
-            font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f5f5f7;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
-            box-sizing: border-box;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border-radius: 20px;
-            padding: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            box-sizing: border-box;
-        }
-        h1 {
-            color: #1d1d1f;
-            font-size: 32px;
-            font-weight: 800;
-            margin-top: 0;
-            margin-bottom: 10px;
-            letter-spacing: -0.5px;
-        }
-        p {
-            color: #86868b;
-            font-size: 16px;
-            margin-bottom: 30px;
-        }
-        table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 20px;
-        }
-        th {
-            text-align: left;
-            padding: 12px 16px;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #86868b;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        td {
-            padding: 16px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            font-size: 14px;
-            color: #1d1d1f;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.8);
-            outline: none;
-            transition: all 0.2s;
-            box-sizing: border-box;
-        }
-        input[type="text"]:focus {
-            border-color: #0066FF;
-            box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
-        }
-        .btn-save {
-            background: #0066FF;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .btn-save:active { transform: scale(0.95); }
-
-        .add-section {
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 1px solid rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .add-section h3 { margin: 0; font-size: 18px; font-weight: 700; }
-        .back-link {
-            align-self: flex-start;
-            display: inline-flex;
-            align-items: center;
-            color: #0066FF;
-            text-decoration: none;
-            font-weight: 600;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .back-link svg { width: 16px; height: 16px; margin-right: 5px; }
-
-        @media (prefers-color-scheme: dark) {
-            body { background-color: #16161a; }
-            .container {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            h1 { color: #f5f5f7; }
-            td { color: #f5f5f7; border-color: rgba(255,255,255,0.05); }
-            input[type="text"] {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: white;
-            }
-        }
+        body { font-family: "Outfit", -apple-system, sans-serif; background-color: #f5f5f7; display: flex; justify-content: center; padding: 40px; margin: 0; }
+        .container { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 14px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        button { padding: 8px 16px; background-color: #0066FF; color: white; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 14px; transition: background-color 0.2s; }
+        button:hover { background-color: #0055cc; }
+        h1 { margin-top: 0; font-size: 24px; color: #1d1d1f; }
+        p { color: #86868b; font-size: 14px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div style="max-width: 800px; width: 100%;">
-        <a href="help.html" class="back-link">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Back to Help Center
-        </a>
-        <div class="container">
-            <h1>Tooltip Registry</h1>
-            <p>Maintain the plain language tooltips used throughout OHC.</p>
-            <table>
-                <thead><tr><th>Element ID</th><th>Tooltip Text</th><th style="width: 100px;">Action</th></tr></thead>
-                <tbody id="registry-body"></tbody>
-            </table>
-            <div class="add-section">
-                <h3>Add New Tooltip</h3>
-                <input id="new-id" type="text" placeholder="Element ID (e.g. nav-store)" />
-                <input id="new-text" type="text" placeholder="Helpful description for non-technical users..." />
-                <button id="add-btn" class="btn-save" style="width: 100%;">Add to Registry</button>
-            </div>
+    <div class="container">
+        <h1>Tooltip Registry</h1>
+        <p>Update dynamic tooltips. Agents can modify these to assist non-technical users.</p>
+        <table>
+            <thead><tr><th>Element ID</th><th>Tooltip Text</th><th>Action</th></tr></thead>
+            <tbody id="registry-body"></tbody>
+        </table>
+        <div style="margin-top: 20px;">
+            <input id="new-id" placeholder="New Element ID" style="margin-bottom: 10px;" />
+            <input id="new-text" placeholder="Tooltip Text" style="margin-bottom: 10px;" />
+            <button id="add-btn">Add Tooltip</button>
         </div>
     </div>
     <script>
-        const BACKEND_URL = (window.__TAURI__ && window.__TAURI__.core) ? 'http://127.0.0.1:18789' : '';
-
         async function loadTooltips() {
             try {
-                const res = await fetch(`${BACKEND_URL}/api/tooltips`);
+                const res = await fetch('/api/tooltips');
                 if (!res.ok) return;
                 const data = await res.json();
                 const tbody = document.getElementById('registry-body');
                 tbody.innerHTML = '';
                 for (const [id, text] of Object.entries(data)) {
                     tbody.innerHTML += `<tr>
-                        <td style="font-family: monospace; color: #0066FF;">${id}</td>
+                        <td>${id}</td>
                         <td><input type="text" id="input-${id}" value="${text.replace(/"/g, '&quot;')}" /></td>
-                        <td><button class="btn-save" onclick="update('${id}')">Save</button></td>
+                        <td><button onclick="update('${id}')">Save</button></td>
                     </tr>`;
                 }
             } catch (e) {
@@ -171,7 +52,7 @@
         window.update = async function(id) {
             const text = document.getElementById('input-' + id).value;
             try {
-                await fetch(`${BACKEND_URL}/api/tooltips`, {
+                await fetch('/api/tooltips', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, text })
                 });
@@ -181,11 +62,11 @@
             }
         };
         document.getElementById('add-btn').onclick = async () => {
-            const id = document.getElementById('new-id').value.trim();
-            const text = document.getElementById('new-text').value.trim();
+            const id = document.getElementById('new-id').value;
+            const text = document.getElementById('new-text').value;
             if (!id || !text) return;
             try {
-                await fetch(`${BACKEND_URL}/api/tooltips`, {
+                await fetch('/api/tooltips', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, text })
                 });
@@ -198,6 +79,5 @@
         };
         loadTooltips();
     </script>
-    <script src="ohc-help.js"></script>
 </body>
 </html>
