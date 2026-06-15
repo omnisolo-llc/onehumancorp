@@ -123,18 +123,21 @@ pub async fn list_videos() -> Json<Vec<VideoTutorial>> {
 }
 
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct HelpArticleDetail {
     #[serde(rename = "title")]
     pub title: String,
     #[serde(rename = "contentHtml")]
     pub content_html: String,
+    #[serde(rename = "contentMarkdown")]
+    pub content_markdown: String,
 }
 
 pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
     match id {
         "getting-started-1" => Some(HelpArticleDetail {
             title: "Getting Started with Your Store".to_string(),
+            content_markdown: r#"Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
@@ -158,6 +161,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
         }),
         "my-store" => Some(HelpArticleDetail {
             title: "Managing My Store".to_string(),
+            content_markdown: r#"To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         Your store is where you show off what you sell. You can easily add new items, keep track of what you have in stock, and change how your store looks.
@@ -178,6 +182,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
         }),
         "marketing" => Some(HelpArticleDetail {
             title: "Finding Customers".to_string(),
+            content_markdown: r#"Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         To grow your business, you need people to know about it. We have tools to help you find and talk to customers.
@@ -198,6 +203,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
         }),
         "account-billing" => Some(HelpArticleDetail {
             title: "Account & Billing".to_string(),
+            content_markdown: r#"Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         Manage your monthly plan, view your past bills, and invite people to help run your business.
@@ -218,6 +224,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
         }),
         "payments" => Some(HelpArticleDetail {
             title: "Getting Paid".to_string(),
+            content_markdown: r#"When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         Getting paid is the most exciting part! We make it secure and easy for your customers to pay you.
@@ -238,6 +245,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
         }),
         "ai-agents" => Some(HelpArticleDetail {
             title: "Your AI Helpers".to_string(),
+            content_markdown: r#"Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."#.to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
         Running a business takes a lot of work. That's why we give you AI helpers—smart computer programs that can do tasks for you, like a real team!
@@ -799,6 +807,22 @@ mod tests {
     async fn test_list_videos() {
         let res = list_videos().await;
         assert!(!res.0.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_article_handler_found() {
+        let res = get_article_handler(axum::extract::Path("getting-started-1".to_string())).await;
+        assert!(res.is_ok());
+        let article = res.unwrap().0;
+        assert_eq!(article.title, "Getting Started with Your Store");
+        assert!(article.content_markdown.contains("Welcome to One Human Corp"));
+    }
+
+    #[tokio::test]
+    async fn test_get_article_handler_not_found() {
+        let res = get_article_handler(axum::extract::Path("invalid-id-xyz".to_string())).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), axum::http::StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]

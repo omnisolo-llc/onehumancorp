@@ -98,8 +98,21 @@
         .article-title, .article-content h2 { color: #f5f5f7; }
         .article-content { color: #d1d1d6; }
       }
+
+        @media (max-width: 375px) {
+            .app-card {
+                padding: 16px !important;
+            }
+            .ohc-help-content,
+            .help-center-header,
+            #ohc-help-input-area,
+            #ohc-floating-help-header {
+                padding: 12px 16px !important;
+            }
+        }
     </style>
-  </head>
+
+</head>
   <body>
     <div class="container">
       <a href="help.html" class="back-link">
@@ -580,7 +593,19 @@ document.addEventListener('DOMContentLoaded', () => {
 .ohc-tooltip.visible {
     opacity: 1;
 }
-</style>
+
+        @media (max-width: 375px) {
+            .app-card {
+                padding: 16px !important;
+            }
+            .ohc-help-content,
+            .help-center-header,
+            #ohc-help-input-area,
+            #ohc-floating-help-header {
+                padding: 12px 16px !important;
+            }
+        }
+    </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {

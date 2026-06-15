@@ -28,7 +28,7 @@ describe('HelpArticlePage', () => {
       ok: true,
       json: () => Promise.resolve({
         title: 'Getting Started',
-        contentHtml: '<p>Welcome to OneHumanCorp!</p>'
+        contentMarkdown: 'Welcome to OneHumanCorp!'
       })
     });
 

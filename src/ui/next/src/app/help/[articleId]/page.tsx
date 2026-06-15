@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function HelpArticlePage() {
   const params = useParams();
   const articleId = params.articleId as string;
-  const [article, setArticle] = useState<{title: string, contentHtml: string} | null>(null);
+  const [article, setArticle] = useState<{title: string, contentHtml: string, contentMarkdown: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,12 +56,32 @@ export default function HelpArticlePage() {
             </Link>
         </div>
 
-        <article className="app-card backdrop-blur-[20px] saturate-200 p-8 sm:p-12 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60">
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 tracking-tight">{article.title}</h1>
-            <div
-                className="prose prose-lg prose-blue max-w-none prose-headings:font-outfit prose-headings:font-bold prose-headings:text-gray-800 prose-p:text-gray-700 prose-p:leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: article.contentHtml }}
-            />
+        <article className="app-card backdrop-blur-[20px] saturate-200 p-4 sm:p-8 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/50 bg-white/70">
+            <h1 className="text-2xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 tracking-tight">{article.title}</h1>
+            <div className="text-lg text-gray-700 leading-relaxed font-inter space-y-4">
+               {article.contentMarkdown ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-gray-900 mt-6 mb-4" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="text-xl font-bold text-gray-900 mt-6 mb-3" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="text-lg font-bold text-gray-900 mt-4 mb-2" {...props} />,
+                      p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                      ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4" {...props} />,
+                      ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4" {...props} />,
+                      li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                      a: ({node, ...props}) => <a className="text-blue-600 hover:underline" {...props} />,
+                      blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,
+                      code: ({node, ...props}) => <code className="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono text-gray-800" {...props} />,
+                      pre: ({node, ...props}) => <pre className="bg-gray-100 rounded-lg p-4 overflow-x-auto mb-4" {...props} />,
+                    }}
+                  >
+                    {article.contentMarkdown}
+                  </ReactMarkdown>
+               ) : (
+                  <div dangerouslySetInnerHTML={{ __html: article.contentHtml }} />
+               )}
+            </div>
         </article>
       </div>
     </div>
