@@ -288,6 +288,167 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 });
 
+test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
+  const tauriUiDir = process.env.TEST_WORKSPACE
+      ? require('path').join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE, 'src/ui/tauri/src/ui')
+      : require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
+
+  test.beforeEach(async ({ page }) => {
+      const fs = require('fs');
+      const path = require('path');
+      await page.route('http://mock/setup.html', async route => {
+          const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+          await route.fulfill({ contentType: 'text/html', body: content });
+      });
+  });
+
+  // Test 1: Verifies Instant Build successful generation flow
+  test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
+    await page.goto('http://mock/setup.html');
+    const setupScreen = page.locator('.container');
+    await expect(setupScreen).toBeVisible({ timeout: 30000 });
+
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await expect(instantBuildButton).toBeVisible();
+    await instantBuildButton.click();
+
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    await expect(bioInput).toBeVisible();
+    await expect(bioInput).toHaveClass(/glassmorphism/);
+
+    await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
+
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    await imageUrlInput.fill("https://example.com/logo.png");
+
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd, args) => {
+            if (cmd === 'process_intake') {
+              return {
+                business_name: "Test Business",
+                business_type: "Local Service",
+                categories: ["Handyman"],
+                location: "Local",
+                target_audience: "Homeowners",
+                initial_products: [
+                  { name: "Consultation", price: "0.00" }
+                ]
+              };
+            }
+            if (cmd === "start_onboarding") {
+              return { success: true, message: "OK", organization_id: "test-org" };
+            }
+            throw new Error(`Unhandled command: ${cmd}`);
+          }
+        }
+      };
+    });
+
+    // Handle the navigation to success.html within the mock environment
+    await page.route('http://mock/success.html', async route => {
+      const fs = require('fs');
+      const path = require('path');
+      const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+      await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    const generateButton = page.locator('#generate-storefront-btn');
+    await expect(generateButton).toBeVisible();
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're all set!" });
+
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
+  });
+
+  // Test 2: Verifies Instant Build handles network error gracefully
+  test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
+    await page.goto('http://mock/setup.html');
+    const setupScreen = page.locator('.container');
+    await expect(setupScreen).toBeVisible({ timeout: 30000 });
+
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await expect(instantBuildButton).toBeVisible();
+    await instantBuildButton.click();
+
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    await bioInput.fill("Will fail network request");
+
+    // Override the mock to throw an error for process_intake
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd, args) => {
+            if (cmd === 'process_intake') {
+              throw new Error("Failed to analyze business details");
+            }
+            throw new Error(`Unhandled command: ${cmd}`);
+          }
+        }
+      };
+    });
+
+    const generateButton = page.locator('#generate-storefront-btn');
+    await generateButton.click();
+
+    // Verify error is shown with correct styling
+    const errorBlock = page.locator('#instant-error');
+    await expect(errorBlock).toBeVisible();
+    await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
+    await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
+    await expect(errorBlock).toHaveClass(/animate-shake/);
+
+    // Verify textarea has the red border
+    await expect(bioInput).toHaveClass(/border-\[#FF3B30\]/);
+
+    // Typing clears the error border
+    await bioInput.fill("New text");
+    await expect(bioInput).not.toHaveClass(/border-\[#FF3B30\]/);
+  });
+
+  // Test 3: Verifies empty input behavior
+  test('Instant Build prevents submission when the input is empty', async ({ page }) => {
+    await page.goto('http://mock/setup.html');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const generateButton = page.locator('#generate-storefront-btn');
+
+    // Button should be disabled when input is empty.
+    await expect(generateButton).toBeDisabled();
+
+    // We shouldn't see a loading state.
+    const loadingState = page.getByText('Building Your Business...');
+    await expect(loadingState).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+  });
+
+  // Test 5: Mobile responsiveness of the Instant Build component
+  test('Instant Build respects mobile viewport constraints (375px) with valid touch targets for the conversational flow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('http://mock/setup.html');
+
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const box = await bioInput.boundingBox();
+    expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeLessThanOrEqual(375);
+
+    const generateButton = page.locator('#generate-storefront-btn');
+    const btnBox = await generateButton.boundingBox();
+    expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
+  });
+});
+
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
 
