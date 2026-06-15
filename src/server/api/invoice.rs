@@ -331,13 +331,230 @@ impl InvoiceService for InvoiceServiceImpl {
     }
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
+use axum::{
+    extract::{Extension, Path, Query},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, put},
+    Json,
+};
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
+pub struct InvoiceCreatePayload {
+    pub tenant_id: String,
+    pub client_id: String,
+    pub client_name: String,
+    pub due_date: i64,
+    pub currency: String,
+    pub line_items: Vec<InvoiceLineItemPayload>,
+}
 
-    // This is just a stub router for Axum integration if needed,
-    // though typically gRPC services are mounted differently.
-    // For now, we return an empty router.
+#[derive(Serialize, Deserialize)]
+pub struct InvoiceLineItemPayload {
+    pub description: String,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub amount: f64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UpdateInvoiceStatusPayload {
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InvoiceListResponse {
+    pub invoices: Vec<InvoiceData>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct InvoiceData {
+    pub id: String,
+    pub client_id: String,
+    pub client_name: String,
+    pub status: String,
+    pub due_date: i64,
+    pub currency: String,
+    pub total_amount: f64,
+    pub total_amount_cents: i32,
+    pub stripe_invoice_id: String,
+    pub stripe_payment_link: String,
+    pub line_items: Vec<InvoiceLineItemData>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct InvoiceLineItemData {
+    pub id: String,
+    pub invoice_id: String,
+    pub description: String,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub amount: f64,
+}
+
+#[derive(Deserialize)]
+pub struct InvoiceListQuery {
+    pub tenant: Option<String>,
+}
+
+async fn list_invoices_handler(
+    Extension(hub): Extension<Arc<Hub>>,
+    Query(query): Query<InvoiceListQuery>,
+) -> impl IntoResponse {
+    let pool = &hub.pool;
+    let tenant_id = query.tenant.unwrap_or_else(|| "default-tenant".to_string());
+
+    use sqlx::Row;
+    let invoices_res = sqlx::query("SELECT id, client_id, client_name, status, due_date, currency, total_amount, stripe_invoice_id, stripe_payment_link FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC")
+        .bind(&tenant_id)
+        .fetch_all(pool)
+        .await;
+
+    match invoices_res {
+        Ok(rows) => {
+            let mut invoices = Vec::new();
+            for r in rows {
+                let id: String = r.try_get("id").unwrap_or_default();
+                let items_res = sqlx::query("SELECT id, invoice_id, description, quantity, unit_price, amount FROM invoice_line_items WHERE invoice_id = $1")
+                    .bind(&id)
+                    .fetch_all(pool)
+                    .await;
+
+                let mut line_items = Vec::new();
+                if let Ok(items) = items_res {
+                    for i in items {
+                        line_items.push(InvoiceLineItemData {
+                            id: i.try_get("id").unwrap_or_default(),
+                            invoice_id: i.try_get("invoice_id").unwrap_or_default(),
+                            description: i.try_get("description").unwrap_or_default(),
+                            quantity: i.try_get("quantity").unwrap_or(1),
+                            unit_price: i.try_get("unit_price").unwrap_or(0.0),
+                            amount: i.try_get("amount").unwrap_or(0.0),
+                        });
+                    }
+                }
+
+                let due_date_ts = if let Ok(dt) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("due_date") {
+                    dt.timestamp()
+                } else {
+                    0
+                };
+
+                invoices.push(InvoiceData {
+                    id: r.try_get("id").unwrap_or_default(),
+                    client_id: r.try_get("client_id").unwrap_or_default(),
+                    client_name: r.try_get("client_name").unwrap_or_default(),
+                    status: r.try_get("status").unwrap_or_default(),
+                    due_date: due_date_ts,
+                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                    total_amount: r.try_get("total_amount").unwrap_or(0.0),
+                    total_amount_cents: (r.try_get::<f64, _>("total_amount").unwrap_or(0.0) * 100.0) as i32,
+                    stripe_invoice_id: r.try_get("stripe_invoice_id").unwrap_or_default(),
+                    stripe_payment_link: r.try_get("stripe_payment_link").unwrap_or_default(),
+                    line_items,
+                });
+            }
+
+            (StatusCode::OK, Json(InvoiceListResponse { invoices })).into_response()
+        }
+        Err(e) => {
+            eprintln!("Error fetching invoices: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to fetch invoices"}))).into_response()
+        }
+    }
+}
+
+async fn create_invoice_handler(
+    Extension(hub): Extension<Arc<Hub>>,
+    Json(payload): Json<InvoiceCreatePayload>,
+) -> impl IntoResponse {
+    let pool = &hub.pool;
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db error"}))).into_response(),
+    };
+
+    let invoice_id = uuid::Uuid::new_v4().to_string();
+    let total_amount: f64 = payload.line_items.iter().map(|item| item.amount).sum();
+    let status = "draft".to_string();
+    let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+
+    let res = sqlx::query(
+        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link)
+         VALUES ($1, $2, $3, $4, $5, to_timestamp($6), $7, $8, $9)"
+    )
+    .bind(&invoice_id)
+    .bind(&payload.tenant_id)
+    .bind(&payload.client_id)
+    .bind(&payload.client_name)
+    .bind(&status)
+    .bind(payload.due_date as f64)
+    .bind(&payload.currency)
+    .bind(total_amount)
+    .bind(&stripe_payment_link)
+    .execute(&mut *tx)
+    .await;
+
+    if res.is_err() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to insert invoice"}))).into_response();
+    }
+
+    for item in payload.line_items {
+        let item_id = uuid::Uuid::new_v4().to_string();
+        let item_res = sqlx::query(
+            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(&item_id)
+        .bind(&payload.tenant_id)
+        .bind(&invoice_id)
+        .bind(&item.description)
+        .bind(item.quantity)
+        .bind(item.unit_price)
+        .bind(item.amount)
+        .execute(&mut *tx)
+        .await;
+
+        if item_res.is_err() {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to insert line item"}))).into_response();
+        }
+    }
+
+    if tx.commit().await.is_err() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to commit tx"}))).into_response();
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "invoice_id": invoice_id
+    }))).into_response()
+}
+
+async fn update_invoice_status_handler(
+    Extension(hub): Extension<Arc<Hub>>,
+    Path(invoice_id): Path<String>,
+    Json(payload): Json<UpdateInvoiceStatusPayload>,
+) -> impl IntoResponse {
+    let pool = &hub.pool;
+
+    let res = sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE id = $2")
+        .bind(payload.status)
+        .bind(invoice_id)
+        .execute(pool)
+        .await;
+
+    match res {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to update invoice"}))).into_response(),
+    }
+}
+
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
+        .route("/", get(list_invoices_handler).post(create_invoice_handler))
+        .route("/{id}/status", put(update_invoice_status_handler))
+        .layer(Extension(hub))
 }
 
 #[cfg(test)]

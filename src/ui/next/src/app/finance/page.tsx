@@ -6,27 +6,30 @@ import { AppShell } from '../components/AppShell';
 export default function FinancePage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showDraftModal, setShowDraftModal] = useState(false);
+    const [showDraftModal, setShowDraftModal] = useState<any>(null);
+
+    const fetchInvoices = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/v1/invoices');
+            if (res.ok) {
+                const data = await res.json();
+                setInvoices(data.invoices || []);
+            }
+        } catch (e) {
+            console.error("Failed to fetch invoices", e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        async function fetchInvoices() {
-            try {
-                const res = await fetch('/api/v1/invoices');
-                if (res.ok) {
-                    const data = await res.json();
-                    setInvoices(data.invoices || []);
-                }
-            } catch (e) {
-                console.error("Failed to fetch invoices", e);
-            } finally {
-                setLoading(false);
-            }
-        }
         fetchInvoices();
     }, []);
 
     const handleCreateInvoice = () => {
-        setShowDraftModal(true);
+        // Just open the modal with an empty template if no invoice selected, or create via API
+        alert("Navigating to /invoice-generator...");
     };
 
     return (
@@ -37,19 +40,21 @@ export default function FinancePage() {
                     <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
                 </header>
 
-                {/* Triage Feed Simulation */}
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={() => setShowDraftModal(true)}>
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xl shadow-md">
-                            ✨
+                {/* Triage Feed for Draft Invoices */}
+                {invoices.filter(inv => inv.status === 'draft').map((invoice, idx) => (
+                    <div key={`draft-${idx}`} className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={() => setShowDraftModal(invoice)}>
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xl shadow-md">
+                                ✨
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Draft Invoice ready for {invoice.client_name}</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">The Finance AI Assistant drafted this based on project completion.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white">Draft Invoice ready for Nora's Design Project</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">The Finance AI Assistant noticed the project was marked complete.</p>
-                        </div>
+                        <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-indigo-700">Review</button>
                     </div>
-                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-indigo-700">Review</button>
-                </div>
+                ))}
 
                 {loading ? (
                     <div className="flex justify-center py-12">
@@ -78,7 +83,7 @@ export default function FinancePage() {
                                     </div>
                                     <button
                                         className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                                        onClick={() => invoice.status === 'draft' && setShowDraftModal(true)}
+                                        onClick={() => invoice.status === 'draft' && setShowDraftModal(invoice)}
                                     >
                                         {invoice.status === 'draft' ? 'Review & Send' : 'View Details'}
                                     </button>
@@ -101,12 +106,12 @@ export default function FinancePage() {
             </main>
 
             {/* Translucent Glass Modal for Reviewing Draft Invoice */}
-            {showDraftModal && invoices.length > 0 && (
+            {showDraftModal && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
                     <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-t-2xl z-10">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Review Invoice Draft</h2>
-                            <button onClick={() => setShowDraftModal(false)} className="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full">
+                            <button onClick={() => setShowDraftModal(null)} className="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full">
                                 ✕
                             </button>
                         </div>
@@ -114,13 +119,13 @@ export default function FinancePage() {
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                             <div className="mb-6">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Billed To</label>
-                                <input type="text" className="w-full bg-transparent border-b border-gray-300 dark:border-gray-600 pb-2 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors" defaultValue={invoices[0].client_name} />
+                                <input type="text" className="w-full bg-transparent border-b border-gray-300 dark:border-gray-600 pb-2 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors" defaultValue={showDraftModal.client_name} />
                             </div>
 
                             <div className="mb-8">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Line Items</label>
                                 <div className="space-y-4">
-                                    {invoices[0].line_items.map((item: any, idx: number) => (
+                                    {showDraftModal.line_items?.map((item: any, idx: number) => (
                                         <div key={idx} className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                                             <div className="flex-1">
                                                 <input type="text" className="w-full bg-transparent font-medium text-gray-900 dark:text-white text-sm focus:outline-none" defaultValue={item.description} />
@@ -143,17 +148,30 @@ export default function FinancePage() {
 
                             <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-6">
                                 <span className="text-gray-500 font-medium">Total</span>
-                                <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">${invoices[0].total_amount.toFixed(2)}</span>
+                                <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">${showDraftModal.total_amount?.toFixed(2)}</span>
                             </div>
                         </div>
 
                         <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-2xl">
                             <button
                                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg"
-                                onClick={() => {
-                                    // Submit logic
-                                    alert("Invoice sent! Stripe payment link generated.");
-                                    setShowDraftModal(false);
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch(`/api/v1/invoices/${showDraftModal.id}/status`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'sent' })
+                                        });
+                                        if (res.ok) {
+                                            alert("Invoice sent! Stripe payment link generated.");
+                                            setShowDraftModal(null);
+                                            fetchInvoices();
+                                        } else {
+                                            alert("Failed to send invoice.");
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
                                 }}
                             >
                                 Approve & Send

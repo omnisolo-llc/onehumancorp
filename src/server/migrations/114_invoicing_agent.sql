@@ -17,7 +17,22 @@ CREATE INDEX IF NOT EXISTS idx_invoice_line_items_tenant ON invoice_line_items(t
 ALTER TABLE invoice_line_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_invoice_line_items ON invoice_line_items USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
+CREATE TABLE IF NOT EXISTS invoices (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    client_id TEXT,
+    client_name TEXT,
+    stripe_payment_link TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
+
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_invoices ON invoices USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
 -- Add columns to invoices if missing
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_id TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_name TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_id TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DOUBLE PRECISION DEFAULT 0;
