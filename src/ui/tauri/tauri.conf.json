@@ -4,7 +4,7 @@
   "version": "0.4.47+1",
   "identifier": "com.onehumancorp.ohc",
   "build": {
-    "frontendDist": "./src/ui",
+    "frontendDist": "./next_out",
     "devUrl": "http://localhost:3000"
   },
   "bundle": {
