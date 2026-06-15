@@ -344,6 +344,8 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route("/loyalty/generate", post(handle_generate_loyalty_program))
+        .route("/loyalty", get(handle_get_loyalty))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
@@ -2822,4 +2824,61 @@ async fn handle_simulate_referral_checkout(
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
     }))
+}
+
+#[derive(serde::Serialize)]
+pub struct GenerateLoyaltyProgramResponse {
+    pub message: String,
+    pub share_url: String,
+}
+
+pub async fn handle_generate_loyalty_program(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> axum::response::Json<GenerateLoyaltyProgramResponse> {
+    let tenant_id = auth_info.org_id;
+    let share_url = format!("https://ohc.app/loyalty/join?ref={}", tenant_id);
+
+    axum::response::Json(GenerateLoyaltyProgramResponse {
+        message: "Program Generated Successfully".to_string(),
+        share_url,
+    })
+}
+
+#[derive(serde::Deserialize)]
+pub struct GetLoyaltyQuery {
+    pub tenant_id: String,
+    pub customer_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct GetLoyaltyResponse {
+    pub points_balance: i32,
+    pub tier_name: Option<String>,
+}
+
+pub async fn handle_get_loyalty(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetLoyaltyQuery>,
+) -> Result<axum::response::Json<GetLoyaltyResponse>, axum::http::StatusCode> {
+    // Note: fallback to query_as because sqlx::query! macro requires a cargo build time DB connection.
+    let row: Option<(Option<i32>, Option<String>)> = sqlx::query_as(
+        "SELECT points_balance, tier_name FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2"
+    )
+    .bind(query.tenant_id)
+    .bind(query.customer_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(r) = row {
+        Ok(axum::response::Json(GetLoyaltyResponse {
+            points_balance: r.0.unwrap_or(0),
+            tier_name: r.1,
+        }))
+    } else {
+        Ok(axum::response::Json(GetLoyaltyResponse {
+            points_balance: 0,
+            tier_name: None,
+        }))
+    }
 }

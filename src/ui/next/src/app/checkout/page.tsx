@@ -47,18 +47,20 @@ function CheckoutContent() {
           if (res.ok) {
             return res.json();
           }
-          return { points_balance: 50 }; // Fallback to 50 for guests/failures
+          return { points_balance: 0 };
         })
         .then(data => {
-          setAvailablePoints(data.points_balance || 50);
-          if ((data.points_balance || 50) >= 50) {
+          setAvailablePoints(data.points_balance || 0);
+          if ((data.points_balance || 0) >= 50) {
             setLoyaltyDiscount(0.1); // 10%
+          } else {
+            setLoyaltyDiscount(0);
           }
           setIsLoyaltyReady(true);
         })
         .catch(() => {
-          setAvailablePoints(50);
-          setLoyaltyDiscount(0.1);
+          setAvailablePoints(0);
+          setLoyaltyDiscount(0);
           setIsLoyaltyReady(true);
         });
     } else {

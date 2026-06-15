@@ -534,3 +534,8 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+-- Seed loyalty points for test user
+INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, tier_name, last_updated)
+VALUES ('loyalty-1', 'e2e-tenant', 'guest', 50, 'Silver', CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = 50;

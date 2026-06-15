@@ -28,6 +28,10 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
     title: "Cost",
     subtitle: "Track usage, spend, and plan limits.",
   },
+  "/dashboard/loyalty": {
+    title: "Loyalty Program",
+    subtitle: "Generate and manage viral loyalty programs.",
+  },
   "/diagnostics": {
     title: "Diagnostics",
     subtitle: "Inspect system health and operational checks.",
