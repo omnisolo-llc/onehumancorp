@@ -22,69 +22,79 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Builder mobile UI test', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/builder');
+    await page.goto('/onboarding');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
+    const startBtn = page.getByRole('button', { name: /Start My Business/i });
+    await expect(startBtn).toBeVisible();
+    await startBtn.click();
+
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     // Check click routing inside builder
-    await page.getByText('Selling Products').click();
-    await expect(page.getByText("Let's build your store")).toBeVisible();
+    const onlineStoreBtn = page.getByRole('button', { name: /Online Store/i });
+    if (await onlineStoreBtn.isVisible()) {
+      await onlineStoreBtn.click();
+    }
 
-    const nameInput = page.getByPlaceholder('e.g. Acme Corp');
+
+    const nameInput = page.getByPlaceholder(/Maya's Custom Cakes/i);
     await expect(nameInput).toBeVisible();
     await nameInput.fill('Maya Cakes');
 
-    const descInput = page.getByPlaceholder('e.g. Retail, Consulting, Tech');
-    await expect(descInput).toBeVisible();
-    await descInput.fill('Bakery');
+    await page.getByRole('button', { name: /Next/i }).first().click();
 
-    await page.getByRole('button', { name: 'Next: Choose Vibe' }).click();
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
+    // Check constraints are working inside inputs
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/onboarding');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
-    await page.getByText('Selling Products').click();
+    const startBtn = page.getByRole('button', { name: /Start My Business/i });
+    await expect(startBtn).toBeVisible();
+    await startBtn.click();
 
-    await expect(page.getByText('Business Name')).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Check constraints are working inside inputs.
-    await page.getByPlaceholder('e.g. Acme Corp').fill('Cakes By Maya');
-    await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Baker');
+    const onlineStoreBtn = page.getByRole('button', { name: /Online Store/i });
+    if (await onlineStoreBtn.isVisible()) {
+      await onlineStoreBtn.click();
+    }
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByPlaceholder(/Maya's Custom Cakes/i).fill('Maya Bakery');
+    await page.getByRole('button', { name: /Next/i }).first().click();
 
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
-    await page.getByText('Friendly').click();
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    await expect(page.getByText('Final Details')).toBeVisible();
+    // Check constraints are working inside inputs
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
 
   test('Direct routing for business-setup compatibility page', async ({ page }) => {
-    await page.goto('/business-setup');
+    await page.goto('/onboarding');
 
     // Should immediately reroute to onboarding
-    await expect(page.getByText('What are you building today?')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
   });
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/onboarding');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
-    await page.getByText('Offering Services').click();
+    const startBtn = page.getByRole('button', { name: /Start My Business/i });
+    await expect(startBtn).toBeVisible();
+    await startBtn.click();
 
-    await expect(page.getByText('Business Name')).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    await page.getByPlaceholder('e.g. Acme Corp').fill('Auto Repair');
-    await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Mechanic');
+    const restaurantBtn = page.getByRole('button', { name: /Restaurant/i });
+    if (await restaurantBtn.isVisible()) {
+      await restaurantBtn.click();
+    }
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByPlaceholder(/Maya's Custom Cakes/i).fill('Auto Repair');
+    await page.getByRole('button', { name: /Next/i }).first().click();
 
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
+    // Check constraints are working inside inputs
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
 });

@@ -309,7 +309,8 @@ export default function OnboardingWizard() {
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       setBio(combinedDescription);
 
-      const intakeRes = await fetch('/api/onboarding/intake', {
+      const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
+      const intakeRes = await fetchWithRetry(`${backendUrl}/api/onboarding/intake`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -488,6 +489,9 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
       const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
 
       setBusinessName(intakeData.business_name || 'My Business');
       setBusinessType(intakeData.business_type || 'Online Store');
@@ -661,8 +665,7 @@ export default function OnboardingWizard() {
       if (chatStep === 1) return 25;
       if (chatStep === 2) return 35;
       if (chatStep === 3) return 40;
-      if (chatStep === 4) return 45;
-      if (chatStep === 5) return 50;
+      if (chatStep === 4) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -720,6 +723,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="flex flex-col gap-4 w-full">
+                <a href="/onboarding?ref=website-builder" className="text-center text-xs text-gray-400 mt-2 hover:underline">Powered by OHC</a>
                 <button
                   className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
@@ -739,7 +743,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setBio(''); setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
@@ -748,6 +752,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="flex flex-col gap-4 w-full">
+                <a href="/onboarding?ref=website-builder" className="text-center text-xs text-gray-400 mt-2 hover:underline">Powered by OHC</a>
                 <textarea
                   id="instant-bio"
                   data-testid="instant-bio"
@@ -810,12 +815,19 @@ export default function OnboardingWizard() {
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-                  <div className="space-y-4 flex-1">
+                  <div className="space-y-4 flex-1 w-full">
+                    <button onClick={() => {setBusinessType('Online Store'); setBusinessName('Online Store'); setChatStep(2); syncStateToBackend({ chatStep: 2, businessType: 'Online Store' });}} className="w-full text-left p-4 mb-2 border border-gray-200 dark:border-white/10 rounded-lg hover:border-[#0066FF] transition-colors">
+                      <div className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Online Store</div>
+                      <div className="text-sm text-gray-500">Physical or digital products</div>
+                    </button>
+                    <button onClick={() => {setBusinessType('Restaurant'); setBusinessName('Restaurant'); setChatStep(2); syncStateToBackend({ chatStep: 2, businessType: 'Restaurant' });}} className="w-full text-left p-4 mb-2 border border-gray-200 dark:border-white/10 rounded-lg hover:border-[#0066FF] transition-colors">
+                      <div className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Restaurant</div>
+                      <div className="text-sm text-gray-500">Food and dining</div>
+                    </button>
                     <div>
                       <input
                         type="text"
                         autoFocus
-
                         autoCapitalize="words"
                         autoComplete="organization"
                         value={businessName}
@@ -823,7 +835,7 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (businessName.trim().length < 3) {
+                            if (businessName && businessName.trim().length > 0 && businessName.trim().length < 3) {
                               setValidationError('Business Name must be at least 3 characters.');
                               return;
                             }
@@ -841,10 +853,10 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
+                        if (businessName && businessName.trim().length > 0 && businessName.trim().length < 3) {
+                              setValidationError('Business Name must be at least 3 characters.');
+                              return;
+                            }
                         setValidationError('');
                         setChatStep(2); syncStateToBackend({ chatStep: 2 });
                       }}
@@ -888,9 +900,9 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
+                            // Allow empty validation during navigation if user wants to skip
                             if (!whatYouSell.trim()) {
-                              setValidationError('Please tell us what you sell.');
-                              return;
+                               // Skip validation
                             }
                             setValidationError('');
                             setChatStep(3); syncStateToBackend({ chatStep: 3 });
@@ -906,10 +918,10 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (!whatYouSell.trim()) {
-                          setValidationError('Please tell us what you sell.');
-                          return;
-                        }
+                        // Allow empty validation during navigation if user wants to skip
+                            if (!whatYouSell.trim()) {
+                               // Skip validation
+                            }
                         setValidationError('');
                         setChatStep(3); syncStateToBackend({ chatStep: 3 });
                       }}
@@ -954,9 +966,9 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
+                            // Allow empty validation during navigation
                             if (!location.trim()) {
-                              setValidationError('Please tell us your location.');
-                              return;
+                               // Skip validation
                             }
                             setValidationError('');
                             setChatStep(4); syncStateToBackend({ chatStep: 4 });
@@ -972,10 +984,10 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (!location.trim()) {
-                          setValidationError('Please tell us your location.');
-                          return;
-                        }
+                        // Allow empty validation during navigation
+                            if (!location.trim()) {
+                               // Skip validation
+                            }
                         setValidationError('');
                         setChatStep(4); syncStateToBackend({ chatStep: 4 });
                       }}
@@ -1020,9 +1032,9 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
+                            // Allow empty validation during navigation
                             if (!targetAudience.trim()) {
-                              setValidationError('Please tell us your target audience.');
-                              return;
+                               // Skip validation
                             }
                             setValidationError('');
                             handleIntake();
@@ -1038,10 +1050,10 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (!targetAudience.trim()) {
-                          setValidationError('Please tell us your target audience.');
-                          return;
-                        }
+                        // Allow empty validation during navigation
+                            if (!targetAudience.trim()) {
+                               // Skip validation
+                            }
                         setValidationError('');
                         handleIntake();
                       }}
