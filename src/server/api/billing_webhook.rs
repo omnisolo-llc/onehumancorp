@@ -419,6 +419,47 @@ pub async fn stripe_webhook_handler(
                 }
             }
 
+            let booking_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("booking_id"))
+                .and_then(|id| id.as_str());
+
+            if let Some(booking_id) = booking_id_opt {
+                let res = match &webhook_state.db.store {
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE bookings SET status = 'confirmed' WHERE id = ?")
+                            .bind(booking_id)
+                            .execute(pool)
+                            .await
+                            .map(|_| ())
+                    }
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE bookings SET status = 'confirmed' WHERE id = $1")
+                            .bind(booking_id)
+                            .execute(&webhook_state.db.pool)
+                            .await
+                            .map(|_| ())
+                    }
+                };
+
+                if let Err(e) = res {
+                    tracing::error!("Failed to confirm booking {}: {:?}", booking_id, e);
+                } else if let Some(tenant_id) = tenant_id_opt {
+                    // Dispatch the payment.captured event so Operations can do follow up if required
+                    let orch = webhook_state.orchestrator.clone();
+                    let payload_val = obj.clone();
+                    let tenant_id_val = tenant_id.to_string();
+                    tokio::spawn(async move {
+                        let evt = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id_val,
+                            event_type: "payment.captured".to_string(),
+                            payload: payload_val,
+                        };
+                        let _ = orch.dispatch_event(evt).await;
+                    });
+                }
+            }
+
             StatusCode::OK.into_response()
         },
         "checkout.session.completed" | "customer.subscription.updated" => {
