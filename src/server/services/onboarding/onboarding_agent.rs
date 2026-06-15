@@ -283,6 +283,7 @@ Your response:",
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         use sqlx::Row;
+
         let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
             .bind(tenant_id)
             .bind(user_id)
@@ -332,6 +333,7 @@ Your response:",
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key);
         if let Some(cached_state) = cache.get(&cache_key).await {
             tracing::debug!("Cache hit for onboarding state key: {}", cache_key);
             return Ok(cached_state);
@@ -342,6 +344,7 @@ Your response:",
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         use sqlx::Row;
+
         let row = sqlx::query(
             "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
