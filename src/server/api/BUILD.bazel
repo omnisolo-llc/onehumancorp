@@ -94,6 +94,9 @@ rust_library(
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
     ],
+    compile_data = [
+        "//:CHANGELOG.md",
+    ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel_package"],
