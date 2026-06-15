@@ -106,7 +106,16 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
     #[cfg(unix)]
     {
         use std::os::unix::fs::DirBuilderExt;
+        use std::os::unix::fs::PermissionsExt;
         let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
+
+        if let Ok(metadata) = std::fs::metadata(&dir) {
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o777 != 0o700 {
+                perms.set_mode(0o700);
+                let _ = std::fs::set_permissions(&dir, perms);
+            }
+        }
     }
     #[cfg(not(unix))]
     {
@@ -115,7 +124,6 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
 
     dir
 }
-
 pub trait ModeEnforcer {
     fn enforce(&self, cfg: AppConfig) -> AppConfig;
 }
