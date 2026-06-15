@@ -1,9 +1,16 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HybridLandingPage from './page';
 
 describe('HybridLandingPage', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -42,10 +49,13 @@ describe('HybridLandingPage', () => {
     // Verify downloading state
     expect(screen.getByText('Downloading...')).toBeDefined();
 
-    // Wait for async operations
-    await vi.waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
-    }, { timeout: 2000 });
+    // Fast-forward the setTimeout of 1500ms
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    // Verify alert was called
+    expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
 
     // Cleanup mocks
     mockAlert.mockRestore();
