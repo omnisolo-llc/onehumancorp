@@ -955,6 +955,7 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
+                            e.stopPropagation();
                             if (!location.trim()) {
                               setValidationError('Please tell us your location.');
                               return;
@@ -1021,6 +1022,7 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
+                            e.stopPropagation();
                             if (!targetAudience.trim()) {
                               setValidationError('Please tell us your target audience.');
                               return;
