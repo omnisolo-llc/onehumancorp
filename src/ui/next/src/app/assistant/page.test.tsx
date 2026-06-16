@@ -128,7 +128,7 @@ test('renders Task List as a real section page and keeps resource sections hones
   expect(within(sectionMenu).getByRole('button', { name: 'Connectors' })).toBeDefined();
 
   expect(screen.getByRole('heading', { name: 'Task List' })).toBeDefined();
-  expect(screen.getByText("Create this week's operating brief")).toBeDefined();
+  expect(await screen.findByText("Create this week's operating brief")).toBeDefined();
   expect(screen.getByText('Organize Downloads by file type')).toBeDefined();
   expect(screen.queryByText('Skill Marketplace')).toBeNull();
   expect(screen.queryByText('Parity Audit')).toBeNull();
