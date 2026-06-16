@@ -1156,10 +1156,11 @@ pub struct CustomerReferralEmbedQuery {
     pub give: Option<String>,
     pub get: Option<String>,
     pub theme: Option<String>,
+    pub hide_branding: Option<String>,
 }
 
 async fn handle_customer_referral_embed(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<CustomerReferralEmbedQuery>,
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
@@ -1176,6 +1177,24 @@ async fn handle_customer_referral_embed(
     let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
     let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
     let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
+    let mut has_pro = false;
+    if query.hide_branding.as_deref() == Some("true") {
+        // Validate pro status in DB
+        let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
+
+        if let Ok(Some(true)) = is_pro_res {
+            has_pro = true;
+        }
+    }
+
+    let branding = if has_pro {
+        "".to_string()
+    } else {
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
+    };
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -1242,7 +1261,7 @@ async fn handle_customer_referral_embed(
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
         <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
-        <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>
+        {branding}
     </div>
 </body>
 </html>"#
@@ -2609,7 +2628,7 @@ mod cloud_bridge_tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
-        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None };
+        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None, hide_branding: None };
         let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
 
         let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
