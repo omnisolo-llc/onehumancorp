@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS team_invites (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     team_id TEXT NOT NULL,
     inviter_id TEXT NOT NULL,
     invitee_id TEXT NOT NULL,
@@ -16,4 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_team_invites_invitee_id ON team_invites(invitee_i
 
 ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_team_invites ON team_invites;
-CREATE POLICY tenant_isolation_team_invites ON team_invites USING (team_id::text = current_setting('app.current_tenant', true)) WITH CHECK (team_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_team_invites ON team_invites USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));

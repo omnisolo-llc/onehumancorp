@@ -121,6 +121,18 @@ export class SyncManager {
              mutation_type: 'draft_quote',
              payload: m.notes
           };
+        } else if (m.type === 'agent_intent') {
+          return {
+             transaction_id: m.id,
+             product_id: 'agent_intent',
+             quantity_deducted: 0,
+             amount: null,
+             payment_method: null,
+             payment_intent_id: null,
+             currency: 'usd',
+             mutation_type: 'agent_intent',
+             payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
+          };
         } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote') {
             return m; // keep them for KDS or Quotes API
         }
