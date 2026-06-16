@@ -1,18 +1,29 @@
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention)
-use tokio::time::{Duration, sleep};
+use tokio::time::sleep;
 use tracing::{error, info, warn};
+use ohc_builtin_agent_core::retry_strategy::{RetryStrategy, ExponentialBackoffWithJitter};
 
 pub struct ToolExecutionEngine;
 
 impl ToolExecutionEngine {
     /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
-    #[tracing::instrument(skip(tool, tc), fields(tool_name = %tc.name, tool_call_id = %tc.id))]
     pub async fn execute_tool_with_langgraph_mechanics(
         tool: &Tool,
         tc: &ToolCall,
         max_retries: usize,
+    ) -> Result<String, ToolError> {
+        let default_strategy = ExponentialBackoffWithJitter::default();
+        Self::execute_tool_with_langgraph_mechanics_and_strategy(tool, tc, max_retries, &default_strategy).await
+    }
+
+    #[tracing::instrument(skip(tool, tc, strategy), fields(tool_name = %tc.name, tool_call_id = %tc.id))]
+    pub async fn execute_tool_with_langgraph_mechanics_and_strategy(
+        tool: &Tool,
+        tc: &ToolCall,
+        max_retries: usize,
+        strategy: &dyn RetryStrategy,
     ) -> Result<String, ToolError> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
@@ -26,11 +37,8 @@ impl ToolExecutionEngine {
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
+                        let backoff = strategy.next_backoff(retry_count + 1);
                         retry_count += 1;
-                        let base_backoff = 500 * (1 << retry_count);
-                        use rand::Rng;
-                        let jitter = rand::thread_rng().gen_range(0..100);
-                        let backoff = Duration::from_millis((base_backoff as u64) + jitter);
                         warn!(
                             "Transient error executing '{}', retrying {}/{} after {}ms...",
                             tool.name,

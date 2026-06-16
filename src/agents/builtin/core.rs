@@ -4,6 +4,7 @@ pub mod caveman;
 pub mod expert_team;
 
 pub mod output_parser;
+pub mod retry_strategy;
 pub mod pubsub;
 pub mod types;
 
