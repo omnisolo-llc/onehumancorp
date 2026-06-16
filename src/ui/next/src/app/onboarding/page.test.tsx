@@ -52,7 +52,7 @@ describe('OnboardingWizard', () => {
     });
 
     global.fetch = vi.fn().mockImplementation((url) => {
-        return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+        return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     }) as any;
   });
 
@@ -85,7 +85,7 @@ describe('OnboardingWizard', () => {
           })
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     await renderOnboardingWizard();
@@ -191,7 +191,7 @@ describe('OnboardingWizard', () => {
           json: async () => ({ message: "Success!" })
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     await renderOnboardingWizard();
@@ -256,7 +256,7 @@ describe('OnboardingWizard', () => {
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
     await user.type(passwordInput, 'mypassword123');
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Go Live/i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -290,7 +290,7 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     await renderOnboardingWizard();
@@ -350,12 +350,12 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, status: 500, clone: () => ({ json: async () => ({ error: "Failed to start onboarding" }) }), json: async () => ({ error: "Failed to start onboarding" }) });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     await renderOnboardingWizard();
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Go Live/i });
 
     await user.click(launchButton);
 
@@ -557,7 +557,7 @@ describe('OnboardingWizard', () => {
         }
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     act(() => {
@@ -583,6 +583,7 @@ describe('OnboardingWizard', () => {
           ok: true,
           json: async () => ({
             wizardState: {
+              bio: "Draft Bio",
               step: 1,
               chatStep: 2,
               businessName: 'Draft Business Name',
@@ -594,7 +595,7 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/state') {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ wizardState: {} })
+          json: async () => ({ wizardState: { bio: "Draft Bio" } })
         });
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -647,7 +648,7 @@ describe('OnboardingWizard', () => {
           json: async () => ({})
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     // Start at Step 2
@@ -735,7 +736,7 @@ describe('OnboardingWizard', () => {
     // Mock the draft save success
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/draft') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
 
     await renderOnboardingWizard();
@@ -841,7 +842,7 @@ describe('OnboardingWizard', () => {
 
     render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
-    const launchButton = await screen.findByRole('button', { name: /Launch Store/i });
+    const launchButton = await screen.findByRole('button', { name: /Approve & Go Live/i });
     await user.click(launchButton);
 
     expect(startRequestPayload).toBeDefined();

@@ -247,8 +247,8 @@ export default function AgentsPage() {
               <Link href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
                 ← Back to Dashboard
               </Link>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">Expert Center</h1>
-              <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">AI Departments</h2>
+              <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1>
+              <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
                 Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
               </p>
@@ -1350,7 +1350,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
       </div>
       {workflows.length === 0 ? (
-        <p className="rounded-[8px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
+        <p className="rounded-[16px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
           {workflows.map((workflow) => (

@@ -949,7 +949,7 @@ button {
   gap: 12px;
 }
 
-.setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[8px]"] {
+.setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[16px]"] {
   padding: 12px;
   border: 1px solid #d8e0ea;
   border-radius: 16px;
@@ -1008,4 +1008,14 @@ button {
   .setup-page #setup-screen [class*="grid"][class*="cols-2"] {
     grid-template-columns: 1fr;
   }
+}
+
+/* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+button,
+[role="button"],
+a.button,
+.app-button,
+.glassmorphism button,
+.glassmorphism a {
+  min-height: 44px;
 }

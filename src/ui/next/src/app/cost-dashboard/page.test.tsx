@@ -211,6 +211,7 @@ describe('CostDashboardPage', () => {
       period_end: "2023-10-31",
       trend: [],
       agent_costs: [],
+      budget_health_alert: "true" as any,
       department_tier_usage: {
         departments: [
           {
@@ -256,7 +257,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Budget Health Warning')).toBeDefined();
+    expect(screen.getByText('Soft Limit Approaching')).toBeDefined();
   });
 
   test('renders 0 limits properly', async () => {

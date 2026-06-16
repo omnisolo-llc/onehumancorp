@@ -249,3 +249,41 @@ test('sends Workbuddy context, attachment, model, and output controls in the hir
     taskConstraints: 'Budget under $500; draft before sending',
   });
 });
+
+test('supports interactive tab transitions and toggling grid extensions', async () => {
+  render(<AgentsPage />);
+
+  // Initial tab is Browse experts. Go to Skills.
+  fireEvent.click(screen.getByRole('button', { name: 'Skills' }));
+  expect(screen.getByText('Skill Market')).toBeDefined();
+
+  // Toggle skill inside grid to disable or enable it
+  const skillButton = screen.getByRole('button', { name: /Web Research Enabled/i });
+  fireEvent.click(skillButton);
+  // It should be disabled/unselected now, displaying status "Installed"
+  expect(screen.getByRole('button', { name: /Web Research Installed/i })).toBeDefined();
+
+  // Navigate to Connectors
+  fireEvent.click(screen.getByRole('button', { name: 'Connectors' }));
+  expect(screen.getByText('Connector Center')).toBeDefined();
+
+  // Toggle connector
+  const connectorButton = screen.getByRole('button', { name: /Stripe Selected/i });
+  fireEvent.click(connectorButton);
+  expect(screen.getByRole('button', { name: /Stripe Connected/i })).toBeDefined();
+});
+
+test('renders paywall dialog and handles simulated upgrade flow', async () => {
+  render(<AgentsPage />);
+
+  // Click Toggle Pro Mode switch to trigger paywall
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle Pro Mode' }));
+
+  // Paywall dialog should appear
+  expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeDefined();
+
+  // Click share on X
+  fireEvent.click(screen.getByText('Share on X to get 7 Days Free'));
+  // Dialog closes and gives Pro
+  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+});

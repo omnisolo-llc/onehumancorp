@@ -257,7 +257,12 @@
 
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
 
-      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
+        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
+        </div>
+      </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
 
       <div class="header">
@@ -646,21 +651,35 @@
 
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
-          const tenantId = localStorage.getItem('tenant_id') || 'default';
-          fetch('/api/v1/payments/terminal/sync_offline', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  session_id: 'web_session',
-                  transactions: [{
-                      id: 'tx_' + Date.now(),
-                      client_id: 'web_client',
-                      amount_cents: currentAmountCents,
-                      currency: 'usd',
-                      payload: '{}'
-                  }]
-              })
-          }).catch(console.error);
+          if (!navigator.onLine) {
+              document.querySelector('.receipt-text').innerText = "Payment saved offline. Will sync when network is restored.";
+              enqueueOfflineMutation({
+                  type: 'tap_to_pay',
+                  id: 'tx_' + Date.now(),
+                  amount: currentAmountCents,
+                  currency: 'usd',
+                  product_id: 'quick_charge',
+                  quantity: 1,
+                  timestamp: new Date().toISOString()
+              });
+          } else {
+              document.querySelector('.receipt-text').innerText = "Payment Successful";
+              const tenantId = localStorage.getItem('tenant_id') || 'default';
+              fetch('/api/v1/payments/terminal/sync_offline', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      session_id: 'web_session',
+                      transactions: [{
+                          id: 'tx_' + Date.now(),
+                          client_id: 'web_client',
+                          amount_cents: currentAmountCents,
+                          currency: 'usd',
+                          payload: '{}'
+                      }]
+                  })
+              }).catch(console.error);
+          }
       });
 
       function cancelCharge() {
@@ -954,14 +973,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -1500,12 +1519,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -1586,44 +1605,98 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-    // Offline Sync Logic
+    // Offline Sync Logic (IndexedDB CRDT)
 
-    function enqueueOfflineMutation(mutation) {
-        let queue = [];
+    const DB_NAME = "OHC_Offline_Queue";
+    const STORE_NAME = "actions";
+    const DB_VERSION = 1;
+
+    function getDB() {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = event => reject(request.error);
+            request.onsuccess = event => resolve(event.target.result);
+            request.onupgradeneeded = event => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                }
+            };
+        });
+    }
+
+    async function getQueue() {
+        if (!window.indexedDB) return [];
         try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-        queue.push(mutation);
-        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
-        window.dispatchEvent(new Event("ohc_queue_updated"));
+            const db = await getDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        } catch(e) {
+            return [];
+        }
+    }
+
+    async function enqueueOfflineMutation(mutation) {
+        if (!mutation.id) {
+            mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        }
+        if (!mutation.timestamp) {
+            mutation.timestamp = Date.now();
+        }
+
+        try {
+            const db = await getDB();
+            await new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(mutation);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+            window.dispatchEvent(new Event("ohc_queue_updated"));
+        } catch (e) {
+            console.error("Failed to enqueue offline mutation", e);
+        }
 
         if (navigator.onLine) {
             syncOfflineQueue();
         }
     }
 
-    function updateOfflineStatus() {
+    async function updateOfflineStatus() {
         const networkIndicator = document.getElementById("network-status-indicator");
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
+        const queue = await getQueue();
+
+        const dot = document.getElementById("network-status-dot");
+        const text = document.getElementById("network-status-text");
+
         if (!navigator.onLine) {
-            networkIndicator.style.display = "block";
+            networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (text) text.innerText = "Working Offline";
+        } else if (queue.length > 0) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
         }
 
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+            queueIndicator.innerText = queue.length + " Items Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -1632,11 +1705,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function syncOfflineQueue() {
         if (!navigator.onLine) return;
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
+        const queue = await getQueue();
         if (queue.length === 0) return;
 
         const posTransactions = [];
@@ -1649,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     amount_cents: Math.round(m.amount),
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date(m.timestamp || Date.now()).toISOString()
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
@@ -1668,31 +1737,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
         const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
-
-
         let allOk = true;
+
         if (posTransactions.length > 0) {
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
             try {
                 const res = await fetch("/api/v1/payments/terminal/sync_offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
-                });
-                if (!res.ok) allOk = false;
-            } catch(e) {
-                allOk = false;
-            }
-        }
-
-        if (generalMutations.length > 0) {
-
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
-            try {
-                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                    body: JSON.stringify({ transactions: posTransactions })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
@@ -1702,10 +1754,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (generalMutations.length > 0) {
             try {
-                const res = await fetch("/api/v1/sync/offline", {
+                const deltas = generalMutations.map(m => ({
+                    id: crypto.randomUUID(),
+                    entity_id: m.product_id || m.transaction_id || "general",
+                    data: JSON.stringify(m),
+                    updated_at: new Date().toISOString()
+                }));
+
+                const res = await fetch("/api/v1/sync/mcp-deltas", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ mutations: generalMutations })
+                    body: JSON.stringify({ tenant_id: tenantId, deltas: deltas })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
@@ -1714,7 +1773,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allOk) {
-            localStorage.setItem("ohc_offline_queue", "[]");
+            try {
+                const db = await getDB();
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], "readwrite");
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch(e) {
+                console.error("Failed to clear IndexedDB", e);
+            }
             updateOfflineStatus();
         }
     }

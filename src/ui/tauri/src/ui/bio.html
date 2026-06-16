@@ -108,6 +108,106 @@
         .footer a:hover {
             opacity: 1;
         }
+
+        /* Expandable Badge Styles */
+        .ohc-floating-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 9999px;
+            padding: 12px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1d1d1f;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            width: auto;
+            max-width: 200px; /* Collapsed state max width */
+        }
+
+        .ohc-floating-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .ohc-floating-badge .badge-icon {
+            font-size: 16px;
+        }
+
+        .ohc-floating-badge .badge-content {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            width: 100%;
+            text-align: left;
+        }
+
+        .ohc-floating-badge .badge-content p {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1d1d1f;
+            line-height: 1.4;
+        }
+
+        .ohc-floating-badge .badge-cta {
+            display: inline-block;
+            background: #0066FF;
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .ohc-floating-badge .badge-cta:hover {
+            background: #005ce6;
+        }
+
+        /* Expanded State */
+        .ohc-floating-badge.expanded {
+            border-radius: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 20px;
+            max-width: 300px; /* Expanded state max width */
+            cursor: default;
+        }
+
+        .ohc-floating-badge.expanded:hover {
+            transform: none; /* Disable hover lift when expanded */
+        }
+
+        .ohc-floating-badge.expanded .badge-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .ohc-floating-badge.expanded .badge-content {
+            display: flex;
+        }
+
+        /* Dark mode overrides if needed based on body background, but since it's glass it adapts well. We can add specific dark mode if required */
     </style>
 </head>
 <body>
@@ -121,7 +221,19 @@
     </div>
 
     <div class="footer">
-        <a id="powered-by-link" href="#">⚡ Powered by OHC</a>
+        <!-- Replaced by floating badge -->
+    </div>
+
+    <!-- Expandable Floating Badge -->
+    <div id="ohc-badge" class="ohc-floating-badge">
+        <div class="badge-header" id="ohc-badge-header">
+            <span class="badge-icon">⚡</span>
+            <span>Powered by OHC</span>
+        </div>
+        <div class="badge-content">
+            <p>Want a storefront like this? Get OHC for free and start growing your business.</p>
+            <a id="badge-cta-link" href="#" class="badge-cta">Start Free Trial</a>
+        </div>
     </div>
 </div>
 
@@ -135,7 +247,6 @@
         const bioEl = document.getElementById('bio');
         const linksEl = document.getElementById('links');
         const appEl = document.getElementById('app');
-        const poweredByLink = document.getElementById('powered-by-link');
 
         let data = {
             store_name: 'My Store',
@@ -175,7 +286,17 @@
         // Update UI
         titleEl.textContent = data.store_name;
         bioEl.textContent = data.bio;
-        poweredByLink.href = `https://ohc.store/join?ref=${tenant}`;
+
+        // Setup Badge Interactive Logic
+        const badge = document.getElementById('ohc-badge');
+        const badgeHeader = document.getElementById('ohc-badge-header');
+        const ctaLink = document.getElementById('badge-cta-link');
+
+        ctaLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}&source=bio_expandable_badge`;
+
+        badgeHeader.addEventListener('click', () => {
+            badge.classList.toggle('expanded');
+        });
 
         let styles = { bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#1D1D1F', linkBg: 'rgba(255, 255, 255, 0.15)', linkBorder: 'rgba(255, 255, 255, 0.3)' };
         switch(data.theme) {
@@ -187,7 +308,6 @@
         document.body.style.background = styles.theme === 'light' ? '#f3f4f6' : '#000';
         appEl.style.background = styles.bg;
         appEl.style.color = styles.color;
-        poweredByLink.style.color = styles.color;
 
         data.links.forEach(link => {
             const a = document.createElement('a');

@@ -614,7 +614,12 @@
       </div>
 
 
-      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
+        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
+        </div>
+      </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
 
       <div id="sold-out-toggle-falafel-container" style="display: none;">
@@ -624,6 +629,7 @@
         <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
         <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
       </div>
+      <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back</div>
 
       <div class="subtitle" style="margin-top: 5px;">Your private agentic workspace.</div>
 
@@ -805,21 +811,13 @@
 
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
+        <p><a href="email-signature-generator.html" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 14px; margin-bottom: 10px; display: inline-block;">Email Signature Generator</a></p>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
+        <a href="/referrals" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Click here to go to the Referral Dashboard.">Referral Dashboard</a>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
-
-        <div class="link-container" id="link-container">
-          <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
-        <div class="action-buttons">
-            <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
-            <button class="btn-secondary" id="share-whatsapp-btn" data-tooltip="Share your link via WhatsApp">Share on WhatsApp</button>
-            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
-            <a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a>
-          </div>
-        </div>
+        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button></div>
+        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
       </div>
 
 
@@ -827,16 +825,9 @@
       <div class="ohc-growth-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
         <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
-        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
-          Get My Invite Link
-        </button>
-        <div id="dashboard-invite-container" style="display: none; margin-top: 15px;">
-          <input type="text" class="link-input" id="dashboard-invite-link" readonly value="" style="width: 100%;" />
-          <div class="action-buttons" style="margin-top: 10px;">
-            <button class="btn-secondary" id="dashboard-copy-btn" style="flex: 1;">Copy</button>
-            <button class="btn-secondary" id="dashboard-share-x-btn" style="flex: 1; background-color: #1DA1F2; color: white;">Share to X</button>
-          </div>
-        </div>
+        <a href="/referrals" id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
+          Go to Referral Dashboard
+        </a>
       </div>
 
       <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
@@ -1530,7 +1521,7 @@
         } else {
           try {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+            const res = await fetch('/api/v1/growth/team-invites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
@@ -1667,9 +1658,9 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
                     <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1695,7 +1686,7 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1722,7 +1713,7 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
                 </div>
               </div>
@@ -1767,7 +1758,7 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1795,7 +1786,7 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1821,7 +1812,7 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1845,6 +1836,29 @@
             `;
           }
 
+          if (item.source === 'Proactive Context Agent') {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #FF9500;"></div>
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
+                  <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #995500; display: flex; align-items: center; gap: 8px; margin: 0;">
+                      <span style="font-size: 24px;">✨</span> Needs Attention Today
+                    </h2>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'High'}</div>
+                </div>
+                <div class="triage-context" style="font-weight: 500; margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: #804000;">
+                  ${description}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve & Execute</button>
+                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                </div>
+              </div>
+            `;
+          }
+
           return `
             <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
               <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
@@ -1852,9 +1866,9 @@
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
-              <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+              <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
               </div>
             </div>
             `;
@@ -2184,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               try {
                   const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                  const res = await fetch('/api/v1/growth/team-invites', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
@@ -2237,7 +2251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               try {
                   const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                  const res = await fetch('/api/v1/growth/team-invites', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
@@ -2395,14 +2409,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2746,7 +2760,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
             </div>
         </div>
 
@@ -2945,12 +2959,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -3031,44 +3045,98 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-    // Offline Sync Logic
+    // Offline Sync Logic (IndexedDB CRDT)
 
-    function enqueueOfflineMutation(mutation) {
-        let queue = [];
+    const DB_NAME = "OHC_Offline_Queue";
+    const STORE_NAME = "actions";
+    const DB_VERSION = 1;
+
+    function getDB() {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = event => reject(request.error);
+            request.onsuccess = event => resolve(event.target.result);
+            request.onupgradeneeded = event => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                }
+            };
+        });
+    }
+
+    async function getQueue() {
+        if (!window.indexedDB) return [];
         try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-        queue.push(mutation);
-        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
-        window.dispatchEvent(new Event("ohc_queue_updated"));
+            const db = await getDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        } catch(e) {
+            return [];
+        }
+    }
+
+    async function enqueueOfflineMutation(mutation) {
+        if (!mutation.id) {
+            mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        }
+        if (!mutation.timestamp) {
+            mutation.timestamp = Date.now();
+        }
+
+        try {
+            const db = await getDB();
+            await new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(mutation);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+            window.dispatchEvent(new Event("ohc_queue_updated"));
+        } catch (e) {
+            console.error("Failed to enqueue offline mutation", e);
+        }
 
         if (navigator.onLine) {
             syncOfflineQueue();
         }
     }
 
-    function updateOfflineStatus() {
+    async function updateOfflineStatus() {
         const networkIndicator = document.getElementById("network-status-indicator");
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
+        const queue = await getQueue();
+
+        const dot = document.getElementById("network-status-dot");
+        const text = document.getElementById("network-status-text");
+
         if (!navigator.onLine) {
-            networkIndicator.style.display = "block";
+            networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (text) text.innerText = "Working Offline";
+        } else if (queue.length > 0) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
         }
 
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+            queueIndicator.innerText = queue.length + " Items Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -3077,11 +3145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function syncOfflineQueue() {
         if (!navigator.onLine) return;
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
+        const queue = await getQueue();
         if (queue.length === 0) return;
 
         const posTransactions = [];
@@ -3094,7 +3158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     amount_cents: Math.round(m.amount),
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date(m.timestamp || Date.now()).toISOString()
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
@@ -3113,16 +3177,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
         const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
-
-
         let allOk = true;
+
         if (posTransactions.length > 0) {
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
             try {
                 const res = await fetch("/api/v1/payments/terminal/sync_offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                    body: JSON.stringify({ transactions: posTransactions })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
@@ -3131,7 +3193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (generalMutations.length > 0) {
-
             try {
                 const res = await fetch("/api/v1/sync/offline", {
                     method: "POST",
@@ -3145,7 +3206,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allOk) {
-            localStorage.setItem("ohc_offline_queue", "[]");
+            try {
+                const db = await getDB();
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], "readwrite");
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch(e) {
+                console.error("Failed to clear IndexedDB", e);
+            }
             updateOfflineStatus();
         }
     }

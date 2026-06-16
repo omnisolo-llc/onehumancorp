@@ -12,8 +12,16 @@ export default function WhatsAppLinkGeneratorPage() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [tenant, setTenant] = useState("default");
 
-  const brandingText = "⚡ Powered by OHC";
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      const storedTenant = localStorage.getItem("tenant");
+      if (storedTenant) setTenant(storedTenant);
+    }
+  }, []);
+
+  const brandingText = `⚡ Powered by OHC`;
 
   const finalMessage = React.useMemo(() => {
     let finalStr = message.trim();
@@ -29,7 +37,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   const generatedLink = cleanPhoneNumber
-    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}`
+    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}\n\nhttps://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`
     : '';
 
   const handleCopy = async () => {
@@ -93,7 +101,7 @@ export default function WhatsAppLinkGeneratorPage() {
                     <input
                         id="phoneNumber"
                         type="text"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter"
                         placeholder="e.g. 1234567890"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -105,7 +113,7 @@ export default function WhatsAppLinkGeneratorPage() {
                     <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">Pre-filled Message</label>
                     <textarea
                         id="message"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter resize-none h-32"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter resize-none h-32"
                         placeholder="Hello, I would like to inquire about your services."
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
@@ -137,7 +145,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Light theme"
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
@@ -145,7 +153,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Dark theme"
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -155,7 +163,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 <button
                     onClick={() => setShowModal(true)}
                     disabled={!phoneNumber}
-                    className={`w-full py-3 text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors shadow-sm ${phoneNumber ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'}`}
+                    className={`w-full py-3 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm ${phoneNumber ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'}`}
                 >
                     Get Link
                 </button>
@@ -224,20 +232,20 @@ export default function WhatsAppLinkGeneratorPage() {
                     <textarea
                         readOnly
                         value={generatedLink}
-                        className="w-full h-24 p-4 bg-gray-50 border border-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
+                        className="w-full h-24 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
                     />
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Link'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
@@ -285,7 +293,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 </div>
 
                 <div className="flex gap-3">
-                    <button className="flex-1 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] hover:from-black hover:to-gray-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <button className="flex-1 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:from-black hover:to-gray-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                         Upgrade Now
                     </button>
                 </div>
@@ -295,7 +303,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       {/* Persistent Footer Growth Loop */}
       <footer className="mt-12 py-8 border-t border-gray-200 text-center">
-          <a href="/onboarding" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+          <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}  target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
               <span className="text-base">⚡</span> Powered by OHC
           </a>
       </footer>

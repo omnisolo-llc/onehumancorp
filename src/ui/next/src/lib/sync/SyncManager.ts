@@ -101,6 +101,7 @@ export class SyncManager {
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
+              timestamp: new Date(m.timestamp || Date.now()).toISOString(),
               transaction_id: m.id,
               product_id: m.id.replace('e2e-product-', ''),
               quantity_deducted: 1, // Assume 1 for E2E logic
@@ -111,6 +112,7 @@ export class SyncManager {
            };
         } else if (m.type === 'draft_quote') {
           return {
+             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
              transaction_id: m.id,
              product_id: 'draft_quote',
              quantity_deducted: 0,
@@ -121,16 +123,54 @@ export class SyncManager {
              mutation_type: 'draft_quote',
              payload: m.notes
           };
+        } else if (m.type === 'agent_intent') {
+          return {
+             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+             transaction_id: m.id,
+             product_id: 'agent_intent',
+             quantity_deducted: 0,
+             amount: null,
+             payment_method: null,
+             payment_intent_id: null,
+             currency: 'usd',
+             mutation_type: 'agent_intent',
+             payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
+          };
         } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote') {
             return m; // keep them for KDS or Quotes API
         }
         return m;
       });
 
+      const crdtDeltas = queue.filter(m => m.type === 'CRDT_MUTATION').map(m => {
+         return {
+            id: m.id,
+            entity_id: m.payload.entity_id || 'unknown',
+            data: typeof m.payload.data === 'string' ? m.payload.data : JSON.stringify(m.payload.data || {}),
+            updated_at: new Date(m.timestamp || Date.now()).toISOString()
+         };
+      });
+
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
+
+      // Sync CRDT Deltas
+      if (crdtDeltas.length > 0) {
+        const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ deltas: crdtDeltas })
+        });
+        if (!resCrdt.ok) {
+          allOk = false;
+          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
+        }
+      }
 
       // Sync Quote Actions
       const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
@@ -179,7 +219,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',

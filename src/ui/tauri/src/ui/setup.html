@@ -19,7 +19,7 @@
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
+        padding: 20px;
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
@@ -56,17 +56,19 @@
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
-      select.glassmorphism, textarea.glassmorphism {
+      select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
-      input.glassmorphism {
-        border-radius: 8px;
-      }
+
       select, textarea, input {
         border-radius: 8px;
       }
@@ -129,7 +131,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        height: 12px;
+        height: 8px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -156,7 +158,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -285,9 +287,9 @@
       }
       .step-indicator {
         width: 12px;
-        height: 12px;
+        height: 8px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
         border: 2px solid rgba(255, 255, 255, 0.8);
         z-index: 2;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -330,7 +332,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -415,14 +417,14 @@
       /* Multi-step logic */
       .step {
         display: none;
-        animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .step.active {
         display: block;
       }
       @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
       }
 
       input, select, textarea {
@@ -435,7 +437,7 @@
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
@@ -506,7 +508,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.5);
@@ -558,9 +560,9 @@
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
-        overflow-x: auto;
+        flex-wrap: wrap;
+        justify-content: center;
         padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
       }
       .persona-chip {
         flex: 0 0 auto;
@@ -617,7 +619,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -747,7 +749,7 @@
         }
         .step-indicator {
           width: 8px;
-          height: 12px;
+          height: 8px;
         }
         .step-indicator.active {
           transform: scale(1.2);
@@ -756,7 +758,7 @@
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
+        padding: 20px;
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
@@ -822,7 +824,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -922,13 +924,13 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="Tell us about your business that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
@@ -948,7 +950,7 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
@@ -959,17 +961,17 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 12px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 8px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 12px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 12px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 8px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 8px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
       </div>
 
 
       <div class="step" id="step-approval">
-        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Ready to Launch</h1>
@@ -1058,7 +1060,7 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
         <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
@@ -1196,7 +1198,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
@@ -1218,6 +1220,7 @@
         <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
 
         <div class="btn-group">
+          <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
@@ -1313,6 +1316,26 @@
       };
 
 
+
+      // Auto save draft logic
+      let autoSaveTimer = null;
+      function debouncedAutoSave() {
+          clearTimeout(autoSaveTimer);
+          autoSaveTimer = setTimeout(() => {
+              saveCurrentState();
+              const msg = document.getElementById('draft-saved-msg');
+              if (msg) {
+                  msg.style.display = 'block';
+                  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+              }
+          }, 500);
+      }
+
+      document.querySelectorAll('input, select, textarea').forEach(el => {
+          el.addEventListener('input', debouncedAutoSave);
+          el.addEventListener('change', debouncedAutoSave);
+      });
+
       // Handle radio buttons selection visual state
       inputs.context.forEach(radio => {
           radio.addEventListener('change', (e) => {
@@ -1324,7 +1347,9 @@
 
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
+        const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+        const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
+        window.__TAURI__.core.invoke("get_onboarding_state", { tenantId, userId }).then((backendState) => {
           if (backendState) {
             state = { ...state, ...backendState };
             populateForm();
@@ -1480,13 +1505,14 @@
           // Always set localStorage directly
           localStorage.setItem('onboardingState', JSON.stringify(state));
 
+          const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+          const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
+
           if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
+              window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
-              const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
               fetch(`${backendUrl}/api/onboarding/draft`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
@@ -1867,7 +1893,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                       return;
                   }
@@ -1904,7 +1933,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   } else {
                       throw new Error('Failed to start onboarding');
@@ -1996,7 +2028,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   } else {
                       const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
@@ -2038,7 +2073,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   }
 
@@ -2077,7 +2115,7 @@
 
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-                window.__TAURI__.core.invoke("save_onboarding_state", { state }).then(() => {
+                window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).then(() => {
                     e.target.innerText = "Saved!";
                     setTimeout(() => {
                         e.target.innerText = originalText;
@@ -2160,10 +2198,18 @@
                        localStorage.setItem('tenant_id', startData.organization_id);
                        localStorage.setItem('tenant', startData.organization_id);
                    }
+
+                   localStorage.removeItem('onboardingState');
                    localStorage.setItem('has_onboarded', 'true');
+
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
+                   const submitError = document.getElementById('submit-error');
+                   if (submitError) {
+                       submitError.style.display = 'block';
+                       submitError.innerText = (err && err.message) ? err.message : typeof err === 'string' ? err : 'Failed to launch store';
+                   }
                    goToStep('step-template');
                    finishBtn.disabled = false;
                    finishBtn.innerText = "Launch Store";
@@ -2181,16 +2227,24 @@
                  }).then(response => {
                      if (response.ok) {
                          localStorage.setItem('onboardingState', JSON.stringify(state));
-                         localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                          window.location.href = "success.html";
                      } else {
                          throw new Error('Failed to start onboarding');
                      }
                  }).catch((err) => {
-                     console.error(err);
-                     goToStep('step-template');
-                     finishBtn.disabled = false;
-                     finishBtn.innerText = "Launch Store";
+                   console.error(err);
+                   const submitError = document.getElementById('submit-error');
+                   if (submitError) {
+                       submitError.style.display = 'block';
+                       submitError.innerText = (err && err.message) ? err.message : typeof err === 'string' ? err : 'Failed to launch store';
+                   }
+                   goToStep('step-template');
+                   finishBtn.disabled = false;
+                   finishBtn.innerText = "Launch Store";
                  });
                }
            }
@@ -2289,7 +2343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -2372,7 +2426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
+        window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -2519,7 +2573,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
+        window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -2611,14 +2665,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2641,7 +2695,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -2742,7 +2796,7 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 600px;
             max-height: calc(100vh - 120px);
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(30px) saturate(210%);
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             z-index: 99990;
@@ -2826,7 +2880,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         .ohc-chat-msg {
             padding: 12px 16px;
-            border-radius: 12px;
+            border-radius: 16px;
             max-width: 85%;
             font-size: 14px;
             line-height: 1.5;
@@ -2886,7 +2940,7 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-bottom: 12px;
             cursor: pointer;
             transition: background 0.2s;
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.65);
         }
         .ohc-tour-card:hover {
             background: rgba(248, 250, 252, 0.8);
@@ -3069,7 +3123,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {
+        window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
@@ -3156,12 +3210,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -3182,7 +3236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
