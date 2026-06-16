@@ -3552,50 +3552,6 @@ impl Agent {
                 );
             }
             for tc in &read_only_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!("Tool call {} requires manual approval.", tc.name),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires manual approval.",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                } else if final_cfg.hil_spectrum
-                    == crate::types::HumanInLoopSpectrum::CollaborativeEdit
-                {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!(
-                                "Tool call {} requires collaborative editing/approval.",
-                                tc.name
-                            ),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires collaborative editing/approval.",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
-                    let is_high_risk =
-                        ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
-                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!(
-                                "Tool call {} requires supervisory approval (high-risk tool).",
-                                tc.name
-                            ),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires supervisory approval (high-risk tool).",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                }
 
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails
@@ -3832,52 +3788,6 @@ impl Agent {
                 );
             }
             for tc in &mutating_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate
-                    || final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll
-                {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!("Tool call {} requires manual approval.", tc.name),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires manual approval.",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                } else if final_cfg.hil_spectrum
-                    == crate::types::HumanInLoopSpectrum::CollaborativeEdit
-                {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!(
-                                "Tool call {} requires collaborative editing/approval.",
-                                tc.name
-                            ),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires collaborative editing/approval.",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
-                    let is_high_risk =
-                        ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
-                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired {
-                            error: format!(
-                                "Tool call {} requires supervisory approval (high-risk tool).",
-                                tc.name
-                            ),
-                        });
-                        return Err(ToolError::UserFixable(format!(
-                            "Tool call {} requires supervisory approval (high-risk tool).",
-                            tc.name
-                        ))
-                        .into());
-                    }
-                }
 
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails
@@ -5343,12 +5253,13 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::ApprovalOnAll;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.high_risk_tools = vec!["bash".to_string()];
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains(
-            "User intervention required: Tool call read_only_tool requires manual approval."
+            "USER_FIXABLE: Tool 'read_only_tool' requires explicit user confirmation under 'ApprovalOnAll' mode."
         ));
     }
 
@@ -5386,11 +5297,12 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::CollaborativeEdit;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.high_risk_tools = vec!["bash".to_string()];
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call read_only_tool requires collaborative editing/approval."));
+        assert!(res.unwrap_err().to_string().contains("USER_FIXABLE: Collaborative Edit required for tool 'read_only_tool'. Please review and optionally edit the tool arguments to proceed."));
     }
 
     #[tokio::test]
@@ -5427,11 +5339,12 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.high_risk_tools = vec!["bash".to_string()];
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call bash requires supervisory approval (high-risk tool)."));
+        assert!(res.unwrap_err().to_string().contains("USER_FIXABLE: High-risk tool 'bash' requires explicit user confirmation. Approve this tool call to proceed."));
     }
 
     #[tokio::test]
@@ -5476,6 +5389,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.high_risk_tools = vec!["bash".to_string()];
         cfg.confidence_threshold = 2.0;
 
         let mut events = vec![];
