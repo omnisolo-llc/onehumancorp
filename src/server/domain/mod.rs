@@ -10,3 +10,8 @@ pub mod sre;
 #[cfg(test)]
 pub mod unified_tenant_test;
 pub mod subscription;
+pub mod action_router;
+pub mod sales;
+pub mod crm;
+pub mod incident;
+pub mod social;
