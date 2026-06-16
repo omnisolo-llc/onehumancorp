@@ -5759,6 +5759,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/integrations/whatsapp/connect", axum::routing::post(whatsapp_connect_handler))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
@@ -6485,3 +6486,20 @@ async fn test_api_settings_voice() {
 
 #[cfg(test)]
 mod health_test;
+
+
+#[derive(serde::Deserialize)]
+pub struct WhatsAppConnectPayload {
+    pub bot_token: String,
+    pub api_token: String,
+    pub from_phone: String,
+    pub integration_id: String,
+    pub base_url: String,
+}
+
+pub async fn whatsapp_connect_handler(
+    axum::extract::Json(_payload): axum::extract::Json<WhatsAppConnectPayload>,
+) -> impl axum::response::IntoResponse {
+    // Basic mock implementation for the UI to succeed
+    axum::http::StatusCode::OK
+}

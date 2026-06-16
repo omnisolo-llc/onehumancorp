@@ -18,7 +18,7 @@ export default function Integrations() {
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
-    { id: "whatsapp", name: "Twilio for WhatsApp", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant powered by Twilio." },
+    { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Direct integration with Meta for reliable, zero-markup WhatsApp Business messaging." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
     { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
@@ -28,7 +28,7 @@ export default function Integrations() {
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [whatsappTwilioCreds, setWhatsappTwilioCreds] = useState({ accountSid: '', authToken: '', phoneNumber: '' });
+  const [whatsappCloudCreds, setWhatsappCloudCreds] = useState({ accountSid: '', authToken: '', phoneNumber: '' });
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: false,
@@ -91,32 +91,32 @@ export default function Integrations() {
     router.push('/inbox');
   };
 
-  const saveWhatsAppIntegration = async () => {
+  const saveWhatsAppCloudIntegration = async () => {
     try {
       const res = await fetch(`/api/integrations/whatsapp/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bot_token: whatsappTwilioCreds.accountSid,
-          api_token: whatsappTwilioCreds.authToken,
-          from_phone: whatsappTwilioCreds.phoneNumber,
-          integration_id: 'twilio',
-          base_url: 'https://api.twilio.com'
+          bot_token: whatsappCloudCreds.accountSid,
+          api_token: whatsappCloudCreds.authToken,
+          from_phone: whatsappCloudCreds.phoneNumber,
+          integration_id: 'meta',
+          base_url: 'https://graph.facebook.com/v19.0'
         })
       });
 
       if (!res.ok) {
-        setStatusMessage("Failed to connect Twilio for WhatsApp.");
+        setStatusMessage("Failed to connect WhatsApp Cloud API.");
         return;
       }
       setIntegrations(prev => prev.map(integration =>
         integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
       ));
       setShowWhatsAppModal(false);
-      setStatusMessage("Twilio for WhatsApp connected.");
+      setStatusMessage("WhatsApp Cloud API connected.");
       router.push('/inbox');
     } catch (e) {
-      setStatusMessage("Failed to connect Twilio for WhatsApp.");
+      setStatusMessage("Failed to connect WhatsApp Cloud API.");
     }
   };
 
@@ -127,7 +127,7 @@ export default function Integrations() {
       statusItems={[{ label: "Premium Link", value: "Active", tone: "good" }]}
     >
       <div className="flex flex-col font-inter">
-        {/* Twilio for WhatsApp Connect Modal */}
+        {/* WhatsApp Cloud API Connect Modal */}
         {showWhatsAppModal && (
           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
@@ -143,28 +143,28 @@ export default function Integrations() {
                 </button>
               </div>
 
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect Twilio for WhatsApp</h2>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect WhatsApp Cloud API</h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-                Enter your Twilio API credentials to securely link your WhatsApp Business account. Incoming messages will be automatically routed into Work Triage.
+                Enter your Meta App credentials and access token to securely link your WhatsApp Business account via the Cloud API. Incoming messages will be automatically routed into Work Triage.
               </p>
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Account SID</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">App ID</label>
                   <input
                     type="text"
-                    value={whatsappTwilioCreds.accountSid}
-                    onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, accountSid: e.target.value }))}
+                    value={whatsappCloudCreds.accountSid}
+                    onChange={(e) => setWhatsappCloudCreds(prev => ({ ...prev, accountSid: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
-                    placeholder="AC..."
+                    placeholder="Meta App ID"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Auth Token</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Access Token</label>
                   <input
                     type="password"
-                    value={whatsappTwilioCreds.authToken}
-                    onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, authToken: e.target.value }))}
+                    value={whatsappCloudCreds.authToken}
+                    onChange={(e) => setWhatsappCloudCreds(prev => ({ ...prev, authToken: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
                     placeholder="Hidden for security"
                   />
@@ -173,8 +173,8 @@ export default function Integrations() {
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Phone Number</label>
                   <input
                     type="text"
-                    value={whatsappTwilioCreds.phoneNumber}
-                    onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    value={whatsappCloudCreds.phoneNumber}
+                    onChange={(e) => setWhatsappCloudCreds(prev => ({ ...prev, phoneNumber: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
                     placeholder="+1234567890"
                   />
@@ -182,7 +182,7 @@ export default function Integrations() {
               </div>
 
               <button
-                onClick={saveWhatsAppIntegration}
+                onClick={saveWhatsAppCloudIntegration}
                 className="w-full bg-[#0f766e] hover:bg-[#0d645d] text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
               >
                 Save & Connect
