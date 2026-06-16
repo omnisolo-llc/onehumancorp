@@ -702,7 +702,7 @@ export default function Dashboard() {
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Live performance, orders, and inbox activity.</p>
             </div>
-            <Link href="/business-analytics" className="app-button min-h-[44px]">Business Analytics</Link>
+            <Link href="/analytics" className="app-button min-h-[44px]">Business Analytics</Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
