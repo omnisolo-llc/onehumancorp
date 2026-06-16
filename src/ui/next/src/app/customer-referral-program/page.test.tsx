@@ -73,6 +73,7 @@ describe('CustomerReferralProgramPage', () => {
     });
   });
 
+
   it('navigates back', async () => {
     render(<CustomerReferralProgramPage />);
     const backBtn = screen.getByText('Back to Dashboard');
@@ -81,4 +82,58 @@ describe('CustomerReferralProgramPage', () => {
     });
     // Check navigation
   });
+
+  it('renders Powered by OHC branding in preview by default', () => {
+    render(<CustomerReferralProgramPage />);
+    const brandingElements = screen.getAllByText(/Powered by OHC/i);
+    expect(brandingElements.length).toBeGreaterThan(0);
+  });
+
+  it('shows soft paywall when attempting to remove branding without pro', async () => {
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === 'has_pro') return 'false';
+        return null;
+      }),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+    });
+
+    render(<CustomerReferralProgramPage />);
+
+    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+
+    await act(async () => {
+        fireEvent.click(toggle);
+    });
+
+    expect(screen.getByText('Pro Feature')).toBeDefined();
+    expect(screen.getByText(/Upgrade to Pro to remove/i)).toBeDefined();
+  });
+
+  it('removes branding when pro is true and toggle is clicked', async () => {
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === 'has_pro') return 'true';
+        return null;
+      }),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+    });
+
+    render(<CustomerReferralProgramPage />);
+
+    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+
+    await act(async () => {
+        fireEvent.click(toggle);
+    });
+
+    expect(screen.queryByText('Pro Feature')).toBeNull();
+    // The exact text "⚡ Powered by OHC" in the preview should be removed
+    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+  });
+
 });
