@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ::server_ohc::invoice::*;
 use ::server_ohc::invoice::invoice_service_server::InvoiceService;
-use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, post, put}, Json, Router};
+use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, put}, Json, Router};
 use serde::Deserialize;
 use ::server_common::Claims;
 use tonic::{Request, Response, Status};

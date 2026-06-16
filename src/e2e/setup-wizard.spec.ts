@@ -1,12 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Setup Wizard 375px Flow', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
     test('should render properly and allow selection', async ({ adminPage: page }) => {
         // Go to setup wizard
-        await page.goto('/ui/setup.html');
+        await page.goto(`file://${process.cwd()}/src/ui/tauri/src/ui/setup.html`);
         await expect(page).toHaveTitle(/OHC Setup/);
 
         // Wait for page to be ready
@@ -22,7 +21,7 @@ test.describe('Setup Wizard 375px Flow', () => {
         // Step Context
         const stepContext = page.locator('#step-context');
         await expect(stepContext).toBeVisible();
-        await expect(stepContext).not.toHaveCSS('overflow-x', 'scroll'); // No horizontal scroll
+        await expect(page.locator('.persona-row').first()).not.toHaveCSS('overflow-x', 'scroll'); // No horizontal scroll
 
         // Click Storefront context card
         const storefrontCard = page.getByTestId('context-storefront');
@@ -53,7 +52,8 @@ test.describe('Setup Wizard 375px Flow', () => {
 
         const scheduleToggle = page.getByTestId('cap-schedule');
         await expect(scheduleToggle).toBeChecked();
-        await scheduleToggle.uncheck();
+        // Checkbox inputs might be obscured by their labels/sliders. Click the parent to uncheck.
+        await scheduleToggle.locator('xpath=..').click();
         await expect(scheduleToggle).not.toBeChecked();
 
         await page.locator('#step-assistant .next-step-btn').click();

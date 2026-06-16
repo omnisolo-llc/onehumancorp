@@ -1,6 +1,5 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
-use serde::Deserialize;
 use std::sync::Arc;
 use super::task::Task;
 use chrono::Utc;
