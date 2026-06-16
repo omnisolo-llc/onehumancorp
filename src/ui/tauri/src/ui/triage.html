@@ -122,10 +122,11 @@
       }
 
       .app-list-item {
-        background: transparent;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        padding: 12px;
+        padding: 16px;
         cursor: pointer;
         display: flex;
         justify-content: space-between;
@@ -137,7 +138,7 @@
         background: rgba(255, 255, 255, 0.8);
       }
       .app-list-item.selected {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.9);
         border-color: #0066FF;
         box-shadow: 0 0 0 1px #0066FF;
       }
