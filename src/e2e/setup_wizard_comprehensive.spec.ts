@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
     await page.goto('/onboarding');
     await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await expect(page.getByRole('button', { name: /Online Store/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Restaurant/ })).toBeVisible();
   });
