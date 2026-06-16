@@ -51,11 +51,12 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    let formatted_msg = if msg.contains("Validation Error (Pydantic-first tool schema)") {
-                        msg
-                    } else {
-                        format!("Validation Error (Pydantic-first tool schema): {}", msg)
-                    };
+                    let formatted_msg =
+                        if msg.contains("Validation Error (Pydantic-first tool schema)") {
+                            msg
+                        } else {
+                            format!("Validation Error (Pydantic-first tool schema): {}", msg)
+                        };
                     info!("LLM-recoverable error encountered: {}", formatted_msg);
                     return Err(ToolError::LlmRecoverable(formatted_msg));
                 }
