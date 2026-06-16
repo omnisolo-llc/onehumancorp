@@ -28,6 +28,16 @@ impl CodexCore {
         &self,
         message: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        // OpenAI Mechanic: Input Guardrails (Early Check)
+        if let Some(guardrails) = &self.runtime_config.guardrails {
+            if let Err(e) = guardrails.check_input(message) {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("Codex Runner Input Guardrail tripped: {}", e),
+                )));
+            }
+        }
+
         let mut total_cost = 0.0;
         let mut on_event = |e: AgentEvent| {
             if let AgentEvent::CostUpdate { total_cost_usd } = e {
@@ -100,6 +110,18 @@ impl Runner {
         let msg = message.to_string();
 
         tokio::spawn(async move {
+            // OpenAI Mechanic: Input Guardrails (Early Check) for streamed execution
+            if let Some(guardrails) = &core.runtime_config.guardrails {
+                if let Err(e) = guardrails.check_input(&msg) {
+                    let _ = tx
+                        .send(AgentEvent::TaskError {
+                            error: format!("Codex Runner Input Guardrail tripped: {}", e),
+                        })
+                        .await;
+                    return;
+                }
+            }
+
             let tx_clone = tx.clone();
             let mut on_event = move |event: AgentEvent| {
                 let _ = tx_clone.try_send(event);
@@ -1188,5 +1210,60 @@ mod tests {
         let resp_json_bad = app_server.handle_request(req_json_bad).await;
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_codex_runner_input_guardrail() {
+        use crate::guardrails::{GuardrailRegistry, InputGuardrail};
+        struct RejectGuardrail;
+        impl InputGuardrail for RejectGuardrail {
+            fn check_input(&self, _input: &str) -> Result<(), String> {
+                Err("Rejected by test guardrail".to_string())
+            }
+        }
+
+        let mut registry = GuardrailRegistry::new();
+        registry
+            .input_guardrails
+            .push(Arc::new(RejectGuardrail));
+
+        struct DummyLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for DummyLlmClient {
+            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                unimplemented!()
+            }
+        }
+
+        let agent = Arc::new(Agent::new(
+            Arc::new(DummyLlmClient),
+            vec![],
+        ));
+
+        let mut config = AgentRunConfig::default();
+        config.guardrails = Some(registry);
+
+        let core = Arc::new(CodexCore::new(agent, config));
+        let runner = Runner::new_with_core(core);
+
+        // Test run_async
+        let result = runner.run_async("test_input").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Codex Runner Input Guardrail tripped: Rejected by test guardrail"));
+
+        // Test run_streamed
+        let mut rx = runner.run_streamed("test_input");
+        let first_event = rx.recv().await.unwrap();
+        match first_event {
+            AgentEvent::TaskError { error } => {
+                assert!(error.contains("Codex Runner Input Guardrail tripped: Rejected by test guardrail"));
+            }
+            _ => panic!("Expected TaskError event"),
+        }
+
+        // Test run_sync_blocking
+        let result_sync = runner.run_sync_blocking("test_input");
+        assert!(result_sync.is_err());
+        assert!(result_sync.unwrap_err().to_string().contains("Codex Runner Input Guardrail tripped: Rejected by test guardrail"));
     }
 }
