@@ -43,4 +43,24 @@ test.describe('Viral Referral Loop', () => {
       expect(clipboardText).toMatch(/^http/);
     }
   });
+
+  test('should display Cloud Bridge Invite widget and generate link', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/dashboard.html');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
+
+    const emailInput = page.locator('#cloud-bridge-email');
+    await expect(emailInput).toBeVisible();
+    await emailInput.fill('team-member@example.com');
+
+    const generateCloudBtn = page.locator('#generate-cloud-bridge-btn');
+    await expect(generateCloudBtn).toBeVisible();
+    await generateCloudBtn.click();
+
+    const statusText = page.locator('#cloud-bridge-status');
+    await expect(statusText).toBeVisible();
+    await expect(statusText).toContainText('Cloud Invite generated: https://ohc.app/invite/');
+  });
 });
