@@ -57,7 +57,7 @@ pub trait MeshTransport: Send + Sync {
 pub struct InProcessTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     presence: DashMap<String, (String, std::time::Instant)>,
-    locks: DashMap<String, (String, i64)>,
+    locks: DashMap<String, (String, tokio::time::Instant)>,
 }
 
 impl Default for InProcessTransport {
@@ -120,7 +120,7 @@ impl MeshTransport for InProcessTransport {
         owner: &str,
         ttl_seconds: u64,
     ) -> Result<bool, String> {
-        let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
+        let expires_at = tokio::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
 
         use dashmap::mapref::entry::Entry;
         match self.locks.entry(resource.to_string()) {
@@ -130,7 +130,7 @@ impl MeshTransport for InProcessTransport {
             }
             Entry::Occupied(mut o) => {
                 let (stored_owner, stored_exp) = o.get();
-                if stored_owner == owner || *stored_exp <= chrono::Utc::now().timestamp_millis() {
+                if stored_owner == owner || *stored_exp <= tokio::time::Instant::now() {
                     o.insert((owner.to_string(), expires_at));
                     Ok(true)
                 } else {
