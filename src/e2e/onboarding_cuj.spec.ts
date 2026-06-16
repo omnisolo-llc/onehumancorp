@@ -3,18 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear());
-    await page.route('/api/onboarding/intake', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          business_type: 'Bakery',
-          business_name: 'Maya Bakery',
-          categories: ['food'],
-          initial_products: [{ name: 'Cake', price: '20' }]
-        }),
-      });
-    });
     await page.route('/api/onboarding/state', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -31,137 +19,136 @@ test.describe('Onboarding Wizard CUJ', () => {
         body: JSON.stringify({}),
       });
     });
-    await page.route('/api/onboarding/start', async route => {
+    await page.route('/api/onboarding/launch', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          message: 'Your business has been successfully launched.',
+          status: 'launched',
         }),
       });
     });
   });
 
   async function startOnboarding(page: import('@playwright/test').Page) {
-    await page.goto('/onboarding');
+    await page.goto('/ui/setup.html');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
-    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await expect(page.getByText("Choose a quick-start or select how you work.")).toBeVisible();
   }
 
 
-  // Test 1: Persona navigates from home, starts onboarding
   test('Persona: Business Owner completes initial setup successfully', async ({ page }) => {
     await startOnboarding(page);
 
-    // 2. Owner enters business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    // Context
+    await page.locator('[data-testid="persona-baker"]').click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    // 3. Owner enters what they sell
-    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
-    await sellInput.fill('Cakes');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    // Categories
+    await expect(page.getByRole('heading', { name: 'What\'s your category?' })).toBeVisible();
+    await page.locator('#step-categories .next-step-btn').click();
 
-    // 4. Owner enters location
-    const locInput = page.getByPlaceholder(/Portland, OR/i);
-    await locInput.fill('NY');
+    // Name
+    await expect(page.getByRole('heading', { name: 'What\'s the name of your business?' })).toBeVisible();
+    await page.locator('#step-name .next-step-btn').click();
 
-    const generateBtn = page.getByRole('button', { name: 'Next', exact: true });
-    await generateBtn.click();
+    // Assistant
+    await expect(page.getByRole('heading', { name: 'Set up your Assistant' })).toBeVisible();
+    await page.locator('#step-assistant .next-step-btn').click();
 
-    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
-    await audienceInput.fill('Tech enthusiasts and developers');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    // Admin Credentials
+    await expect(page.getByRole('heading', { name: 'Admin Credentials' })).toBeVisible();
+    await page.locator('#admin-email').fill('admin@mayabakery.com');
+    await page.locator('#admin-password').fill('securepassword123');
+    await page.locator('#step-admin .next-step-btn').click();
 
-    // Depending on backend speed we may need to wait for the analysis overlay to disappear
-    // 5. Verify it transitions to Step 2: Review Details
-    // Depending on backend speed we may need to increase timeout or just await visibility
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
+    // First Offer
+    await expect(page.getByRole('heading', { name: 'Your First Offer' })).toBeVisible();
+    await page.locator('#step-offer .next-step-btn').click();
 
-    // 6. Owner continues to Step 3: Style & Team
-    await page.getByRole('button', { name: /Continue/i }).click();
-    await expect(page.getByText('Style & Team')).toBeVisible();
+    // Template
+    await expect(page.getByRole('heading', { name: 'Template Selection' })).toBeVisible();
+    await page.locator('#template-selection').selectOption('Modern');
+    await page.locator('#finish-btn').click();
 
-    // 7. Owner launches store
-    await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
-    await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
-    await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
-    await page.getByRole('button', { name: /Launch Store/i }).click({ force: true });
-
-    // 8. Verify it transitions to Live Screen
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
+    // Verify it transitions to Loading
+    await expect(page.getByRole('heading', { name: 'Building Your Business...' })).toBeVisible({ timeout: 15000 });
   });
 
-  // Test 2: Ensure validation fails on small name
   test('Persona: Business Owner fails validation on short business name', async ({ page }) => {
     await startOnboarding(page);
 
-    // Owner enters short business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('M');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('[data-testid="persona-baker"]').click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    // Expect validation failure message immediately
+    await expect(page.getByRole('heading', { name: 'What\'s your category?' })).toBeVisible();
+    await page.locator('#step-categories .next-step-btn').click();
+
+    await expect(page.getByRole('heading', { name: 'What\'s the name of your business?' })).toBeVisible();
+
+    // Fill short name
+    await page.locator('#business-name').fill('Ma');
+    await page.locator('#step-name .next-step-btn').click();
+
+    // Expect validation failure message
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+    // Verify we are still on the name step
+    await expect(page.getByRole('heading', { name: 'What\'s the name of your business?' })).toBeVisible();
   });
 
-  // Test 3: Validate missing location blocks progression
-  test('Persona: Business Owner cannot progress without location', async ({ page }) => {
+  test('Persona: Business Owner cannot progress without email on admin step', async ({ page }) => {
     await startOnboarding(page);
 
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('[data-testid="persona-baker"]').click();
+    await page.locator('#step-context .next-step-btn').click();
+    await page.locator('#step-categories .next-step-btn').click();
+    await page.locator('#step-name .next-step-btn').click();
+    await page.locator('#step-assistant .next-step-btn').click();
 
-    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
-    await sellInput.fill('Cakes');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Admin Credentials' })).toBeVisible();
 
-    // Keep location empty
-    const generateBtn = page.getByRole('button', { name: 'Next', exact: true });
-    await expect(generateBtn).toBeDisabled();
+    // Fill only password
+    await page.locator('#admin-password').fill('securepassword123');
+
+    // Try to proceed
+    await page.locator('#step-admin .next-step-btn').click();
+
+    // Expect validation failure
+    await expect(page.getByText('Please enter a valid email address.')).toBeVisible();
   });
 
-  // Test 4: Navigating Back works
-  test('Persona: Business Owner can navigate back from sell step', async ({ page }) => {
+  test('Persona: Business Owner can navigate back from categories to context', async ({ page }) => {
     await startOnboarding(page);
 
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByText('What do you sell?')).toBeVisible();
+    await page.locator('[data-testid="persona-baker"]').click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    const backBtn = page.getByRole('button', { name: /Back/i });
-    await backBtn.click();
-    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What\'s your category?' })).toBeVisible();
+
+    // Click back
+    await page.locator('#step-categories .prev-step-btn').click();
+
+    await expect(page.getByText("Choose a quick-start or select how you work.")).toBeVisible();
   });
 
-  // Test 5: Can cancel from Style & Team
-  test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
+  test('Persona: Business Owner can toggle Auto Respond on Admin step', async ({ page }) => {
     await startOnboarding(page);
 
-    await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByPlaceholder(/Portland, OR/i).fill('NY');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
-    await audienceInput.fill('Tech enthusiasts and developers');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('[data-testid="persona-baker"]').click();
+    await page.locator('#step-context .next-step-btn').click();
+    await page.locator('#step-categories .next-step-btn').click();
+    await page.locator('#step-name .next-step-btn').click();
+    await page.locator('#step-assistant .next-step-btn').click();
 
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: /Continue/i }).click();
-
-    await expect(page.getByText('Style & Team')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Admin Credentials' })).toBeVisible();
 
     // Toggle auto-respond
-    const autoRespondToggle = page.getByRole('checkbox', { name: /Allow AI to Auto-Respond/i });
+    const autoRespondToggle = page.locator('#ai-auto-respond');
     await expect(autoRespondToggle).toBeChecked();
+
     await page.getByText('Allow AI to Auto-Respond').click();
+
     await expect(autoRespondToggle).not.toBeChecked();
   });
 });
