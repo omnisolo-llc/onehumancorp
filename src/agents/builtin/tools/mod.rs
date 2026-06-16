@@ -25,6 +25,7 @@ pub mod marketing;
 pub mod finance;
 pub mod local_fs_sync;
 pub mod ollama;
+pub mod superpowers_tool;
 pub mod subagent;
 pub mod head;
 pub mod tail;
@@ -164,7 +165,7 @@ pub fn all_tools(
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
-
+        superpowers_tool::superpowers_skill_tool(),
 ];
 
     if let Some(llm) = agent_llm {
