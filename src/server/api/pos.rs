@@ -89,6 +89,23 @@ async fn post_inventory_handler(
             }
         }
     }
+
+    // Trigger cache invalidation for the storefront
+    let cache_payload = serde_json::json!({
+        "event": "product.updated",
+        "tags": [format!("storefront:tenant:{}", tenant_id)]
+    });
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let _: Result<(), _> = redis::cmd("PUBLISH")
+                    .arg("cache_invalidation_events")
+                    .arg(cache_payload.to_string())
+                    .query_async(&mut conn).await;
+            }
+        }
+    }
+
     Json(json!({"status": "ok"}))
 }
 
