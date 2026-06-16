@@ -3224,6 +3224,86 @@ pub struct MockOmniInboxPayload {
     pub message: String,
 }
 
+pub async fn simulate_agent_feed_item_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
+    let action_id = format!("sim-action-{}", uuid::Uuid::new_v4());
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Simulated Webhook")
+            .bind("High")
+            .bind("A new simulated event needs your attention.")
+            .bind("pending")
+            .execute(&db.pool)
+            .await {
+                tracing::error!("Failed to insert triage_item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
+            )
+            .bind(&action_id)
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Draft Reply")
+            .bind("This is a simulated draft action payload.")
+            .execute(&db.pool)
+            .await {
+                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+        },
+        crate::db::DbStore::Sqlite(_) => {
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Simulated Webhook")
+            .bind("High")
+            .bind("A new simulated event needs your attention.")
+            .bind("pending")
+            .execute(&db.pool)
+            .await {
+                tracing::error!("Failed to insert triage_item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+            )
+            .bind(&action_id)
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Draft Reply")
+            .bind("This is a simulated draft action payload.")
+            .execute(&db.pool)
+            .await {
+                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+        }
+    }
+
+    if let Some(cache) = UI_TRIAGE_CACHE.get() {
+        cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": item_id }))).into_response()
+}
+
 pub async fn mock_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -5589,6 +5669,7 @@ async fn create_ui_bom_item_handler(
                 .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
         .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
