@@ -64,10 +64,151 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
+
+        // Now test Postgres parity directly using pg_pool.
+        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+            let pg_pool = PgPoolOptions::new()
+                .connect(&database_url)
+                .await
+                .unwrap();
+            let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");
+            let table_name = format!("test_parity_{}", table_suffix);
+            sqlx::query(&format!(
+                "CREATE TABLE {} (
+                    id TEXT PRIMARY KEY,
+                    mission_log TEXT,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );", table_name
+            )).execute(&pg_pool).await.unwrap();
+
+            sqlx::query(&format!("INSERT INTO {} (id, mission_log) VALUES ($1, $2)", table_name))
+                .bind("1")
+                .bind(None::<String>) // Inserting NULL
+                .execute(&pg_pool).await.unwrap();
+
+            let pg_row: (String, Option<String>, chrono::DateTime<chrono::Utc>) = sqlx::query_as(&format!("SELECT id, mission_log, updated_at FROM {} WHERE id = '1'", table_name))
+                .fetch_one(&pg_pool)
+                .await
+                .unwrap();
+
+            assert_eq!(pg_row.0, "1");
+            assert_eq!(pg_row.1, None, "NULL handling parity must be maintained between SQLite and Postgres");
+            assert!(pg_row.2.timestamp() > 0);
+            sqlx::query(&format!("DROP TABLE {}", table_name)).execute(&pg_pool).await.unwrap();
+        }
     }
 
 
     // Testing graceful degradation during network latency
+    #[tokio::test]
+    async fn test_cuj_stress_workspaces_cloud_mode() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(20)
+                .connect(&database_url)
+                .await
+                .unwrap();
+
+            let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");
+            let table_name = format!("stress_workspaces_{}", table_suffix);
+            sqlx::query(&format!(
+                "CREATE TABLE {} (
+                    id TEXT PRIMARY KEY,
+                    workspace_id TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );", table_name
+            )).execute(&pool).await.unwrap();
+
+            let pool_arc = std::sync::Arc::new(pool);
+            let mut handles = vec![];
+
+            // 100 simultaneous workspaces
+            for i in 0..100 {
+                let p = pool_arc.clone();
+                let t_name = table_name.clone();
+                handles.push(tokio::spawn(async move {
+                    let start = std::time::Instant::now();
+                    let ws_id = format!("ws_{}", i);
+                    sqlx::query(&format!("INSERT INTO {} (id, workspace_id, payload) VALUES ($1, $2, 'data')", t_name))
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(ws_id)
+                        .execute(&*p)
+                        .await
+                        .unwrap();
+                    start.elapsed().as_millis() as u64
+                }));
+            }
+
+            let mut latencies = vec![];
+            for h in handles {
+                latencies.push(h.await.unwrap());
+            }
+            latencies.sort();
+
+            let p50 = latencies[latencies.len() * 50 / 100];
+            let p95 = latencies[latencies.len() * 95 / 100];
+            let p99 = latencies[latencies.len() * 99 / 100];
+
+            println!("Cloud Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+            assert!(p50 < 5000, "p50 latency should be reasonable");
+
+            sqlx::query(&format!("DROP TABLE {}", table_name)).execute(&*pool_arc).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cuj_stress_workspaces_standalone_mode() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&uri)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE stress_workspaces (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                payload TEXT NOT NULL
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let pool_arc = std::sync::Arc::new(pool);
+        let mut handles = vec![];
+
+        // 10 simultaneous workspaces
+        for i in 0..10 {
+            let p = pool_arc.clone();
+            handles.push(tokio::spawn(async move {
+                let start = std::time::Instant::now();
+                let ws_id = format!("ws_{}", i);
+                sqlx::query("INSERT INTO stress_workspaces (id, workspace_id, payload) VALUES (?, ?, 'data')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(ws_id)
+                    .execute(&*p)
+                    .await
+                    .unwrap();
+                start.elapsed().as_millis() as u64
+            }));
+        }
+
+        let mut latencies = vec![];
+        for h in handles {
+            latencies.push(h.await.unwrap());
+        }
+        latencies.sort();
+
+        let p50 = latencies[latencies.len() * 50 / 100];
+        let p95 = latencies[latencies.len() * 95 / 100];
+        let p99 = latencies[latencies.len() * 99 / 100];
+
+        println!("Standalone Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+        assert!(p50 < 5000, "p50 latency should be reasonable");
+    }
+
     #[tokio::test]
     async fn test_host_cpu_exhaustion_degradation() {
         use std::sync::Arc;
