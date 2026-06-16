@@ -2,7 +2,6 @@ use axum::{Json, Router, routing::post};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::agent::AgentRunConfig;
 use crate::codex_runner::Runner;
 
 /// JSON-RPC 2.0 Request
@@ -37,11 +36,6 @@ pub struct AppState {
     pub runner: Arc<Runner>,
 }
 
-#[derive(Debug, Deserialize)]
-struct RunParams {
-    initial_message: String,
-}
-
 async fn handle_rpc(
     axum::extract::State(state): axum::extract::State<Arc<AppState>>,
     Json(payload): Json<JsonRpcRequest>,
@@ -59,87 +53,33 @@ async fn handle_rpc(
         });
     }
 
-    let params: RunParams = match payload.params {
-        Some(p) => match serde_json::from_value(p) {
-            Ok(params) => params,
-            Err(e) => {
-                return Json(JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32602,
-                        message: format!("Invalid params: {}", e),
-                        data: None,
-                    }),
-                    id: payload.id,
-                });
-            }
-        },
-        None => {
-            return Json(JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32602,
-                    message: "Invalid params: missing parameters".to_string(),
-                    data: None,
-                }),
-                id: payload.id,
-            });
-        }
+    // We need to map `json_rpc_server::JsonRpcRequest` to `codex_runner::JsonRpcRequest` structure,
+    // which codex_runner::AppServer parses from a JSON string.
+    let codex_req = crate::codex_runner::JsonRpcRequest {
+        jsonrpc: payload.jsonrpc.clone(),
+        id: payload.id.clone(),
+        method: payload.method.clone(),
+        params: payload.params.clone().unwrap_or_else(|| serde_json::Value::Object(serde_json::Map::new())),
     };
 
-    let _cfg = AgentRunConfig::default();
+    let req_str = serde_json::to_string(&codex_req).unwrap_or_default();
 
-    let result = match payload.method.as_str() {
-        "run_async" => state.runner.run_async(&params.initial_message).await,
-        "run_sync_blocking" => {
-            // Note: in a real async server you wouldn't want to actually block the tokio worker thread,
-            // but the method is defined as run_sync_blocking on the Runner.
-            // We'll wrap it in spawn_blocking to avoid starving the executor.
-            let runner_clone = state.runner.clone();
-            let initial_message = params.initial_message.clone();
-            match tokio::task::spawn_blocking(move || {
-                runner_clone.run_sync_blocking(&initial_message)
-            })
-            .await
-            {
-                Ok(res) => res,
-                Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
-            }
-        }
-        _ => {
-            return Json(JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32601,
-                    message: "Method not found".to_string(),
-                    data: None,
-                }),
-                id: payload.id,
-            });
-        }
-    };
+    // Route the raw JSON string to codex_runner::AppServer
+    let app_server = crate::codex_runner::AppServer::new(state.runner.clone());
+    let resp_str = app_server.handle_request(&req_str).await;
 
-    match result {
-        Ok(output) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: Some(serde_json::Value::String(output)),
-            error: None,
-            id: payload.id,
+    let resp: JsonRpcResponse = serde_json::from_str(&resp_str).unwrap_or_else(|_| JsonRpcResponse {
+        jsonrpc: "2.0".to_string(),
+        result: None,
+        error: Some(JsonRpcError {
+            code: -32603,
+            message: "Internal error parsing app server response".to_string(),
+            data: None,
         }),
-        Err(e) => Json(JsonRpcResponse {
-            jsonrpc: "2.0".to_string(),
-            result: None,
-            error: Some(JsonRpcError {
-                code: -32000,
-                message: format!("Execution Error: {}", e),
-                data: None,
-            }),
-            id: payload.id,
-        }),
-    }
+        id: payload.id.clone(),
+    });
+
+    Json(resp)
 }
 
 pub fn create_router(runner: Arc<Runner>) -> Router {

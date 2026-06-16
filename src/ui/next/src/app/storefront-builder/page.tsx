@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");

@@ -22,11 +22,11 @@ export async function POST(req: Request) {
     try {
       await FaultInjector.applyFault('expert_team_api_fetch_before');
 
-      const backendRes = await fetch('http://127.0.0.1:8080', {
+      const backendRes = await fetch(process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789/rpc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rpcRequest),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(60000)
       });
 
       await FaultInjector.applyFault('expert_team_api_fetch_after');
