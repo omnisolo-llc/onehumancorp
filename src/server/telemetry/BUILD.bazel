@@ -8,6 +8,7 @@ rust_library(
         "mod.rs",
         "forecaster.rs",
         "dashboard_test.rs",
+        "mcp_sync_worker.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -38,20 +39,4 @@ rust_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-)
-
-# Added rules for mcp sync worker
-load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "mcp_sync_worker",
-    srcs = ["mcp_sync_worker.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/telemetry",
-    visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "mcp_sync_worker_test",
-    srcs = ["mcp_sync_worker_test.go"],
-    embed = [":mcp_sync_worker"],
 )
