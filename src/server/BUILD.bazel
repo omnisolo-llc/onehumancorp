@@ -114,6 +114,8 @@ SERVER_RS_SRCS = [
     "//src/server/domain/repository:campaign_repo.rs",
     "//src/server/domain/repository:task_repo.rs",
     "//src/server/domain/repository:agent_feed_repo.rs",
+    "//src/server/domain:action_router_router.rs",
+    "//src/server/domain:action_router_handlers.rs",
     "//src/server/integrations:catalog.rs",
     "//src/server/integrations:mcp/registry.rs",
     "//src/server/integrations:mcp_gateway.rs",

@@ -129,6 +129,7 @@ rust_library(
         "//src/proto:organization_prost",
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
+        "//src/server/domain:server_domain",
         "//src/server/config:server_config",
         "//src/server/harness:server_harness",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",

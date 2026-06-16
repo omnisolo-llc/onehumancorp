@@ -2,6 +2,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "action_router_router.rs",
+        "action_router_handlers.rs",
         "b2b.rs",
         "blueprint.rs",
         "compute.rs",
@@ -35,6 +37,8 @@ rust_library(
         "//src/server/domain/repository:models.rs",
         "//src/server/domain/repository:task_repo.rs",
         "//src/server/domain/repository:agent_feed_repo.rs",
+        "action_router_router.rs",
+        "action_router_handlers.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
