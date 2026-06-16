@@ -250,6 +250,143 @@
         .tap-title { color: #f5f5f7; }
         .receipt-amount { color: #f5f5f7; }
       }
+
+      .mode-tabs {
+        display: flex;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 4px;
+        margin: 16px 24px;
+      }
+      .mode-tab {
+        flex: 1;
+        padding: 8px 0;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: #86868b;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      .mode-tab.active {
+        background: #fff;
+        color: #1d1d1f;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      .view-container {
+        display: none;
+        flex: 1;
+        flex-direction: column;
+        padding: 0 24px;
+        overflow-y: auto;
+      }
+      .view-container.active {
+        display: flex;
+      }
+
+      .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .catalog-item {
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        min-height: 44px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      }
+      .catalog-item:active {
+        transform: scale(0.98);
+        background: rgba(229, 229, 234, 0.5);
+      }
+      .item-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 4px;
+      }
+      .item-price {
+        font-size: 14px;
+        color: #0066FF;
+        font-weight: 600;
+      }
+      .item-stock {
+        font-size: 12px;
+        color: #86868b;
+        margin-top: auto;
+        padding-top: 8px;
+      }
+
+      .cart-container {
+        background: #fff;
+        border-top: 1px solid rgba(0,0,0,0.05);
+        padding: 16px 24px;
+        display: flex;
+        flex-direction: column;
+      }
+      .cart-list {
+        max-height: 150px;
+        overflow-y: auto;
+        margin-bottom: 12px;
+      }
+      .cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+      }
+      .cart-item:last-child {
+        border-bottom: none;
+      }
+      .cart-item-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1d1d1f;
+      }
+      .cart-item-qty {
+        font-size: 14px;
+        color: #86868b;
+        background: #f5f5f7;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+        cursor: pointer;
+      }
+      .cart-item-price {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+      }
+
+      .checkout-btn {
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 56px;
+      }
+      .checkout-btn:disabled {
+        background-color: #a1a1a6;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -546,6 +683,120 @@
 </script>
 
 <script>
+
+      let currentMode = 'keypad';
+      let catalog = [];
+      let cart = []; // array of { product, quantity }
+
+      function switchMode(mode) {
+          currentMode = mode;
+          document.getElementById('tab-keypad').classList.toggle('active', mode === 'keypad');
+          document.getElementById('tab-catalog').classList.toggle('active', mode === 'catalog');
+          document.getElementById('view-keypad').classList.toggle('active', mode === 'keypad');
+          document.getElementById('view-catalog').classList.toggle('active', mode === 'catalog');
+
+          if (mode === 'catalog' && catalog.length === 0) {
+              fetchCatalog();
+          }
+      }
+
+      async function fetchCatalog() {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          try {
+              const res = await fetch(`/api/pos/inventory?tenant_id=${tenantId}`, {
+                  headers: {
+                      'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                      'x-tenant-id': tenantId,
+                  }
+              });
+              if (res.ok) {
+                  const data = await res.json();
+                  catalog = data.inventory || [];
+                  renderCatalog();
+              } else {
+                  document.getElementById('catalog-grid').innerHTML = '<div style="text-align: center; color: #FF3B30; grid-column: 1 / -1; padding: 20px;">Failed to load catalog</div>';
+              }
+          } catch (e) {
+              console.error(e);
+              document.getElementById('catalog-grid').innerHTML = '<div style="text-align: center; color: #FF3B30; grid-column: 1 / -1; padding: 20px;">Error connecting to server</div>';
+          }
+      }
+
+      function renderCatalog() {
+          const grid = document.getElementById('catalog-grid');
+          grid.innerHTML = '';
+          if (catalog.length === 0) {
+              grid.innerHTML = '<div style="text-align: center; color: #86868b; grid-column: 1 / -1; padding: 20px;">No products available</div>';
+              return;
+          }
+          catalog.forEach(item => {
+              const div = document.createElement('div');
+              div.className = 'catalog-item';
+              div.onclick = () => addToCart(item);
+              div.innerHTML = `
+                  <div class="item-name">${item.name}</div>
+                  <div class="item-price">$${(item.price_cents / 100).toFixed(2)}</div>
+                  <div class="item-stock">Stock: ${item.stock}</div>
+              `;
+              grid.appendChild(div);
+          });
+      }
+
+      function addToCart(product) {
+          const existing = cart.find(i => i.product.id === product.id);
+          if (existing) {
+              existing.quantity++;
+          } else {
+              cart.push({ product, quantity: 1 });
+          }
+          renderCart();
+      }
+
+      function removeFromCart(productId) {
+          const existing = cart.find(i => i.product.id === productId);
+          if (existing) {
+              existing.quantity--;
+              if (existing.quantity <= 0) {
+                  cart = cart.filter(i => i.product.id !== productId);
+              }
+          }
+          renderCart();
+      }
+
+      function renderCart() {
+          const list = document.getElementById('cart-list');
+          list.innerHTML = '';
+          let totalCents = 0;
+
+          cart.forEach(item => {
+              const itemTotalCents = item.product.price_cents * item.quantity;
+              totalCents += itemTotalCents;
+
+              const div = document.createElement('div');
+              div.className = 'cart-item';
+              div.innerHTML = `
+                  <div style="display: flex; align-items: center;">
+                      <span class="cart-item-name">${item.product.name}</span>
+                      <span class="cart-item-qty" onclick="removeFromCart('${item.product.id}')">x${item.quantity}</span>
+                  </div>
+                  <div class="cart-item-price">$${(itemTotalCents / 100).toFixed(2)}</div>
+              `;
+              list.appendChild(div);
+          });
+
+          const formattedTotal = '$' + (totalCents / 100).toFixed(2);
+          document.getElementById('cart-total').innerText = formattedTotal;
+
+          const checkoutBtn = document.getElementById('checkout-btn');
+          if (totalCents > 0) {
+              checkoutBtn.removeAttribute('disabled');
+          } else {
+              checkoutBtn.setAttribute('disabled', 'true');
+          }
+      }
+
+      let cartReservedLocks = {}; // Map of productId -> lock_id
+
       let currentAmountCents = 0;
 
       const amountDisplay = document.getElementById('amount-display');
@@ -589,9 +840,54 @@
 
       async function initiateCharge() {
         tapOverlay.style.display = 'flex';
+        simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
+        simulateTapBtn.style.backgroundColor = "#34C759";
 
-        // In a real app, here we would invoke the native Tap To Pay SDK.
-        // For web and tests, we show a simulate button.
+        let totalCents = 0;
+        cartReservedLocks = {};
+
+        if (currentMode === 'catalog') {
+            totalCents = cart.reduce((acc, item) => acc + (item.product.price_cents * item.quantity), 0);
+
+            // Reserve inventory for each item
+            for (const item of cart) {
+                try {
+                    const tenantId = localStorage.getItem('tenant_id') || 'default';
+                    const res = await fetch('/api/v1/payments/terminal/reserve', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                            'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
+                        },
+                        body: JSON.stringify({
+                            tenant_id: tenantId,
+                            product_id: item.product.id,
+                            quantity: item.quantity,
+                            ttl_seconds: 60
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success) {
+                            cartReservedLocks[item.product.id] = data.lock_id;
+                        } else {
+                            console.warn("Reservation failed for " + item.product.id, data.error_message);
+                            // Real app: might want to abort or show warning
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to reserve", e);
+                }
+            }
+        } else {
+            totalCents = currentAmountCents;
+        }
+
+        const dollars = (totalCents / 100).toFixed(2);
+        tapAmountSubtitle.innerText = '$' + dollars;
+        receiptAmount.innerText = '$' + dollars;
+
         try {
           const tenantId = localStorage.getItem('tenant_id') || 'default';
 
@@ -600,7 +896,8 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+              'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+              'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
             }
           });
           if (!tokenRes.ok) {
@@ -614,18 +911,18 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+              'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+              'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
             },
             body: JSON.stringify({
-              amount_cents: currentAmountCents,
+              amount_cents: totalCents,
               currency: 'usd',
-              product_id: 'pos_custom_amount', // Using a placeholder for custom amounts
+              product_id: currentMode === 'catalog' ? (cart.length > 0 ? cart[0].product.id : null) : 'pos_custom_amount',
               quantity: 1,
               order_id: 'pos_web_' + Date.now()
             })
           });
 
-          // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
@@ -646,39 +943,111 @@
 
           // Tap Success
           tapOverlay.style.display = 'none';
-          posView.style.display = 'none';
+          document.getElementById('view-keypad').style.display = 'none';
+          document.getElementById('view-catalog').style.display = 'none';
+          document.querySelector('.mode-tabs').style.display = 'none';
           receiptScreen.style.display = 'flex';
 
-          // In real flow, we'd confirm the intent and sync offline txs.
-          // We simulate the offline sync for E2E validation:
+          let totalCents = currentMode === 'catalog' ? cart.reduce((acc, item) => acc + (item.product.price_cents * item.quantity), 0) : currentAmountCents;
+
           if (!navigator.onLine) {
               document.querySelector('.receipt-text').innerText = "Payment saved offline. Will sync when network is restored.";
-              enqueueOfflineMutation({
-                  type: 'tap_to_pay',
-                  id: 'tx_' + Date.now(),
-                  amount: currentAmountCents,
-                  currency: 'usd',
-                  product_id: 'quick_charge',
-                  quantity: 1,
-                  timestamp: new Date().toISOString()
-              });
+              if (currentMode === 'catalog') {
+                  cart.forEach(item => {
+                      enqueueOfflineMutation({
+                          type: 'tap_to_pay',
+                          id: 'tx_' + Date.now() + '_' + item.product.id,
+                          amount: item.product.price_cents * item.quantity,
+                          currency: 'usd',
+                          product_id: item.product.id,
+                          quantity: item.quantity,
+                          timestamp: new Date().toISOString()
+                      });
+                  });
+              } else {
+                  enqueueOfflineMutation({
+                      type: 'tap_to_pay',
+                      id: 'tx_' + Date.now(),
+                      amount: currentAmountCents,
+                      currency: 'usd',
+                      product_id: 'quick_charge',
+                      quantity: 1,
+                      timestamp: new Date().toISOString()
+                  });
+              }
           } else {
               document.querySelector('.receipt-text').innerText = "Payment Successful";
               const tenantId = localStorage.getItem('tenant_id') || 'default';
-              fetch('/api/v1/payments/terminal/sync_offline', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      session_id: 'web_session',
-                      transactions: [{
-                          id: 'tx_' + Date.now(),
-                          client_id: 'web_client',
-                          amount_cents: currentAmountCents,
-                          currency: 'usd',
-                          payload: '{}'
-                      }]
-                  })
-              }).catch(console.error);
+
+              if (currentMode === 'catalog') {
+                  for (const item of cart) {
+                      try {
+                          await fetch('/api/v1/payments/terminal/commit', {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                                  'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
+                              },
+                              body: JSON.stringify({
+                                  tenant_id: tenantId,
+                                  product_id: item.product.id,
+                                  quantity: item.quantity,
+                                  lock_id: cartReservedLocks[item.product.id] || "",
+                                  customer_id: null,
+                                  amount_cents: item.product.price_cents * item.quantity
+                              })
+                          });
+                      } catch (e) {
+                          console.error("Commit failed", e);
+                      }
+                  }
+
+                  // Also record the transaction for offline sync compat
+                  fetch('/api/v1/payments/terminal/sync_offline', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
+                      },
+                      body: JSON.stringify({
+                          session_id: 'web_session',
+                          transactions: [{
+                              id: 'tx_' + Date.now(),
+                              client_id: 'web_client',
+                              amount_cents: totalCents,
+                              currency: 'usd',
+                              payload: JSON.stringify(cart.map(i => ({product_id: i.product.id, quantity: i.quantity})))
+                          }]
+                      })
+                  }).catch(console.error);
+
+              } else {
+                  fetch('/api/v1/payments/terminal/sync_offline', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                        'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`
+                      },
+                      body: JSON.stringify({
+                          session_id: 'web_session',
+                          transactions: [{
+                              id: 'tx_' + Date.now(),
+                              client_id: 'web_client',
+                              amount_cents: currentAmountCents,
+                              currency: 'usd',
+                              payload: '{}'
+                          }]
+                      })
+                  }).catch(console.error);
+              }
+          }
+
+          if (currentMode === 'catalog') {
+              cart = [];
+              renderCart();
           }
       });
 
@@ -691,7 +1060,8 @@
       function resetPOS() {
           clearAmount();
           receiptScreen.style.display = 'none';
-          posView.style.display = 'flex';
+          document.querySelector('.mode-tabs').style.display = 'flex';
+          switchMode(currentMode);
           simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
           simulateTapBtn.style.backgroundColor = "#34C759";
       }
