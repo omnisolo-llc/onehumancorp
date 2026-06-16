@@ -134,7 +134,7 @@ pub async fn handle_edge_request_impl(
         }
         response.headers_mut().insert(
             CACHE_CONTROL,
-            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+            "public, s-maxage=31536000, stale-while-revalidate=86400, max-age=0".parse().unwrap(),
         );
         if stale {
             // Spawn background regeneration logic if it was stale, but prevent thundering herd
@@ -178,7 +178,7 @@ pub async fn handle_edge_request_impl(
         }
             response.headers_mut().insert(
                 CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                "public, s-maxage=31536000, stale-while-revalidate=86400, max-age=0".parse().unwrap(),
             );
             return Ok(response);
         }
@@ -202,7 +202,7 @@ pub async fn handle_edge_request_impl(
     }
     response.headers_mut().insert(
         CACHE_CONTROL,
-        "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        "public, s-maxage=31536000, stale-while-revalidate=86400, max-age=0".parse().unwrap(),
     );
     Ok(response)
 }

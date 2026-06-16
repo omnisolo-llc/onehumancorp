@@ -366,6 +366,14 @@ impl InventoryService {
                     .execute(&mut *tx)
                     .await;
             }
+            // Call cache invalidation webhook
+            let client = reqwest::Client::new();
+            let webhook_url = std::env::var("OHC_CORE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string()) + "/api/webhook/invalidate";
+            let invalidation_payload = serde_json::json!({
+                "tags": [format!("storefront:product:{}:{}", tenant_id, product_id)]
+            });
+            let _ = client.post(&webhook_url).json(&invalidation_payload).send().await;
+
         } else {
             let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                 .bind(product_id)

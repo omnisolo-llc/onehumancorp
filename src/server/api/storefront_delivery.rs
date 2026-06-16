@@ -52,7 +52,7 @@ async fn get_storefront_product(
             let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
                 http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                "public, s-maxage=31536000, stale-while-revalidate=86400, max-age=0".parse().unwrap(),
             );
             return Ok(response);
         }
@@ -79,7 +79,7 @@ async fn get_storefront_product(
             }
             response.headers_mut().insert(
                 http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                "public, s-maxage=31536000, stale-while-revalidate=86400, max-age=0".parse().unwrap(),
             );
             return Ok(response);
         }
