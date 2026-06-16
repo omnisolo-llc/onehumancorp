@@ -88,6 +88,7 @@ mod tests {
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
+    #[allow(unused_imports)]
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     #[tokio::test]

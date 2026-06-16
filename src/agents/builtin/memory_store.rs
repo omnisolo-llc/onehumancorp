@@ -776,6 +776,7 @@ impl VectorRepository {
                 } else {
                     // Fallback for tests environments without sqlite-vec loaded:
                     // Optimize by fetching only id, tenant_id, and embedding to minimize memory usage
+                    #[allow(dead_code)]
                     struct MinimalRecord {
                         id: String,
                         tenant_id: String,
@@ -1082,6 +1083,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
 
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
+    #[allow(dead_code)]
     pub tenant_id: String,
     pub agent_id: String,
     pub llm: std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>,
@@ -1152,8 +1154,9 @@ impl LongTermMemory for PersistentMemoryStore {
 /// 2) Detailed topic files (pulled on demand)
 /// 3) Raw transcripts (accessed via search only)
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct Anthropic3TierMemoryStore {
-    base_dir: std::path::PathBuf,
+    _base_dir: std::path::PathBuf,
     index_file: std::path::PathBuf,
     topics_dir: std::path::PathBuf,
     transcripts_dir: std::path::PathBuf,
@@ -1177,7 +1180,7 @@ impl Anthropic3TierMemoryStore {
         std::fs::create_dir_all(&transcripts_dir).map_err(|e| e.to_string())?;
 
         Ok(Self {
-            base_dir,
+            _base_dir: base_dir,
             index_file,
             topics_dir,
             transcripts_dir,

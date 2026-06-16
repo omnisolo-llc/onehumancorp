@@ -1,8 +1,7 @@
-use crate::ohc::orchestration::McpInvokeRequest;
-
 #[cfg(test)]
 mod tests {
     use crate::tools::edge_caching::server::EdgeCachingMcpServer;
+    #[allow(unused_imports)]
     use crate::ohc::orchestration::McpInvokeRequest;
 
     #[tokio::test]
