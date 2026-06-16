@@ -456,6 +456,11 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_sub_agent_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // SQLite queue
+        let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hour')")
+            .execute(&self.sqlite_pool)
+            .await;
+
         // PG queue
         let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'")
             .execute(&self.pg_pool)

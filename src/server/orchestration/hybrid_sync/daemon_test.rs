@@ -19,6 +19,19 @@ mod tests {
 
         sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                parent_task_id TEXT,
+                payload TEXT,
+                status TEXT,
+                worker_id TEXT,
+                scheduled_at TEXT,
+                completed_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )").execute(&sqlite_pool).await.unwrap();
+
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -514,6 +527,9 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours')")
             .execute(&pg_pool).await.unwrap();
 
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'))")
+            .execute(&sqlite_pool).await.unwrap();
+
         sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours')")
             .execute(&pg_pool).await.unwrap();
 
@@ -531,6 +547,11 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_pg = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_pg'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_pg.get::<String, _>("status"), "FAILED");
+
+        // Verify SQLite queue is failed
+        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_sqlite'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
 
         // Verify PG queue is failed
         let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_pg'")
