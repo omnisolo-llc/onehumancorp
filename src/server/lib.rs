@@ -203,6 +203,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
     m.insert("network-status-tooltip".to_string(), "Shows whether you are currently online and syncing to the cloud, or offline.".to_string());
     m.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
+    m.insert("my-plan-tooltip".to_string(), "View and manage your subscription plan and usage.".to_string());
     RwLock::new(m)
     })
 }

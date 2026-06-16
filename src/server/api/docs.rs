@@ -91,16 +91,16 @@ pub fn get_articles() -> Vec<HelpArticle> {
 
 pub fn get_videos() -> Vec<VideoTutorial> {
     vec![
-        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string(), video_url: "/videos/1.mp4".to_string() },
-        VideoTutorial { id: 2, title: "Accept your first payment".to_string(), duration: "1:15".to_string(), video_url: "/videos/2.mp4".to_string() },
-        VideoTutorial { id: 3, title: "Activate your AI Support Agent".to_string(), duration: "0:50".to_string(), video_url: "/videos/3.mp4".to_string() },
-        VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string(), video_url: "/videos/4.mp4".to_string() },
-        VideoTutorial { id: 5, title: "Review an order".to_string(), duration: "1:10".to_string(), video_url: "/videos/5.mp4".to_string() },
-        VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string(), video_url: "/videos/6.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:20".to_string(), video_url: "/videos/7.mp4".to_string() },
-        VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
-        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "1:25".to_string(), video_url: "/videos/9.mp4".to_string() },
-        VideoTutorial { id: 10, title: "View analytics and reports".to_string(), duration: "1:20".to_string(), video_url: "/videos/10.mp4".to_string() },
+        VideoTutorial { id: 1, title: "How to set up your store in 5 minutes".to_string(), duration: "1:15".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 2, title: "Connecting a bank account to accept payments".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 3, title: "Activating your AI Support Agent".to_string(), duration: "1:25".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 4, title: "Adding a new product to your inventory".to_string(), duration: "0:50".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 5, title: "Managing staff and user permissions".to_string(), duration: "1:10".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 6, title: "Creating a marketing campaign".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 7, title: "Using the Analytics Dashboard".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 8, title: "How to handle refunds and returns".to_string(), duration: "1:05".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 9, title: "Customizing your storefront design".to_string(), duration: "1:15".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 10, title: "Setting up automated email receipts".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
     ]
 }
 
