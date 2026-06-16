@@ -10,6 +10,14 @@ use uuid::Uuid;
 use chrono::Utc;
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use crate::domain::action::{
+    router::ActionRouter,
+    sre_handler::SreHandler,
+    marketing_handler::MarketingHandler,
+    inbox_handler::InboxHandler,
+    sales_handler::SalesHandler,
+    ActionIntent,
+};
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
@@ -273,61 +281,34 @@ async fn update_feed_item_state(
                     .await;
             }
 
-            // Handle incident resolution execution
+            // Handle execution dynamically using Operations Manager protocol
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
-                    if item.event_source == "incident_resolution" {
-                        if let Some(ref payload) = item.context_payload {
-                            if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
-                                let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(incident_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
+                    let mut payload = item.proposed_action.clone().or_else(|| item.context_payload.clone()).unwrap_or_else(|| sqlx::types::Json(serde_json::json!({})));
+
+                    let mut feature_type = payload.get("feature_type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    if feature_type.is_empty() && item.event_source == "incident_resolution" {
+                        feature_type = "incident_resolution".to_string();
                     }
 
-                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
-                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
-                            // Real implementation would buffer post here to AYRSHARE.
-                        }
+                    if !feature_type.is_empty() {
+                        let intent = ActionIntent {
+                            feature_type: feature_type.clone(),
+                            action: payload.get("action").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            resource_type: payload.get("resource_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            resource_id: payload.get("resource_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            payload: payload.0,
+                        };
 
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
+                        let router = ActionRouter::new()
+                            .register("incident_resolution", Box::new(SreHandler))
+                            .register("social_post_draft", Box::new(MarketingHandler))
+                            .register("ambassador_reply", Box::new(InboxHandler))
+                            .register("instagram_dm", Box::new(InboxHandler))
+                            .register("quote_draft", Box::new(SalesHandler));
 
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
-                            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved quote draft: {}", quote_id);
-                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        let feature_type = payload.get("feature_type").and_then(|v| v.as_str()).unwrap_or("");
-                        if feature_type == "instagram_dm" || feature_type == "ambassador_reply" {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
-                                tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(draft_reply)
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                        if let Err(e) = router.dispatch(&pool, &tenant_id, &intent).await {
+                            tracing::error!("Failed to execute action intent for feed item {}: {}", id, e);
                         }
                     }
                 }
