@@ -4,7 +4,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
   test('Cost Dashboard renders the "My Plan" fields completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
     await page.goto('/cost-dashboard');
@@ -36,7 +36,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     // Login as the unlimited admin user (Pro tier)
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard.html');
+    await proPage.goto('/cost-dashboard');
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
@@ -54,7 +54,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard.html');
+    await proPage.goto('/cost-dashboard');
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'AI actions used this month' }) }).first();
@@ -69,7 +69,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard.html');
+    await proPage.goto('/cost-dashboard');
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'Storage used' }) }).first();
@@ -120,7 +120,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // We expect a fallback redirect to checkout.stripe.com, we can just intercept and fulfill to avoid navigating out of the test domain, or just wait for the URL change
 
-    await expect(page).toHaveURL(/.*checkout.stripe.com.*/);
+    // We now expect to land on our local checkout page instead of stripe.
+    await expect(page).toHaveURL(/.*\/checkout\?tier=Starter/);
 
     // Now go to the My Plan page
     await page.goto('/cost-dashboard');
