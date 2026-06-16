@@ -26,6 +26,118 @@ pub struct OfflineSyncResponse {
     pub failed_count: i32,
 }
 
+pub async fn crdt_sync_handler(
+    State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<OfflineSyncRequest>,
+) -> impl IntoResponse {
+    tracing::info!("Received {} CRDT mutations for edge sync.", payload.mutations.len());
+
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+    if tenant_id.is_empty() {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(OfflineSyncResponse { success: false, failed_count: 0 }),
+        ).into_response();
+    }
+
+    let cache = crate::builder::edge::get_edge_cache();
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>> = Vec::new();
+    for mutation in payload.mutations {
+        let db_clone = db.clone();
+        let tenant_id_clone = tenant_id.clone();
+
+        futures.push(Box::pin(async move {
+            let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+
+            let crdt_payload_str = mutation.payload.unwrap_or_else(|| "{}".to_string());
+
+            // Insert into crdt_deltas
+            let q1 = "INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
+                      VALUES ($1, $2, $3, $4, $5, $6)
+                      ON CONFLICT(tenant_id, id) DO UPDATE SET
+                      data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = $6
+                      WHERE crdt_deltas.updated_at < excluded.updated_at";
+
+            sqlx::query(q1)
+                .bind(&tenant_id_clone)
+                .bind(&mutation.transaction_id)
+                .bind(&mutation.product_id)
+                .bind(&crdt_payload_str)
+                .bind(chrono::Utc::now().to_rfc3339())
+                .bind(true)
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            // Insert into mcp_sync_deltas
+            let q2 = "INSERT INTO mcp_sync_deltas (tenant_id, id, entity_type, entity_id, payload, updated_at)
+                      VALUES ($1, $2, $3, $4, $5, $6)
+                      ON CONFLICT (tenant_id, id) DO UPDATE SET
+                      payload = excluded.payload, updated_at = excluded.updated_at
+                      WHERE mcp_sync_deltas.updated_at < excluded.updated_at";
+
+            sqlx::query(q2)
+                .bind(&tenant_id_clone)
+                .bind(&mutation.transaction_id)
+                .bind("crdt_mutation")
+                .bind(&mutation.product_id)
+                .bind(&crdt_payload_str)
+                .bind(chrono::Utc::now().timestamp_millis())
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            // Logic to check for conflict, for instance negative inventory count if it's an inventory crdt update
+            if let Ok(crdt_json) = serde_json::from_str::<serde_json::Value>(&crdt_payload_str) {
+                if let Some(qty_deducted) = crdt_json.get("quantity_deducted").and_then(|v| v.as_i64()) {
+                    let q3 = "UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3 RETURNING inventory_count";
+                    if let Ok(Some(row)) = sqlx::query(q3)
+                        .bind(qty_deducted)
+                        .bind(&mutation.product_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_optional(&mut *db_tx)
+                        .await
+                    {
+                        use sqlx::Row;
+                        let inv_count: i32 = row.get("inventory_count");
+                        if inv_count < 0 {
+                            // Enqueue task for operations agent
+                            let job_id = uuid::Uuid::new_v4().to_string();
+                            let job_payload = serde_json::json!({
+                                "conflict_type": "oversold_inventory",
+                                "product_id": mutation.product_id,
+                                "shortage": -inv_count
+                            }).to_string();
+                            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'agent_task', $3, 'PENDING')")
+                                .bind(&job_id)
+                                .bind(&tenant_id_clone)
+                                .bind(job_payload)
+                                .execute(&mut *db_tx)
+                                .await;
+                        }
+                    }
+                }
+            }
+
+            db_tx.commit().await.map_err(|e| e.to_string())?;
+            Ok(())
+        }));
+    }
+
+    let results = futures::future::join_all(futures).await;
+    let failed_count = results.into_iter().filter(|r| r.is_err()).count() as i32;
+
+    (
+        StatusCode::OK,
+        Json(OfflineSyncResponse { success: true, failed_count }),
+    ).into_response()
+}
+
 pub async fn offline_sync_handler(
     State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
     headers: axum::http::HeaderMap,
@@ -273,6 +385,72 @@ mod tests {
 
         let response = offline_sync_handler(state, headers, Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn test_crdt_sync_handler() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-crdt-1', 'tenant-offline', 'CRDT Prod', 5) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let state = State((pool.clone(), mesh.clone()));
+
+        let req = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx-crdt-1".to_string(),
+                    product_id: "prod-crdt-1".to_string(),
+                    quantity_deducted: 2,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("crdt_delta".to_string()),
+                    payload: Some(serde_json::json!({"quantity_deducted": 2}).to_string()),
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
+
+        let response = crdt_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let row: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-crdt-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, 3);
+
+        // Test oversold condition (conflict resolution)
+        let req2 = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx-crdt-2".to_string(),
+                    product_id: "prod-crdt-1".to_string(),
+                    quantity_deducted: 5,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("crdt_delta".to_string()),
+                    payload: Some(serde_json::json!({"quantity_deducted": 5}).to_string()),
+                },
+            ],
+        };
+        let response2 = crdt_sync_handler(state, headers, Json(req2)).await.into_response();
+        assert_eq!(response2.status(), StatusCode::OK);
+
+        let row2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-crdt-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row2.0, -2);
     }
 
     #[tokio::test]

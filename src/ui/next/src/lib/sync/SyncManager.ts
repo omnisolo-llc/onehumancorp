@@ -99,7 +99,19 @@ export class SyncManager {
       });
 
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
-        if (m.type === 'inventory_toggle') {
+        if (m.type === 'crdt_delta') {
+            return {
+               transaction_id: m.id,
+               product_id: m.entity_id || m.product_id || 'unknown',
+               quantity_deducted: m.quantity_deducted || 0,
+               amount: null,
+               payment_method: null,
+               payment_intent_id: null,
+               currency: null,
+               mutation_type: 'crdt_delta',
+               payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
+            };
+        } else if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
               product_id: m.id.replace('e2e-product-', ''),
@@ -190,8 +202,25 @@ export class SyncManager {
         }
       }
 
+      // Sync CRDT mutations
+      const crdtMutations = generalMutations.filter(m => m.mutation_type === 'crdt_delta');
+      if (crdtMutations.length > 0) {
+        const resCrdt = await fetch('/api/v1/sync/crdt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ mutations: crdtMutations })
+        });
+        if (!resCrdt.ok) {
+          allOk = false;
+          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
+        }
+      }
+
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.mutation_type !== 'crdt_delta');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',

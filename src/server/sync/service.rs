@@ -46,9 +46,9 @@ impl SyncDeltas for CloudSyncService {
                 if db_clone.is_sqlite() {
                     if let DbStore::Sqlite(ref pool) = db_clone.store {
                         let query = r#"
-                            INSERT INTO mcp_sync_deltas (id, entity_type, entity_id, payload, updated_at)
-                            VALUES ($1, $2, $3, $4, $5)
-                            ON CONFLICT (id) DO UPDATE SET
+                            INSERT INTO mcp_sync_deltas (tenant_id, id, entity_type, entity_id, payload, updated_at)
+                            VALUES ('system', $1, $2, $3, $4, $5)
+                            ON CONFLICT (tenant_id, id) DO UPDATE SET
                             payload = excluded.payload,
                             updated_at = excluded.updated_at
                             WHERE mcp_sync_deltas.updated_at < excluded.updated_at
@@ -65,9 +65,9 @@ impl SyncDeltas for CloudSyncService {
                     }
                 } else {
                     let query = r#"
-                        INSERT INTO mcp_sync_deltas (id, entity_type, entity_id, payload, updated_at)
-                        VALUES ($1, $2, $3, $4, $5)
-                        ON CONFLICT (id) DO UPDATE SET
+                        INSERT INTO mcp_sync_deltas (tenant_id, id, entity_type, entity_id, payload, updated_at)
+                        VALUES ('system', $1, $2, $3, $4, $5)
+                        ON CONFLICT (tenant_id, id) DO UPDATE SET
                         payload = EXCLUDED.payload,
                         updated_at = EXCLUDED.updated_at
                         WHERE mcp_sync_deltas.updated_at < EXCLUDED.updated_at
