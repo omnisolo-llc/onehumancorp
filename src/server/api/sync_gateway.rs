@@ -3,7 +3,7 @@ use axum::{
     response::IntoResponse,
     http::StatusCode,
     Router,
-    routing::{get, post},
+    routing::{get},
 };
 use ::server_common::Claims;
 use ::server_ohc::orchestration::{SyncMcpDeltasRequest, DeltaItem};

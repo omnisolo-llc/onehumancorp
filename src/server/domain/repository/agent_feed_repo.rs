@@ -212,5 +212,3 @@ mod tests {
         assert!(mobile_item.proposed_action.is_none());
     }
 }
-#[cfg(test)]
-mod agent_feed_repo_test;
