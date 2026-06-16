@@ -16,10 +16,10 @@ test.describe('Help Center & Documentation Features', () => {
     await page.waitForTimeout(500); // Wait for debounce or search update
 
     // 4. Verify search results contain video tutorial
-    await expect(page.locator('text=How to set up your store in 5 minutes')).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'How to set up your store in 5 minutes' }).first()).toBeVisible();
 
     // 5. Open video tutorial modal
-    await page.locator('text=How to set up your store in 5 minutes').click();
+    await page.locator('h3', { hasText: 'How to set up your store in 5 minutes' }).first().click();
 
     // 6. Verify video modal opens and can be closed
     const closeButton = page.locator('button[aria-label="Close video"]');
@@ -46,7 +46,7 @@ test.describe('Help Center & Documentation Features', () => {
     await expect(page).toHaveURL(/\/api-docs/);
 
     // 5. Verify API docs loaded (Swagger UI)
-    await expect(page.locator('text=Advanced:')).toBeVisible();
+    await expect(page.locator('span:has-text("Advanced:")')).toBeVisible();
     await expect(page.locator('.swagger-ui')).toBeVisible();
   });
 
@@ -73,15 +73,15 @@ test.describe('Help Center & Documentation Features', () => {
       await expect(page.locator('h3', { hasText: 'Step 1: Dashboard' })).toBeVisible();
 
       // 5. Navigate through the walkthrough
-      await nextButton.click();
+      await nextButton.evaluate((b) => (b as HTMLElement).click());
       await expect(page.locator('h3', { hasText: 'Step 2: Add Products' })).toBeVisible();
-      await nextButton.click();
+      await nextButton.evaluate((b) => (b as HTMLElement).click());
       await expect(page.locator('h3', { hasText: 'Step 3: Launch' })).toBeVisible();
 
       // 6. Finish the walkthrough
       const finishButton = page.locator('button:has-text("Finish")');
       await expect(finishButton).toBeVisible();
-      await finishButton.click();
+      await finishButton.evaluate((b) => (b as HTMLElement).click());
       await expect(finishButton).not.toBeVisible();
     }
   });
@@ -97,7 +97,7 @@ test.describe('Help Center & Documentation Features', () => {
     await helpButton.first().evaluate((b) => (b as HTMLElement).click());
 
     // 3. Switch to Ask AI tab
-    const askAiTab = page.locator('button:has-text("Ask AI")');
+    const askAiTab = page.locator('button:has-text("Ask AI")').last();
     if (await askAiTab.isVisible()) {
       await askAiTab.evaluate((b) => (b as HTMLElement).click());
     }
@@ -139,6 +139,6 @@ test.describe('Help Center & Documentation Features', () => {
     // Click and navigate
     await releaseNotesLink.evaluate((b) => (b as HTMLElement).click());
     await expect(page).toHaveURL(/\/changelog/);
-    await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
   });
 });
