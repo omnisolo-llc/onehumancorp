@@ -401,7 +401,7 @@
                     document.getElementById('budget-health-alert').style.display = 'flex';
                     document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
                 } else {
-                    document.getElementById('budget-health-alert').style.display = 'flex';
+                    document.getElementById('budget-health-alert').style.display = 'none';
                 }
 
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);

@@ -32,7 +32,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('a', { hasText: 'Back to My Plan' }).click();
-    await expect(page.url()).toContain('/plan.html');
+    await page.locator('button', { hasText: 'Back to My Plan' }).click();
+    await expect(page.url()).toContain('/dashboard.html');
   });
 });
