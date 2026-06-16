@@ -392,7 +392,40 @@ pub async fn sync_offline_transactions_handler(
 
             if let Err(e) = insert_res {
                 tracing::error!("Failed to insert offline transaction: {}", e);
-                return Err(tx_id);
+                return Err(tx_id.clone());
+            }
+
+            // Execute CRDTOfflineSynchronizer to deduct inventory immediately during sync
+            if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                if let Some(arr) = payload_json.as_array() {
+                    let mut crdt_mutations = Vec::new();
+                    for item in arr {
+                        if let (Some(pid), Some(qty)) = (item.get("product_id").and_then(|v| v.as_str()), item.get("quantity").and_then(|v| v.as_i64())) {
+                            crdt_mutations.push(crate::services::sync::offline_pos::OfflineMutation {
+                                transaction_id: tx_id.clone(),
+                                timestamp: None,
+                                product_id: pid.to_string(),
+                                quantity_deducted: qty as i32,
+                                amount: Some(amount_cents),
+                                payment_method: Some("tap_to_pay".to_string()),
+                                payment_intent_id: None,
+                                currency: Some(currency.clone()),
+                                mutation_type: None,
+                                payload: Some(payload_str.clone()),
+                            });
+                        }
+                    }
+                    if !crdt_mutations.is_empty() {
+                        let pool_for_crdt = pool_clone.clone();
+                        let tenant_id_for_crdt = tenant_id_clone.clone();
+                        // Execute it right away
+                        let _ = crate::services::sync::offline_pos::CRDTOfflineSynchronizer::process_batch(
+                            &pool_for_crdt,
+                            &tenant_id_for_crdt,
+                            &crdt_mutations
+                        ).await;
+                    }
+                }
             }
 
             let job_id = uuid::Uuid::new_v4().to_string();
@@ -416,12 +449,12 @@ pub async fn sync_offline_transactions_handler(
 
             if let Err(e) = job_res {
                 tracing::error!("Failed to enqueue job: {}", e);
-                return Err(tx_id);
+                return Err(tx_id.clone());
             }
 
             if let Err(e) = db_tx.commit().await {
                 tracing::error!("Failed to commit transaction: {}", e);
-                return Err(tx_id);
+                return Err(tx_id.clone());
             }
 
             Ok(())
