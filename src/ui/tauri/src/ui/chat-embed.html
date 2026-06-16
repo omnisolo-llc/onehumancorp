@@ -245,16 +245,51 @@
         messages.scrollTop = messages.scrollHeight;
 
         try {
-            // Fake delay for UI feedback
-            await new Promise(r => setTimeout(r, 600));
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
 
             const aiMsg = document.createElement('div');
             aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = "I'm a demo agent embedded from OHC! In a real environment, I would connect to the backend API to answer your request.";
+
+            let replyText = data;
+            let linkObj = null;
+
+            if (data.reply) {
+                replyText = data.reply.text || data.reply;
+                if (data.reply.link && data.reply.link.url && data.reply.link.title) {
+                    linkObj = data.reply.link;
+                }
+            } else if (data.text) {
+                replyText = data.text;
+                if (data.link && data.link.url && data.link.title) {
+                    linkObj = data.link;
+                }
+            }
+
+            aiMsg.textContent = replyText;
+            if (linkObj) {
+                const space = document.createTextNode(' ');
+                const linkEl = document.createElement('a');
+                linkEl.href = linkObj.url;
+                linkEl.textContent = linkObj.title;
+                aiMsg.appendChild(space);
+                aiMsg.appendChild(linkEl);
+            }
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
         } catch(e) {
             console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = "I'm sorry, I'm having trouble connecting right now.";
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
         }
       }
 
