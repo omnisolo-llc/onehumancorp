@@ -32,6 +32,7 @@ rust_library(
         "proactive_analysis_job.rs",
         "message_triage_worker.rs",
         "pricing_analysis_worker.rs",
+        "deposit_follow_up_worker.rs",
         "mod.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",
