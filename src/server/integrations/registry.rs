@@ -604,11 +604,20 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
-                return c.send_whatsapp(to, from, body).await;
+            let res = if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
+                let r = c.send_whatsapp(to, from, body).await;
+                if r.is_ok() {
+                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_whatsapp", 0.015).await;
+                }
+                r
             } else {
-                return c.send_sms(to, from, body).await;
-            }
+                let r = c.send_sms(to, from, body).await;
+                if r.is_ok() {
+                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_sms", 0.01).await;
+                }
+                r
+            };
+            return res;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -870,7 +879,11 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.send_email(to, subject, body).await;
+            let res = c.send_email(to, subject, body).await;
+            if res.is_ok() {
+                let _ = ::server_telemetry::record_email_send_cost(&crate::db::get_pool(), "unknown", 1).await;
+            }
+            return res;
         }
         Err("integration not found or not supported".to_string())
     }
