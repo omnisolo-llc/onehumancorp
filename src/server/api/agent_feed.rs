@@ -10,6 +10,8 @@ use uuid::Uuid;
 use chrono::Utc;
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+
+use crate::domain::action_router::ActionRouter;
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
@@ -273,62 +275,25 @@ async fn update_feed_item_state(
                     .await;
             }
 
-            // Handle incident resolution execution
+            // Handle dynamic action execution via ActionRouter
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
-                    if item.event_source == "incident_resolution" {
-                        if let Some(ref payload) = item.context_payload {
-                            if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
-                                let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(incident_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                    let mut feature_type_str = item.event_source.as_str();
+                    let mut execution_payload = serde_json::Value::Null;
+
+                    let combined_payload = item.proposed_action.clone().or(item.context_payload.clone());
+                    if let Some(ref p) = combined_payload {
+                        if let Some(ft) = p.get("feature_type").and_then(|v| v.as_str()) {
+                            feature_type_str = ft;
                         }
+                        execution_payload = p.0.clone();
+                    } else if let Some(ref p) = item.context_payload {
+                        execution_payload = p.0.clone();
                     }
 
-                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
-                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
-                            // Real implementation would buffer post here to AYRSHARE.
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
-                            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved quote draft: {}", quote_id);
-                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        let feature_type = payload.get("feature_type").and_then(|v| v.as_str()).unwrap_or("");
-                        if feature_type == "instagram_dm" || feature_type == "ambassador_reply" {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
-                                tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(draft_reply)
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
+                    let router = ActionRouter::new(pool.clone());
+                    if let Err(e) = router.execute(&tenant_id, feature_type_str, &execution_payload).await {
+                        tracing::error!("ActionRouter execution failed for item {}: {}", id, e);
                     }
                 }
             }
@@ -336,6 +301,7 @@ async fn update_feed_item_state(
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
+
             (StatusCode::OK, Json(updated_item)).into_response()
         },
         Err(e) => {
@@ -345,10 +311,13 @@ async fn update_feed_item_state(
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use crate::api::agent_feed;
-    use sqlx::PgPool;
+
+use crate::domain::action_router::ActionRouter;
+use sqlx::PgPool;
     use super::{get_agent_feed_cache, AgentFeedListResponse, ws_feed_handler};
     use axum::{Router, routing::get, extract::Extension};
     use ::server_common::Claims;

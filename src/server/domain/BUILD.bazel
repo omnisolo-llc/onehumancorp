@@ -2,6 +2,10 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "action_router/mod.rs",
+        "sales.rs",
+        "inbox.rs",
+        "incident.rs",
         "b2b.rs",
         "blueprint.rs",
         "compute.rs",
@@ -20,6 +24,10 @@ rust_library(
     name = "server_domain",
     srcs = [
         "bazel_lib.rs",
+        "action_router/mod.rs",
+        "sales.rs",
+        "inbox.rs",
+        "incident.rs",
         "b2b.rs",
         "blueprint.rs",
         "compute.rs",
