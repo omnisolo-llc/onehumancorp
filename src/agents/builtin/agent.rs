@@ -1763,7 +1763,7 @@ impl Agent {
             last_message: None,
         };
 
-        match graph.run(initial_state).await {
+        match graph.pregel_run(initial_state).await {
             Ok(final_state) => {
                 let msgs = final_state.messages;
                 let last_msg = msgs.last().unwrap();
@@ -4492,7 +4492,7 @@ mod tests {
         use crate::types::{Message, Role, ToolResult};
 
         // Create a fake chain of messages
-        let mut messages = vec![
+        let messages = vec![
             Message::user("Task: Do something"),
             Message {
                 role: Role::Assistant,
@@ -4537,10 +4537,10 @@ mod tests {
         ];
 
         let prev_id = "resp_1".to_string();
-        let mut restored_msgs = None;
+        let restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
 
         // Test the actual helper method from the Agent struct
-        restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
+
 
         assert!(restored_msgs.is_some());
         let restored = restored_msgs.unwrap();

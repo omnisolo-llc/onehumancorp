@@ -75,6 +75,28 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("agent_intent") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+                let job_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(mutation.payload.unwrap_or_else(|| "{}".to_string()))
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to enqueue agent intent: {}", e);
+                    e.to_string()
+                })?;
+                db_tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
         futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
@@ -97,10 +119,11 @@ pub async fn offline_sync_handler(
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
+                        .bind(mutation.quantity_deducted)
                         .execute(&mut *db_tx)
                         .await;
 

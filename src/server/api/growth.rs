@@ -39,6 +39,59 @@ pub struct SocialPostResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatReq {
+    pub message: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatDraftAction {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub action_type: String,
+    pub payload: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatRes {
+    pub response: String,
+    pub draft_action: Option<ChatDraftAction>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteReq {
+    pub action_id: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteRes {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendReceiptRequest {
+    pub customer_email: Option<String>,
+    pub order_id: Option<String>,
+    pub amount: Option<String>,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendReceiptResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CampaignRequest {
+    pub name: String,
+    pub subject: String,
+    pub body: String,
+    pub target_segment: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CampaignResponse {
     pub campaign_id: String,
@@ -122,6 +175,16 @@ pub struct WaitlistResponse {
 async fn handle_waitlist(
     Json(req): Json<WaitlistRequest>,
 ) -> Result<Json<WaitlistResponse>, StatusCode> {
+    Ok(Json(WaitlistResponse {
+        success: true,
+        position: 42,
+        referral_link: format!("https://ohc.app/waitlist?ref={}", req.tenant_id),
+    }))
+}
+
+pub async fn handle_conversational_chat(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<ChatReq>
 ) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
@@ -290,6 +353,8 @@ where
 .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/link-in-bio", post(handle_post_link_in_bio))
+        .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -978,11 +1043,6 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2934,4 +2994,95 @@ pub async fn handle_promo_generate(
     axum::Json(GeneratePromoResponse {
         content: generated,
     })
+}
+
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct LinkItem {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct LinkInBioConfig {
+    pub store_name: String,
+    pub bio: String,
+    pub theme: String,
+    pub links: Vec<LinkItem>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct SetLinkInBioConfigReq {
+    pub store_name: String,
+    pub bio: String,
+    pub theme: String,
+    pub links: Vec<LinkItem>,
+}
+
+pub async fn handle_get_link_in_bio(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Path(tenant): axum::extract::Path<String>
+) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
+    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant).execute(&mut *tx).await;
+
+    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
+        .bind(&tenant)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let config = if let Some(val) = value {
+        serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
+            store_name: "My Store".to_string(),
+            bio: "Welcome to my storefront!".to_string(),
+            theme: "gradient".to_string(),
+            links: vec![
+                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
+                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
+            ]
+        })
+    } else {
+        LinkInBioConfig {
+            store_name: "My Store".to_string(),
+            bio: "Welcome to my storefront!".to_string(),
+            theme: "gradient".to_string(),
+            links: vec![
+                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
+                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
+            ]
+        }
+    };
+
+    Ok(axum::Json(config))
+}
+
+pub async fn handle_post_link_in_bio(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
+) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_id = auth_info.org_id;
+    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+
+    let config = LinkInBioConfig {
+        store_name: req.store_name,
+        bio: req.bio,
+        theme: req.theme,
+        links: req.links,
+    };
+
+    let val = serde_json::to_string(&config).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
+        .bind(&tenant_id)
+        .bind(&val)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(axum::http::StatusCode::OK)
 }

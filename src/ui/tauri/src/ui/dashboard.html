@@ -614,7 +614,12 @@
       </div>
 
 
-      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
+        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
+        </div>
+      </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
 
       <div id="sold-out-toggle-falafel-container" style="display: none;">
@@ -839,6 +844,18 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
+        <h2>Cloud Bridge Invite</h2>
+        <p>Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
+        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; min-width: 200px;" />
+            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.1s;">
+              Generate Cloud Invite
+            </button>
+        </div>
+        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; word-break: break-all;"></div>
+      </div>
+
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
@@ -846,6 +863,7 @@
         <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
         <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
+        <a href="link-in-bio-generator.html" id="link-in-bio-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Link-in-Bio Generator 🔗</a>
         <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
@@ -869,11 +887,6 @@
           </div>
         </div>
       </section>
-
-        <div id="triage-queue">
-          <div class="triage-card empty">Loading agent feed...</div>
-        </div>
-      </div>
 
       </div>
     </div>
@@ -1650,18 +1663,18 @@
               const price = payload.suggested_price || 0;
               const scope = payload.scope || '';
               return `
-                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}">
-                  <div class="triage-header">
-                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">Draft Quote</div>
-                    <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">Draft Quote</div>
+                    <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${clientName}</div>
-                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
-                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
-                  <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send Proposal</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Dismiss</button>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
+                  <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
+                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1687,7 +1700,7 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1714,8 +1727,53 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (actionType === 'ambassador_reply') {
+            let parsedPayload = {};
+            try {
+              if (typeof item.action_payload === 'string') {
+                parsedPayload = JSON.parse(item.action_payload);
+              } else if (item.action_payload) {
+                parsedPayload = item.action_payload;
+              } else if (item.context_payload) {
+                parsedPayload = item.context_payload;
+              }
+            } catch(e) {}
+
+            const originalMessage = parsedPayload.original_message || item.context || 'Customer message';
+            const draftReply = parsedPayload.generated_response || 'Ready to send.';
+            const source = parsedPayload.source || item.source || 'instagram';
+
+            return `
+              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+                <div class="triage-header" style="margin-bottom: 12px;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💬</span> <strong>${source.replace('_', ' ')}</strong>
+                  </div>
+                  <div class="triage-priority ${priorityClass}">Action Required</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">
+                  Action Required: Approve Reply
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 14px; color: #333;">
+                  1 New Message from ${source}
+                </div>
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+                  "${originalMessage}"
+                </div>
+                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #0044BB;">
+                  <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">AI Draft</span>
+                  ${draftReply}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1742,7 +1800,7 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1768,7 +1826,7 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1777,35 +1835,56 @@
 
           if (description.includes("reschedule") || description.includes("tentatively booked")) {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
-                <div class="triage-header">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
-                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                 </div>
-                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-                <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
+                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Deny</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (item.source === 'Proactive Context Agent') {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #FF9500;"></div>
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
+                  <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #995500; display: flex; align-items: center; gap: 8px; margin: 0;">
+                      <span style="font-size: 24px;">✨</span> Needs Attention Today
+                    </h2>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'High'}</div>
+                </div>
+                <div class="triage-context" style="font-weight: 500; margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: #804000;">
+                  ${description}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve & Execute</button>
+                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
                 </div>
               </div>
             `;
           }
 
           return `
-            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
-              <div class="triage-header">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
-                <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+              <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
-              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-              <div class="triage-controls" style="margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
+              <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
               </div>
-
-                </div>
-              </div>
+            </div>
             `;
           }).join('');
         } else {
@@ -1818,13 +1897,13 @@
           triageQueue.innerHTML = activities.map(activity => {
             const description = activity.proposed_action?.message || activity.proposed_action?.action_type || activity.context_payload?.description || 'Action completed';
             return `
-              <div class="triage-item">
-                <div class="triage-header">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 4px;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
-                  <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px;">${activity.lifecycle_state}</div>
+              <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 12px;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px; font-weight: 600;">${activity.lifecycle_state}</div>
                 </div>
-                <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px;">${description}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${new Date(activity.updated_at || activity.created_at || Date.now()).toLocaleString()}</div>
+                <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px; margin-bottom: 8px; color: #1D1D1F;">${description}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px; font-weight: 500;">${new Date(activity.updated_at || activity.created_at || Date.now()).toLocaleString()}</div>
               </div>
             `;
           }).join('');
@@ -2120,6 +2199,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+      const cloudBridgeBtn = document.getElementById('generate-cloud-bridge-btn');
+      const cloudBridgeEmail = document.getElementById('cloud-bridge-email');
+      const cloudBridgeStatus = document.getElementById('cloud-bridge-status');
+
+      if (cloudBridgeBtn) {
+          cloudBridgeBtn.addEventListener('click', async () => {
+              const email = cloudBridgeEmail.value || "test@example.com";
+              cloudBridgeBtn.innerText = "Generating...";
+              cloudBridgeBtn.disabled = true;
+
+              try {
+                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
+                  });
+                  const data = await res.json();
+
+                  cloudBridgeStatus.style.display = 'block';
+                  if (res.ok && data.invite_link) {
+                      cloudBridgeStatus.innerText = `Cloud Invite generated: ${data.invite_link}`;
+                      cloudBridgeStatus.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+                      cloudBridgeStatus.style.color = '#4ade80';
+                  } else {
+                      cloudBridgeStatus.innerText = `Failed to generate cloud invite: ${data.error || 'Unknown error'}`;
+                      cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                      cloudBridgeStatus.style.color = '#f87171';
+                  }
+              } catch (e) {
+                  console.error("Cloud bridge error:", e);
+                  cloudBridgeStatus.style.display = 'block';
+                  cloudBridgeStatus.innerText = "Error generating cloud invite.";
+                  cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                  cloudBridgeStatus.style.color = '#f87171';
+              } finally {
+                  cloudBridgeBtn.innerText = "Generate Cloud Invite";
+                  cloudBridgeBtn.disabled = false;
+              }
+          });
+      }
+
     const btn = document.getElementById('dashboard-invite-btn');
     const container = document.getElementById('dashboard-invite-container');
     const linkInput = document.getElementById('dashboard-invite-link');
@@ -2301,14 +2423,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2851,12 +2973,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -2958,23 +3080,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
-        if (!navigator.onLine) {
-            networkIndicator.style.display = "block";
-            networkIndicator.classList.remove("hidden");
-        } else {
-            networkIndicator.style.display = "none";
-            networkIndicator.classList.add("hidden");
-        }
-
         let queue = [];
         try {
             queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
         } catch(e) {}
 
+        const dot = document.getElementById("network-status-dot");
+        const text = document.getElementById("network-status-text");
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (text) text.innerText = "Working Offline";
+        } else if (queue.length > 0) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+            queueIndicator.innerText = queue.length + " Items Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -3011,6 +3143,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     payment_method: null,
                     payment_intent_id: null,
                     currency: null
+                });
+            } else if (m.type === "agent_intent") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: "agent_intent",
+                    quantity_deducted: 0,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: "usd",
+                    mutation_type: "agent_intent",
+                    payload: typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload)
                 });
             } else {
                 generalMutations.push(m);

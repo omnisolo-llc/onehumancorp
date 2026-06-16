@@ -497,7 +497,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-col">
         <div className="order-first md:order-last mb-6 w-full overflow-hidden">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+          <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
         </div>
 
         <div className="order-last md:order-first">

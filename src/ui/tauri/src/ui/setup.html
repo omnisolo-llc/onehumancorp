@@ -13,6 +13,7 @@
         align-items: center;
         justify-content: center;
         height: 100vh;
+        overflow-x: hidden;
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
@@ -740,6 +741,7 @@
       }
 
             @media (max-width: 375px) {
+        .container { box-sizing: border-box; overflow-x: hidden; padding: 20px; }
         .stepper {
           gap: 4px;
         }
@@ -1338,10 +1340,10 @@
 
         // Fetch from API to support cross-device resume
         const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
+        const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+        const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
 
-        fetch(`${backendUrl}/api/onboarding/state`, {
+        fetch(`${backendUrl}/api/onboarding/draft`, {
             method: 'GET',
             headers: {
                 'X-Tenant-ID': tenantId,
@@ -1363,7 +1365,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1439,7 +1441,7 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -1470,24 +1472,22 @@
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              if (activeStep.id === 'step-context') stepNumber = 0;
-              if (activeStep.id === 'step-categories') stepNumber = 1;
-              if (activeStep.id === 'step-name') stepNumber = 2;
-              if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-admin') stepNumber = 4;
-              if (activeStep.id === 'step-offer') stepNumber = 5;
-              if (activeStep.id === 'step-template') stepNumber = 6;
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
+
+          // Always set localStorage directly
+          localStorage.setItem('onboardingState', JSON.stringify(state));
 
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-              const userId = localStorage.getItem('user_id') || 'test-user';
-              fetch(`${backendUrl}/api/onboarding/state`, {
+              const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+              const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
+              fetch(`${backendUrl}/api/onboarding/draft`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
                   body: JSON.stringify(state)
@@ -1872,8 +1872,8 @@
                       return;
                   }
 
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+                  const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
 
                   const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                       method: 'POST',
@@ -1918,7 +1918,6 @@
       }
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
-      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
@@ -1941,8 +1940,8 @@
 
               try {
                   const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+                  const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
 
                   let intakeData = null;
 
@@ -2062,8 +2061,8 @@
             e.target.disabled = true;
 
             const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
-            const tenantId = localStorage.getItem("tenant_id") || "storefront";
-            const userId = localStorage.getItem("user_id") || "test-user";
+            const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
+            const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
             const currentStepEl = document.querySelector(".step.active");
             let currentStepIdx = 0;
@@ -2093,7 +2092,7 @@
                     }, 3000);
                 });
             } else {
-                fetch(`${backendUrl}/api/onboarding/state`, {
+                fetch(`${backendUrl}/api/onboarding/draft`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -2220,6 +2219,8 @@ document.addEventListener('DOMContentLoaded', () => {
               if (activeStep) {
                   // Don't auto-advance in chat if we are focused on chat input
                   if (activeStep.id === 'step-chat' && (e.target.id === 'chat-input' || e.target.id === 'chat-image-url')) {
+                      e.preventDefault();
+                      sendChatMessage();
                       return;
                   }
                   e.preventDefault();
@@ -2610,14 +2611,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2640,7 +2641,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -2650,7 +2651,7 @@ function initWalkthrough() {
             `;
 
             document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
             document.getElementById('wt-next').onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
@@ -3155,12 +3156,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -3181,7 +3182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -3191,7 +3192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep();
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
                 document.getElementById('wt-next').onclick = () => {
                     if (currentStep === steps.length - 1) {
                         closeWalkthrough();

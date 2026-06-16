@@ -1,8 +1,24 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Distributed Inventory Sync via UI', () => {
-  test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ request, page }) => {
+  test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ request, page, memberPage }) => {
     // 1. Visit the home page / login and get to the POS
+    await memberPage.goto('/api/staff');
+    await memberPage.evaluate(() => {
+      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        id: 'staff_1',
+        name: 'Priya',
+        role: 'Manager',
+        pin_hash: '1234'
+      }]));
+      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+    });
+
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+
     await page.goto('/pos/terminal');
 
     // Make sure we are prompted for a PIN
@@ -62,8 +78,24 @@ test.describe('Distributed Inventory Sync via UI', () => {
     expect(commitReq.ok()).toBeTruthy();
   });
 
-  test('Persona: Online customer tries to checkout while item is held in POS', async ({ request, page }) => {
+  test('Persona: Online customer tries to checkout while item is held in POS', async ({ request, page, memberPage }) => {
      // 1. Visit the home page / login and get to the POS
+     await memberPage.goto('/api/staff');
+     await memberPage.evaluate(() => {
+       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+         id: 'staff_1',
+         name: 'Priya',
+         role: 'Manager',
+         pin_hash: '1234'
+       }]));
+       localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+     });
+
+     await page.goto('/login');
+     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+     await page.getByPlaceholder('Password').fill('admin');
+     await page.getByRole('button', { name: 'Sign In' }).click();
+
      await page.goto('/pos/terminal');
 
      // Make sure we are prompted for a PIN
