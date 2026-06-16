@@ -646,21 +646,35 @@
 
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
-          const tenantId = localStorage.getItem('tenant_id') || 'default';
-          fetch('/api/v1/payments/terminal/sync_offline', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  session_id: 'web_session',
-                  transactions: [{
-                      id: 'tx_' + Date.now(),
-                      client_id: 'web_client',
-                      amount_cents: currentAmountCents,
-                      currency: 'usd',
-                      payload: '{}'
-                  }]
-              })
-          }).catch(console.error);
+          if (!navigator.onLine) {
+              document.querySelector('.receipt-text').innerText = "Payment saved offline. Will sync when network is restored.";
+              enqueueOfflineMutation({
+                  type: 'tap_to_pay',
+                  id: 'tx_' + Date.now(),
+                  amount: currentAmountCents,
+                  currency: 'usd',
+                  product_id: 'quick_charge',
+                  quantity: 1,
+                  timestamp: new Date().toISOString()
+              });
+          } else {
+              document.querySelector('.receipt-text').innerText = "Payment Successful";
+              const tenantId = localStorage.getItem('tenant_id') || 'default';
+              fetch('/api/v1/payments/terminal/sync_offline', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      session_id: 'web_session',
+                      transactions: [{
+                          id: 'tx_' + Date.now(),
+                          client_id: 'web_client',
+                          amount_cents: currentAmountCents,
+                          currency: 'usd',
+                          payload: '{}'
+                      }]
+                  })
+              }).catch(console.error);
+          }
       });
 
       function cancelCharge() {
