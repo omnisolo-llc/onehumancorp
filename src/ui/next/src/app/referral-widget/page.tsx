@@ -62,7 +62,7 @@ export default function ReferralWidgetPage() {
 
       <main className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-8 rounded-[16px] glassmorphism border border-white/40 shadow-sm relative z-10">
+            <div className="p-8 glassmorphism border border-white/40 shadow-sm relative z-10">
                 <h2 className="text-xl font-bold font-outfit mb-6 flex items-center gap-2">
                    <svg className="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
                    Configuration
@@ -73,12 +73,12 @@ export default function ReferralWidgetPage() {
                     <div className="flex gap-2">
                         <input
                             type="number"
-                            className="w-24 px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                            className="w-24 px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                             value={discountAmount}
                             onChange={(e) => setDiscountAmount(e.target.value)}
                         />
                         <select
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                            className="flex-1 px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                             value={discountType}
                             onChange={(e) => setDiscountType(e.target.value)}
                         >
@@ -94,14 +94,14 @@ export default function ReferralWidgetPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -122,13 +122,13 @@ export default function ReferralWidgetPage() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-indigo-600 text-white font-medium min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                     Get Widget Code
                 </button>
             </div>
 
-            <div className="p-6 rounded-[16px] glassmorphism border border-white/40">
+            <div className="p-6 glassmorphism border border-white/40">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Viral Growth
                 </h3>
@@ -139,10 +139,10 @@ export default function ReferralWidgetPage() {
         </div>
 
         <div className="w-full md:w-2/3">
-            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 border border-white/50 shadow-inner">
+            <div className="p-8 h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 border border-white/50 shadow-inner">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
-                <div className="relative w-full max-w-md rounded-[16px] shadow-xl overflow-hidden border border-gray-100" style={getThemeStyles()}>
+                <div className="relative w-full max-w-md shadow-xl overflow-hidden border border-gray-100" style={getThemeStyles()}>
                     <div className="p-6 text-center">
                         <div className="w-16 h-16 mx-auto bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 text-2xl">
                             🎁
@@ -161,7 +161,7 @@ export default function ReferralWidgetPage() {
                                 value={`https://app.onehumancorp.com/onboarding?ref=${tenant}&promo=ref123`}
                                 className="flex-1 bg-transparent border-none text-xs text-gray-600 px-2 focus:outline-none"
                             />
-                            <button className="bg-white text-indigo-600 text-xs font-bold py-2 px-4 rounded-[16px] min-h-[44px] min-w-[44px] shadow-sm hover:shadow transition-all">
+                            <button className="bg-white text-indigo-600 text-xs font-bold py-2 px-4 min-h-[44px] min-w-[44px] shadow-sm hover:shadow transition-all">
                                 Copy Link
                             </button>
                         </div>
@@ -182,7 +182,7 @@ export default function ReferralWidgetPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -200,7 +200,7 @@ export default function ReferralWidgetPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -216,13 +216,13 @@ export default function ReferralWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
@@ -234,7 +234,7 @@ export default function ReferralWidgetPage() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[16px] p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+          <div className="bg-white w-full max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">
@@ -246,7 +246,7 @@ export default function ReferralWidgetPage() {
               </button>
             </div>
 
-            <div className="w-16 h-16 bg-indigo-100 rounded-[16px] flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+            <div className="w-16 h-16 bg-indigo-100 flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
               ✨
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
@@ -256,7 +256,7 @@ export default function ReferralWidgetPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
             >
               Upgrade to Pro
             </button>
