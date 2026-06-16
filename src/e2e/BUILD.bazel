@@ -59,6 +59,7 @@ _NEXT_UI_E2E_SPECS = [
 
 _ROOT_E2E_SPECS = [
     "quote_deposit_pipeline.spec.ts",
+    "field_service_quote.spec.ts",
 ]
 
 

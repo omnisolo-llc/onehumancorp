@@ -535,3 +535,8 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+VALUES
+  ('demo-quote-draft-1', 'e2e-tenant', 'service_request', '{"feature_type": "quote_draft", "customer_name": "Carlos Client", "description": "Fix ceiling fans", "total_amount": 150, "proposed_slots": ["Tomorrow 10am", "Friday 2pm"]}', '{"feature_type": "quote_draft", "action_type": "quote_draft"}', 'PENDING')
+ON CONFLICT DO NOTHING;

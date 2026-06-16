@@ -387,7 +387,12 @@
 
           if (!res.ok) throw new Error("Failed to update action");
 
-          showStatus(approved ? "Approved!" : "Dismissed.", true);
+          const selected = items.find(i => i.id === id);
+          if (selected && selected.source === 'service_request' && approved) {
+              showStatus("✨ Quote Sent & Time Slot Held!", true);
+          } else {
+              showStatus(approved ? "Approved!" : "Dismissed.", true);
+          }
 
           items = items.filter(i => i.id !== id);
           if (selectedId === id) {
@@ -431,7 +436,7 @@
               onclick="selectItem('${item.id}')"
             >
               <div style="min-width: 0;">
-                <div class="app-list-title">${item.source || "Unknown Source"}</div>
+                <div class="app-list-title">${item.source === 'service_request' ? 'Service Request' : (item.source || "Unknown Source")}</div>
                 <div class="app-list-subtitle">${item.original_content || "No content"}</div>
               </div>
               <span class="app-badge neutral">${item.status || "unread"}</span>
@@ -462,24 +467,46 @@
             `;
           }
 
-          let buttonsHtml = `
-            <div class="btn-group">
-              <button
-                class="btn-primary"
-                data-testid="approve-btn"
-                onclick="handleDecision('${selected.id}', true)"
-              >
-                ✨ Send Reply
-              </button>
-              <button
-                class="btn-secondary"
-                data-testid="dismiss-btn"
-                onclick="handleDecision('${selected.id}', false)"
-              >
-                Dismiss
-              </button>
-            </div>
-          `;
+          let buttonsHtml = '';
+          if (selected.source === 'service_request') {
+            buttonsHtml = `
+              <div class="btn-group">
+                <button
+                  class="btn-primary"
+                  data-testid="create-quote-btn"
+                  onclick="window.location.href='/quoting'"
+                >
+                  ✨ Draft Quote
+                </button>
+                <button
+                  class="btn-secondary"
+                  data-testid="dismiss-btn"
+                  onclick="handleDecision('${selected.id}', false)"
+                >
+                  Dismiss
+                </button>
+              </div>
+            `;
+          } else {
+            buttonsHtml = `
+              <div class="btn-group">
+                <button
+                  class="btn-primary"
+                  data-testid="approve-btn"
+                  onclick="handleDecision('${selected.id}', true)"
+                >
+                  ✨ Send Reply
+                </button>
+                <button
+                  class="btn-secondary"
+                  data-testid="dismiss-btn"
+                  onclick="handleDecision('${selected.id}', false)"
+                >
+                  Dismiss
+                </button>
+              </div>
+            `;
+          }
 
           detailEl.innerHTML = `
             <div class="detail-group">

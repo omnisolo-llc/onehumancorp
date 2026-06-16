@@ -1639,16 +1639,18 @@
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
-            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
+            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft' || item.event_source === 'service_request') {
               let payload = item.proposed_action || item.context_payload || {};
               if (typeof item.action_payload === 'string') {
                   try { payload = JSON.parse(item.action_payload); } catch(e){}
               } else if (item.action_payload) {
                   payload = item.action_payload;
               }
-              const clientName = payload.client_name || 'Client';
-              const price = payload.suggested_price || 0;
-              const scope = payload.scope || '';
+              const clientName = payload.client_name || payload.customer_name || 'Client';
+              const price = payload.suggested_price || payload.total_amount || 0;
+              const scope = payload.scope || payload.description || '';
+              const proposedSlots = payload.proposed_slots ? `<div style="font-size: 14px; margin-top: 4px; color: #333;"><strong>Proposed Slots:</strong><br/>${payload.proposed_slots.join('<br/>')}</div>` : '';
+
               return `
                 <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}">
                   <div class="triage-header">
@@ -1658,8 +1660,9 @@
                   <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${clientName}</div>
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
+                  ${proposedSlots}
                   <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send Proposal</button>
+                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send</button>
                     <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Edit</button>
                     <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Dismiss</button>
                   </div>
