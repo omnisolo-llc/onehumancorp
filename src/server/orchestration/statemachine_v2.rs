@@ -28,6 +28,8 @@ impl State {
 pub trait Repository: Send + Sync {
     fn get_task_state(&self, task_id: &str) -> Result<State, String>;
     fn update_task_state(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String>;
+    fn get_dependent_tasks(&self, task_id: &str) -> Result<Vec<String>, String>;
+    fn are_all_dependencies_met(&self, task_id: &str) -> Result<bool, String>;
 }
 
 use crate::orchestration::mesh::TeammateMesh;
@@ -94,7 +96,20 @@ impl StateMachine {
     }
 
     pub async fn transition_to_completed(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {
-        self.transition(tenant_id, task_id, State::Completed, "").await
+        self.transition(tenant_id, task_id, State::Completed, "").await?;
+
+        // Unblock dependent tasks if all dependencies are now met
+        if let Ok(dependent_tasks) = self.repo.get_dependent_tasks(task_id) {
+            for dep_task_id in dependent_tasks {
+                if let Ok(State::Blocked) = self.repo.get_task_state(&dep_task_id) {
+                    if self.repo.are_all_dependencies_met(&dep_task_id).unwrap_or(false) {
+                        let _ = self.transition_to_ready(tenant_id, &dep_task_id).await;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn transition_to_blocked(&self, tenant_id: &str, task_id: &str) -> Result<(), String> {

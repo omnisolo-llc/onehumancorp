@@ -26,6 +26,14 @@ impl Repository for MockRepository {
         states.insert(task_id.to_string(), new_state);
         Ok(())
     }
+
+    fn get_dependent_tasks(&self, _task_id: &str) -> Result<Vec<String>, String> {
+        Ok(vec![])
+    }
+
+    fn are_all_dependencies_met(&self, _task_id: &str) -> Result<bool, String> {
+        Ok(true)
+    }
 }
 
 #[tokio::test]
