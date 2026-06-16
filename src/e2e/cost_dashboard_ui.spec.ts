@@ -5,7 +5,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard directly
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
@@ -24,7 +24,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page
-    await page.goto('/plan');
+    await page.goto('/plan.html');
 
     // Wait for the main heading to be visible
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
@@ -46,7 +46,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
 
   test('should verify checkout routing works from pricing', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
 
     // Ensure the starter upgrade button is visible
