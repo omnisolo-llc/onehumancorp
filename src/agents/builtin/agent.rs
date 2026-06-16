@@ -1763,7 +1763,7 @@ impl Agent {
             last_message: None,
         };
 
-        match graph.run(initial_state).await {
+        match graph.pregel_run(initial_state).await {
             Ok(final_state) => {
                 let msgs = final_state.messages;
                 let last_msg = msgs.last().unwrap();

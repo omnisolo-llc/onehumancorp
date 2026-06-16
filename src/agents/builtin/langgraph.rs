@@ -127,6 +127,87 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
 
         Ok(current_state)
     }
+
+    /// Pregel-inspired execution model for StateGraph.
+    /// Runs all currently active nodes concurrently (super-steps),
+    /// merging their outputs via the reducer at the end of each super-step.
+    pub async fn pregel_run(&self, initial_state: S) -> Result<S, String> {
+        let mut current_state = initial_state;
+        let mut active_nodes = vec![self.entry_point.clone().ok_or("Entry point not set")?];
+
+        let mut iterations = 0;
+        let max_iterations = 100;
+
+        if let Some(obs) = &self.observer {
+            obs.on_graph_start("pregel_start", &current_state);
+        }
+
+        while !active_nodes.is_empty() {
+            if iterations >= max_iterations {
+                return Err("Max iterations reached".to_string());
+            }
+            iterations += 1;
+
+            let mut next_nodes = vec![];
+            let mut tasks = vec![];
+
+            // Run active nodes concurrently
+            for node in active_nodes {
+                if node == END {
+                    continue;
+                }
+
+                if let Some(obs) = &self.observer {
+                    obs.on_node_start(&node, &current_state);
+                }
+
+                let node_fn = self
+                    .nodes
+                    .get(&node)
+                    .ok_or_else(|| format!("Node not found: {}", node))?;
+
+                let state_clone = current_state.clone();
+                let node_clone = node.clone();
+                let node_fn_clone = node_fn.clone();
+
+                tasks.push(async move {
+                    let update = node_fn_clone(state_clone).await?;
+                    Ok::<(String, S), String>((node_clone, update))
+                });
+            }
+
+            let results = futures::future::join_all(tasks).await;
+
+            // Reduce all updates from the super-step and determine the next nodes
+            for res in results {
+                let (node, update) = res?;
+
+                if let Some(obs) = &self.observer {
+                    obs.on_node_end(&node, &current_state, &update);
+                }
+
+                self.reducer.reduce(&mut current_state, update);
+
+                if let Some(cond_fn) = self.conditional_edges.get(&node) {
+                    next_nodes.push(cond_fn(&current_state));
+                } else if let Some(next_node) = self.edges.get(&node) {
+                    next_nodes.push(next_node.clone());
+                } else {
+                    next_nodes.push(END.to_string());
+                }
+            }
+
+            active_nodes = next_nodes.into_iter().filter(|n| n != END).collect();
+            active_nodes.sort();
+            active_nodes.dedup();
+        }
+
+        if let Some(obs) = &self.observer {
+            obs.on_graph_end(&current_state);
+        }
+
+        Ok(current_state)
+    }
 }
 
 /// A default reducer that merges JSON objects and appends to arrays
