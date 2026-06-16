@@ -186,12 +186,16 @@ impl Department for CustomerSuccessAgent {
                 .and_then(|v| v.as_str()).unwrap_or("");
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+            let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Identity Resolution: Look up customer by phone, email, or name
             let mut customer_id = "".to_string();
             let mut past_orders = "".to_string();
-            if !sender_id.is_empty() && sender_id != "unknown" {
-                let pool = crate::db::get_pool();
+            let pool = crate::db::get_pool();
+
+            if !payload_customer_id.is_empty() {
+                customer_id = payload_customer_id.to_string();
+            } else if !sender_id.is_empty() && sender_id != "unknown" {
                 let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2) LIMIT 1")
                     .bind(&event.tenant_id)
                     .bind(&sender_id)
@@ -200,17 +204,19 @@ impl Department for CustomerSuccessAgent {
                 if let Ok((id,)) = result {
                     customer_id = id.clone();
                     tracing::info!("Resolved sender {} to customer {}", sender_id, customer_id);
+                }
+            }
 
-                    // Fetch past orders context
-                    let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
-                        .bind(&event.tenant_id)
-                        .bind(&customer_id)
-                        .fetch_all(&pool)
-                        .await;
-                    if let Ok(orders) = orders {
-                        if !orders.is_empty() {
-                            past_orders = format!("Returning Customer ({} past orders).", orders.len());
-                        }
+            if !customer_id.is_empty() {
+                // Fetch past orders context
+                let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(&event.tenant_id)
+                    .bind(&customer_id)
+                    .fetch_all(&pool)
+                    .await;
+                if let Ok(orders) = orders {
+                    if !orders.is_empty() {
+                        past_orders = format!("Returning Customer ({} past orders).", orders.len());
                     }
                 }
             }
@@ -268,7 +274,7 @@ impl Department for CustomerSuccessAgent {
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
-                "Draft email for review".to_string()
+                "Customer Inquiry Reply Draft".to_string()
             };
 
             let inbox_id = event.payload.get("inbox_message_id")
