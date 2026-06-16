@@ -89,7 +89,7 @@ async fn create_initial_admin(
     let hashed_pw = match bcrypt::hash(&req.password, 4) {
         Ok(hash) => hash,
         Err(e) => {
-            tracing::error!("Failed to hash password: {}", e);
+            tracing::error!("Failed to hash password");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(SetupAdminResponse {
