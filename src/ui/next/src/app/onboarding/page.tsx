@@ -111,6 +111,7 @@ export default function OnboardingWizard() {
       step,
       chatStep,
       businessDescription,
+      bio,
       businessName,
       whatYouSell,
       location,
@@ -171,6 +172,7 @@ export default function OnboardingWizard() {
         step,
         chatStep,
         businessDescription,
+        bio,
         businessName,
         whatYouSell,
         location,
@@ -227,6 +229,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
         if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription !== undefined) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.bio !== undefined) setBio(data.wizardState.bio);
         if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell !== undefined) setWhatYouSell(data.wizardState.whatYouSell);
         if (data.wizardState.location !== undefined) setLocation(data.wizardState.location);
@@ -266,6 +269,7 @@ export default function OnboardingWizard() {
       step,
       chatStep,
       businessDescription,
+      bio,
       businessName,
       whatYouSell,
       location,
