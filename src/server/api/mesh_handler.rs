@@ -192,9 +192,9 @@ pub async fn mesh_stream_sse_handler(
         }
     }
 
-    let cancel_guard = CancelOnDrop(Some(cancel));
+    let cancel_guard = Arc::new(std::sync::Mutex::new(CancelOnDrop(Some(cancel))));
     let sse_stream = stream.map(move |item| -> Result<Event, Infallible> {
-        let _guard = &cancel_guard;
+        let _guard = cancel_guard.clone();
         item
     });
 
