@@ -236,7 +236,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 let payload: serde_json::Value = r.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
                 let payload_str = serde_json::to_string(&payload).unwrap_or_default();
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
-                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(job_id)
                     .bind(&tenant_id)
                     .bind("job_failed")
                     .bind("job_queue")
