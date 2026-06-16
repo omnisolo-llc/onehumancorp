@@ -101,6 +101,7 @@ export class SyncManager {
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
+              timestamp: new Date(m.timestamp || Date.now()).toISOString(),
               transaction_id: m.id,
               product_id: m.id.replace('e2e-product-', ''),
               quantity_deducted: 1, // Assume 1 for E2E logic
@@ -111,6 +112,7 @@ export class SyncManager {
            };
         } else if (m.type === 'draft_quote') {
           return {
+             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
              transaction_id: m.id,
              product_id: 'draft_quote',
              quantity_deducted: 0,
@@ -123,6 +125,7 @@ export class SyncManager {
           };
         } else if (m.type === 'agent_intent') {
           return {
+             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
              transaction_id: m.id,
              product_id: 'agent_intent',
              quantity_deducted: 0,
