@@ -2278,6 +2278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       return;
                   }
                   e.preventDefault();
+                  e.stopPropagation();
                   const nextBtn = activeStep.querySelector('.next-step-btn');
                   if (nextBtn) {
                       nextBtn.click();
