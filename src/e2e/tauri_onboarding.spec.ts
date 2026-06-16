@@ -112,12 +112,12 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     // Less than 3 chars validation
-    await page.getByPlaceholder("e.g. Maya's Bakery").fill("Te");
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Te");
     await page.locator('#step-name').getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#name-error')).toBeVisible();
 
     // Valid business name
-    await page.getByPlaceholder("e.g. Maya's Bakery").fill("Test Business");
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Test Business");
     await page.getByPlaceholder("Tagline (optional)").fill("Fixing things");
     await expect(page.locator('#name-error')).toBeHidden();
 
@@ -146,7 +146,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Step 6: Offer
     await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
 
-    await page.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
+    await page.getByPlaceholder("e.g. I bake custom vegan cakes").fill("Faucet Repair");
     await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Template
@@ -203,7 +203,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(newPage.locator('#business-categories')).toHaveValue('Handyman');
     await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
-    await expect(newPage.getByPlaceholder("e.g. Maya's Bakery")).toHaveValue("Test Business");
+    await expect(newPage.getByPlaceholder("e.g. Maya's Custom Cakes")).toHaveValue("Test Business");
     await expect(newPage.getByPlaceholder("Tagline (optional)")).toHaveValue("Fixing things");
     await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).click();
 
@@ -220,7 +220,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 6: Offer
     await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
-    await expect(newPage.getByPlaceholder("e.g. Custom Birthday Cake")).toHaveValue("Faucet Repair");
+    await expect(newPage.getByPlaceholder("e.g. I bake custom vegan cakes")).toHaveValue("Faucet Repair");
     await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Template
