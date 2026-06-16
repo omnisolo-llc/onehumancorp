@@ -283,7 +283,7 @@ export default function Integrations() {
 
                 <button
                   onClick={() => handleConnect(integration.id)}
-                  className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+                  className={`w-full py-3 rounded-[16px] font-semibold text-sm transition-transform active:scale-[0.98] ${
                     integration.status === 'connected'
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"
