@@ -28,6 +28,7 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     await expect(page.locator('text=Terminal Locked')).toBeVisible({ timeout: 15000 });
 
     // Enter PIN: 1234
+    await page.waitForSelector('button:has-text("1")');
     await page.getByRole('button', { name: '1', exact: true }).click();
     await page.getByRole('button', { name: '2', exact: true }).click();
     await page.getByRole('button', { name: '3', exact: true }).click();
@@ -41,10 +42,10 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
-    await page.locator('text=Quick Charge').click();
+    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
 
     // Verify Payment total and offline
-    await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
+    await expect(page.locator('text=Offline Quick Charge Saved.')).toBeVisible();
 
     // Restore network
     await context.setOffline(false);

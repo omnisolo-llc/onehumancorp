@@ -28,13 +28,13 @@ test.describe('Terminal POS Extended - Inventory and Layout Sync', () => {
        (request) => request.url().includes('/api/v1/payments/terminal/token') && request.method() === 'POST'
      );
 
-     await page.getByRole('button', { name: 'New Order' }).click();
+     await page.getByRole('button', { name: 'Quick Charge $50' }).click();
      const tokenReq = await tokenPromise;
      expect(tokenReq).toBeTruthy();
   });
 
   test('Mocks intent to confirm successful payment state', async ({ page }) => {
-     await page.getByRole('button', { name: 'New Order' }).click();
+     await page.getByRole('button', { name: 'Quick Charge $50' }).click();
 
      await page.route('**/api/v1/payments/terminal/intent', async (route) => {
          await route.fulfill({
@@ -48,7 +48,7 @@ test.describe('Terminal POS Extended - Inventory and Layout Sync', () => {
   });
 
   test('Confirms reserve correctly locks the product inventory', async ({ page }) => {
-     await page.getByRole('button', { name: 'New Order' }).click();
+     await page.getByRole('button', { name: 'Quick Charge $50' }).click();
 
      await page.route('**/api/v1/payments/terminal/reserve', async (route) => {
          await route.fulfill({
@@ -62,7 +62,7 @@ test.describe('Terminal POS Extended - Inventory and Layout Sync', () => {
   });
 
   test('Confirms commit successfully calls backend after terminal checkout', async ({ page }) => {
-      await page.getByRole('button', { name: 'New Order' }).click();
+      await page.getByRole('button', { name: 'Quick Charge $50' }).click();
 
       await page.route('**/api/v1/payments/terminal/commit', async (route) => {
           await route.fulfill({
