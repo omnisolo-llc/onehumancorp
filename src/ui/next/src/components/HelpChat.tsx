@@ -80,66 +80,70 @@ export function HelpChat() {
 
   useEffect(() => {
     const handleOpenHelpChat = () => setIsOpen(true);
-    window.addEventListener('open-help-chat', handleOpenHelpChat);
-    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+    window.addEventListener("open-help-chat", handleOpenHelpChat);
+    return () =>
+      window.removeEventListener("open-help-chat", handleOpenHelpChat);
   }, []);
 
-  const handleSend = useCallback(async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const messageText = inputValue.trim();
-    if (!messageText || isLoading) return;
+  const handleSend = useCallback(
+    async (e?: React.FormEvent) => {
+      e?.preventDefault();
+      const messageText = inputValue.trim();
+      if (!messageText || isLoading) return;
 
-    const userMessage: Message = {
-      id: nextMessageId("user"),
-      sender: "user",
-      text: messageText,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
-    setIsLoading(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const userMessage: Message = {
+        id: nextMessageId("user"),
+        sender: "user",
+        text: messageText,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setInputValue("");
+      setIsLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageText }),
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: messageText }),
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error("Failed to fetch");
+        if (!response.ok) throw new Error("Failed to fetch");
 
-      const data = await response.json();
-      const reply = normalizeAgentReply(data);
+        const data = await response.json();
+        const reply = normalizeAgentReply(data);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextMessageId("agent"),
-          sender: "agent",
-          ...reply,
-        },
-      ]);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      const isTimeout = err.name === "AbortError";
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextMessageId("agent"),
-          sender: "agent",
-          text: isTimeout
-            ? "Sorry, the connection timed out. Please try again later or check your network connection."
-            : "Sorry, I'm having trouble connecting right now.",
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [inputValue, isLoading]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("agent"),
+            sender: "agent",
+            ...reply,
+          },
+        ]);
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        const isTimeout = err.name === "AbortError";
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("agent"),
+            sender: "agent",
+            text: isTimeout
+              ? "Sorry, the connection timed out. Please try again later or check your network connection."
+              : "Sorry, I'm having trouble connecting right now.",
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [inputValue, isLoading],
+  );
 
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const forceChat =
@@ -173,7 +177,10 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-2xl saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/50 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div
+          id="ai-chat-interface"
+          className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/60 dark:bg-[#16161a]/70 backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_16px_40px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden border border-white/60 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100"
+        >
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -224,8 +231,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 backdrop-blur-xl saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/70 dark:bg-white/10 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
+                      : "bg-white/70 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/20 text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
