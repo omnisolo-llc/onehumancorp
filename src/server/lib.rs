@@ -6041,6 +6041,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
+        .nest("/api/v1/seo", api::local_seo::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))

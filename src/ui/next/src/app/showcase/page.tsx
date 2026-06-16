@@ -1,10 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import { useSearchParams } from 'next/navigation';
 
 export default function PublicShowcasePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShowcaseContent />
+    </Suspense>
+  );
+}
+
+function ShowcaseContent() {
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
 
