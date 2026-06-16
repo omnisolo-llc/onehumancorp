@@ -922,7 +922,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
@@ -948,7 +948,7 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
@@ -959,17 +959,17 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 12px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 12px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 12px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
       </div>
 
 
       <div class="step" id="step-approval">
-        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Ready to Launch</h1>
@@ -2782,6 +2782,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cursor: pointer;
             color: #64748b;
             padding: 4px;
+            min-height: 44px;
         }
         #ohc-floating-help-tabs {
             display: flex;
@@ -2799,6 +2800,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color: #64748b;
             border-bottom: 2px solid transparent;
             font-size: 14px;
+            min-height: 44px;
         }
         .ohc-help-tab.active {
             color: #0066FF;
@@ -2864,6 +2866,7 @@ document.addEventListener('DOMContentLoaded', () => {
             font-size: 14px;
             outline: none;
             background: rgba(255, 255, 255, 0.8);
+            min-height: 44px;
         }
         #ohc-help-chat-input:focus {
             border-color: #0066FF;
@@ -2876,6 +2879,7 @@ document.addEventListener('DOMContentLoaded', () => {
             padding: 0 16px;
             font-weight: 500;
             cursor: pointer;
+            min-height: 44px;
         }
 
         /* Tours styles */
@@ -3182,12 +3186,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px; min-height: 44px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; min-height: 44px;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer; min-height: 44px;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 
