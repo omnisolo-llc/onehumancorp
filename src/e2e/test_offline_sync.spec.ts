@@ -86,6 +86,50 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     // This assertion requires the backend to be running to successfully process the offline mutations.
     await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 15000 });
 
+  });
+
+  test('should push CRDT deltas correctly via mcp-deltas endpoint', async ({ page, context }) => {
+    await page.goto('/');
+    await context.setOffline(true);
+
+    await page.evaluate(() => {
+        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+        queue.push({
+            id: 'crdt-test-1',
+            type: 'CRDT_MUTATION',
+            payload: { entity_id: 'task-test', data: { status: 'completed' } },
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+    });
+
+    const mcpDeltasPromise = page.waitForRequest(request =>
+      request.url().includes('/api/v1/sync/mcp-deltas') && request.method() === 'POST'
+    );
+
+    await context.setOffline(false);
+    await page.evaluate(() => {
+        window.dispatchEvent(new Event('online'));
+    });
+
+    const mcpReq = await mcpDeltasPromise;
+    const postData = mcpReq.postDataJSON();
+
+    expect(postData.deltas).toBeDefined();
+    expect(postData.deltas.length).toBe(1);
+    expect(postData.deltas[0].id).toBe('crdt-test-1');
+    expect(postData.deltas[0].entity_id).toBe('task-test');
+    expect(postData.deltas[0].data).toContain('completed');
+
+    // Wait for the sync to clear the queue
+    await page.waitForFunction(() => {
+        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+        return queue.length === 0;
+    }, { timeout: 15000 });
+  });
+
+  test('Push notification test from older test (simulated push event)', async ({ page }) => {
+    await page.goto('/pos/kds');
     // Push notification (simulate receiving push msg via service worker/FCM)
     // Here we assume the frontend mounts a push listener in a real PWA context
     await page.evaluate(() => {
