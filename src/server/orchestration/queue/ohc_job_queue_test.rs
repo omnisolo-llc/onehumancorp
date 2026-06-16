@@ -314,18 +314,20 @@ async fn test_chaos_redis_mailbox_corruption() {
     };
 
     let tenant_id = "tenant_chaos_mailbox";
-    let mailbox_key = format!("ohc:mailbox:{}", tenant_id);
+    let queue_name = "test_queue";
 
-    // Corrupt the mailbox by pushing a non-JSON / invalid string
-    let _: () = redis::cmd("LPUSH")
-        .arg(&mailbox_key)
+    // Corrupt the queue by pushing a non-JSON / invalid string
+    // RedisTaskQueue uses a sorted set (ZSET), so we use ZADD.
+    let _: () = redis::cmd("ZADD")
+        .arg(queue_name)
+        .arg(0)
         .arg("THIS_IS_CORRUPT_DATA_NOT_JSON!!!")
         .query_async(&mut conn)
         .await
         .unwrap();
 
     // Now try to dequeue from Redis queue. Assuming we test the resilience of RedisTaskQueue
-    let queue = super::RedisTaskQueue::new(&redis_url, "test_queue").unwrap();
+    let queue = super::RedisTaskQueue::new(&redis_url, queue_name).unwrap();
 
     // Attempting to dequeue should gracefully handle the corrupt data (e.g., skip it or return error, but NOT panic)
     // Actually, RedisTaskQueue dequeues using LPOP and then parsing.
