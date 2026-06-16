@@ -1448,7 +1448,7 @@
           }
       }
 
-            function saveCurrentState() {
+            async function saveCurrentState() {
           state.categories = inputs.categories.value;
           state.businessName = inputs.name.value;
           state.tagline = inputs.tagline.value;
@@ -1481,17 +1481,20 @@
           localStorage.setItem('onboardingState', JSON.stringify(state));
 
           if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
+              await window.__TAURI__.core.invoke("save_onboarding_state", { state });
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
               const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
               const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
-              fetch(`${backendUrl}/api/onboarding/draft`, {
+              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
                   body: JSON.stringify(state)
-              }).catch(console.error);
+              });
+              if (!res.ok) {
+                  throw new Error(`Failed to save draft: ${res.statusText}`);
+              }
           }
       }
 
@@ -1709,24 +1712,40 @@
               // Add a small delay to allow browser to render "Saving..."
               await new Promise(r => setTimeout(r, 100));
 
-              saveCurrentState();
+              try {
+                  await saveCurrentState();
 
-              btn.innerText = "Saved!";
-              btn.style.backgroundColor = "#34C759";
-              btn.style.color = "white";
-              btn.style.borderColor = "#34C759";
+                  btn.innerText = "Saved!";
+                  btn.style.backgroundColor = "#34C759";
+                  btn.style.color = "white";
+                  btn.style.borderColor = "#34C759";
 
-              const msg = document.getElementById('draft-saved-msg');
-              if (msg) msg.style.display = 'block';
+                  const msg = document.getElementById('draft-saved-msg');
+                  if (msg) msg.style.display = 'block';
 
-              setTimeout(() => {
-                  btn.innerText = originalText;
-                  btn.disabled = false;
-                  btn.style.backgroundColor = "";
-                  btn.style.color = "";
-                  btn.style.borderColor = "";
-                  if (msg) msg.style.display = 'none';
-              }, 2000);
+                  setTimeout(() => {
+                      btn.innerText = originalText;
+                      btn.disabled = false;
+                      btn.style.backgroundColor = "";
+                      btn.style.color = "";
+                      btn.style.borderColor = "";
+                      if (msg) msg.style.display = 'none';
+                  }, 2000);
+              } catch (error) {
+                  console.error("Failed to save draft:", error);
+                  btn.innerText = "Error!";
+                  btn.style.backgroundColor = "#FF3B30";
+                  btn.style.color = "white";
+                  btn.style.borderColor = "#FF3B30";
+
+                  setTimeout(() => {
+                      btn.innerText = originalText;
+                      btn.disabled = false;
+                      btn.style.backgroundColor = "";
+                      btn.style.color = "";
+                      btn.style.borderColor = "";
+                  }, 2000);
+              }
           });
       });
 
@@ -2054,73 +2073,7 @@
               }
           });
       }
-      document.querySelectorAll(".save-draft-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const originalText = e.target.innerText;
-            e.target.innerText = "Saving...";
-            e.target.disabled = true;
 
-            const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
-            const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-            const userId = localStorage.getItem("user_id") || "e2e-admin-user";
-
-            const currentStepEl = document.querySelector(".step.active");
-            let currentStepIdx = 0;
-            if (currentStepEl) {
-                const steps = Array.from(document.querySelectorAll(".step"));
-                currentStepIdx = steps.indexOf(currentStepEl);
-            }
-
-            state.step = currentStepIdx;
-
-
-
-
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                window.__TAURI__.core.invoke("save_onboarding_state", { state }).then(() => {
-                    e.target.innerText = "Saved!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
-            } else {
-                fetch(`${backendUrl}/api/onboarding/draft`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Tenant-ID": tenantId,
-                        "X-User-ID": userId
-                    },
-                    body: JSON.stringify(state)
-                }).then(res => {
-                    if (res.ok) {
-                        e.target.innerText = "Saved!";
-                        setTimeout(() => {
-                            e.target.innerText = originalText;
-                            e.target.disabled = false;
-                        }, 3000);
-                    } else {
-                        throw new Error("Failed to save");
-                    }
-                }).catch(err => {
-                    console.error("Failed to save draft", err);
-                    e.target.innerText = "Error!";
-                    setTimeout(() => {
-                        e.target.innerText = originalText;
-                        e.target.disabled = false;
-                    }, 3000);
-                });
-            }
-        });
-      });
 
 
       if (finishBtn) {
