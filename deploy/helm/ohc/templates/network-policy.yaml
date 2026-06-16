@@ -54,7 +54,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
     {{- if .Values.cnpg.enabled }}
     - to:
         - namespaceSelector:
@@ -80,7 +79,6 @@ spec:
         - protocol: TCP
           port: {{ .Values.valkey.service.port }}
     {{- end }}
-    - to:
 {{- end }}
 ---
 {{- if .Values.ohcCore.networkPolicy.enabled }}
@@ -132,7 +130,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
 {{- end }}
 ---
 {{- if .Values.chatwoot.enabled }}
@@ -184,7 +181,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
 {{- end }}
 ---
 {{- if .Values.powersync.enabled }}
@@ -236,7 +232,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    - to:
 {{- end }}
 ---
 {{- if .Values.valkey.enabled }}
