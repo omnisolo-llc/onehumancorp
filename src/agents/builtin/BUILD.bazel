@@ -57,6 +57,7 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
+        "claude_subagents.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
         "departments.rs",

@@ -4475,18 +4475,51 @@ impl Agent {
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         let mut args = tc.arguments.clone();
-        if tc.name == "spawn_subagent"
-            && let Some(obj) = args.as_object_mut()
-                && obj.get("mode").and_then(|v| v.as_str()) == Some("fork")
-                    && let Ok(context_json) = serde_json::to_string(current_messages) {
-                        let id = uuid::Uuid::new_v4().to_string();
-                        let file_path = format!(".ohc_fork_context_{}.json", id);
-                        let _ = std::fs::write(&file_path, &context_json);
-                        obj.insert(
-                            "parent_context_file".to_string(),
-                            serde_json::json!(file_path),
-                        );
-                    }
+        if tc.name == "spawn_subagent" {
+            if let Some(obj) = args.as_object_mut() {
+                let mode = obj.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
+                let task = obj.get("task").and_then(|v| v.as_str()).unwrap_or("");
+
+                let spawner_mode = match mode {
+                    "fork" => crate::claude_subagents::ClaudeSubagentMode::Fork,
+                    "teammate" => {
+                        let task_id = uuid::Uuid::new_v4().to_string();
+                        let mailbox_dir = std::path::PathBuf::from(format!(".agent-mailboxes/subagent-{}", task_id));
+                        crate::claude_subagents::ClaudeSubagentMode::Teammate { mailbox_dir }
+                    },
+                    "worktree" => {
+                        let task_id = uuid::Uuid::new_v4().to_string();
+                        let branch_name = format!("subagent-{}", task_id);
+                        let base_repo_path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+                        crate::claude_subagents::ClaudeSubagentMode::Worktree {
+                            base_repo_path,
+                            branch_name,
+                            auto_cleanup: true,
+                            auto_merge_on_success: false,
+                        }
+                    },
+                    _ => return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode))),
+                };
+
+                let subagent = std::sync::Arc::new(Agent::new(self.llm.clone(), session_tools.to_vec()));
+                let spawner = crate::claude_subagents::ClaudeSubagentSpawner::new(
+                    self.llm.clone(),
+                    subagent,
+                    spawner_mode,
+                );
+
+                let cfg = crate::agent::AgentRunConfig::default();
+                let res = match spawner.run_subagent(task, current_messages, &cfg).await {
+                    Ok(summary) => Ok(format!("[Subagent ({})] Completed task. Summary: {}", mode, summary)),
+                    Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
+                };
+                {
+                    let mut trace = self.skill_trace.lock().await;
+                    trace.record_skill(&format!("{}_invoked", tc.name));
+                }
+                return res;
+            }
+        }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
             let args_str = match serde_json::to_string(&args) {
