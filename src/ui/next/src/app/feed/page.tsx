@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AppShell } from '../components/AppShell';
+import { ActionCard, ActionCardItem } from '../components/ActionCard';
 
 interface FeedItem {
   id: string;
@@ -89,42 +90,36 @@ export default function FeedPage() {
     };
   }, []);
 
-  const startEditing = (item: FeedItem) => {
-    setEditingId(item.id);
-    setEditValue(item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
-  };
-
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string, newDescription: string) => {
+    // Optimistic update
     setItems((prev) => prev.map((item) => {
       if (item.id === id) {
         return {
           ...item,
           proposed_action: {
             ...item.proposed_action,
-            description: editValue,
+            description: newDescription,
           },
           context_payload: {
             ...item.context_payload,
-            summary: editValue,
+            summary: newDescription,
           }
         };
       }
       return item;
     }));
-    setEditingId(null);
+
+    // Automatically approve after saving edit
+    await handleAction(id, 'APPROVED', newDescription);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const handleAction = async (id: string, state: string) => {
+  const handleAction = async (id: string, state: string, editedPayload?: string) => {
     try {
       setProcessingId(id);
       const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state, edited_payload: editedPayload }),
       });
       if (!res.ok) throw new Error('Action failed');
 
@@ -170,86 +165,24 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const cardItem: ActionCardItem = {
+              id: item.id,
+              source: item.event_source,
+              title: item.proposed_action?.title || 'Review Required',
+              description: item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.',
+              timestamp: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              payload: item
+            };
 
             return (
-              <div
+              <ActionCard
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
-                data-testid="agent-feed-card"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {item.event_source.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-[11px] text-gray-400 font-medium">
-                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {item.proposed_action?.title || 'Review Required'}
-                </h3>
-
-                {editingId === item.id ? (
-                  <div className="mb-5">
-                    <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
-                      rows={3}
-                      data-testid="feed-edit-input"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEdit(item.id)}
-                        className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-1 rounded"
-                        data-testid="feed-save-edit-btn"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-5">
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                      {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                    </p>
-                    <button
-                      onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
-                      data-testid="feed-edit-btn"
-                    >
-                      Edit Action
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : 'Approve'}
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
-                    data-testid="feed-dismiss-btn"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
+                item={cardItem}
+                isProcessing={isProcessing}
+                onApprove={(id) => handleAction(id, 'APPROVED')}
+                onDismiss={(id) => handleAction(id, 'DISMISSED')}
+                onEditSave={(id, newDescription) => saveEdit(id, newDescription)}
+              />
             );
           })}
         </div>

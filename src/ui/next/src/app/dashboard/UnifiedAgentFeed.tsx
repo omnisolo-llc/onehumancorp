@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
+import { ActionCard, ActionCardItem } from "../../components/ActionCard";
 
 type TriageItem = {
   id: string;
@@ -1180,73 +1181,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </div>
                     </>
                   ) : (
-                    editingId === approval.id ? (
-                      <div className="flex flex-col gap-3 w-full">
-                        <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
-                          rows={4}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          data-testid="edit-proposal-textarea"
-                          autoFocus
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => {
-                              handleDecision(approval.id, true, editContent);
-                              setEditingId(null);
-                            }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                            data-testid="save-proposal"
-                          >
-                            Save & Approve
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                            data-testid="cancel-edit-proposal"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                    <>
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
-                        aria-label="Approve proposal"
-                        data-testid="approve-proposal"
-                      >
-                        Approve
-                      </button>
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => {
-                            setEditingId(approval.id);
-                            const textToEdit =
-                              (approval.proposed_action || approval.context_payload)?.generated_response ||
-                              (approval.proposed_action || approval.context_payload)?.draft_reply ||
-                              (approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source);
-                            setEditContent(textToEdit || "");
-                          }}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit proposal"
-                          data-testid="edit-proposal"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Reject proposal"
-                          data-testid="reject-proposal"
-                        >
-                          Deny
-                        </button>
-                      </div>
-                    </>
-                    )
+                    <ActionCard
+                      item={{
+                        id: approval.id,
+                        source: approval.event_source,
+                        title: approval.proposed_action?.title || (approval.proposed_action || approval.context_payload)?.feature_type?.replace(/_/g, ' ') || 'Action Needed',
+                        description: (approval.proposed_action || approval.context_payload)?.generated_response ||
+                                     (approval.proposed_action || approval.context_payload)?.draft_reply ||
+                                     (approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source),
+                        timestamp: new Date(approval.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        payload: approval
+                      }}
+                      onApprove={(id) => handleDecision(id, true)}
+                      onDismiss={(id) => handleDecision(id, false)}
+                      onEditSave={(id, newDescription) => {
+                        handleDecision(id, true, newDescription);
+                      }}
+                    />
                   )}
                 </div>
               </div>
