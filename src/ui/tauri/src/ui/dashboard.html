@@ -839,6 +839,18 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
+        <h2>Cloud Bridge Invite</h2>
+        <p>Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
+        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; min-width: 200px;" />
+            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.1s;">
+              Generate Cloud Invite
+            </button>
+        </div>
+        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; word-break: break-all;"></div>
+      </div>
+
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
@@ -2159,6 +2171,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+      const cloudBridgeBtn = document.getElementById('generate-cloud-bridge-btn');
+      const cloudBridgeEmail = document.getElementById('cloud-bridge-email');
+      const cloudBridgeStatus = document.getElementById('cloud-bridge-status');
+
+      if (cloudBridgeBtn) {
+          cloudBridgeBtn.addEventListener('click', async () => {
+              const email = cloudBridgeEmail.value || "test@example.com";
+              cloudBridgeBtn.innerText = "Generating...";
+              cloudBridgeBtn.disabled = true;
+
+              try {
+                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
+                  });
+                  const data = await res.json();
+
+                  cloudBridgeStatus.style.display = 'block';
+                  if (res.ok && data.invite_link) {
+                      cloudBridgeStatus.innerText = `Cloud Invite generated: ${data.invite_link}`;
+                      cloudBridgeStatus.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+                      cloudBridgeStatus.style.color = '#4ade80';
+                  } else {
+                      cloudBridgeStatus.innerText = `Failed to generate cloud invite: ${data.error || 'Unknown error'}`;
+                      cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                      cloudBridgeStatus.style.color = '#f87171';
+                  }
+              } catch (e) {
+                  console.error("Cloud bridge error:", e);
+                  cloudBridgeStatus.style.display = 'block';
+                  cloudBridgeStatus.innerText = "Error generating cloud invite.";
+                  cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                  cloudBridgeStatus.style.color = '#f87171';
+              } finally {
+                  cloudBridgeBtn.innerText = "Generate Cloud Invite";
+                  cloudBridgeBtn.disabled = false;
+              }
+          });
+      }
+
     const btn = document.getElementById('dashboard-invite-btn');
     const container = document.getElementById('dashboard-invite-container');
     const linkInput = document.getElementById('dashboard-invite-link');
