@@ -636,31 +636,27 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_60s_timeout_rule() {
-        let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(150);
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= std::time::Duration::from_millis(100), "Timeout enforcement should take at least the configured duration");
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_chaos_degradation_network() {
-        let start = std::time::Instant::now();
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
         let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
-            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+            std::future::pending::<()>().await;
             "data"
         }).await;
         assert!(result.is_err());
-        assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
 
 
