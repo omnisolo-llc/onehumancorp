@@ -1729,10 +1729,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (generalMutations.length > 0) {
             try {
-                const res = await fetch("/api/v1/sync/offline", {
+                const deltas = generalMutations.map(m => ({
+                    id: crypto.randomUUID(),
+                    entity_id: m.product_id || m.transaction_id || "general",
+                    data: JSON.stringify(m),
+                    updated_at: new Date().toISOString()
+                }));
+
+                const res = await fetch("/api/v1/sync/mcp-deltas", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ mutations: generalMutations })
+                    body: JSON.stringify({ tenant_id: tenantId, deltas: deltas })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
