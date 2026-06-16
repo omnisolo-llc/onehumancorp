@@ -1,29 +1,41 @@
-use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
-use serde::Deserialize;
-use std::sync::Arc;
-use super::task::Task;
 use chrono::Utc;
+use ohc_builtin_agent_core::types::ToolError;
+use serde::Deserialize;
+use serde_json::json;
+use std::sync::Arc;
 
-use super::{SharedTaskStore, Tool, ToolExecutor};
+use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
+use super::task::Task;
+use super::{SharedTaskStore, Tool};
+
+#[derive(Deserialize)]
+struct MagenticArgs {
+    action: String,
+    title: Option<String>,
+    description: Option<String>,
+    assignee: Option<String>,
+    id: Option<String>,
+    status: Option<String>,
+    result: Option<String>,
+}
 
 pub struct MagenticExecutor {
     store: SharedTaskStore,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for MagenticExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["action"].as_str().unwrap_or("");
+impl PydanticToolExecutor<MagenticArgs> for MagenticExecutor {
+    async fn execute_typed(&self, args: MagenticArgs) -> Result<String, ToolError> {
+        let action = args.action.as_str();
 
         match action {
             "add" => {
-                let title = args["title"].as_str().ok_or_else(|| ToolError::LlmRecoverable("magentic: title is required for add".to_string()))?;
-                let description = args["description"].as_str().unwrap_or("").to_string();
-                let assignee = args["assignee"].as_str().unwrap_or("").to_string();
+                let title = args
+                    .title
+                    .as_deref()
+                    .ok_or_else(|| ToolError::LlmRecoverable("magentic: title is required for add".to_string()))?;
+                let description = args.description.unwrap_or_default();
+                let assignee = args.assignee.unwrap_or_default();
 
                 let now = Utc::now().timestamp_millis();
                 let id = format!("task-{}", uuid::Uuid::new_v4().simple());
@@ -42,11 +54,12 @@ impl ToolExecutor for MagenticExecutor {
                 Ok(format!("Added task: {}", id))
             }
             "update" => {
-                let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("magentic: id is required for update".to_string()))?;
-                let status = args["status"].as_str().map(str::to_string);
-                let result = args["result"].as_str().map(str::to_string);
+                let id = args
+                    .id
+                    .as_deref()
+                    .ok_or_else(|| ToolError::LlmRecoverable("magentic: id is required for update".to_string()))?;
 
-                if self.store.write().await.update(id, status, result) {
+                if self.store.write().await.update(id, args.status, args.result) {
                     Ok(format!("Updated task: {}", id))
                 } else {
                     Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
@@ -106,7 +119,7 @@ pub fn magentic_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["action"]
         }),
-        execute: Arc::new(MagenticExecutor { store }),
+        execute: Arc::new(PydanticAdapter::new(MagenticExecutor { store })),
     }
 }
 
@@ -115,11 +128,14 @@ mod tests {
     use super::*;
     use super::super::task::TaskStore;
     use tokio::sync::RwLock;
+    use crate::tools::ToolExecutor;
 
     #[tokio::test]
     async fn test_magentic_tool_add() {
         let store = Arc::new(RwLock::new(TaskStore::default()));
-        let executor = MagenticExecutor { store: store.clone() };
+        let executor = PydanticAdapter::new(MagenticExecutor {
+            store: store.clone(),
+        });
 
         let args = json!({
             "action": "add",
@@ -135,7 +151,9 @@ mod tests {
     #[tokio::test]
     async fn test_magentic_tool_update_and_list() {
         let store = Arc::new(RwLock::new(TaskStore::default()));
-        let executor = MagenticExecutor { store: store.clone() };
+        let executor = PydanticAdapter::new(MagenticExecutor {
+            store: store.clone(),
+        });
 
         // 1. Add
         let args_add = json!({
