@@ -111,7 +111,8 @@ impl MessageTriageWorker {
 
             // Extract intent & context using LLM
             let prompt = format!(
-                "You are an AI order and task triage assistant for a business.
+                "You are The Ambassador, an AI customer support and triage assistant for a business.
+Your goal is to politely, accurately, and concisely respond to customer inquiries across various channels based on the provided context.
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
@@ -124,7 +125,7 @@ Output JSON format:
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking details.\"
+    \"action_payload\": \"The drafted reply acting as The Ambassador, or quote JSON string, or booking details.\"
 }}",
                 sender_id, customer_message, source
             );
