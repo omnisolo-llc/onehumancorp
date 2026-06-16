@@ -128,7 +128,7 @@ mod tests {
     use super::*;
     use super::super::task::TaskStore;
     use tokio::sync::RwLock;
-    use crate::tools::ToolExecutor;
+    use crate::ToolExecutor;
 
     #[tokio::test]
     async fn test_magentic_tool_add() {

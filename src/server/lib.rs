@@ -143,6 +143,8 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
+
+    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
     m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
@@ -166,7 +168,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("nav-agents".to_string(), "AI Helpers. These are your digital employees.".to_string());
     m.insert("ohc-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
     m.insert("ohc-floating-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly. It can guide you to the right article.".to_string());
     m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
     m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
     m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());
@@ -194,7 +195,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
-    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
     m.insert("checkout-mercadopago-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan via Mercado Pago.".to_string());
     m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
@@ -203,6 +203,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
     m.insert("network-status-tooltip".to_string(), "Shows whether you are currently online and syncing to the cloud, or offline.".to_string());
     m.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
+    m.insert("my-plan-tooltip".to_string(), "View and manage your subscription plan and usage.".to_string());
     RwLock::new(m)
     })
 }
@@ -2512,6 +2513,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
+
+    // Start Deposit Follow-Up Worker
+    let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
+    deposit_follow_up_worker.start();
 
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
@@ -6131,6 +6136,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
+        }))
+        .route("/api/ui/help-widget.mjs", axum::routing::get(|| async {
+            ([(axum::http::header::CONTENT_TYPE, "application/javascript")], include_str!("../ui/tauri/src/ui/help-widget.mjs"))
         }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
