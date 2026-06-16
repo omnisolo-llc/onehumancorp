@@ -166,7 +166,7 @@ impl TaskQueue for PostgresTaskQueue {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &job.tenant_id).await.map_err(|e| e.to_string())?;
-        sqlx::query("UPDATE agent_jobs SET status = 'pending', payload = $3, run_at = $4 WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, scheduled_at = $4 WHERE id = $1 AND tenant_id = $2")
             .bind(&job.id)
             .bind(&job.tenant_id)
             .bind(new_payload)
@@ -197,7 +197,7 @@ impl TaskQueue for PostgresTaskQueue {
         }
 
         let org_ids_vec: Vec<String> = org_ids.into_iter().collect();
-        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM agent_jobs WHERE tenant_id = ANY($1) AND status = 'pending' GROUP BY tenant_id")
+        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'QUEUED' GROUP BY tenant_id")
             .bind(&org_ids_vec)
             .fetch_all(&mut *tx)
             .await
@@ -207,7 +207,7 @@ impl TaskQueue for PostgresTaskQueue {
             current_depths.insert(tenant_id, count);
         }
 
-        let mut builder = sqlx::QueryBuilder::new("INSERT INTO agent_jobs (id, tenant_id, parent_task_id, payload, status, run_at) ");
+        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) ");
 
         let mut prepared_jobs = Vec::new();
         for job in &jobs {
@@ -275,7 +275,7 @@ impl TaskQueue for PostgresTaskQueue {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_jobs WHERE tenant_id = $1 AND status = 'pending'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'QUEUED'")
             .bind(&org_id)
             .fetch_one(&mut *tx)
             .await
@@ -288,7 +288,7 @@ impl TaskQueue for PostgresTaskQueue {
             run_after = run_after + chrono::Duration::seconds(delay_seconds);
         }
 
-        sqlx::query("INSERT INTO agent_jobs (id, tenant_id, parent_task_id, payload, status, run_at) VALUES ($1, $2, $3, $4, $5, $6)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
             .bind(org_id)
             .bind(job.parent_task_id)
@@ -306,7 +306,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE agent_jobs SET status = 'processing' WHERE id = (SELECT id FROM agent_jobs WHERE status = 'pending' AND run_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY run_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, run_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -319,7 +319,7 @@ impl TaskQueue for PostgresTaskQueue {
             let parent_task_id: String = row.get("parent_task_id");
             let payload: String = row.get("payload");
             let status: String = row.get("status");
-            let run_at: DateTime<Utc> = row.get("run_at");
+            let scheduled_at: DateTime<Utc> = row.get("scheduled_at");
             
             let mut j = Job {
                 id,
@@ -330,7 +330,7 @@ impl TaskQueue for PostgresTaskQueue {
                 status,
                 retry_count: 0,
                 max_retries: 3,
-                next_retry_at: run_at,
+                next_retry_at: scheduled_at,
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -356,7 +356,7 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE agent_jobs SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&self.pool)
@@ -369,7 +369,7 @@ impl TaskQueue for PostgresTaskQueue {
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
         let error_payload = serde_json::to_string(&serde_json::json!({"error": reason}))
             .unwrap_or_else(|_| "{}".to_string());
-        sqlx::query("UPDATE agent_jobs SET status = 'failed', payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1 AND tenant_id = $3")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1 AND tenant_id = $3")
             .bind(job_id)
             .bind(error_payload)
             .bind(tenant_id)
@@ -572,7 +572,7 @@ impl QueueManager {
         
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, &job.tenant_id).await?;
-        sqlx::query("INSERT INTO agent_jobs (id, tenant_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(job.id)
             .bind(job.tenant_id)
             .bind(job.parent_task_id)
@@ -593,7 +593,7 @@ impl QueueManager {
         let start_poll = std::time::Instant::now();
         let mut retry_count = 0;
         let row = loop {
-            match sqlx::query("UPDATE agent_jobs SET status = 'processing', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM agent_jobs WHERE status = 'pending' AND (run_at IS NULL OR run_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+            match sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
                 .bind(worker_id)
                 .fetch_optional(&mut *tx)
                 .await {
@@ -642,7 +642,7 @@ impl QueueManager {
     pub async fn mark_completed(&self, job_id: &str, tenant_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        let row = sqlx::query("UPDATE agent_jobs SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2 RETURNING updated_at, created_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2 RETURNING updated_at, created_at")
             .bind(job_id)
             .bind(tenant_id)
             .fetch_optional(&mut *tx)
@@ -664,17 +664,17 @@ impl QueueManager {
 
     pub async fn requeue(&self, job_id: &str, tenant_id: &str, payload: serde_json::Value) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&payload).unwrap_or_default();
-        // Since SubAgentJob's polling uses `status = 'pending'`, and some implementations might not filter by run_at,
+        // Since SubAgentJob's polling uses `status = 'QUEUED'`, and some implementations might not filter by scheduled_at,
         // we can still add a simple delay by using tokio::time::sleep here or rely on the caller to backoff,
-        // or actually update the run_at column if the poll query respects it.
-        // Wait, QueueManager::poll does: `SELECT id FROM agent_jobs WHERE status = 'pending' ORDER BY created_at ASC`
-        // It does NOT use `run_at`!
-        // To implement a true backoff, we need to add `AND (run_at IS NULL OR run_at <= CURRENT_TIMESTAMP)`.
+        // or actually update the scheduled_at column if the poll query respects it.
+        // Wait, QueueManager::poll does: `SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC`
+        // It does NOT use `scheduled_at`!
+        // To implement a true backoff, we need to add `AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)`.
 
         // Update the row.
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        sqlx::query("UPDATE agent_jobs SET status = 'pending', payload = $3, updated_at = CURRENT_TIMESTAMP, run_at = CURRENT_TIMESTAMP + (INTERVAL '1 second' * POWER(2, LEAST(COALESCE(($3->>'attempts')::int, 0), 10))) WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + (INTERVAL '1 second' * POWER(2, LEAST(COALESCE(($3->>'attempts')::int, 0), 10))) WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .bind(payload_str)
@@ -687,7 +687,7 @@ impl QueueManager {
     pub async fn mark_failed(&self, job_id: &str, _reason: &str, tenant_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        sqlx::query("UPDATE agent_jobs SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&mut *tx)
@@ -717,7 +717,7 @@ impl QueueManager {
                                         // Retrieve metrics directly from global OTel or known variables.
                                         // For simplicity, we just format the payload with queue_depth if possible.
                                         // But queue count can be found via a query or we can just pass a queue_health object.
-                                        let queue_depth: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM agent_jobs WHERE status = 'pending'")
+                                        let queue_depth: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_queue WHERE status = 'QUEUED'")
                                             .fetch_one(&self.pool)
                                             .await {
                                             Ok(c) => c,
@@ -833,7 +833,7 @@ impl TaskQueueService {
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'pending' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'completed') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
             .bind(agent_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -869,7 +869,7 @@ impl TaskQueueService {
     pub async fn complete_task(&self, task_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-        sqlx::query("UPDATE shared_tasks SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .execute(&mut *tx)
             .await?;
@@ -884,7 +884,7 @@ impl TaskQueueService {
         // We could merge this better using jsonb operators or just save status
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-        sqlx::query("UPDATE shared_tasks SET status = 'failed', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .bind(payload_update)
             .execute(&mut *tx)
@@ -895,7 +895,7 @@ impl TaskQueueService {
 
 
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content FROM shared_tasks WHERE status = 'completed' LIMIT $1")
+        let rows = sqlx::query("SELECT id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
@@ -946,7 +946,7 @@ impl SqliteTaskQueue {
                 task_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 payload BLOB,
-                status TEXT DEFAULT 'pending'
+                status TEXT DEFAULT 'QUEUED'
             );"
         ).execute(&self.pool).await?;
         Ok(())
@@ -991,7 +991,7 @@ impl TaskQueue for SqliteTaskQueue {
         // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE local_queue_jobs SET status = 'processing' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'pending' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
+            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'QUEUED' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
             role_placeholders
         );
 
@@ -1030,7 +1030,7 @@ impl TaskQueue for SqliteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'completed' WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE local_queue_jobs SET status = 'COMPLETED' WHERE id = ? AND tenant_id = ?")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&self.pool)
@@ -1040,7 +1040,7 @@ impl TaskQueue for SqliteTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'failed' WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE local_queue_jobs SET status = 'FAILED' WHERE id = ? AND tenant_id = ?")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&self.pool)
@@ -1055,7 +1055,7 @@ impl TaskQueue for SqliteTaskQueue {
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
-        sqlx::query("UPDATE local_queue_jobs SET status = 'pending', payload = ? WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE local_queue_jobs SET status = 'QUEUED', payload = ? WHERE id = ? AND tenant_id = ?")
             .bind(new_payload)
             .bind(&job.id)
             .bind(&job.tenant_id)
@@ -1349,7 +1349,7 @@ mod tests {
             let org_id = "tenant-a".to_string();
 
             // Ignore table creation errors if it already exists
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_jobs (id VARCHAR PRIMARY KEY, tenant_id VARCHAR NOT NULL, parent_task_id VARCHAR, payload TEXT, status VARCHAR, worker_id VARCHAR, run_at TIMESTAMP, completed_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP)")
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id VARCHAR PRIMARY KEY, tenant_id VARCHAR NOT NULL, parent_task_id VARCHAR, payload TEXT, status VARCHAR, worker_id VARCHAR, scheduled_at TIMESTAMP, completed_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP)")
                 .execute(&pool)
                 .await;
 
@@ -1371,7 +1371,7 @@ mod tests {
             assert!(res.is_ok()); // The query executes successfully but updates 0 rows
 
             // Verify status is still QUEUED
-            let status: (String,) = sqlx::query_as("SELECT status FROM agent_jobs WHERE id = $1")
+            let status: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
                 .bind(&job_id)
                 .fetch_one(&pool)
                 .await
@@ -1382,7 +1382,7 @@ mod tests {
             let res2 = qm.mark_completed(&job_id, &org_id).await;
             assert!(res2.is_ok());
 
-            let status_updated: (String,) = sqlx::query_as("SELECT status FROM agent_jobs WHERE id = $1")
+            let status_updated: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
                 .bind(&job_id)
                 .fetch_one(&pool)
                 .await
@@ -1404,7 +1404,7 @@ mod tests {
             qm.enqueue(job2).await.unwrap();
 
             let _ = qm.mark_failed(&job_id2, "error", "wrong-tenant").await;
-            let status_failed1: (String,) = sqlx::query_as("SELECT status FROM agent_jobs WHERE id = $1")
+            let status_failed1: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
                 .bind(&job_id2)
                 .fetch_one(&pool)
                 .await
@@ -1412,7 +1412,7 @@ mod tests {
             assert_eq!(status_failed1.0, "QUEUED");
 
             let _ = qm.mark_failed(&job_id2, "error", &org_id).await;
-            let status_failed2: (String,) = sqlx::query_as("SELECT status FROM agent_jobs WHERE id = $1")
+            let status_failed2: (String,) = sqlx::query_as("SELECT status FROM sub_agent_queue WHERE id = $1")
                 .bind(&job_id2)
                 .fetch_one(&pool)
                 .await
