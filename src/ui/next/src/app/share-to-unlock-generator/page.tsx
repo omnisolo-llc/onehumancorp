@@ -163,20 +163,20 @@ export default function ShareToUnlockGeneratorPage() {
                         <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-3xl mb-6 shadow-inner">
                             🎁
                         </div>
-                        <h2 className="text-2xl font-bold font-outfit text-center mb-2" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>
+                        <h2 className="text-2xl font-bold font-outfit text-center mb-2" id="preview-title" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>
                             {campaignTitle || 'Secret Deal'}
                         </h2>
                         <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
                             Unlock your special reward: <br/>
-                            <strong className="text-purple-500">{reward || '20% Off'}</strong>
+                            <strong id="preview-reward-text" className="text-purple-500">{reward || '20% Off'}</strong>
                         </p>
 
                         <div className="w-full p-4 rounded-[16px] min-h-[44px] min-w-[44px] border-2 border-dashed flex items-center justify-center mb-8 relative"
                              style={{ borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db', background: theme === 'dark' ? '#1f2937' : '#f3f4f6' }}>
-                             <span className="font-mono text-xl tracking-widest font-bold filter blur-sm select-none opacity-50" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
+                             <span id="preview-code" className="font-mono text-xl tracking-widest font-bold filter blur-sm select-none opacity-50" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
                                  {hiddenCode || 'SECRET'}
                              </span>
-                             <div className="absolute inset-0 flex items-center justify-center">
+                             <div id="locked-badge" className="absolute inset-0 flex items-center justify-center">
                                  <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-gray-900 text-white rounded-full">
                                      Locked
                                  </span>
