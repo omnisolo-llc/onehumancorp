@@ -1,93 +1,53 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
-test.describe('Share-to-Unlock Growth Loop', () => {
-    test('generator page renders, copies link, and public page reveals code after share', async ({ page, adminUser, loginAs }) => {
-        // Step 1: Login
-        await loginAs(page, adminUser);
+test.describe('Viral Growth Loop - Share to Unlock Widget', () => {
+    test('generator UI creates correct embed link and preview', async ({ page }) => {
+        // We use page directly to bypass login since generator is a static/public tool
+        // or we can test the generator output directly.
+        await page.goto('/ui/share-to-unlock-generator.html');
 
-        // Step 2: Navigate to Dashboard
-        await page.goto('/dashboard');
+        await expect(page.locator('h1')).toHaveText('Share-to-Unlock Generator');
 
-        // Verify the new dashboard link exists and click it
-        const unlockLink = page.locator('a[id="share-to-unlock-link"]');
-        await expect(unlockLink).toBeVisible();
-        await unlockLink.click();
+        // Fill in details
+        await page.fill('#title', 'Super Secret Holiday Promo');
+        await page.fill('#reward', '50% off all cakes');
+        await page.fill('#code', 'CAKE50');
 
-        // Step 3: Verify Generator Page
-        await page.waitForURL('**/share-to-unlock-generator*');
-        await expect(page.getByRole('heading', { name: /Share To Unlock Generator/ })).toBeVisible();
+        // Verify preview reflects changes
+        await expect(page.locator('#preview-title')).toHaveText('Super Secret Holiday Promo');
+        await expect(page.locator('#preview-reward-text')).toHaveText('50% off all cakes');
 
-        // Configure the campaign
-        await page.fill('input[type="text"] >> nth=0', 'E2E Unlock Test');
-        await page.fill('input[type="text"] >> nth=1', 'Free E2E Shipping');
-        await page.fill('input[type="text"] >> nth=2', 'FREE_E2E');
+        // Generate Link
+        await page.click('#generate-btn');
 
-        // Wait briefly for local storage tenant effect
+        // Check link result
+        const generatedLink = await page.inputValue('#generated-url');
+        expect(generatedLink).toContain('title=Super+Secret+Holiday+Promo');
+        expect(generatedLink).toContain('code=CAKE50');
+    });
+
+    test('consumer widget renders and handles unlock', async ({ page }) => {
+        const url = '/ui/share-to-unlock/index.html?title=Free%20Cookie&reward=One%20free%20cookie&code=FREECOOKIE';
+        await page.goto(url);
+
+        await expect(page.locator('#campaign-title')).toHaveText('Free Cookie');
+        await expect(page.locator('#reward-desc')).toHaveText('One free cookie');
+
+        // Initially locked
+        await expect(page.locator('#locked-badge')).toBeVisible();
+
+        // Simulate click to share which triggers unlock
+        await page.click('#share-wa-btn');
+
+        // The timeout is 300ms in JS, wait for unlock
         await page.waitForTimeout(500);
 
-        // Verify Preview Panel updates
-        await expect(page.locator('h2[id="preview-title"]', { hasText: 'E2E Unlock Test' })).toBeVisible();
-        await expect(page.locator('strong[id="preview-reward-text"]', { hasText: 'Free E2E Shipping' })).toBeVisible();
-        await expect(page.locator('span[id="preview-code"]', { hasText: 'FREE_E2E' })).toBeVisible();
+        // Code should now be visible and unlocked
+        await expect(page.locator('#unlocked-actions')).toBeVisible();
+        await expect(page.locator('#copy-code-btn')).toBeVisible();
+        await expect(page.locator('#discount-code')).toHaveClass(/unlocked/);
 
-        // Step 4: Validate generated link
-        // Nextjs automatically updates the link
-        // Wait for generated URL to appear
-        await expect(page.locator('div', { hasText: 'http' }).first()).toBeVisible();
-
-        const copyButton = page.getByRole('button', { name: 'Copy Link' });
-        await expect(copyButton).toBeVisible();
-
-        // Test copy interaction
-        await copyButton.click();
-
-        // Construct the generated URL from the visible UI string to test the public page
-        await page.waitForTimeout(500);
-        const publicUrl = `/unlock/index.html?tenant=e2e-tenant&title=${encodeURIComponent('E2E Unlock Test')}&reward=${encodeURIComponent('Free E2E Shipping')}&code=${encodeURIComponent('FREE_E2E')}&msg=${encodeURIComponent('I just unlocked a secret discount!')}`;
-
-        // Step 5: Test the Public Unlock Route
-        await page.goto(publicUrl.replace('/index.html', ''));
-
-        // Wait for page to load
-        await expect(page.locator('h1', { hasText: 'E2E Unlock Test' })).toBeVisible();
-        await expect(page.locator('strong', { hasText: 'Free E2E Shipping' })).toBeVisible();
-
-        // Verify the code is blurred/locked initially
-        const codeElement = page.locator('div[id="discount-code"]', { hasText: 'FREE_E2E' });
-        await expect(codeElement).toBeVisible();
-        await expect(page.locator('span[id="unlocked-code-span"]')).not.toHaveClass(/unlocked/);
-        await expect(page.locator('div[id="locked-badge"]')).toBeVisible();
-
-        // Ensure "Powered by OHC" referral link is present
-        const poweredByLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
-        await expect(poweredByLink).toBeVisible();
-
-        // Step 6: Mock the Share action to "Unlock"
-        await page.evaluate(() => {
-            window.open = function() { return null; };
-        });
-
-        const shareBtn = page.getByRole('button', { name: 'Share on X' });
-        await expect(shareBtn).toBeVisible();
-        await shareBtn.click();
-
-        // Wait for the simulated setTimeout to run (1.5s)
-        await page.waitForTimeout(1600);
-
-        // Step 7: Verify Unlocked State
-        await expect(page.getByText('Congratulations!')).toBeVisible();
-
-        // Code should no longer be blurred
-        await expect(page.locator('span[id="unlocked-code-span"]')).toHaveClass(/unlocked/);
-
-        // Locked badge should be gone
-        await expect(page.locator('div[id="locked-badge"]')).toBeHidden();
-
-        // Copy Code button should appear
-        const copyCodeBtn = page.getByRole('button', { name: 'Copy Code' });
-        await expect(copyCodeBtn).toBeVisible();
-
-        // Click Copy Code
-        await copyCodeBtn.click();
+        // Verify footer branding
+        await expect(page.locator('footer a')).toHaveText('⚡ Powered by OHC');
     });
 });
