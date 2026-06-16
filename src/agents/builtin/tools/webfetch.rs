@@ -78,7 +78,7 @@ fn strip_html(html: &str) -> String {
     for c in html.chars() {
         match c {
             '<' => in_tag = true,
-            '>' => in_tag = false,
+            '>' => { in_tag = false; result.push(' '); },
             _ if !in_tag => result.push(c),
             _ => {}
         }
