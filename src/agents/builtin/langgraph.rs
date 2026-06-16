@@ -78,9 +78,37 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
         self.observer = Some(observer);
     }
 
+    /// Compiles the StateGraph into a CompiledStateGraph that can be executed.
+    /// This locks the graph topology and prevents further modifications.
+    pub fn compile(self) -> Result<CompiledStateGraph<S>, String> {
+        if self.entry_point.is_none() {
+            return Err("Cannot compile: Entry point not set".to_string());
+        }
+        Ok(CompiledStateGraph {
+            nodes: self.nodes,
+            edges: self.edges,
+            conditional_edges: self.conditional_edges,
+            entry_point: self.entry_point.unwrap(),
+            reducer: self.reducer,
+            observer: self.observer,
+        })
+    }
+}
+
+/// A compiled state graph that is ready to be executed.
+pub struct CompiledStateGraph<S> {
+    nodes: HashMap<String, NodeFn<S>>,
+    edges: HashMap<String, String>,
+    conditional_edges: HashMap<String, ConditionFn<S>>,
+    entry_point: String,
+    reducer: Arc<dyn Reducer<S>>,
+    observer: Option<Arc<dyn GraphObserver<S>>>,
+}
+
+impl<S: Clone + Send + Sync + 'static> CompiledStateGraph<S> {
     pub async fn run(&self, initial_state: S) -> Result<S, String> {
         let mut current_state = initial_state;
-        let mut current_node = self.entry_point.clone().ok_or("Entry point not set")?;
+        let mut current_node = self.entry_point.clone();
 
         let mut iterations = 0;
         let max_iterations = 100;
@@ -133,7 +161,7 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
     /// merging their outputs via the reducer at the end of each super-step.
     pub async fn pregel_run(&self, initial_state: S) -> Result<S, String> {
         let mut current_state = initial_state;
-        let mut active_nodes = vec![self.entry_point.clone().ok_or("Entry point not set")?];
+        let mut active_nodes = vec![self.entry_point.clone()];
 
         let mut iterations = 0;
         let max_iterations = 100;
@@ -297,7 +325,8 @@ mod tests {
             has_tool_calls: false,
         };
 
-        let final_state = graph.run(initial_state).await.unwrap();
+        let compiled = graph.compile().unwrap();
+        let final_state = compiled.run(initial_state).await.unwrap();
 
         assert_eq!(final_state.messages.len(), 4);
         assert_eq!(final_state.messages[0], "user: What is the weather?");
@@ -339,6 +368,127 @@ mod tests {
             let mut ev = self.events.try_lock().unwrap();
             ev.push("graph_end".to_string());
         }
+    }
+
+    #[tokio::test]
+    async fn test_linear_graph() {
+        let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer));
+
+        graph.add_node("node1", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Node 1 executed".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_node("node2", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Node 2 executed".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_edge("node1", "node2");
+        graph.set_entry_point("node1");
+
+        let initial_state = TypedAgentState {
+            messages: vec![],
+            has_tool_calls: false,
+        };
+
+        let compiled = graph.compile().unwrap();
+        let final_state = compiled.run(initial_state).await.unwrap();
+
+        assert_eq!(final_state.messages.len(), 2);
+        assert_eq!(final_state.messages[0], "Node 1 executed");
+        assert_eq!(final_state.messages[1], "Node 2 executed");
+    }
+
+    #[tokio::test]
+    async fn test_reducer_merge() {
+        let mut graph = StateGraph::<Value>::new(Arc::new(DefaultReducer));
+
+        graph.add_node("init", |state| async move {
+            Ok(serde_json::json!({
+                "key1": "value1",
+                "arr": ["item1"]
+            }))
+        });
+
+        graph.add_node("merge", |state| async move {
+            Ok(serde_json::json!({
+                "key2": "value2",
+                "arr": ["item2"]
+            }))
+        });
+
+        graph.add_edge("init", "merge");
+        graph.set_entry_point("init");
+
+        let initial_state = serde_json::json!({});
+        let compiled = graph.compile().unwrap();
+        let final_state = compiled.run(initial_state).await.unwrap();
+
+        assert_eq!(final_state["key1"], "value1");
+        assert_eq!(final_state["key2"], "value2");
+        assert_eq!(final_state["arr"][0], "item1");
+        assert_eq!(final_state["arr"][1], "item2");
+    }
+
+    #[tokio::test]
+    async fn test_conditional_edges() {
+        let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer));
+
+        graph.add_node("router", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Router executed".to_string()],
+                has_tool_calls: state.has_tool_calls, // preserve input flag
+            })
+        });
+
+        graph.add_node("path_a", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Path A executed".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_node("path_b", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Path B executed".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_conditional_edges("router", |state| {
+            if state.has_tool_calls {
+                "path_a".to_string()
+            } else {
+                "path_b".to_string()
+            }
+        });
+
+        graph.set_entry_point("router");
+
+        let compiled = graph.compile().unwrap();
+
+        // Run Path A
+        let initial_state_a = TypedAgentState {
+            messages: vec![],
+            has_tool_calls: true, // Should route to path_a
+        };
+        let final_state_a = compiled.run(initial_state_a).await.unwrap();
+        assert_eq!(final_state_a.messages.len(), 2);
+        assert_eq!(final_state_a.messages[1], "Path A executed");
+
+        // Run Path B
+        let initial_state_b = TypedAgentState {
+            messages: vec![],
+            has_tool_calls: false, // Should route to path_b
+        };
+        let final_state_b = compiled.run(initial_state_b).await.unwrap();
+        assert_eq!(final_state_b.messages.len(), 2);
+        assert_eq!(final_state_b.messages[1], "Path B executed");
     }
 
     #[tokio::test]
@@ -387,7 +537,8 @@ mod tests {
             has_tool_calls: false,
         };
 
-        let _ = graph.run(initial_state).await.unwrap();
+        let compiled = graph.compile().unwrap();
+        let _ = compiled.run(initial_state).await.unwrap();
 
         let events = observer.events.lock().await;
         assert_eq!(
