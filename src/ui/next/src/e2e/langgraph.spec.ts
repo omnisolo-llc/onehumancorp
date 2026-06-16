@@ -12,8 +12,8 @@ test.describe('LangGraph State Machine', () => {
     // Check that the title exists
     await expect(page.locator('h1')).toHaveText('LangGraph State Machine');
 
-    // Instruct the agent to use the TodoWrite tool, proving that it routes to tool_node and back
-    await page.fill('textarea[placeholder*="Write a quick poem about a cake"]', 'Use the TodoWrite tool to write a single todo item: "Buy milk". Then confirm you have done so.');
+    // Instruct the agent to use the Bash tool, proving that it routes to tool_node and back
+    await page.fill('textarea[placeholder*="Write a quick poem about a cake"]', 'Use the Bash tool to execute "echo hello". Then confirm you have done so.');
 
     // Click the execute button
     await page.click('button:has-text("Run LangGraph")');
@@ -23,6 +23,6 @@ test.describe('LangGraph State Machine', () => {
 
     // Verify the text content indicates that the tool was actually used and completed
     const resultText = await page.locator('pre').textContent();
-    expect(resultText?.toLowerCase()).toContain('buy milk');
+    expect(resultText?.toLowerCase()).toContain('hello');
   });
 });
