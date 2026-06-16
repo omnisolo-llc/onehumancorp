@@ -98,7 +98,17 @@ export class SyncManager {
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
+      // Separate CRDT deltas from general offline sync
+      const crdtDeltas = queue.filter(m => m.type === 'crdt_delta').map(m => {
+        return {
+          id: m.id,
+          entity_id: m.entity_id || 'unknown',
+          data: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload),
+          updated_at: new Date(m.timestamp || Date.now()).toISOString()
+        };
+      });
+
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'crdt_delta').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
@@ -204,6 +214,22 @@ export class SyncManager {
         if (!resGen.ok) {
           allOk = false;
           throw new Error(`General Sync failed with status ${resGen.status}`);
+        }
+      }
+
+      // Sync CRDT deltas
+      if (crdtDeltas.length > 0) {
+        const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ tenant_id: tenantId, deltas: crdtDeltas })
+        });
+        if (!resCrdt.ok) {
+          allOk = false;
+          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
         }
       }
 
