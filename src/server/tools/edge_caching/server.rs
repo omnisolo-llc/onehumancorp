@@ -93,7 +93,7 @@ impl EdgeCachingMcpServer {
                 let seo_metadata = &params["seo_metadata"];
 
                 async {
-                    let key = format!("tenant:{}:product:{}:inventory", tenant_id, product_id);
+                    let _key = format!("tenant:{}:product:{}:inventory", tenant_id, product_id);
                     // In a real implementation, we would fetch from Redis here.
                     // For the simulation, we'll return a mock value.
                     let inventory_count = 42; // Mock value
