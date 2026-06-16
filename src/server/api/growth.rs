@@ -1665,22 +1665,25 @@ async fn handle_get_milestone_card(
             .into_response();
     }
 
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
       <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#grad1)" />
+  <rect width="1200" height="630" fill="url(#grad1)" rx="24" ry="24" filter="url(#drop-shadow)" />
 
-  <text x="600" y="200" font-family="sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+  <text x="600" y="200" font-family="Outfit, sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
+  <text x="600" y="350" font-family="Outfit, sans-serif" font-size="80" font-weight="700" text-anchor="middle" fill="#ffffff">{title}</text>
+  <text x="600" y="450" font-family="Outfit, sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
 
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
-  <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
+  <text x="600" y="560" font-family="Outfit, sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
 </svg>"##,
     grad_start = grad_start,
