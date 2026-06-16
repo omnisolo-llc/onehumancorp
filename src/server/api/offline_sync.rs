@@ -97,10 +97,11 @@ pub async fn offline_sync_handler(
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
+                        .bind(mutation.quantity_deducted)
                         .execute(&mut *db_tx)
                         .await;
 

@@ -140,4 +140,9 @@ beforeEach(() => {
     });
   });
 
+  it('renders the PoweredByOHC component', () => {
+    render(<CheckoutPage />);
+    const components = screen.getAllByTestId('powered-by-ohc');
+    expect(components.length).toBeGreaterThan(0);
+  });
 });
