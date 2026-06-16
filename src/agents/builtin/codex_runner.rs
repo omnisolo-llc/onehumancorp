@@ -355,6 +355,75 @@ impl AppServer {
         }
 
 
+        if req.method == "test_guardrails" {
+            let project_trusted = req
+                .params
+                .get("project_trusted")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let allowed_tools: Vec<String> = req
+                .params
+                .get("allowed_tools")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
+
+            let high_risk_tools: Vec<String> = req
+                .params
+                .get("high_risk_tools")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
+
+            let tool_to_run = req
+                .params
+                .get("tool_to_run")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let safe_tools_for_untrusted = vec!["read_file".to_string(), "list_files".to_string()];
+
+            let gater = crate::guardrails::anthropic_hooks::AnthropicToolGater::new(
+                project_trusted,
+                safe_tools_for_untrusted,
+                allowed_tools,
+                high_risk_tools,
+            );
+
+            let tool_call = crate::types::ToolCall {
+                id: "test-call-1".to_string(),
+                name: tool_to_run.clone(),
+                arguments: serde_json::json!({}),
+            };
+
+            use crate::guardrails::ToolGuardrail;
+            let result_json = match gater.check_tool(&tool_call) {
+                Ok(_) => {
+                    serde_json::json!({
+                        "status": "allowed",
+                        "message": format!("Tool '{}' passed all 3 guardrail stages successfully.", tool_to_run)
+                    })
+                }
+                Err(e) => {
+                    serde_json::json!({
+                        "status": "blocked",
+                        "message": e
+                    })
+                }
+            };
+
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(result_json),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        }
+
         if req.method == "run_expert_team" {
             let initial_message = req
                 .params
