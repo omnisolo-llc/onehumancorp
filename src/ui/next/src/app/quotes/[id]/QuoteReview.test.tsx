@@ -1,23 +1,41 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QuoteReviewPage from './page';
 import { useParams, useRouter } from 'next/navigation';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { TooltipProvider } from '../../../components/TooltipRegistry';
 
-jest.mock('next/navigation', () => ({
-  useParams: jest.fn(),
-  useRouter: jest.fn(),
+vi.mock('next/navigation', () => ({
+  useParams: vi.fn(),
+  useRouter: vi.fn(),
+  usePathname: vi.fn(() => '/quotes/123'),
 }));
 
 describe('QuoteReviewPage', () => {
-  const mockRouter = { back: jest.fn(), push: jest.fn() };
+  const mockRouter = { back: vi.fn(), push: vi.fn() };
 
   beforeEach(() => {
-    (useParams as jest.Mock).mockReturnValue({ id: '123' });
-    (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    global.fetch = jest.fn() as jest.Mock;
+    vi.clearAllMocks();
+    (useParams as any).mockReturnValue({ id: '123' });
+    (useRouter as any).mockReturnValue(mockRouter);
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/tooltips') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    }) as any;
+    // Mock window.alert
+    global.alert = vi.fn();
   });
 
   it('renders quote details and allows approval', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         id: '123',
@@ -28,20 +46,24 @@ describe('QuoteReviewPage', () => {
       }),
     });
 
-    render(<QuoteReviewPage />);
+    render(
+      <TooltipProvider>
+        <QuoteReviewPage />
+      </TooltipProvider>
+    );
 
     await waitFor(() => expect(screen.getByText('Item 1 (x1)')).toBeInTheDocument());
-    expect(screen.getByText('00.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0);
 
     const approveBtn = screen.getByText('Approve & Send Quote');
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ status: 'ACCEPTED', stripe_payment_link: 'http://stripe.com' })
     });
 
     fireEvent.click(approveBtn);
-    // Note: window.alert might need mocking if it fails in jsdom
     await waitFor(() => expect(screen.getByText('ACCEPTED')).toBeInTheDocument());
+    expect(global.alert).toHaveBeenCalled();
   });
 });

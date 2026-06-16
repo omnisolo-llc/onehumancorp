@@ -29,7 +29,7 @@ impl DepositFollowUpWorker {
     }
 
     pub async fn poll(&self) -> Result<bool, String> {
-        let overdue_quotes = match &self.db.store {
+        let row_data = match &self.db.store {
             crate::db::DbStore::Postgres => {
                 sqlx::query(
                     r#"
@@ -46,6 +46,14 @@ impl DepositFollowUpWorker {
                 .fetch_optional(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?
+                .map(|r| {
+                    (
+                        r.get::<Uuid, _>("id"),
+                        r.get::<String, _>("tenant_id"),
+                        r.get::<String, _>("customer_name"),
+                        r.get::<i64, _>("total_amount_cents")
+                    )
+                })
             },
             crate::db::DbStore::Sqlite(pool) => {
                 sqlx::query(
@@ -63,14 +71,18 @@ impl DepositFollowUpWorker {
                 .fetch_optional(pool)
                 .await
                 .map_err(|e| e.to_string())?
+                .map(|r| {
+                    (
+                        Uuid::parse_str(&r.get::<String, _>("id")).unwrap_or_default(),
+                        r.get::<String, _>("tenant_id"),
+                        r.get::<String, _>("customer_name"),
+                        r.get::<i64, _>("total_amount_cents")
+                    )
+                })
             }
         };
 
-        if let Some(row) = overdue_quotes {
-            let quote_id: Uuid = row.get("id");
-            let tenant_id: String = row.get("tenant_id");
-            let customer_name: String = row.get("customer_name");
-            let amount: i64 = row.get("total_amount_cents");
+        if let Some((quote_id, tenant_id, customer_name, amount)) = row_data {
 
             let follow_up_msg = format!(
                 "Hi {}, just following up on the estimate for ${:.2}. Let me know if you have any questions or are ready to move forward with the deposit!",
