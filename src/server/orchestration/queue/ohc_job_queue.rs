@@ -18,7 +18,7 @@ pub struct OHCJob {
 }
 
 pub struct OHCJobQueue {
-    pool: Arc<PgPool>,
+    pub pool: Arc<PgPool>,
 }
 
 impl OHCJobQueue {

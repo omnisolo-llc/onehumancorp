@@ -8,6 +8,7 @@ use crate::db::DB;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use ohc_builtin_agent::memory_store::VectorRepository;
+use crate::orchestration::queue::{OHCJobQueue};
 
 #[derive(Serialize)]
 pub struct MemoryResponse {
@@ -27,6 +28,13 @@ pub struct OverrideRequest {
     pub content: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct UploadDocumentRequest {
+    pub content: String,
+    pub source_type: String,
+    pub metadata: Option<String>,
+}
+
 pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<(dyn crate::mesh_handler::MeshTransport + 'static)>> {
     let repo = if matches!(db.store, crate::db::DbStore::Postgres) {
         Arc::new(VectorRepository::new(db.pool.clone()))
@@ -36,14 +44,18 @@ pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<(dyn crate::mesh_handler::Me
             _ => unreachable!(),
         }
     };
+
+    // Add job queue
+    let queue = Arc::new(OHCJobQueue::new(db.pool.clone()));
+
     Router::new()
-        .route("/", get(list_memories))
+        .route("/", get(list_memories).post(upload_document))
         .route("/:id/override", post(override_memory))
-        .with_state(repo)
+        .with_state((repo, queue))
 }
 
 async fn list_memories(
-    State(repo): State<Arc<VectorRepository>>,
+    State((repo, _queue)): State<(Arc<VectorRepository>, Arc<OHCJobQueue>)>,
     auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<Vec<MemoryResponse>>, (axum::http::StatusCode, String)> {
     let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
@@ -66,7 +78,7 @@ async fn list_memories(
 }
 
 async fn override_memory(
-    State(repo): State<Arc<VectorRepository>>,
+    State((repo, _queue)): State<(Arc<VectorRepository>, Arc<OHCJobQueue>)>,
     Path(id): Path<String>,
     auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<OverrideRequest>,
@@ -90,6 +102,26 @@ async fn override_memory(
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     Ok(Json(serde_json::json!({"success": true})))
+}
+
+async fn upload_document(
+    State((_repo, queue)): State<(Arc<VectorRepository>, Arc<OHCJobQueue>)>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<UploadDocumentRequest>,
+) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+    let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
+
+    // We enqueue to ohc_job_queue
+    let job_payload = serde_json::json!({
+        "content": payload.content,
+        "source_type": payload.source_type,
+        "metadata": payload.metadata,
+    });
+
+    let id = queue.enqueue(&tenant_id, "knowledge_document_embedding", &job_payload).await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    Ok(Json(serde_json::json!({"success": true, "id": id})))
 }
 
 #[cfg(test)]
@@ -152,7 +184,11 @@ mod tests {
             role: "owner".to_string(),
         };
 
-        let result = list_memories(State(repo.clone()), axum::extract::Extension(auth_info)).await;
+        let pool = sqlx::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/test").await.unwrap();
+        let queue = Arc::new(OHCJobQueue::new(pool));
+
+        let result = list_memories(State((repo.clone(), queue)), axum::extract::Extension(auth_info)).await;
 
         assert!(result.is_ok());
         let memories = result.unwrap().0;
@@ -193,8 +229,12 @@ mod tests {
             content: Some("New content".to_string()),
         };
 
+        let pool = sqlx::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/test").await.unwrap();
+        let queue = Arc::new(OHCJobQueue::new(pool));
+
         let result = override_memory(
-            State(repo.clone()),
+            State((repo.clone(), queue)),
             Path("test_mem_override".to_string()),
             axum::extract::Extension(auth_info.clone()),
             Json(override_req),
@@ -241,8 +281,12 @@ mod tests {
             content: None,
         };
 
+        let pool = sqlx::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/test").await.unwrap();
+        let queue = Arc::new(OHCJobQueue::new(pool));
+
         let result = override_memory(
-            State(repo.clone()),
+            State((repo.clone(), queue)),
             Path("test_mem_forbidden".to_string()),
             axum::extract::Extension(auth_info),
             Json(override_req),

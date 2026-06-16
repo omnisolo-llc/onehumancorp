@@ -8,17 +8,36 @@ export default function KnowledgePage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isReady, setIsReady] = useState(true);
+  const [uploadContent, setUploadContent] = useState("");
 
   const handleUpload = () => {
     setIsSyncing(true);
     setIsReady(false);
 
-    // Simulate API call
-    setTimeout(() => {
+    // In a real application, you would read a file or a text area.
+    // For this e2e scenario, we send some content.
+    fetch("/api/v1/memory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content: uploadContent || "New Policy Document content...",
+        source_type: "DOCUMENT"
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
       setIsSyncing(false);
       setIsReady(true);
-      setDocuments([...documents, { id: Date.now(), name: "New Policy Document.pdf", status: "Active" }]);
-    }, 2000);
+      if (data.success) {
+        setDocuments([...documents, { id: data.id, name: "New Policy Document.pdf", status: "Active" }]);
+        setUploadContent("");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      setIsSyncing(false);
+      setIsReady(true);
+    });
   };
 
   return (
@@ -31,6 +50,16 @@ export default function KnowledgePage() {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Upload policies, FAQs, and business documents. The Knowledge Assistant will use these to answer customer questions and draft accurate responses.
           </p>
+
+          <div className="mb-4">
+            <textarea
+              className="w-full p-3 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+              rows={4}
+              placeholder="Paste document content here..."
+              value={uploadContent}
+              onChange={e => setUploadContent(e.target.value)}
+            />
+          </div>
 
           <button
             onClick={handleUpload}

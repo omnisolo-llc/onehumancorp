@@ -14,6 +14,7 @@ exports_files(
         "mod.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",
+        "knowledge_worker.rs",
     ],
     visibility = ["//visibility:public"],
 )
