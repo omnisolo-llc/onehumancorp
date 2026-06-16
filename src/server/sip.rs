@@ -128,20 +128,20 @@ impl SipDB {
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(threshold_time)
+                    .bind(threshold_time.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(threshold_time)
+                    .bind(threshold_time.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 let dead_letter_threshold = Utc::now() - chrono::Duration::days(7);
                 sqlx::query("DELETE FROM department_dead_letters WHERE created_at < $1 AND tenant_id = $2")
-                    .bind(dead_letter_threshold)
+                    .bind(dead_letter_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -192,13 +192,13 @@ impl SipDB {
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, 'Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
+                    .bind(stuck_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
+                    .bind(stuck_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -216,19 +216,19 @@ impl SipDB {
                     .await?;
 
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stale', 'agent_missions', payload, 'Mission became stale' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
-                    .bind(fail_threshold)
+                    .bind(fail_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
-                    .bind(fail_threshold)
+                    .bind(fail_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
-                    .bind(fail_threshold)
+                    .bind(fail_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
