@@ -2800,6 +2800,10 @@ pub async fn handle_embed_widget(
   <p>Workspace: {}</p>
   <button id="start-btn" data-type="{}">Start {}</button>
 
+  <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
+    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+  </div>
+
   <script>
     document.getElementById('start-btn').addEventListener('click', function() {{
       alert('Demand captured for ' + this.getAttribute('data-type'));
@@ -2807,7 +2811,7 @@ pub async fn handle_embed_widget(
   </script>
 </body>
 </html>"#,
-        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
+        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type, escaped_tenant
     );
     axum::response::Html(html)
 }
