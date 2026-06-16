@@ -1,6 +1,7 @@
+"use client";
 import React, { useState } from 'react';
 
-export function OneTapReferral({ tenantId, source }: { tenantId: string, source: string }) {
+export function OneTapReferral({ tenantId, source, style }: { tenantId: string, source: string, style?: any }) {
   const [copied, setCopied] = useState(false);
   const referralLink = `/onboarding?ref=${tenantId}&source=${source}`;
 
@@ -11,7 +12,7 @@ export function OneTapReferral({ tenantId, source }: { tenantId: string, source:
   };
 
   return (
-    <div className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-sm border border-indigo-100 rounded-xl shadow-sm text-center">
+    <div className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-sm border border-indigo-100 rounded-xl shadow-sm text-center" style={style}>
       <h3 className="font-bold font-outfit text-indigo-900 mb-1">Refer & Earn $50</h3>
       <p className="text-xs text-indigo-700 mb-3">Invite a friend to OHC and you both get rewarded!</p>
       <div className="flex gap-2 justify-center">

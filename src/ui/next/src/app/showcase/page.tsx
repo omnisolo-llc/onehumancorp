@@ -4,7 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import { useSearchParams } from 'next/navigation';
 
+import { Suspense } from "react";
 export default function PublicShowcasePage() {
+  return (
+    <Suspense fallback={<div>Loading showcase...</div>}>
+      <PublicShowcasePageInner />
+    </Suspense>
+  );
+}
+
+function PublicShowcasePageInner() {
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
 

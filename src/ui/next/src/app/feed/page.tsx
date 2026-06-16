@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AppShell } from '../components/AppShell';
 
 interface FeedItem {
@@ -183,15 +184,21 @@ export default function FeedPage() {
         )}
 
         <div className="flex flex-col gap-4">
+          <AnimatePresence>
           {items.map((item) => {
             const isProcessing = processingId === item.id;
             const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
 
             return (
-              <div
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: isProcessing ? 0.5 : 1, y: 0, scale: isProcessing ? 0.98 : 1 }}
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                className={`glassmorphism p-5 relative overflow-hidden`}
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
@@ -287,9 +294,10 @@ export default function FeedPage() {
                     Dismiss
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
+        </AnimatePresence>
         </div>
 
         {/* Hidden test button to trigger simulation easily during development/testing */}
