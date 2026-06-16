@@ -191,7 +191,32 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote');
+      // Sync CRDT Deltas
+      const crdtDeltas = queue.filter(m => m.type === 'crdt_delta').map(m => {
+        return {
+          id: m.id,
+          entity_id: m.entity_id,
+          data: typeof m.data === 'string' ? m.data : JSON.stringify(m.data),
+          updated_at: new Date(m.timestamp || Date.now()).toISOString()
+        };
+      });
+
+      if (crdtDeltas.length > 0) {
+        const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ deltas: crdtDeltas })
+        });
+        if (!resCrdt.ok) {
+          allOk = false;
+          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
+        }
+      }
+
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'crdt_delta' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
