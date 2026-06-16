@@ -88,7 +88,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
-    await page.getByRole('button', { name: /Launch Store/i }).click({ force: true });
+    await page.getByRole('button', { name: /Approve & Go Live/i }).click({ force: true });
 
     // 8. Verify it transitions to Live Screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
