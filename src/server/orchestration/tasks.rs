@@ -423,6 +423,7 @@ impl TaskDecompositionService {
         let deliberation_log = Some(delib_val.to_string());
 
         Ok(SharedTask {
+            location_id: None,
             id: row.get("id"),
             organization_id: row.get("organization_id"),
             mission_id: row.get("mission_id"),
@@ -474,6 +475,7 @@ impl TaskDecompositionService {
             .with_timezone(&Utc);
 
         Ok(SharedTask {
+            location_id: None,
             id: row.get("id"),
             organization_id: row.get("organization_id"),
             mission_id: row.get("mission_id"),
@@ -518,6 +520,7 @@ impl TaskDecompositionService {
                 let dt_updated: chrono::DateTime<chrono::Utc> = row.get("updated_at");
 
                 Ok(SharedTask {
+            location_id: None,
                     id: row.get("id"),
                     organization_id: row.get("organization_id"),
                     mission_id: row.get("mission_id"),
@@ -604,6 +607,7 @@ impl TaskDecompositionService {
                         .unwrap_or_else(|_| Utc::now());
 
                 Ok(SharedTask {
+            location_id: None,
                     id: row.get("id"),
                     organization_id: row.get("organization_id"),
                     mission_id: row.get("mission_id"),
@@ -1037,6 +1041,7 @@ mod tests {
 
         let task_id = "test-mission-123";
         let task = crate::tasks::SharedTask {
+            location_id: None,
             id: task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-123".to_string(),
@@ -1077,6 +1082,7 @@ mod tests {
         // Simulate failure
         let fail_task_id = "test-fail-123";
         let fail_task = crate::tasks::SharedTask {
+            location_id: None,
             id: fail_task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -1193,6 +1199,7 @@ mod tests {
 
         // Create task 1
         let task1 = crate::tasks::SharedTask {
+            location_id: None,
             id: "task-1".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -1218,6 +1225,7 @@ mod tests {
 
         // Create task 2 depending on task 1
         let task2 = crate::tasks::SharedTask {
+            location_id: None,
             id: "task-2".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -1355,6 +1363,7 @@ mod tests {
 
         // Create task 1
         let task1 = crate::tasks::SharedTask {
+            location_id: None,
             id: "task-pg-1".to_string(),
             organization_id: "org-pg".to_string(),
             mission_id: "mission-pg".to_string(),
@@ -1381,6 +1390,7 @@ mod tests {
         // If creation succeeded (DB migrated), let's proceed to task 2
         if let Ok(_) = service.get_task("task-pg-1").await {
             let task2 = crate::tasks::SharedTask {
+            location_id: None,
                 id: "task-pg-2".to_string(),
                 organization_id: "org-pg".to_string(),
                 mission_id: "mission-pg".to_string(),

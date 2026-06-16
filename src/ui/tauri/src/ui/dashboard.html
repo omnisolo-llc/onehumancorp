@@ -587,6 +587,15 @@
     </div>
 
     <div class="container">
+
+    <!-- Escalations Feed (Owner View) -->
+    <div id="escalations-feed" class="dashboard-card hidden" style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+        <h2>Regional Escalations</h2>
+        <div id="escalations-list" style="margin-top: 16px;">
+            <p style="color: var(--text-secondary); font-size: 14px;">No pending escalations.</p>
+        </div>
+    </div>
+
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
       <div class="ohc-growth-card" id="promoter-card" style="margin-top: 20px;">
@@ -3228,6 +3237,52 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
+</script>
+<script>
+
+    // Owner Escalation Fetch
+    async function loadEscalations() {
+        const feed = document.getElementById('escalations-feed');
+        if (!feed) return;
+        feed.classList.remove('hidden');
+
+        let tenantId = localStorage.getItem('tenant_id') || 'default';
+        try {
+            const res = await fetch('/api/v1/locations/escalations', {
+                headers: { 'x-tenant-id': tenantId }
+            });
+            const escalations = await res.json();
+            renderEscalations(escalations);
+        } catch(e) {
+             const list = document.getElementById('escalations-list');
+             list.innerHTML = 'Error loading escalations';
+        }
+    }
+
+    function renderEscalations(escalations) {
+        const list = document.getElementById('escalations-list');
+        list.innerHTML = '';
+        if (escalations.length === 0) {
+            list.innerHTML = '<p>No pending escalations.</p>';
+            return;
+        }
+
+        escalations.forEach(esc => {
+            list.innerHTML += `
+                <div style="border-left: 3px solid #FF3B30; padding-left: 12px; margin-bottom: 12px;">
+                    <h3 style="font-size: 14px; margin-bottom: 4px;">Escalation</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${esc.summary}</p>
+                    <div style="display: flex; gap: 8px;">
+                        <button style="padding: 4px 8px; background: #0066FF; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Approve IT Request</button>
+                        <button style="padding: 4px 8px; background: transparent; border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 4px; font-size: 12px; cursor: pointer;">Message Jun</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    setTimeout(loadEscalations, 1000);
+
 </script>
 </body>
 </html>

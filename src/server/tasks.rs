@@ -27,6 +27,7 @@ pub struct SharedTask {
     pub action_risk: Option<ActionRisk>,
     pub approval_status: Option<String>,
     pub proposed_content: Option<String>,
+    pub location_id: Option<String>,
 }
 
 impl SharedTask {
@@ -124,6 +125,7 @@ impl TaskManager {
 
     pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
+
     }
 
     pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
@@ -144,6 +146,7 @@ impl TaskManager {
         };
 
         let task = SharedTask {
+            location_id: None,
             id: id.clone(),
             organization_id: org_id,
             mission_id,

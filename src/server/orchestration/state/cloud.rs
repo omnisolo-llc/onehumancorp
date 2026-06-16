@@ -231,6 +231,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             let payload = payload_val.to_string();
 
             tasks.push(SharedTask {
+                        location_id: None,
                 id: id_str,
                 organization_id: tenant_id,
                 mission_id: row.get("mission_id"),

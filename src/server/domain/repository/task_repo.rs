@@ -425,6 +425,7 @@ mod tests {
         let org_id = "org_1".to_string();
 
         let task = Task {
+            location_id: None,
             id: "task_1".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,
@@ -455,6 +456,7 @@ mod tests {
         let org_id = "org_1".to_string();
 
         let task = Task {
+            location_id: None,
             id: "task_1".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,
@@ -488,6 +490,7 @@ mod tests {
         let org_id = "org_1".to_string();
 
         let task1 = Task {
+            location_id: None,
             id: "task_1".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,
@@ -501,6 +504,7 @@ mod tests {
         repo.create_task(task1).await.unwrap();
 
         let task2 = Task {
+            location_id: None,
             id: "task_2".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,
@@ -531,6 +535,7 @@ mod tests {
         let org_id = "org_1".to_string();
 
         let task1 = Task {
+            location_id: None,
             id: "task_1".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,
@@ -544,6 +549,7 @@ mod tests {
         repo.create_task(task1).await.unwrap();
 
         let task2 = Task {
+            location_id: None,
             id: "task_2".to_string(),
             organization_id: org_id.clone(),
             parent_task_id: None,

@@ -13,6 +13,7 @@ pub struct Task {
     pub assigned_agent_role: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub location_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -371,4 +372,35 @@ pub struct LedgerEntry {
     pub entry_type: String,
     pub reference_id: String,
     pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Location {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocationRoleAssignment {
+    pub id: String,
+    pub tenant_id: String,
+    pub user_id: String,
+    pub location_id: String,
+    pub role: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Escalation {
+    pub id: String,
+    pub tenant_id: String,
+    pub task_id: String,
+    pub summary: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }

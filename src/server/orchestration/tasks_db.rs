@@ -103,6 +103,7 @@ impl TaskDbService {
             .unwrap_or_default();
 
         SharedTask {
+            location_id: None,
             id: row.get("id"),
             organization_id: row.get("organization_id"),
             parent_plan_id: parent_plan_id_opt.unwrap_or_default(),
@@ -166,6 +167,7 @@ impl TaskDbService {
 
 
         SharedTask {
+            location_id: None,
             id: row.get("id"),
             organization_id: row.get("organization_id"),
             parent_plan_id: parent_plan_id_opt.unwrap_or_default(),

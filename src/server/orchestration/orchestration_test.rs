@@ -120,6 +120,7 @@ async fn test_task_decomposition_service() {
 
     let now = Utc::now();
     let dep_task = SharedTask {
+            location_id: None,
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
         mission_id: "m1".to_string(),
@@ -143,6 +144,7 @@ async fn test_task_decomposition_service() {
     };
 
     let main_task = SharedTask {
+            location_id: None,
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
         mission_id: "m1".to_string(),
@@ -277,6 +279,7 @@ async fn test_task_decomposition_dag_blocked() {
 
     let now = Utc::now();
     let dep_task = SharedTask {
+            location_id: None,
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
         mission_id: "m1".to_string(),
@@ -300,6 +303,7 @@ async fn test_task_decomposition_dag_blocked() {
     };
 
     let main_task = SharedTask {
+            location_id: None,
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
         mission_id: "m1".to_string(),
@@ -442,6 +446,7 @@ async fn test_task_decomposition_service_fail_task() {
 
     let now = Utc::now();
     let main_task = SharedTask {
+            location_id: None,
         id: uuid::Uuid::new_v4().to_string(),
         organization_id: "org1".to_string(),
         mission_id: "m1".to_string(),

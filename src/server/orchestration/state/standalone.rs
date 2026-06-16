@@ -316,6 +316,7 @@ impl StateManager for StandaloneStateManager {
                     .with_timezone(&Utc);
 
                 let t = SharedTask {
+                        location_id: None,
                     id: id.clone(),
                     organization_id: tenant_id,
                     mission_id: row.get("mission_id"),

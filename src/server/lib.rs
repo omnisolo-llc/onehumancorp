@@ -4724,9 +4724,9 @@ async fn ui_dashboard_unified_feed_handler(
                 tokio::spawn(async move { load_ui_priority_tasks_from_db(&db7, &t7, mobile_optimized).await })
             );
 
-            let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -4774,9 +4774,9 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await })
     );
 
-    let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -6141,6 +6141,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
+        .nest("/api/v1/locations", api::locations::router().with_state(db.pool.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -6173,6 +6174,12 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
+        }))
+        .route("/api/ui/location-manager.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/location-manager.html"))
+        }))
+        .route("/api/ui/dashboard.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
