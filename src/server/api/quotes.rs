@@ -261,6 +261,10 @@ mod tests {
             customer_id: "c1".to_string(),
             status: "DRAFT".to_string(),
             valid_until: Some(chrono::Utc::now()),
+            total_amount: None,
+            required_deposit: None,
+            checkout_url: None,
+            signature_hash: None,
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
         };
