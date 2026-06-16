@@ -35,7 +35,7 @@ export const MasterMenu: React.FC = () => {
   });
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
+    <Box flexDirection="column" borderStyle="round" borderColor="white" padding={1} >
       <Text bold color="cyan" marginBottom={1}>Select an action (Use Up/Down arrows):</Text>
       {options.map((option, index) => {
         const isSelected = index === selectedIndex;
