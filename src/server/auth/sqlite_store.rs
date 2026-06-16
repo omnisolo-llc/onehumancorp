@@ -14,7 +14,7 @@ fn is_multitenant_mode() -> bool {
 }
 
 use sqlx::Row;
-use super::postgres_store::UserRepository;
+
 
 
 macro_rules! validate_org_id {
@@ -41,7 +41,7 @@ impl SqliteUserRepository {
 }
 
 #[async_trait]
-impl UserRepository for SqliteUserRepository {
+impl crate::user_repository::UserRepository for SqliteUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
@@ -382,6 +382,7 @@ impl UserRepository for SqliteUserRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::user_repository::UserRepository;
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use sqlx::sqlite::SqlitePoolOptions;

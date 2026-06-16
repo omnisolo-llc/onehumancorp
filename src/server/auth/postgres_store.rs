@@ -56,7 +56,7 @@ impl PgUserRepository {
 }
 
 #[async_trait]
-impl UserRepository for PgUserRepository {
+impl crate::user_repository::UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
@@ -491,6 +491,7 @@ impl UserRepository for PgUserRepository {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+    use crate::user_repository::UserRepository;
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;

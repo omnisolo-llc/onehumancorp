@@ -1,4 +1,4 @@
-use super::postgres_store::UserRepository;
+use crate::user_repository::UserRepository;
 use super::postgres_store::PgUserRepository;
 use super::User;
 use std::time::Duration;

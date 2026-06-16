@@ -5,10 +5,11 @@ pub use ::server_oidc as oidc;
 
 pub mod orchestration;
 pub mod postgres_store;
+
 pub mod sqlite_store;
+pub mod user_repository;
 pub mod grpc;
 
-use std::collections::HashMap;
 
 pub async fn guest_auth_middleware(
     mut req: axum::extract::Request,
@@ -33,7 +34,6 @@ pub async fn guest_auth_middleware(
     next.run(req).await
 }
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -87,9 +87,7 @@ fn hash(password: String, cost: u32) -> Result<String, String> {
     bcrypt::hash(password, cost).map_err(|e| e.to_string())
 }
 
-fn verify(password: &str, hash: &str) -> Result<bool, String> {
-    bcrypt::verify(password, hash).map_err(|e| e.to_string())
-}
+
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
@@ -137,18 +135,14 @@ pub struct OIDCConfig {
 }
 
 pub struct Store {
-    users: RwLock<HashMap<String, User>>,
-    by_name: RwLock<HashMap<TenantKey, String>>,
-    by_email: RwLock<HashMap<TenantKey, String>>,
-    by_oidc: RwLock<HashMap<TenantKey, String>>,
-    revoked: RwLock<HashMap<String, DateTime<Utc>>>,
+    pub repo: std::sync::Arc<dyn crate::user_repository::UserRepository>,
     redis_client: Option<redis::Client>,
-    secret: Vec<u8>,
-    oidc_cfg: RwLock<OIDCConfig>,
+    pub secret: Vec<u8>,
+    oidc_cfg: std::sync::RwLock<OIDCConfig>,
 }
 
 impl Store {
-    pub fn new() -> Self {
+    pub fn new(repo: std::sync::Arc<dyn crate::user_repository::UserRepository>) -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
@@ -203,7 +197,6 @@ impl Store {
                         let _ = file.write_all(&new_secret);
                     }
 
-                    // Ensure permissions are strictly 0o600
                     use std::os::unix::fs::PermissionsExt;
                     if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                         if (perms.mode() & 0o777) != 0o600 {
@@ -220,28 +213,6 @@ impl Store {
                 new_secret
             });
 
-        let mut roles = HashMap::new();
-        let now = Utc::now();
-
-        roles.insert(ROLE_ADMIN.to_string(), Role {
-            id: ROLE_ADMIN.to_string(),
-            name: ROLE_ADMIN.to_string(),
-            permissions: vec!["*".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_OPERATOR.to_string(), Role {
-            id: ROLE_OPERATOR.to_string(),
-            name: ROLE_OPERATOR.to_string(),
-            permissions: vec!["read".to_string(), "write".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_VIEWER.to_string(), Role {
-            id: ROLE_VIEWER.to_string(),
-            name: ROLE_VIEWER.to_string(),
-            permissions: vec!["read".to_string()],
-            created_at: now,
-        });
-
         let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
@@ -255,73 +226,25 @@ impl Store {
         };
 
         let store = Store {
-            users: RwLock::new(HashMap::new()),
-
-            by_name: RwLock::new(HashMap::new()),
-            by_email: RwLock::new(HashMap::new()),
-            by_oidc: RwLock::new(HashMap::new()),
-            revoked: RwLock::new(HashMap::new()),
+            repo,
             redis_client,
             secret,
-            oidc_cfg: RwLock::new(OIDCConfig {
+            oidc_cfg: std::sync::RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,
                 enabled,
             }),
         };
 
-        store.seed_default_admin(now);
-
         store
     }
 
-    fn seed_default_admin(&self, now: DateTime<Utc>) {
-        let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-        let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
-
-        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
-
-        let id = hex::encode(random_bytes(8));
-
-        let admin = User {
-            id: id.clone(),
-            username: admin_user.clone(),
-            email: admin_email.clone(),
-            password_hash: hash,
-            roles: vec![ROLE_ADMIN.to_string()],
-            active: true,
-            organization_id: None,
-            created_at: now,
-            updated_at: now,
-            oidc_subject: None,
-        };
-
-        self.users.write().unwrap().insert(id.clone(), admin);
-        self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
-    }
-
-    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
         if username.is_empty() {
             return Err("username is required".to_string());
         }
         if password.len() < 6 {
             return Err("password must be at least 6 characters".to_string());
-        }
-
-        let mut users = self.users.write().unwrap();
-        let mut by_name = self.by_name.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
-
-        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
-        if by_name.contains_key(&name_key) {
-            return Err("username already taken".to_string());
-        }
-
-        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
-        if by_email.contains_key(&email_key) {
-            return Err("email already registered".to_string());
         }
 
         let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
@@ -336,33 +259,69 @@ impl Store {
             password_hash: hash,
             roles,
             active: true,
-            organization_id: Some(org_id),
+            organization_id: Some(org_id.clone()),
             created_at: now,
             updated_at: now,
             oidc_subject: None,
         };
 
-        users.insert(id.clone(), user.clone());
-        by_name.insert(name_key, id.clone());
-        by_email.insert(email_key, id);
+        self.repo.create_user(user.clone(), &org_id).await?;
 
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+
+
+
+    pub async fn seed_default_admin(&self) {
+        let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+        let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
+        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+
+        if self.repo.get_by_username(&admin_user, "").await.is_err() {
+            let hash = bcrypt::hash(&admin_pass, if cfg!(test) { 4 } else { 12 }).expect("Failed to hash password");
+            let now = chrono::Utc::now();
+            let admin = User {
+                id: "admin".to_string(),
+                username: admin_user,
+                email: admin_email,
+                password_hash: hash,
+                roles: vec!["admin".to_string()],
+                active: true,
+                organization_id: None,
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            };
+            let _ = self.repo.create_user(admin, "").await;
+        }
+    }
+
+    pub async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
-        let by_name = self.by_name.read().unwrap();
-        let users = self.users.read().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
-        let mut user_id_opt = by_name.get(&name_key).cloned();
-
-        if user_id_opt.is_none() && org_id.is_empty() {
-            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+        let mut user_result = self.repo.get_by_username(username, org_id).await;
+        if user_result.is_err() {
+            user_result = self.repo.get_by_email(username, org_id).await;
         }
 
-        let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
+        // Standalone mode can fallback to empty org_id?
+        let user = match user_result {
+             Ok(u) => u,
+             Err(_e) => {
+                 if org_id.is_empty() {
+                      {
+                          let mut res = self.repo.get_by_username(username, "").await;
+                          if res.is_err() {
+                              res = self.repo.get_by_email(username, "").await;
+                          }
+                          res.map_err(|_| "invalid credentials".to_string())?
+                      }
+                 } else {
+                      return Err("invalid credentials".to_string());
+                 }
+             }
+        };
 
         if !user.active {
             return Err("account disabled".to_string());
@@ -374,14 +333,21 @@ impl Store {
             }
         }
 
-        if verify(password, &user.password_hash).unwrap_or(false) {
-            Ok(user.clone())
+        let password_hash = user.password_hash.clone();
+        let password_clone = password.to_string();
+        let is_valid = match tokio::task::spawn_blocking(move || bcrypt::verify(&password_clone, &password_hash)).await {
+             Ok(res) => res.unwrap_or(false),
+             Err(_) => false,
+        };
+
+        if is_valid {
+            Ok(user)
         } else {
             Err("invalid credentials".to_string())
         }
     }
 
-    fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
+    pub fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
         if ::server_config::get().multitenant {
             if org_id.trim().eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
@@ -393,65 +359,29 @@ impl Store {
         Ok(())
     }
 
-    pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+    pub async fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
         if self.validate_org_id(org_id).is_err() {
             return None;
         }
 
-        let users = self.users.read().unwrap();
-        let u = users.get(id)?;
-
-        if !org_id.is_empty() {
-            if let Some(ref user_org) = u.organization_id {
-                if user_org != org_id {
-                    return None;
-                }
-            } else {
-                return None;
-            }
-        }
-        Some(u.clone())
+        self.repo.get_by_id(id, org_id).await.ok()
     }
 
-    pub fn list_users(&self, org_id: &str) -> Vec<User> {
+    pub async fn list_users(&self, org_id: &str) -> Vec<User> {
         if self.validate_org_id(org_id).is_err() {
             return vec![];
         }
 
-        let users = self.users.read().unwrap();
-        users.values()
-            .filter(|u| {
-                org_id.is_empty() || u.organization_id.as_deref() == Some(org_id)
-            })
-            .cloned()
-            .collect()
+        self.repo.list_users(org_id).await.unwrap_or_default()
     }
 
-    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
 
-        let mut users = self.users.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
-
-        let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
-
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
-                 return Err("user not found".to_string());
-             }
-        }
+        let mut u = self.repo.get_by_id(id, org_id).await?;
 
         if let Some(email) = email_ptr {
-            if email != u.email {
-                let org = u.organization_id.clone().unwrap_or_default();
-                let email_key = TenantKey { org_id: org, key: email.clone() };
-                if by_email.contains_key(&email_key) {
-                    return Err("email already registered".to_string());
-                }
-                by_email.remove(&TenantKey { org_id: u.organization_id.clone().unwrap_or_default(), key: u.email.clone() });
-                u.email = email;
-                by_email.insert(email_key, id.to_string());
-            }
+            u.email = email;
         }
 
         if let Some(r) = roles {
@@ -464,35 +394,15 @@ impl Store {
 
         u.updated_at = Utc::now();
 
-        Ok(u.clone())
+        self.repo.update_user(u.clone(), org_id).await?;
+
+        Ok(u)
     }
 
-    pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+    pub async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         self.validate_org_id(org_id)?;
 
-        let mut users = self.users.write().unwrap();
-        let mut by_name = self.by_name.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
-        let mut by_oidc = self.by_oidc.write().unwrap();
-
-        let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
-
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
-                 return Err("user not found".to_string());
-             }
-        }
-
-        let org = u.organization_id.clone().unwrap_or_default();
-        by_name.remove(&TenantKey { org_id: org.clone(), key: u.username.clone() });
-        by_email.remove(&TenantKey { org_id: org.clone(), key: u.email.clone() });
-        if let Some(ref oidc) = u.oidc_subject {
-            by_oidc.remove(&TenantKey { org_id: org, key: oidc.clone() });
-        }
-
-        users.remove(id);
-
-        Ok(())
+        self.repo.delete_user(id, org_id).await
     }
 
     pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
@@ -500,13 +410,8 @@ impl Store {
             return;
         }
 
-        {
-            let mut revoked = self.revoked.write().unwrap();
-            revoked.insert(format!("{}:{}", org_id, jti), exp);
+        let _ = self.repo.revoke_token(jti.clone(), exp, org_id).await;
 
-            let now = Utc::now();
-            revoked.retain(|_, v| *v > now);
-        }
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
@@ -521,14 +426,10 @@ impl Store {
             return false;
         }
 
-        {
-            let revoked = self.revoked.read().unwrap();
-            if let Some(exp) = revoked.get(&format!("{}:{}", org_id, jti)) {
-                 if *exp > Utc::now() {
-                     return true;
-                 }
-            }
+        if let Ok(true) = self.repo.is_revoked(jti, org_id).await {
+            return true;
         }
+
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let redis_key = format!("revoked_token:{}:{}", org_id, jti);
@@ -657,11 +558,7 @@ impl AuthServiceServerImpl {
     }
 }
 
-impl Default for Store {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
@@ -694,7 +591,7 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.store.authenticate(&req.username, &req.password, &req.organization_id).await {
             Ok(user) => {
                 match self.store.issue_token(&user) {
                     Ok(token) => {
@@ -723,7 +620,7 @@ impl AuthService for AuthServiceServerImpl {
             req.password,
             vec![ROLE_VIEWER.to_string()],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
 
         let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
 
@@ -758,7 +655,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id)
+        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -778,7 +675,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let users = self.store.list_users(&auth_info.org_id);
+        let users = self.store.list_users(&auth_info.org_id).await;
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -801,7 +698,7 @@ impl AuthService for AuthServiceServerImpl {
             "temp".to_string(),
             vec![],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -819,7 +716,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id)
+        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -841,7 +738,7 @@ impl AuthService for AuthServiceServerImpl {
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
+        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -862,7 +759,7 @@ impl AuthService for AuthServiceServerImpl {
             .map(|ai| ai.org_id.clone())
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        self.store.delete_user(&request.get_ref().id, &org_id)
+        self.store.delete_user(&request.get_ref().id, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))
@@ -902,18 +799,22 @@ impl AuthService for AuthServiceServerImpl {
 mod store_tests {
     use super::*;
 
-    #[test]
-    fn test_secret_paths_are_safe() {
-        let store = Store::new();
+    #[tokio::test]
+    async fn test_secret_paths_are_safe() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap();
+        let repo = std::sync::Arc::new(crate::sqlite_store::SqliteUserRepository::new(pool));
+        let store = Store::new(repo);
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
         assert!(!store.secret.is_empty());
     }
 
-    #[test]
-    fn test_store_validate_org_id_multitenant() {
+    #[tokio::test]
+    async fn test_store_validate_org_id_multitenant() {
         // Create an empty store just to access the validate_org_id method
-        let store = Store::new();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_lazy("sqlite::memory:").unwrap();
+        let repo = std::sync::Arc::new(crate::sqlite_store::SqliteUserRepository::new(pool));
+        let store = Store::new(repo);
 
         // In a real environment, ::server_config::get().multitenant is controlled by the config.
         // We test that `validate_org_id` properly returns an error or success based on the config.
