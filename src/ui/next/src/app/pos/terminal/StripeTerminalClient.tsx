@@ -276,9 +276,11 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-            {reserving ? 'Processing...' : `Collect Payment $${(amount / 100).toFixed(2)}`}
-          </button>
+          <WalkthroughTarget stepId="terminal-charge">
+            <button id="charge-btn" onClick={processPayment} disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+              {reserving ? 'Processing...' : `Collect Payment $${(amount / 100).toFixed(2)}`}
+            </button>
+          </WalkthroughTarget>
         </div>
       )}
     </div>

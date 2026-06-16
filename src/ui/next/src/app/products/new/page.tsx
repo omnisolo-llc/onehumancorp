@@ -349,9 +349,11 @@ function AutoCatalogContent() {
 
               <div className="mt-4 border-t border-white/40 pt-4">
                   <label className="flex items-center justify-between cursor-pointer">
-                      <div className="text-gray-900 font-bold text-sm">
-                          Split this payment
-                      </div>
+                      <WithTooltip id="tooltip-split-payment" defaultText="Automatically split revenue with partners or creators on every sale.">
+                          <div className="text-gray-900 font-bold text-sm">
+                              Split this payment
+                          </div>
+                      </WithTooltip>
                       <div className="relative">
                           <input type="checkbox" className="sr-only" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
                           <div className={`block w-10 h-6 rounded-full transition-colors ${isSplitEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
