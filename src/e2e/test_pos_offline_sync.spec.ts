@@ -25,18 +25,32 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Ensure the Offline Mode badge is visible
     await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible();
 
-    // Click "New Order" while offline
-    await memberPage.getByRole('button', { name: 'New Order' }).click();
+    // Click "Quick Charge" while offline
+    await memberPage.locator('text=Quick Charge').click();
 
     // Verify it queues the order
-    await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();
+    await expect(memberPage.locator('text=Offline Quick Charge Saved.')).toBeVisible();
 
-    // Assert the transaction was written to localStorage
-    const queuedTxs = await memberPage.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
-    });
+    // Assert the transaction was written to IndexedDB
+    const queuedTxs = await memberPage.evaluate(async () => {
+      return new Promise((resolve) => {
+        const req = indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const getAllReq = store.getAll();
+          getAllReq.onsuccess = () => resolve(getAllReq.result);
+        };
+        req.onerror = () => resolve([]);
+      });
+    }) as any[];
     expect(queuedTxs.length).toBeGreaterThan(0);
-    expect(queuedTxs[0].amount_cents).toBe(5000);
+    expect(queuedTxs[0].amount).toBe(5000);
 
     // Make network online
     await context.setOffline(false);
@@ -49,15 +63,44 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Verify "Syncing..." or Online indicator
     await expect(memberPage.locator('text=Online').first()).toBeVisible();
 
-    // Wait for the sync to complete and the local storage to be cleared
-    await memberPage.waitForFunction(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;
+    // Wait for the sync to complete and the IndexedDB queue to be cleared
+    await memberPage.waitForFunction(async () => {
+      const q = await new Promise((resolve) => {
+        const req = indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const getAllReq = store.getAll();
+          getAllReq.onsuccess = () => resolve(getAllReq.result);
+        };
+        req.onerror = () => resolve([]);
+      }) as any[];
+      return q.length === 0;
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
-    const afterSyncTxs = await memberPage.evaluate(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
-    });
+    const afterSyncTxs = await memberPage.evaluate(async () => {
+      return new Promise((resolve) => {
+        const req = indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const getAllReq = store.getAll();
+          getAllReq.onsuccess = () => resolve(getAllReq.result);
+        };
+        req.onerror = () => resolve([]);
+      });
+    }) as any[];
     expect(afterSyncTxs.length).toBe(0);
   });
 });
