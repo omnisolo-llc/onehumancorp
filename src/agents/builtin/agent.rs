@@ -2649,22 +2649,61 @@ impl Agent {
 
     /// State Management: Implementation of OpenAI's lightweight previous_response_id chaining
     pub fn chain_previous_response_id(messages: &[Message], target_id: &str) -> Option<Vec<Message>> {
-        let mut new_messages = Vec::new();
-        let mut found = false;
-        for m in messages.iter() {
-            new_messages.push(m.clone());
+        let mut target_idx = None;
+        for (i, m) in messages.iter().enumerate() {
             if let Some(rid) = &m.response_id {
                 if rid == target_id {
-                    found = true;
+                    target_idx = Some(i);
                     break;
                 }
             }
         }
-        if found {
-            Some(new_messages)
-        } else {
-            None
+
+        let target_idx = target_idx?;
+
+        let mut parent_map = std::collections::HashMap::new();
+        for i in 0..=target_idx {
+            let m = &messages[i];
+            if let Some(rid) = &m.response_id {
+                if let Some(prev) = &m.previous_response_id {
+                    parent_map.insert(rid.clone(), prev.clone());
+                } else {
+                    parent_map.insert(rid.clone(), String::new());
+                }
+            }
         }
+
+        let mut ancestor_ids = std::collections::HashSet::new();
+        ancestor_ids.insert(target_id.to_string());
+        let mut curr = target_id.to_string();
+        while let Some(prev) = parent_map.get(&curr) {
+            if prev.is_empty() {
+                break;
+            }
+            ancestor_ids.insert(prev.clone());
+            curr = prev.clone();
+        }
+
+        let mut chain = Vec::new();
+        for i in 0..=target_idx {
+            let m = &messages[i];
+
+            let should_include = if let Some(rid) = &m.response_id {
+                ancestor_ids.contains(rid)
+            } else if let Some(prev) = &m.previous_response_id {
+                // For tool results, they belong to the assistant message that spawned them
+                ancestor_ids.contains(prev) && prev != target_id
+            } else {
+                // User/System messages without response_id are always included
+                true
+            };
+
+            if should_include {
+                chain.push(m.clone());
+            }
+        }
+
+        Some(chain)
     }
 
     pub async fn run<F>(
@@ -4491,63 +4530,116 @@ mod tests {
     async fn test_state_management_lightweight_chaining() {
         use crate::types::{Message, Role, ToolResult};
 
-        // Create a fake chain of messages
+        // Create a branched chain of messages:
+        // User (root)
+        // └── Assistant(A) [resp_A]
+        //     ├── Tool(A) [prev_resp_A]
+        //     │   ├── Assistant(B) [resp_B]
+        //     │   │   └── Tool(B) [prev_resp_B]
+        //     │   └── Assistant(C) [resp_C]
+        //     │       └── Tool(C) [prev_resp_C]
+        //     │           └── Assistant(D) [resp_D]
         let messages = vec![
-            Message::user("Task: Do something"),
+            Message::user("Task: Do something"), // idx 0
+
+            // Node A
             Message {
                 role: Role::Assistant,
-                content: "Thought 1".to_string(),
+                content: "Thought A".to_string(),
                 tool_calls: vec![],
                 tool_results: vec![],
-                response_id: Some("resp_1".to_string()),
+                response_id: Some("resp_A".to_string()),
                 previous_response_id: None,
-            },
+            }, // idx 1
             Message {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![ToolResult {
-                    tool_call_id: "call_1".to_string(),
-                    content: "Result 1".to_string(),
-                    error: String::new(),
-                }],
+                tool_results: vec![ToolResult { tool_call_id: "call_A".to_string(), content: "Result A".to_string(), error: String::new() }],
                 response_id: None,
-                previous_response_id: Some("resp_1".to_string()),
-            },
+                previous_response_id: Some("resp_A".to_string()),
+            }, // idx 2
+
+            // Node B (Branch 1 from A)
             Message {
                 role: Role::Assistant,
-                content: "Thought 2".to_string(),
+                content: "Thought B".to_string(),
                 tool_calls: vec![],
                 tool_results: vec![],
-                response_id: Some("resp_2".to_string()),
-                previous_response_id: Some("resp_1".to_string()),
-            },
+                response_id: Some("resp_B".to_string()),
+                previous_response_id: Some("resp_A".to_string()),
+            }, // idx 3
             Message {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![ToolResult {
-                    tool_call_id: "call_2".to_string(),
-                    content: "Result 2".to_string(),
-                    error: String::new(),
-                }],
+                tool_results: vec![ToolResult { tool_call_id: "call_B".to_string(), content: "Result B".to_string(), error: String::new() }],
                 response_id: None,
-                previous_response_id: Some("resp_2".to_string()),
-            },
+                previous_response_id: Some("resp_B".to_string()),
+            }, // idx 4
+
+            // Node C (Branch 2 from A)
+            Message {
+                role: Role::Assistant,
+                content: "Thought C".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_C".to_string()),
+                previous_response_id: Some("resp_A".to_string()),
+            }, // idx 5
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult { tool_call_id: "call_C".to_string(), content: "Result C".to_string(), error: String::new() }],
+                response_id: None,
+                previous_response_id: Some("resp_C".to_string()),
+            }, // idx 6
+
+            // Node D (Child of C)
+            Message {
+                role: Role::Assistant,
+                content: "Thought D".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_D".to_string()),
+                previous_response_id: Some("resp_C".to_string()),
+            }, // idx 7
         ];
 
-        let prev_id = "resp_1".to_string();
-        let restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
+        // 1. Restore to resp_A
+        // Should include User, Assistant(A). It shouldn't include Tool(A) because we are restoring to before it finishes
+        let prev_id_a = "resp_A".to_string();
+        let restored_a = super::Agent::chain_previous_response_id(&messages, &prev_id_a).unwrap();
+        assert_eq!(restored_a.len(), 2);
+        assert_eq!(restored_a[1].response_id, Some("resp_A".to_string()));
 
-        // Test the actual helper method from the Agent struct
+        // 2. Restore to resp_B
+        // Should include User, Assistant(A), Tool(A), Assistant(B)
+        let prev_id_b = "resp_B".to_string();
+        let restored_b = super::Agent::chain_previous_response_id(&messages, &prev_id_b).unwrap();
+        assert_eq!(restored_b.len(), 4);
+        assert_eq!(restored_b[3].response_id, Some("resp_B".to_string()));
 
+        // 3. Restore to resp_D
+        // Should include User, Assistant(A), Tool(A), Assistant(C), Tool(C), Assistant(D)
+        // Notice Assistant(B) and Tool(B) are NOT in this chain
+        let prev_id_d = "resp_D".to_string();
+        let restored_d = super::Agent::chain_previous_response_id(&messages, &prev_id_d).unwrap();
 
-        assert!(restored_msgs.is_some());
-        let restored = restored_msgs.unwrap();
+        assert_eq!(restored_d.len(), 6);
+        assert_eq!(restored_d[0].content, "Task: Do something");
+        assert_eq!(restored_d[1].response_id, Some("resp_A".to_string()));
+        assert_eq!(restored_d[2].previous_response_id, Some("resp_A".to_string()));
+        assert_eq!(restored_d[3].response_id, Some("resp_C".to_string()));
+        assert_eq!(restored_d[4].previous_response_id, Some("resp_C".to_string()));
+        assert_eq!(restored_d[5].response_id, Some("resp_D".to_string()));
 
-        // Should contain exactly the first two messages: User + Assistant(resp_1)
-        assert_eq!(restored.len(), 2);
-        assert_eq!(restored[1].response_id, Some("resp_1".to_string()));
+        // Ensure no B components
+        for m in &restored_d {
+            assert!(m.response_id != Some("resp_B".to_string()));
+            assert!(m.previous_response_id != Some("resp_B".to_string()));
+        }
     }
 
     use crate::tools::ToolExecutor;
