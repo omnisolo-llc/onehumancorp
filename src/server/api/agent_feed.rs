@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 
@@ -18,7 +18,29 @@ use std::sync::{Arc, OnceLock};
 use futures::{sink::SinkExt, stream::StreamExt};
 use redis::AsyncCommands;
 
-pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MobileAgentFeedItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub event_source: String,
+    pub lifecycle_state: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MobileAgentFeedListResponse {
+    pub items: Vec<MobileAgentFeedItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum AnyAgentFeedListResponse {
+    Standard(AgentFeedListResponse),
+    Mobile(MobileAgentFeedListResponse),
+}
+
+pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AnyAgentFeedListResponse>>> = OnceLock::new();
 pub static SHARED_REDIS_CLIENT: OnceLock<redis::Client> = OnceLock::new();
 
 pub fn get_redis_client() -> redis::Client {
@@ -28,7 +50,7 @@ pub fn get_redis_client() -> redis::Client {
     }).clone()
 }
 
-pub fn get_agent_feed_cache() -> Arc<HybridCache<AgentFeedListResponse>> {
+pub fn get_agent_feed_cache() -> Arc<HybridCache<AnyAgentFeedListResponse>> {
     AGENT_FEED_CACHE.get_or_init(|| {
         let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         let redis_client = match redis::Client::open(redis_url) {
@@ -149,15 +171,22 @@ async fn list_feed_items(
     Query(query): Query<PaginationQuery>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(AgentFeedListResponse { items: vec![] })).into_response(),
+        None => {
+            if mobile_optimized {
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response();
+            } else {
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response();
+            }
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
-    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
 
@@ -174,9 +203,21 @@ async fn list_feed_items(
         tokio::spawn(async move {
             let repo = AgentFeedRepository::new(pool_bg);
             if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
-                let response = AgentFeedListResponse { items };
+                let any_response = if mobile_optimized {
+                    let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                        id: item.id,
+                        tenant_id: item.tenant_id,
+                        event_source: item.event_source,
+                        lifecycle_state: item.lifecycle_state,
+                        created_at: item.created_at,
+                        updated_at: item.updated_at,
+                    }).collect();
+                    AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+                } else {
+                    AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+                };
                 let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
-                cache_bg.set_with_tags(&cache_key_bg, response, vec![tag], std::time::Duration::from_secs(60)).await;
+                cache_bg.set_with_tags(&cache_key_bg, any_response, vec![tag], std::time::Duration::from_secs(60)).await;
             }
         });
 
@@ -187,14 +228,30 @@ async fn list_feed_items(
 
     match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
         Ok(items) => {
-            let response = AgentFeedListResponse { items };
+            let any_response = if mobile_optimized {
+                let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                    id: item.id,
+                    tenant_id: item.tenant_id,
+                    event_source: item.event_source,
+                    lifecycle_state: item.lifecycle_state,
+                    created_at: item.created_at,
+                    updated_at: item.updated_at,
+                }).collect();
+                AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+            } else {
+                AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+            };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
-            (StatusCode::OK, Json(response)).into_response()
+            cache.set_with_tags(&cache_key, any_response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
+            (StatusCode::OK, Json(any_response)).into_response()
         },
         Err(e) => {
             tracing::error!("Failed to list agent feed items: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(AgentFeedListResponse { items: vec![] })).into_response()
+            if mobile_optimized {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response()
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response()
+            }
         }
     }
 }
@@ -315,10 +372,9 @@ async fn update_feed_item_state(
 #[cfg(test)]
 mod tests {
     use crate::api::agent_feed;
-
 use crate::domain::action_router::ActionRouter;
-use sqlx::PgPool;
-    use super::{get_agent_feed_cache, AgentFeedListResponse, ws_feed_handler};
+    use sqlx::PgPool;
+    use super::{get_agent_feed_cache, AgentFeedListResponse, AnyAgentFeedListResponse, ws_feed_handler};
     use axum::{Router, routing::get, extract::Extension};
     use ::server_common::Claims;
     use std::net::SocketAddr;
@@ -335,16 +391,16 @@ use sqlx::PgPool;
     #[tokio::test]
     async fn test_agent_feed_cache_operations() {
         let cache = get_agent_feed_cache();
-        let cache_key = "agent_feed:test_tenant:20:0";
+        let cache_key = "agent_feed:test_tenant:20:0:false";
 
         // Ensure it's empty initially
         cache.invalidate(cache_key).await;
         let result = cache.get(cache_key).await;
         assert!(result.is_none());
 
-        let response = AgentFeedListResponse {
+        let response = AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
             items: vec![],
-        };
+        });
 
         // Set cache with tag
         cache.set_with_tags(

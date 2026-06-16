@@ -16,7 +16,7 @@ test.describe('Documentation full suite', () => {
     await searchInput.fill('Test search');
 
     // Chat widget open interaction
-    const chatBtn = page.locator('#ohc-help-btn');
+    const chatBtn = page.locator('#ohc-floating-help-btn');
     await expect(chatBtn).toBeVisible();
     await chatBtn.click();
 
