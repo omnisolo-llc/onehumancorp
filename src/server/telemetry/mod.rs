@@ -1,3 +1,5 @@
+pub mod mcp_sync_worker;
+
 pub mod forecaster;
 
 pub use ::server_config as config;
