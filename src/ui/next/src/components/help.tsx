@@ -313,8 +313,8 @@ export function HelpWidget() {
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
-                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
+                        ? "backdrop-blur-2xl bg-white/80 border border-white/60 shadow-sm text-blue-900 rounded-tl-none"
+                        : "backdrop-blur-2xl bg-white/40 border border-white/40 shadow-sm text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
