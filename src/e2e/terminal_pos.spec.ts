@@ -73,4 +73,17 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Wait for the payment success text
     await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 20000 });
   });
+
+  test('Processes Quick Charge successfully', async ({ page }) => {
+    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
+    await expect(page.getByText('Offline Quick Charge Saved.')).toBeVisible();
+  });
+
+  test('Handles offline mode and sync queue', async ({ page }) => {
+    await page.context().setOffline(true);
+    await expect(page.getByText('Offline Mode')).toBeVisible();
+    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
+    await page.context().setOffline(false);
+    await expect(page.getByText('Online')).toBeVisible();
+  });
 });
