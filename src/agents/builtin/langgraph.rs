@@ -156,6 +156,9 @@ impl<S: Clone + Send + Sync + 'static> CompiledStateGraph<S> {
         Ok(current_state)
     }
 
+    /// Pregel-inspired execution model for StateGraph.
+    /// Runs all currently active nodes concurrently (super-steps),
+    /// merging their outputs via the reducer at the end of each super-step.
     pub async fn pregel_run(&self, initial_state: S) -> Result<S, String> {
         let mut current_state = initial_state;
         let mut active_nodes = vec![self.entry_point.clone()];
