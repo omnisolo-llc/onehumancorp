@@ -614,7 +614,12 @@
       </div>
 
 
-      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
+      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
+        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
+        </div>
+      </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
 
       <div id="sold-out-toggle-falafel-container" style="display: none;">
@@ -3052,23 +3057,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
-        if (!navigator.onLine) {
-            networkIndicator.style.display = "block";
-            networkIndicator.classList.remove("hidden");
-        } else {
-            networkIndicator.style.display = "none";
-            networkIndicator.classList.add("hidden");
-        }
-
         let queue = [];
         try {
             queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
         } catch(e) {}
 
+        const dot = document.getElementById("network-status-dot");
+        const text = document.getElementById("network-status-text");
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (text) text.innerText = "Working Offline";
+        } else if (queue.length > 0) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Payments Pending Sync";
+            queueIndicator.innerText = queue.length + " Items Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -3105,6 +3120,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     payment_method: null,
                     payment_intent_id: null,
                     currency: null
+                });
+            } else if (m.type === "agent_intent") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: "agent_intent",
+                    quantity_deducted: 0,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: "usd",
+                    mutation_type: "agent_intent",
+                    payload: typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload)
                 });
             } else {
                 generalMutations.push(m);
