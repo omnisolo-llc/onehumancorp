@@ -548,7 +548,14 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
+        // Enforce the 60-second ML-Resilience rule for database operations
+        let start_time = std::time::Instant::now();
+        let timeout_duration = std::time::Duration::from_secs(60);
+
         loop {
+            if start_time.elapsed() > timeout_duration {
+                return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+            }
             match f().await {
                 Ok(val) => return Ok(val),
                 Err(err) => {
