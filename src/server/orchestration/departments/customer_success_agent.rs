@@ -182,6 +182,7 @@ impl Department for CustomerSuccessAgent {
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
+                .or_else(|| event.payload.get("content"))
                 .and_then(|v| v.as_str()).unwrap_or("");
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -270,7 +271,9 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
-            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+            let inbox_id = event.payload.get("inbox_message_id")
+                .or_else(|| event.payload.get("message_id"))
+                .and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
                 if risk == ActionRisk::AutoExecute {

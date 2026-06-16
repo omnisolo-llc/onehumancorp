@@ -94,6 +94,7 @@ pub async fn handle_omnichannel_webhook(
 
     let payload_json = serde_json::json!({
         "message_id": id,
+        "inbox_message_id": id,
         "source": payload.source,
         "content": payload.message,
         "sender_id": payload.sender_id

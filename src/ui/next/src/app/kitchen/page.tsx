@@ -91,7 +91,11 @@ export default function KitchenView() {
   };
 
   return (
+<<<<<<< HEAD
+    <AppShell title="Kitchen Command Center">
+=======
     <AppShell title="Kitchen">
+>>>>>>> 4d69dfe8 (fix(ui): correct budget alert display and nextjs build issues)
       <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-inter">
         <header className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border-b border-white/40 sticky top-0 z-50 px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold font-outfit">Kitchen Command Center</h1>

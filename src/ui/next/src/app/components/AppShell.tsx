@@ -60,6 +60,7 @@ const primaryNav: NavItem[] = [
 
 const secondaryNav: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: "calendar" },
+  { label: "LangGraph", href: "/langgraph", icon: "activity" },
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },

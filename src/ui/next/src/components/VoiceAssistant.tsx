@@ -1,6 +1,11 @@
 "use client";
 import { WithTooltip } from "./TooltipRegistry";
 
+<<<<<<< HEAD
+
+import { WithTooltip } from "./TooltipRegistry";
+=======
+>>>>>>> 4d69dfe8 (fix(ui): correct budget alert display and nextjs build issues)
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 

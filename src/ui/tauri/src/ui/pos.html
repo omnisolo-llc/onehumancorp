@@ -624,7 +624,7 @@
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  // Mock or real call for Terminal SDK would go here to set up the reader
+                  // Terminal SDK setup
               }
           } else {
               console.warn("Payment intent API returned error");
@@ -639,32 +639,28 @@
           simulateTapBtn.innerText = "Processing...";
           simulateTapBtn.style.backgroundColor = "#86868b";
 
-          // Simulate SDK processing time
-          setTimeout(() => {
-              // Tap Success
-              tapOverlay.style.display = 'none';
-              posView.style.display = 'none';
-              receiptScreen.style.display = 'flex';
+          // Tap Success
+          tapOverlay.style.display = 'none';
+          posView.style.display = 'none';
+          receiptScreen.style.display = 'flex';
 
-              // In real flow, we'd confirm the intent and sync offline txs.
-              // We simulate the offline sync for E2E validation:
-              const tenantId = localStorage.getItem('tenant_id') || 'default';
-              fetch('/api/v1/payments/terminal/sync_offline', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      session_id: 'web_session',
-                      transactions: [{
-                          id: 'tx_' + Date.now(),
-                          client_id: 'web_client',
-                          amount_cents: currentAmountCents,
-                          currency: 'usd',
-                          payload: '{}'
-                      }]
-                  })
-              }).catch(console.error);
-
-          }, 800);
+          // In real flow, we'd confirm the intent and sync offline txs.
+          // We simulate the offline sync for E2E validation:
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          fetch('/api/v1/payments/terminal/sync_offline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  session_id: 'web_session',
+                  transactions: [{
+                      id: 'tx_' + Date.now(),
+                      client_id: 'web_client',
+                      amount_cents: currentAmountCents,
+                      currency: 'usd',
+                      payload: '{}'
+                  }]
+              })
+          }).catch(console.error);
       });
 
       function cancelCharge() {

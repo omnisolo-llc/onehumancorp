@@ -1,4 +1,5 @@
 "use client";
+import { useSyncGateway } from "../../hooks/useSyncGateway";
 
 import { useSyncGateway } from "../../hooks/useSyncGateway";
 
