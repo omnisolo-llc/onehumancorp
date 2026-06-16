@@ -19,10 +19,10 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 32M
+          memory: 256M
         reservations:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
     image: onehumancorp/mono-core:latest
     pull_policy: never
     environment:
@@ -49,10 +49,10 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 32M
+          memory: 256M
         reservations:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
     image: onehumancorp/server:latest
     pull_policy: never
     environment:
@@ -118,7 +118,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
 
   valkey:
     logging:
@@ -145,7 +145,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
 
   postgres:
     logging:
@@ -175,7 +175,7 @@ services:
       resources:
         limits:
           cpus: "0.3"
-          memory: 32M
+          memory: 256M
 
   powersync:
     profiles: ["sync"]
@@ -200,7 +200,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 32M
+          memory: 256M
 
   chatwoot-migrate:
     profiles: ["chatwoot"]
@@ -252,7 +252,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 32M
+          memory: 256M
 
   chatwoot-worker:
     profiles: ["chatwoot"]
@@ -278,7 +278,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 32M
+          memory: 256M
 
   prometheus:
     profiles: ["observability"]
@@ -299,7 +299,7 @@ services:
       resources:
         limits:
           cpus: "0.05"
-          memory: 32M
+          memory: 256M
 
   grafana:
     profiles: ["observability"]
@@ -325,7 +325,7 @@ services:
       resources:
         limits:
           cpus: "0.05"
-          memory: 32M
+          memory: 256M
 
 
 
@@ -344,7 +344,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
 
   telemetry-mcp-bridge:
     profiles: ["telemetry-mcp"]
@@ -365,7 +365,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: 32M
+          memory: 256M
 
 volumes:
   # Persists the bootstrap marker so the admin-init script runs only once.
