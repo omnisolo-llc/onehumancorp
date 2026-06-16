@@ -98,7 +98,7 @@ define_playwright_tests(
         "//src/ui/tauri/src/ui:all_files",
     ],
     server = "//src/server:server",
-    specs = glob(["*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
+    specs = glob(["*.spec.ts", "ui/*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
 )
 
 sh_test(
