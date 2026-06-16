@@ -46,6 +46,7 @@ pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Stri
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_OMNI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
@@ -3124,6 +3125,26 @@ pub async fn list_ui_omni_inbox_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
+    let cache_key = format!("ui_omni_inbox:{}", tenant_id);
+    let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            if let Ok(items) = load_ui_omni_inbox_from_db(&db_bg, &t_bg).await {
+                if let Some(c) = UI_OMNI_INBOX_CACHE.get() {
+                    c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
+                }
+            }
+        });
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
     let items = match load_ui_omni_inbox_from_db(&db, &tenant_id).await {
         Ok(items) => items,
         Err(e) => {
@@ -3132,6 +3153,7 @@ pub async fn list_ui_omni_inbox_handler(
         }
     };
 
+    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(items)).into_response()
 }
 
@@ -3175,6 +3197,9 @@ pub async fn update_ui_omni_inbox_action_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
 
+            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
+
             if payload.approved {
                 if let Some(reply) = &payload.edited_reply {
                     let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
@@ -3198,6 +3223,9 @@ pub async fn update_ui_omni_inbox_action_handler(
                 tracing::error!("Failed to update omni_inbox_message: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+
+            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
 
             if payload.approved {
                 if let Some(reply) = &payload.edited_reply {
