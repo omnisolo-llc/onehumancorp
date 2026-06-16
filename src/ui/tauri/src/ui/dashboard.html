@@ -1520,7 +1520,7 @@
         } else {
           try {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+            const res = await fetch('/api/v1/growth/team-invites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
@@ -2197,7 +2197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               try {
                   const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                  const res = await fetch('/api/v1/growth/team-invites', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
@@ -2250,7 +2250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               try {
                   const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                  const res = await fetch('/api/v1/growth/team-invites', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
