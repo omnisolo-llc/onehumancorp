@@ -1046,6 +1046,11 @@ async fn handle_send_campaign(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ZeroClickGenerateResponse {
     pub name: String,
     pub url: String,
