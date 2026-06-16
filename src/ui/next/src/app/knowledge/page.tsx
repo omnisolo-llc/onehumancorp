@@ -8,17 +8,86 @@ export default function KnowledgePage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isReady, setIsReady] = useState(true);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleUpload = () => {
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem("auth_token") || "test_token"; // ensure a token is sent in local dev
+      const res = await fetch("/api/memory", {
+        headers: {
+            "Authorization": token ? `Bearer ${token}` : ""
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data.map((m: any) => ({
+          id: m.id,
+          name: m.source_type || "Document",
+          status: "Active",
+          content: m.content
+        })));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      const token = localStorage.getItem("auth_token") || "test_token";
+      await fetch(`/api/memory/${id}`, {
+          method: "DELETE",
+          headers: {
+              "Authorization": token ? `Bearer ${token}` : ""
+          }
+      });
+      fetchDocuments();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setIsSyncing(true);
     setIsReady(false);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      let content = "";
+
+      if (file.type === "application/pdf") {
+          const reader = new FileReader();
+          content = await new Promise((resolve) => {
+              reader.onload = () => resolve((reader.result as string).split(",")[1]);
+              reader.readAsDataURL(file);
+          });
+      } else {
+          content = await file.text();
+      }
+
+      const token = localStorage.getItem("auth_token") || "test_token";
+      await fetch("/api/memory/upload", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+        },
+        body: JSON.stringify({ content, source_type: file.name }),
+      });
+      await fetchDocuments();
+    } catch (error) {
+      console.error(error);
+    } finally {
       setIsSyncing(false);
       setIsReady(true);
-      setDocuments([...documents, { id: Date.now(), name: "New Policy Document.pdf", status: "Active" }]);
-    }, 2000);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -32,8 +101,15 @@ export default function KnowledgePage() {
             Upload policies, FAQs, and business documents. The Knowledge Assistant will use these to answer customer questions and draft accurate responses.
           </p>
 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleUpload}
+            className="hidden"
+            accept=".txt,.md,.csv,.pdf"
+          />
           <button
-            onClick={handleUpload}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isSyncing}
             className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm disabled:opacity-50 min-h-[44px]"
           >
@@ -65,6 +141,9 @@ export default function KnowledgePage() {
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                       Active
                     </span>
+                    <button onClick={() => handleDelete(doc.id)} className="text-red-500 hover:text-red-700 text-sm font-medium ml-2">
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
