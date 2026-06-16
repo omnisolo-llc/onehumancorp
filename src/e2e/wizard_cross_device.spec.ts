@@ -11,37 +11,28 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.goto('/onboarding');
     await page.waitForLoadState('networkidle');
 
-    // 2. Click Start My Business to advance to step 1
-    // The first screen is "10-Minute Setup Wizard", clicking "Start My Business" moves to step 1
-    await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    // 2. The first screen is "Tell us about your business" for Instant Build. We fill the bio.
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await page.getByPlaceholder("e.g. I run a local bakery").fill('Cross Device Wizard');
+    await page.getByTestId('admin-email').fill('maya@example.com');
+    await page.getByTestId('admin-password').fill('mypassword123');
 
-    // 3. Move to step 2 and enter business name
-    // It's already at the "What's the name of your business?" step. We fill the input.
-    // The placeholder is "e.g. Maya's Custom Cakes"
-    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Cross Device Wizard');
-
-    // Wait until local storage is updated with the business name
+    // Wait until local storage is updated with the bio
     await expect.poll(async () => {
       const stateStr = await page.evaluate(() => localStorage.getItem('onboarding-storage-v3'));
       if (!stateStr) return '';
       try {
         const state = JSON.parse(stateStr);
-        return state.state.businessName;
+        return state.state.bio;
       } catch (e) {
         return '';
       }
     }, {
-      message: 'Wait for local storage to save business name',
+      message: 'Wait for local storage to save bio',
       timeout: 5000,
     }).toBe('Cross Device Wizard');
 
-    // Also trigger save to backend
-    await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
-    await page.waitForTimeout(1000);
-
-    // 4. Simulate a cross-device session with a new browser context
+    // 3. Simulate a cross-device session with a new browser context
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
 
@@ -61,11 +52,9 @@ test.describe('Wizard Cross Device E2E', () => {
     await newPage.goto('/onboarding');
     await newPage.waitForLoadState('networkidle');
 
-    // 5. Verify the business name and step was properly restored
-    await expect(newPage.getByRole('heading', { name: 'What do you sell?' })).toBeVisible({ timeout: 10000 });
-    await newPage.locator('button:has-text("Back")').first().click();
-    await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-    await expect(newPage.getByPlaceholder("e.g. Maya's Custom Cakes")).toHaveValue('Cross Device Wizard', { timeout: 10000 });
+    // 4. Verify the bio was properly restored
+    await expect(newPage.getByRole('heading', { name: "Tell us about your business" })).toBeVisible({ timeout: 10000 });
+    await expect(newPage.getByPlaceholder("e.g. I run a local bakery")).toHaveValue('Cross Device Wizard', { timeout: 10000 });
 
     await newContext.close();
   });

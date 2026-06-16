@@ -14,6 +14,8 @@ interface DailyCost {
 }
 
 interface CostDashboardData {
+  budget_health_alert_message?: string;
+  budget_health_alert?: string;
   total_revenue: number;
   total_costs: number;
   projected_monthly_cost: number;

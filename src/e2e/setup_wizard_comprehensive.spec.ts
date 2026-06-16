@@ -24,12 +24,14 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.waitForLoadState('networkidle');
 
 
-    await page.getByRole('button', { name: /Instant Build/ }).click();
+
 
     // Verify glassmorphism style is present
     await expect(page.locator('.glassmorphism').first()).toBeVisible({ timeout: 5000 });
 
     await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
+    await page.getByTestId('admin-email').fill('maya@example.com');
+    await page.getByTestId('admin-password').fill('mypassword123');
 
     await page.getByRole('button', { name: /Next/ }).click();
 
@@ -43,50 +45,28 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test('validates empty input in Tell us about your business', async ({ page }) => {
     await page.goto('/onboarding');
-    await page.getByRole('button', { name: /Instant Build/ }).click();
+
 
     // The textarea starts empty
     const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
 
+    await page.getByTestId('admin-email').fill('maya@example.com');
+    await page.getByTestId('admin-password').fill('mypassword123');
     await page.getByPlaceholder('e.g. I run a local bakery').fill('A');
     await expect(generateBtn).toBeEnabled();
   });
 
-  test('clears previous bio input when re-entering Instant Build', async ({ page }) => {
-    await page.goto('/onboarding');
-
-    // Enter instant build, fill bio, then go back
-    await page.getByRole('button', { name: /Instant Build/ }).click();
-    await page.getByPlaceholder('e.g. I run a local bakery').fill('Some initial input');
-
-    // Go back to step 0
-    await page.getByRole('button', { name: /Back/ }).click();
-
-    // Re-enter Instant Build
-    await page.getByRole('button', { name: /Instant Build/ }).click();
-
-    // Bio should be cleared and button disabled
-    const generateBtn = page.getByRole('button', { name: /Next/ });
-    await expect(generateBtn).toBeDisabled();
-    await expect(page.getByPlaceholder('e.g. I run a local bakery')).toHaveValue('');
-  });
-
-  test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
-    await page.goto('/onboarding');
-    await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Online Store/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Restaurant/ })).toBeVisible();
-  });
 
   test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {
     await page.goto('/onboarding');
-    await page.getByRole('button', { name: /Instant Build/ }).click();
+
 
     const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
 
+    await page.getByTestId('admin-email').fill('maya@example.com');
+    await page.getByTestId('admin-password').fill('mypassword123');
     await page.getByPlaceholder('e.g. I run a local bakery').fill('   \n  ');
     await expect(generateBtn).toBeDisabled();
 
