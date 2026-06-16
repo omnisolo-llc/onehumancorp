@@ -1,3 +1,4 @@
+pub mod action_router;
 pub mod repository;
 pub mod organization;
 pub mod model;
