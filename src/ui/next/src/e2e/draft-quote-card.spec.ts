@@ -35,7 +35,7 @@ test.describe('Draft Quote Action Card CUJ', () => {
     // 6. Edit the price
     const priceInput = page.getByTestId('edit-quote-price');
     await expect(priceInput).toBeVisible();
-    await priceInput.fill('350');
+    await priceInput.fill('350.00');
 
     // 7. Edit the scope
     const scopeInput = page.getByTestId('edit-quote-scope');

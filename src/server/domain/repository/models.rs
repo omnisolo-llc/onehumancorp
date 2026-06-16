@@ -347,6 +347,9 @@ pub struct Quote {
     pub valid_until: Option<DateTime<Utc>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub total_amount: Option<f64>,
+    pub required_deposit: Option<f64>,
+    pub checkout_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

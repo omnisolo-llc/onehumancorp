@@ -111,6 +111,9 @@ impl StripeClient {
         form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());
         form.insert("line_items[0][quantity]".to_string(), "1".to_string());
         form.insert("client_reference_id".to_string(), customer_id.to_string());
+        if !is_subscription {
+            form.insert("payment_intent_data[setup_future_usage]".to_string(), "off_session".to_string());
+        }
 
         match pm {
             PaymentMethod::Ach => {

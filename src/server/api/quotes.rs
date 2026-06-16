@@ -38,16 +38,16 @@ pub struct QuoteQuery {
 pub struct CreateQuoteRequest {
     pub tenant_id: String,
     pub customer_id: String,
-    pub total_amount: Option<i64>,
-    pub required_deposit: Option<i64>,
+    pub total_amount: Option<f64>,
+    pub required_deposit: Option<f64>,
     pub checkout_url: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
 }
 
 #[derive(Deserialize)]
 pub struct UpdateQuoteRequest {
-    pub total_amount: Option<i64>,
-    pub required_deposit: Option<i64>,
+    pub total_amount: Option<f64>,
+    pub required_deposit: Option<f64>,
     pub checkout_url: Option<String>,
     pub status: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
@@ -263,6 +263,9 @@ mod tests {
             valid_until: Some(chrono::Utc::now()),
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
+            total_amount: None,
+            required_deposit: None,
+            checkout_url: None,
         };
 
         let mut line_items = vec![QuoteLineItem {
@@ -304,12 +307,24 @@ async fn accept_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+
     match sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1")
         .bind(quote_id)
         .execute(&pool)
         .await
     {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
+        Ok(_) => {
+            let checkout_url = quote.checkout_url.unwrap_or_default();
+            (StatusCode::OK, Json(serde_json::json!({"success": true, "checkout_url": checkout_url}))).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to accept quote: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response()
