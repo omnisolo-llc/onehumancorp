@@ -3990,14 +3990,13 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
     match &db.store {
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4023,14 +4022,13 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4689,10 +4687,12 @@ async fn ui_dashboard_unified_feed_handler(
             let db6 = db_bg.clone(); let t6 = t_bg.clone();
             let db7 = db_bg.clone(); let t7 = t_bg.clone();
 
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+            let db8 = db_bg.clone(); let t8 = t_bg.clone();
+            let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
                 tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
                 tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_supply_from_db(&db8, &t8, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_triage_from_db(&db4, &t4, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_approvals_from_db(&db5, &t5, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_feed_from_db(&db6, &t6, mobile_optimized).await }),
@@ -4707,10 +4707,12 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
+            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
+                "supply": supply,
                 "triage": triage,
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
@@ -5173,18 +5175,29 @@ async fn list_ui_inbox_handler(
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(created_at::text, '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = $1
-                 ORDER BY created_at DESC
-                 LIMIT 50"
+                if query.mobile_optimized.unwrap_or(false) {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(status, '') AS status,
+                            COALESCE(created_at::text, '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                } else {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(created_at::text, '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                }
             )
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
@@ -5194,7 +5207,6 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -5216,18 +5228,29 @@ async fn list_ui_inbox_handler(
         }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = ?
-                 ORDER BY created_at DESC
-                 LIMIT 50"
+                if query.mobile_optimized.unwrap_or(false) {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(status, '') AS status,
+                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                } else {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                }
             )
                 .bind(&tenant_id)
                 .fetch_all(pool)
@@ -5237,7 +5260,6 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
