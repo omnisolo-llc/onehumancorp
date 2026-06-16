@@ -401,6 +401,8 @@ pub use ::server_telemetry as telemetry;
 pub mod chaos;
 #[cfg(test)]
 pub mod chaos_db_test;
+#[cfg(test)]
+pub mod db_privacy_test;
 pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;

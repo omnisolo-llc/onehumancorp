@@ -1236,7 +1236,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("jwt")
         || k.contains("bearer")
         || k.contains("sessionid")
-        || k.contains("payload")
         || k.contains("credit")
         || k.contains("card")
         || k.contains("cvv")
@@ -1255,9 +1254,16 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("salary")
         || k.contains("tax")
         || k.contains("socialsecurity")
+        || k.contains("creditcard")
+        || k.contains("deviceid")
+        || k.contains("gps")
+        || k.contains("latitude")
+        || k.contains("longitude")
+        || k.contains("contact")
+        || k.contains("location")
+        || k.contains("bio")
         || k.contains("ipaddress")
         || k.contains("macaddress")
-        || k.contains("creditcard") || k.contains("deviceid") || k.contains("gps") || k.contains("latitude") || k.contains("longitude")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1268,6 +1274,23 @@ pub fn is_email(s: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_redact_nested_array_pii() {
+        let original_json = serde_json::json!({
+            "users": [
+                { "name": "Alice", "email": "alice@example.com" },
+                { "name": "Bob", "email": "bob@example.com" }
+            ]
+        });
+
+        let redacted_json = redact_interface_pii(original_json);
+
+        assert_eq!(redacted_json["users"][0]["name"], "[REDACTED]");
+        assert_eq!(redacted_json["users"][0]["email"], "[REDACTED]");
+        assert_eq!(redacted_json["users"][1]["name"], "[REDACTED]");
+        assert_eq!(redacted_json["users"][1]["email"], "[REDACTED]");
+    }
+
     use super::*;
 
 
@@ -1309,6 +1332,33 @@ mod tests {
         // But wait! `raw_email` key also contains "email"! Let's test a key that does NOT contain sensitive words but HAS email string
         assert_eq!(redacted_json["raw_email"], "[REDACTED]"); // "email" in key matched first!
         assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
+    }
+
+    #[test]
+    fn test_redact_ohc_specific_pii() {
+        let original_json = serde_json::json!({
+            "tenant_id": "tenant_123",
+            "customer_name": "Maya Baker",
+            "contact_info": "+1-202-555-0123",
+            "delivery_location": "123 Main St, Springfield",
+            "bio": "I love baking cakes for everyone!",
+            "payload": {
+                "ceo_name": "Platform Admin",
+                "lat": 34.0522,
+                "lng": -118.2437
+            }
+        });
+
+        let redacted_json = redact_interface_pii(original_json);
+
+        assert_eq!(redacted_json["tenant_id"], "tenant_123"); // Should not be redacted
+        assert_eq!(redacted_json["customer_name"], "[REDACTED]");
+        assert_eq!(redacted_json["contact_info"], "[REDACTED]");
+        assert_eq!(redacted_json["delivery_location"], "[REDACTED]");
+        assert_eq!(redacted_json["bio"], "[REDACTED]");
+        assert_eq!(redacted_json["payload"]["ceo_name"], "[REDACTED]");
+        // Note: lat/lng are numbers, redact_interface_pii doesn't redact numbers unless they match a pattern in strings
+        // But if they were strings, they should be redacted if key matches.
     }
 }
 

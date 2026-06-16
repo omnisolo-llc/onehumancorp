@@ -947,3 +947,31 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+
+rust_test(
+    name = "db_privacy_test_unit_test",
+    size = "large",
+    args = [
+        "--test",
+        "db_privacy_test",
+    ],
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:tempfile",
+        "@crates//:tokio-tungstenite",
+    ],
+)
