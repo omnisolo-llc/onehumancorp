@@ -12,8 +12,16 @@ export default function WhatsAppLinkGeneratorPage() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [tenant, setTenant] = useState("default");
 
-  const brandingText = "⚡ Powered by OHC";
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      const storedTenant = localStorage.getItem("tenant");
+      if (storedTenant) setTenant(storedTenant);
+    }
+  }, []);
+
+  const brandingText = `⚡ Powered by OHC`;
 
   const finalMessage = React.useMemo(() => {
     let finalStr = message.trim();
@@ -29,7 +37,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   const generatedLink = cleanPhoneNumber
-    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}`
+    ? `https://wa.me/${cleanPhoneNumber}?text=${encodeURIComponent(finalMessage)}\n\nhttps://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`
     : '';
 
   const handleCopy = async () => {
@@ -295,7 +303,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       {/* Persistent Footer Growth Loop */}
       <footer className="mt-12 py-8 border-t border-gray-200 text-center">
-          <a href="/onboarding" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+          <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}  target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
               <span className="text-base">⚡</span> Powered by OHC
           </a>
       </footer>
