@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('My Plan and Cost Dashboard Screens', () => {
   test('My Plan screen routes to Pricing correctly', async ({ page }) => {
     // Navigate to My Plan
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
 
     // Check heading
     await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
@@ -17,7 +17,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
   });
 
   test('My Plan screen routes to Cost Dashboard correctly', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
 
     // Verify detailed costs routing
     const detailedCostsButton = page.locator('button', { hasText: 'View Detailed Costs' });

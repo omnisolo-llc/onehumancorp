@@ -3,28 +3,28 @@ import { test, expect } from './fixtures';
 test.describe('My Plan Dashboard', () => {
 
   test('should display the My Plan header', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
   });
 
   test('should display current plan details', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
     await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
   });
 
   test('should display estimated next bill', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill' })).toBeVisible();
+    await page.goto('/cost-dashboard');
+    await expect(page.locator('div', { hasText: 'Estimated Next Bill' })).toBeVisible();
   });
 
   test('should display AI Actions usage', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
+    await page.goto('/cost-dashboard');
+    await expect(page.locator('div', { hasText: 'AI actions used this month' })).toBeVisible();
   });
 
   test('should display Storage usage', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('span', { hasText: 'Storage used' })).toBeVisible();
+    await page.goto('/cost-dashboard');
+    await expect(page.locator('div', { hasText: 'Storage used' })).toBeVisible();
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {
@@ -39,7 +39,7 @@ test.describe('My Plan Dashboard', () => {
   });
 
   test('should navigate to pricing page when Upgrade is clicked', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard');
     const changePlanButton = page.locator('button', { hasText: 'Upgrade' });
     await expect(changePlanButton).toBeVisible();
     await changePlanButton.click();

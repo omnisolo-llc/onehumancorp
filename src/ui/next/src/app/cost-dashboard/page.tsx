@@ -154,7 +154,7 @@ export default function CostDashboardPage() {
     <AppShell
       title="Cost Transparency Dashboard"
       subtitle="Cost and tier usage signals based on connected billing, storage, and agents."
-      actions={[{ label: "Back to My Plan", href: "/plan" }]}
+      actions={[{ label: "Back to Dashboard", href: "/plan" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
         <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">

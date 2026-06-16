@@ -82,12 +82,12 @@ export default function MyPlanPage() {
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
                         Plan: <span className="text-indigo-600">{data?.current_plan || 'Free'}</span>
-                    </h2>
+                    </div>
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
+                    <div><div className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
                         Estimated Next Bill: <span className="text-green-600">{formatCurrency(data?.next_bill_estimated || 0)}</span>
-                    </h2>
+                    </div>
                 </div>
             </div>
 
@@ -108,14 +108,14 @@ export default function MyPlanPage() {
         {/* Current Usage Section */}
         <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg mt-4 dark:bg-gray-900/70 dark:border-white/10">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
-             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
+             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</div>
           </div>
           <div className="app-panel-body p-6">
               <div className="flex flex-col gap-8">
                   {/* AI Actions */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">AI actions used this month</span>
+                          <div className="font-medium text-gray-700 text-lg">AI actions used this month</div>
                           <span className="font-bold text-gray-900 text-lg">
                               {data?.ai_actions_used || 0} <span className="text-gray-500 font-normal text-base">{data?.ai_actions_limit != null ? `/ ${data.ai_actions_limit}` : '/ Unlimited'}</span>
                           </span>
@@ -131,7 +131,7 @@ export default function MyPlanPage() {
                   {/* Storage */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">Storage used</span>
+                          <div className="font-medium text-gray-700 text-lg">Storage used</div>
                           <span className="font-bold text-gray-900 text-lg">
                               {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{data?.storage_limit_bytes != null ? `/ ${formatStorage(data.storage_limit_bytes)}` : '/ Unlimited'}</span>
                           </span>
