@@ -3080,39 +3080,67 @@ pub async fn list_ui_triage_handler(
 }
 
 
-async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                .bind(tenant_id)
-                .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "original_content": row.get::<String, _>("original_content"),
-                        "draft_reply": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "sender_id": row.get::<String, _>("sender_id"),
-                        "created_at": row.get::<String, _>("created_at")
-                    })
-                }).collect())
+            if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                .bind(tenant_id)
-                .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "original_content": row.get::<String, _>("original_content"),
-                        "draft_reply": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "sender_id": row.get::<String, _>("sender_id"),
-                        "created_at": row.get::<String, _>("created_at")
-                    })
-                }).collect())
+            if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
         }
     }
 }
@@ -3123,8 +3151,9 @@ pub async fn list_ui_omni_inbox_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let items = match load_ui_omni_inbox_from_db(&db, &tenant_id).await {
+    let items = match load_ui_omni_inbox_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(items) => items,
         Err(e) => {
             tracing::error!("Failed to fetch omni inbox items: {:?}", e);
