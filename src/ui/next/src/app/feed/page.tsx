@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
 
 interface FeedItem {
@@ -15,6 +16,7 @@ interface FeedItem {
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +127,12 @@ export default function FeedPage() {
   };
 
   const handleAction = async (id: string, state: string) => {
+    const item = items.find(i => i.id === id);
+    if (state === 'APPROVED' && item?.proposed_action?.action_type === 'Draft Quote') {
+      router.push(`/quotes/${item.proposed_action.quote_id}`);
+      return;
+    }
+
     try {
       setProcessingId(id);
       const res = await fetch(`/api/agent-feed/${id}/state`, {
@@ -203,7 +211,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.event_source.replace(/_/g, ' ')}
+                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -213,6 +221,10 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Draft Quote'
+                    ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Draft Follow-up'
+                    ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
@@ -270,7 +282,9 @@ export default function FeedPage() {
                       </div>
                     ) : (
                       <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                        {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                        {item.proposed_action?.action_type === 'Draft Quote'
+                          ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
+                          : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
                       </p>
                     )}
                   </div>
@@ -315,7 +329,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : 'Approve'}
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}
