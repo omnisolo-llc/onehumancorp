@@ -68,7 +68,7 @@ export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our St
               />
               <button
                 onClick={handleCopy}
-                className="px-4 py-2 bg-gray-100 min-h-[44px] hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors whitespace-nowrap"
+                className="px-4 py-2 bg-gray-100 min-h-44px hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors whitespace-nowrap"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -76,14 +76,14 @@ export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our St
 
             <button
               onClick={handleWhatsApp}
-              className="w-full app-button min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] text-white border-none py-2 px-4 rounded-md text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+              className="w-full app-button min-h-44px bg-[#25D366] hover:bg-[#1ebd5a] text-white border-none py-2 px-4 rounded-md text-sm font-semibold transition-colors flex items-center justify-center gap-2"
             >
               Share on WhatsApp
             </button>
 
             <button
               onClick={handleTwitter}
-              className="w-full app-button min-h-[44px] bg-black hover:bg-gray-800 text-white border-none py-2 px-4 rounded-md text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2"
+              className="w-full app-button min-h-44px bg-black hover:bg-gray-800 text-white border-none py-2 px-4 rounded-md text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X (Twitter)

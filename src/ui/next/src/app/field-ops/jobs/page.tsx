@@ -199,21 +199,21 @@ export default function FieldOpsJobsPage() {
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
                   {job.status === 'Requested' || job.status === 'Scheduled' ? (
                      <button
-                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-44px"
                         onClick={() => handleStatusChange(job.id, 'En-Route')}
                       >
                         Heading to Job
                       </button>
                   ) : job.status === 'En-Route' ? (
                       <button
-                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-44px"
                         onClick={() => handleStatusChange(job.id, 'In-Progress')}
                       >
                         Start Work
                       </button>
                   ) : (
                       <button
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-44px"
                         onClick={() => handleComplete(job.id)}
                       >
                         Job Done

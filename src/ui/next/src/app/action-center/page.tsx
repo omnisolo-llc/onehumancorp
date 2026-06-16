@@ -170,13 +170,13 @@ export default function ActionCenterPage() {
                   <div className="flex gap-3 mt-2">
                     <button
                       onClick={() => handleDismiss(approval.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all min-h-44px"
                     >
                       Dismiss
                     </button>
                     <button
                       onClick={() => handleApprove(approval.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-44px"
                     >
                       Approve & Send
                     </button>

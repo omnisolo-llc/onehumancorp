@@ -278,13 +278,13 @@ export default function CampaignOrchestrationPage() {
                 <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
-                    className={selected === workflow.key ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
+                    className={selected === workflow.key ? "app-button primary min-h-44px" : "app-button min-h-44px"}
                     disabled={submitting}
                     onClick={() => runWorkflow(workflow)}
                   >
                     {submitting && selected === workflow.key ? "Working..." : workflow.methodLabel}
                   </button>
-                  <Link href={workflow.href} className="app-button min-h-[44px]">
+                  <Link href={workflow.href} className="app-button min-h-44px">
                     {workflow.linkLabel}
                   </Link>
                 </div>
@@ -315,10 +315,10 @@ export default function CampaignOrchestrationPage() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={activeWorkflow.href} className="app-button primary min-h-[44px]">
+              <Link href={activeWorkflow.href} className="app-button primary min-h-44px">
                 Continue in workflow
               </Link>
-              <Link href="/dashboard" className="app-button min-h-[44px]">
+              <Link href="/dashboard" className="app-button min-h-44px">
                 Back to Dashboard
               </Link>
             </div>

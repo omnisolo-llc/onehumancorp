@@ -67,7 +67,7 @@ export default function TipJarWidgetGenerator() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-44px focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="e.g. Creator Name"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
@@ -88,7 +88,7 @@ export default function TipJarWidgetGenerator() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Suggested Amounts ($)</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-44px focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="e.g. 5, 10, 20"
                         value={amounts}
                         onChange={(e) => setAmounts(e.target.value)}
@@ -101,14 +101,14 @@ export default function TipJarWidgetGenerator() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -139,7 +139,7 @@ export default function TipJarWidgetGenerator() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-44px hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                     Get Widget Code
                 </button>
@@ -257,13 +257,13 @@ export default function TipJarWidgetGenerator() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-44px transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-44px transition-colors"
                     >
                         Close
                     </button>

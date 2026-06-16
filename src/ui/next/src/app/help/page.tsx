@@ -67,7 +67,7 @@ export default function HelpCenterPage() {
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
-              className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-md transition-all min-h-[44px]"
+              className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-md transition-all min-h-44px"
               onClick={() => {
                 const event = new CustomEvent('open-help-chat');
                 window.dispatchEvent(event);
@@ -115,7 +115,7 @@ export default function HelpCenterPage() {
                     <h3 className="text-base sm:text-lg font-bold font-outfit text-yellow-900">Advanced Users</h3>
                     <p className="text-yellow-800/80 text-xs sm:text-sm mt-1">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
                   </div>
-                  <Link href="/api-docs" className="shrink-0 px-6 py-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-semibold rounded-xl shadow-sm transition-all border border-yellow-300/50 w-full sm:w-auto text-center min-h-[44px]">
+                  <Link href="/api-docs" className="shrink-0 px-6 py-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-semibold rounded-xl shadow-sm transition-all border border-yellow-300/50 w-full sm:w-auto text-center min-h-44px">
                     API Documentation
                   </Link>
                 </div>

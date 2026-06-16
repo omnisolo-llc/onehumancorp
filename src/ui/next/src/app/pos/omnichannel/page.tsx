@@ -83,7 +83,7 @@ export default function OmnichannelCartPage() {
             id="create-cart-btn"
             onClick={createCart}
             disabled={isProcessing}
-            className="w-full bg-[#0066FF] text-white py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all active:scale-[0.98]"
+            className="w-full bg-[#0066FF] text-white py-3 min-h-44px rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all active:scale-[0.98]"
           >
             Create Omnichannel Cart
           </button>
@@ -104,7 +104,7 @@ export default function OmnichannelCartPage() {
                   id="add-item-btn"
                   onClick={addItemToCart}
                   disabled={isProcessing}
-                  className="bg-gray-900 text-white px-4 py-2 min-h-[44px] rounded-lg text-sm font-bold hover:bg-black disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-gray-900 text-white px-4 py-2 min-h-44px rounded-lg text-sm font-bold hover:bg-black disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   Add Item
                 </button>

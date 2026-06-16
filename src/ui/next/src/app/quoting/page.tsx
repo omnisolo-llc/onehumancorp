@@ -186,7 +186,7 @@ function QuotingContent() {
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleApproveAndSend}
-                className="w-full min-h-[44px] py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-[16px] shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
+                className="w-full min-h-44px py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-[16px] shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
                 data-testid="quote-approve-btn"
               >
                 Approve & Send

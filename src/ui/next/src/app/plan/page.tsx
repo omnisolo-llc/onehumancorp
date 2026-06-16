@@ -65,7 +65,7 @@ export default function MyPlanPage() {
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden">
       <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm w-full">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
+          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-44px px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
             Back
           </button>
           <WithTooltip id="my-plan-tooltip" defaultText="View and manage your subscription plan and usage.">

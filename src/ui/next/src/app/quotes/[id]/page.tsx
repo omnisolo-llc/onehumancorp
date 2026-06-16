@@ -166,7 +166,7 @@ export default function QuoteReviewPage() {
             <button
               onClick={saveQuoteChanges}
               disabled={approving}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[16px] shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+              className="w-full min-h-44px bg-[#0066FF] text-white font-bold rounded-[16px] shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
               {approving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -174,7 +174,7 @@ export default function QuoteReviewPage() {
             <button
               onClick={handleApprove}
               disabled={approving}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[16px] shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+              className="w-full min-h-44px bg-[#0066FF] text-white font-bold rounded-[16px] shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
               {approving ? 'Approving...' : 'Approve & Send Quote'}
             </button>
@@ -183,7 +183,7 @@ export default function QuoteReviewPage() {
 
         <button
           onClick={() => router.back()}
-          className="w-full min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium rounded-[16px] hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="w-full min-h-44px border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium rounded-[16px] hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
         >
           Back to Feed
         </button>

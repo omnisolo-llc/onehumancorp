@@ -52,7 +52,7 @@ export default function SmartPricingPage() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Smart Pricing</h1>
-        <div className="flex items-center min-h-[44px]">
+        <div className="flex items-center min-h-44px">
           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[16px] text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
           </button>
@@ -69,7 +69,7 @@ export default function SmartPricingPage() {
             <h3 className="text-lg font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Enable Smart Pricing</h3>
             <p className="text-sm text-gray-500 mt-1">Turn on autonomous hyper-local dynamic pricing.</p>
           </div>
-          <div className="flex items-center min-h-[44px]">
+          <div className="flex items-center min-h-44px">
             <button
               aria-label="Enable Smart Pricing"
               aria-pressed={enabled}
@@ -91,7 +91,7 @@ export default function SmartPricingPage() {
                 <p className="font-medium" style={{ color: '#1D1D1F' }}>Auto-discount perishables 2 hours before closing</p>
                 <p className="text-xs text-gray-500 mt-1">Clear out remaining inventory today.</p>
               </div>
-              <div className="flex items-center min-h-[44px]">
+              <div className="flex items-center min-h-44px">
                 <button
                   aria-label="Auto-discount perishables"
                   aria-pressed={discountPerishables}
@@ -109,7 +109,7 @@ export default function SmartPricingPage() {
                 <p className="font-medium" style={{ color: '#1D1D1F' }}>Surge pricing during high demand</p>
                 <p className="text-xs text-gray-500 mt-1">Charge a premium during peak rush hours.</p>
               </div>
-              <div className="flex items-center min-h-[44px]">
+              <div className="flex items-center min-h-44px">
                 <button
                   aria-label="Surge pricing"
                   aria-pressed={surgePricing}
@@ -127,7 +127,7 @@ export default function SmartPricingPage() {
                 <label className="font-medium" style={{ color: '#1D1D1F' }}>Maximum price adjustment bounds (+/-)</label>
                 <span className="font-bold text-blue-600">{maxAdjustment}%</span>
               </div>
-              <div className="flex items-center min-h-[44px]">
+              <div className="flex items-center min-h-44px">
                 <input
                   aria-label="Maximum price adjustment bounds"
                   type="range"

@@ -126,7 +126,7 @@ export default function KitchenView() {
                   )}
                   <button
                     onClick={() => handleMarkReady(order.id)}
-                    className="w-full h-[44px] min-h-[44px] bg-[#34C759] text-white rounded-[16px] font-bold text-lg shadow-sm active:scale-95 transition-transform"
+                    className="w-full h-[44px] min-h-44px bg-[#34C759] text-white rounded-[16px] font-bold text-lg shadow-sm active:scale-95 transition-transform"
                   >
                     Mark Ready & Notify
                   </button>
@@ -151,7 +151,7 @@ export default function KitchenView() {
                   <button
                     id={`sold-out-toggle-${item.id}`}
                     onClick={() => handleToggleSoldOut(item.id, soldOut)}
-                    className={`min-h-[44px] min-w-[44px] h-[44px] px-4 rounded-[16px] font-bold text-sm transition-colors ${
+                    className={`min-h-44px min-w-[44px] h-[44px] px-4 rounded-[16px] font-bold text-sm transition-colors ${
                       soldOut
                         ? "bg-[#FF3B30]/10 text-[#FF3B30] border border-[#FF3B30]/20"
                         : "bg-[#0071E3]/10 text-[#0071E3] border border-[#0071E3]/20 hover:bg-[#0071E3]/20"

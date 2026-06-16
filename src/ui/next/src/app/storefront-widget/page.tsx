@@ -44,7 +44,7 @@ export default function StorefrontWidgetPage() {
              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">New Growth Loop</span>
          </div>
          <div className="flex items-center gap-3">
-             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
+             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-44px min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
              </button>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
@@ -66,14 +66,14 @@ export default function StorefrontWidgetPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -86,7 +86,7 @@ export default function StorefrontWidgetPage() {
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-44px min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. my-store"
                     />
                     <p className="text-xs text-gray-500 mt-2">Used to link the widget to your store.</p>
@@ -106,7 +106,7 @@ export default function StorefrontWidgetPage() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-blue-600 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-blue-600 text-white font-medium rounded-[16px] min-h-44px min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
                 >
                     Get Widget
                 </button>
@@ -191,7 +191,7 @@ export default function StorefrontWidgetPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-blue-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-44px min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-blue-500 transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -207,13 +207,13 @@ export default function StorefrontWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-44px min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-44px min-w-[44px] transition-colors"
                     >
                         Close
                     </button>

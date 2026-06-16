@@ -437,7 +437,7 @@ function AutoCatalogContent() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-[11px] min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-blue-600 transition-colors text-lg flex items-center justify-center gap-2"
+             className="w-full py-[11px] min-h-44px bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-blue-600 transition-colors text-lg flex items-center justify-center gap-2"
            >
              Looks Good
            </button>

@@ -67,7 +67,7 @@ export default function IncidentIntakePage() {
           <button
             type="submit"
             disabled={isSubmitting || !description.trim()}
-            className="w-full min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-[16px] transition-colors disabled:opacity-50"
+            className="w-full min-h-44px bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-[16px] transition-colors disabled:opacity-50"
             data-testid="submit-incident"
           >
             {isSubmitting ? "Reporting..." : "Submit Incident"}

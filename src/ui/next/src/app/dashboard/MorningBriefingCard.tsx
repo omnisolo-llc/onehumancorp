@@ -139,14 +139,14 @@ try {
                 <div className="flex gap-2 w-full">
                   <button
                     onClick={() => handleTriageDecision(item.id, true)}
-                    className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center"
+                    className="flex-1 min-h-44px min-w-[44px] rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center"
                     data-testid={`action-card-approve-${item.id}`}
                   >
                     {item.action_type || "Execute Action"}
                   </button>
                   <button
                     onClick={() => handleTriageDecision(item.id, false)}
-                    className="min-h-[44px] min-w-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-center"
+                    className="min-h-44px min-w-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-center"
                     data-testid={`action-card-dismiss-${item.id}`}
                     aria-label="Dismiss Action"
                   >
@@ -195,7 +195,7 @@ try {
             <button
               type="submit"
               disabled={isChatting || !chatMessage.trim()}
-              className="rounded-[8px] min-h-[44px] bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0052CC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 transition-colors"
+              className="rounded-[8px] min-h-44px bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0052CC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 transition-colors"
               data-testid="insight-chat-submit"
             >
               Ask

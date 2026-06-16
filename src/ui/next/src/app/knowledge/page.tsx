@@ -111,7 +111,7 @@ export default function KnowledgePage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isSyncing}
-            className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm disabled:opacity-50 min-h-[44px]"
+            className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm disabled:opacity-50 min-h-44px"
           >
             {isSyncing ? "Syncing..." : "Upload New Document"}
           </button>

@@ -247,14 +247,14 @@ export default function FeedPage() {
                           // UnifiedAgentFeed does: `handleDecision(approval.id, true, editContent); setEditingId(null);`
                           // Let's keep it separate for now or change saveEdit to do handleAction directly if needed.
                         }}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-44px px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
                         {isAmbassador ? 'Save & Send' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                        className="flex-1 min-h-44px px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                         data-testid="feed-cancel-edit-btn"
                       >
                         Cancel
@@ -296,7 +296,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Send Draft"
                         data-testid="feed-approve-btn"
                       >
@@ -305,7 +305,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => startEditing(item)}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="feed-edit-btn"
                       >
@@ -314,7 +314,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => handleAction(item.id, 'DISMISSED')}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss Draft"
                         data-testid="feed-dismiss-btn"
                       >
@@ -326,7 +326,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
                         {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : 'Approve'}
@@ -334,7 +334,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => startEditing(item)}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         data-testid="feed-edit-btn"
                       >
                         Edit
@@ -342,7 +342,7 @@ export default function FeedPage() {
                       <button
                         onClick={() => handleAction(item.id, 'DISMISSED')}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-44px min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         data-testid="feed-dismiss-btn"
                       >
                         Dismiss

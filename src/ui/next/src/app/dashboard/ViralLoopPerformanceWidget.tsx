@@ -64,7 +64,7 @@ export function ViralLoopPerformanceWidget() {
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-            <Link href="/referrals" className="app-button bg-indigo-600 hover:bg-indigo-700 text-white border-none py-2 px-6 rounded-lg text-sm font-semibold transition-colors min-h-[44px] flex items-center justify-center">View Referral Details</Link>
+            <Link href="/referrals" className="app-button bg-indigo-600 hover:bg-indigo-700 text-white border-none py-2 px-6 rounded-lg text-sm font-semibold transition-colors min-h-44px flex items-center justify-center">View Referral Details</Link>
         </div>
       </div>
     </section>

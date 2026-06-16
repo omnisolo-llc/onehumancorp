@@ -73,12 +73,12 @@ export default function ReferralWidgetPage() {
                     <div className="flex gap-2">
                         <input
                             type="number"
-                            className="w-24 px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                            className="w-24 px-3 py-2 border border-gray-300 rounded-[16px] min-h-44px min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                             value={discountAmount}
                             onChange={(e) => setDiscountAmount(e.target.value)}
                         />
                         <select
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-[16px] min-h-44px min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                             value={discountType}
                             onChange={(e) => setDiscountType(e.target.value)}
                         >
@@ -94,14 +94,14 @@ export default function ReferralWidgetPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-44px min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -122,7 +122,7 @@ export default function ReferralWidgetPage() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-44px min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                     Get Widget Code
                 </button>
@@ -161,7 +161,7 @@ export default function ReferralWidgetPage() {
                                 value={`https://app.onehumancorp.com/onboarding?ref=${tenant}&promo=ref123`}
                                 className="flex-1 bg-transparent border-none text-xs text-gray-600 px-2 focus:outline-none"
                             />
-                            <button className="bg-white text-indigo-600 text-xs font-bold py-2 px-4 rounded-[16px] min-h-[44px] min-w-[44px] shadow-sm hover:shadow transition-all">
+                            <button className="bg-white text-indigo-600 text-xs font-bold py-2 px-4 rounded-[16px] min-h-44px min-w-[44px] shadow-sm hover:shadow transition-all">
                                 Copy Link
                             </button>
                         </div>
@@ -200,7 +200,7 @@ export default function ReferralWidgetPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-44px min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -216,13 +216,13 @@ export default function ReferralWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-44px min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-44px min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
@@ -256,7 +256,7 @@ export default function ReferralWidgetPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+              className="w-full py-4 rounded-[16px] min-h-44px min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
             >
               Upgrade to Pro
             </button>

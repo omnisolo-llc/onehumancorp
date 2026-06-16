@@ -117,23 +117,23 @@ export default function PrepForecast() {
                     <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0">
                       <div className="flex items-center border border-[var(--border-subtle)] rounded-[16px] overflow-hidden bg-white/80 w-full sm:w-auto">
                         <button
-                          className="px-3 py-1 bg-black/5 hover:bg-black/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center font-bold text-lg cursor-pointer"
+                          className="px-3 py-1 bg-black/5 hover:bg-black/10 transition-colors min-h-44px min-w-[44px] flex items-center justify-center font-bold text-lg cursor-pointer"
                           onClick={() => adjustQuantity(prediction.id, -1)}
                         >
                           -
                         </button>
-                        <div className="px-4 py-1 font-semibold min-h-[44px] flex items-center justify-center min-w-[48px] text-center w-full sm:w-auto">
+                        <div className="px-4 py-1 font-semibold min-h-44px flex items-center justify-center min-w-[48px] text-center w-full sm:w-auto">
                           {prediction.suggested_reorder_quantity}
                         </div>
                         <button
-                          className="px-3 py-1 bg-black/5 hover:bg-black/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center font-bold text-lg cursor-pointer"
+                          className="px-3 py-1 bg-black/5 hover:bg-black/10 transition-colors min-h-44px min-w-[44px] flex items-center justify-center font-bold text-lg cursor-pointer"
                           onClick={() => adjustQuantity(prediction.id, 1)}
                         >
                           +
                         </button>
                       </div>
                       <button
-                        className="app-btn primary min-h-[44px] rounded-[16px] px-6 font-semibold bg-[#0066FF] hover:bg-[#0052cc] text-white transition-colors cursor-pointer w-full sm:w-auto"
+                        className="app-btn primary min-h-44px rounded-[16px] px-6 font-semibold bg-[#0066FF] hover:bg-[#0052cc] text-white transition-colors cursor-pointer w-full sm:w-auto"
                         onClick={() => approvePlan(prediction)}
                       >
                         Approve
