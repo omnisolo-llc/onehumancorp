@@ -741,7 +741,7 @@ button {
 
 .setup-page #setup-screen .setup-nav-button {
   width: fit-content;
-  min-height: 32px;
+  min-height: 44px; min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
   border-radius: 999px;
@@ -898,7 +898,7 @@ button {
 .setup-page #setup-screen button[class*="text-[#0066FF]"],
 .setup-page #setup-screen button.self-start {
   width: auto;
-  min-height: 32px;
+  min-height: 44px; min-width: 44px;
   padding: 0;
   border: 0;
   background: transparent !important;
@@ -1008,4 +1008,11 @@ button {
   .setup-page #setup-screen [class*="grid"][class*="cols-2"] {
     grid-template-columns: 1fr;
   }
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

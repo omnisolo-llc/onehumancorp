@@ -210,6 +210,7 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
+    let isMounted = true;
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -222,6 +223,7 @@ export default function OnboardingWizard() {
         .catch(() => null)
     ])
     .then(([draftData, stateData]) => {
+      if (!isMounted) return;
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
         if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
@@ -242,14 +244,17 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
-        initialStateLoaded.current = true;
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err))
     .finally(() => {
-      initialStateLoaded.current = true;
-      setIsLoaded(true);
+      if (isMounted) {
+        initialStateLoaded.current = true;
+        setIsLoaded(true);
+      }
     });
+
+    return () => { isMounted = false; };
   }, []);
 
   // Sync state to backend
@@ -701,7 +706,7 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto hide-scrollbar">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[8px] text-sm animate-shake">
               {error}
@@ -740,7 +745,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
@@ -803,7 +808,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -860,7 +865,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -870,7 +875,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -925,7 +930,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -935,7 +940,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -991,7 +996,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 4 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
@@ -1001,7 +1006,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1067,7 +1072,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -1077,7 +1082,7 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1085,7 +1090,7 @@ export default function OnboardingWizard() {
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
@@ -1199,7 +1204,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px]">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
@@ -1209,7 +1214,7 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px]"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1225,7 +1230,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`min-h-[44px] min-w-[44px] p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
@@ -1238,14 +1243,14 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`min-h-[44px] min-w-[44px] p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.app</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`min-h-[44px] min-w-[44px] p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
@@ -1423,13 +1428,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/assistant"
-                  className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full min-h-[44px] min-w-[44px] items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="sparkles">Open Assistant</IconLabel>
                 </a>
                 <a
                   href="/builder"
-                  className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full min-h-[44px] min-w-[44px] items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>

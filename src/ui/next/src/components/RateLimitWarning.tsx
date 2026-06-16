@@ -2,7 +2,6 @@
 import { WithTooltip } from "./TooltipRegistry";
 
 
-import { WithTooltip } from "./TooltipRegistry";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 

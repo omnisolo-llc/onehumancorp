@@ -2,8 +2,6 @@
 import { WithTooltip } from "./TooltipRegistry";
 
 
-import { WithTooltip } from "./TooltipRegistry";
-
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../lib/sync/SyncManager';
 
