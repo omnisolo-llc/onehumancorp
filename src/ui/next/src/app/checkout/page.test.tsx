@@ -62,7 +62,11 @@ beforeEach(() => {
 
     render(<CheckoutPage />);
 
-    expect(screen.getByText('Plan Upgrade')).toBeDefined();
+    // Wait for the Suspense inner content to load
+    await waitFor(() => {
+      expect(screen.getByText('Plan Upgrade')).toBeDefined();
+    });
+
     expect(screen.getByText('OHC Starter Plan')).toBeDefined();
 
     const payButton = screen.getByText('Upgrade');
@@ -97,7 +101,10 @@ beforeEach(() => {
 
     render(<CheckoutPage />);
 
-    expect(screen.getByText('Secure Checkout')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText('Secure Checkout')).toBeDefined();
+    });
+
     expect(screen.getByText('Service Deposit')).toBeDefined();
     expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
     expect(screen.getAllByText('$45.00')[0]).toBeDefined();
@@ -124,6 +131,10 @@ beforeEach(() => {
 
     render(<CheckoutPage />);
 
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Enter address for delivery quote')).toBeDefined();
+    });
+
     const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
     fireEvent.change(addressInput, { target: { value: '123 Main St' } });
 
@@ -140,9 +151,23 @@ beforeEach(() => {
     });
   });
 
-  it('renders the PoweredByOHC component', () => {
+  it('renders the PoweredByOHC component', async () => {
+    // Mock the fetch call for the loyalty points since the component uses it on mount
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/v1/growth/loyalty')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ points_balance: 50 }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
     render(<CheckoutPage />);
-    const components = screen.getAllByTestId('powered-by-ohc');
-    expect(components.length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const components = screen.getAllByTestId('powered-by-ohc');
+      expect(components.length).toBeGreaterThan(0);
+    });
   });
 });
