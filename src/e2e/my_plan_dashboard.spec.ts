@@ -10,7 +10,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
 
     // Verify upgrade routing
-    const upgradeButton = page.locator('button', { hasText: 'View Upgrade Plans' });
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
     await expect(page.url()).toContain('/pricing.html');

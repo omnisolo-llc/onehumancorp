@@ -182,10 +182,58 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         if (mounted) {
           if (unifiedData?.items) {
+            let combinedItems = [...unifiedData.items];
+
+            // Integrate Priority Tasks
+            if (unifiedData.priority_tasks && Array.isArray(unifiedData.priority_tasks)) {
+              combinedItems = [...combinedItems, ...unifiedData.priority_tasks.map((pt: any) => ({
+                id: pt.id,
+                tenant_id: pt.tenant_id || "default",
+                event_source: "task",
+                context_payload: { description: pt.description || pt.title },
+                proposed_action: { message: "Task Pending", action_type: "complete_task" },
+                lifecycle_state: pt.status === "PENDING" ? "PENDING_APPROVAL" : "DISMISSED",
+                created_at: pt.created_at || new Date().toISOString(),
+                updated_at: pt.updated_at || new Date().toISOString()
+              }))];
+            }
+
+            // Integrate Triage Items (Messages)
+            if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
+              combinedItems = [...combinedItems, ...unifiedData.triage.map((ti: any) => ({
+                id: ti.id,
+                tenant_id: ti.tenant_id || "default",
+                event_source: "triage",
+                context_payload: { description: ti.context || "Message requires attention" },
+                proposed_action: { message: ti.action_payload || "Triage item", action_type: ti.action_type || "resolve" },
+                lifecycle_state: ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
+                created_at: ti.created_at || new Date().toISOString(),
+                updated_at: ti.created_at || new Date().toISOString()
+              }))];
+            }
+
+            // Integrate Orders
+            if (unifiedData.orders && Array.isArray(unifiedData.orders)) {
+              combinedItems = [...combinedItems, ...unifiedData.orders.map((or: any) => ({
+                id: or.id,
+                tenant_id: or.tenant_id || "default",
+                event_source: "order",
+                context_payload: { description: `Order ${or.id} needs fulfillment` },
+                proposed_action: { message: "Fulfill Order", action_type: "fulfill_order" },
+                lifecycle_state: or.status === "pending" || or.status === "unfulfilled" ? "PENDING_APPROVAL" : "DISMISSED",
+                created_at: or.created_at || new Date().toISOString(),
+                updated_at: or.created_at || new Date().toISOString()
+              }))];
+            }
+
+            // Sort by created_at desc
+            combinedItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setItems(combinedItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
-            const mappedActivities = unifiedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+            const mappedActivities = combinedItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
               id: a.id,
               tenant_id: a.tenant_id,
               event_type: a.lifecycle_state,

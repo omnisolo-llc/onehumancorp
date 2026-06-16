@@ -130,7 +130,7 @@ export default function CostDashboardPage() {
 
   if (loading) {
       return (
-          <AppShell title="Cost Transparency" subtitle="Cost and tier usage signals.">
+          <AppShell title="Cost Transparency Dashboard" subtitle="Cost and tier usage signals.">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse" data-testid="cost-dashboard-loading">
                   <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
                   <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
@@ -152,9 +152,9 @@ export default function CostDashboardPage() {
 
   return (
     <AppShell
-      title="Cost Transparency"
+      title="Cost Transparency Dashboard"
       subtitle="Cost and tier usage signals based on connected billing, storage, and agents."
-      actions={[{ label: "Back to Dashboard", href: "/dashboard" }]}
+      actions={[{ label: "Back to My Plan", href: "/plan" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
         <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">
@@ -222,7 +222,7 @@ export default function CostDashboardPage() {
         {/* Overview Section */}
         <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 hover:shadow-xl transition-shadow duration-300 shadow-lg dark:bg-gray-900/70 rounded-2xl">
             <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40 bg-transparent">
-               <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency</h2>
+               <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
@@ -250,7 +250,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Budget Health Alert */}
-        {data && data.projected_monthly_cost > 10000 && (
+        {data && (
             <div id="budget-health-alert" className="p-4 bg-amber-50/70 border border-amber-200 backdrop-blur-xl saturate-200 rounded-xl flex items-start gap-3">
                 <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
