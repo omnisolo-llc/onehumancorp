@@ -1419,7 +1419,154 @@ impl AdvisorWorker {
         });
     }
 }
-#[cfg(test)]
+
+pub struct QuoteFollowUpWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+}
+
+impl QuoteFollowUpWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(60), // Run every minute
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let interval_duration = self.poll_interval;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval_duration);
+            loop {
+                interval.tick().await;
+                loop {
+                    match Self::poll(&db).await {
+                        Ok(true) => continue, // keep polling until queue is empty
+                        Ok(false) => break,
+                        Err(e) => {
+                            ::server_telemetry::record_error_signal("QuoteFollowUpWorker error");
+                            tracing::error!("QuoteFollowUpWorker error: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+        let pool = db.pool.clone();
+
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    r#"
+                    SELECT id, tenant_id, payload, retry_count
+                    FROM ohc_job_queue
+                    WHERE status = 'PENDING' AND job_type = 'quote_deposit_follow_up'
+                    AND next_retry_at <= NOW()
+                    ORDER BY created_at ASC
+                    LIMIT 1 FOR UPDATE SKIP LOCKED
+                    "#
+                )
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    let job_id: String = r.get("id");
+                    let tenant_id: String = r.get("tenant_id");
+                    let payload: serde_json::Value = r.get("payload");
+                    let retry_count: i32 = r.get("retry_count");
+
+                    // Set processing
+                    sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+
+                    let quote_id = payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or("");
+                    if quote_id.is_empty() {
+                         sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                             .bind(&job_id)
+                             .execute(&pool).await.map_err(|e| e.to_string())?;
+                         return Ok(true);
+                    }
+
+                    let quote_id_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
+
+                    // Check if quote status is still SENT
+                    let quote_status_res: Result<String, _> = sqlx::query_scalar(
+                        "SELECT status FROM quotes WHERE id = $1 AND tenant_id = $2"
+                    )
+                    .bind(quote_id_uuid)
+                    .bind(&tenant_id)
+                    .fetch_one(&pool)
+                    .await;
+
+                    match quote_status_res {
+                        Ok(status) if status == "SENT" => {
+                             // Still SENT. Time to follow up.
+                             // Create a follow-up card in the agent feed.
+
+                             let mesh = crate::orchestration::mesh::get_mesh_transport(&db.store).await.unwrap_or_else(|_| std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()))));
+                             let orchestrator = crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), mesh);
+
+                             let action_payload = json!({
+                                 "feature_type": "ambassador_reply",
+                                 "quote_id": quote_id,
+                                 "draft_reply": "Hi! Just following up on the quote I sent over. Let me know if you have any questions or if you're ready to move forward!"
+                             });
+
+                             let _ = orchestrator.execute_action(
+                                 crate::orchestration::departments::types::DepartmentType::Sales,
+                                 format!("Follow up on unpaid deposit for quote {}", quote_id),
+                                 tenant_id.clone(),
+                                 crate::orchestration::departments::types::ActionRisk::DraftForReview,
+                                 action_payload
+                             ).await;
+
+                             sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                                 .bind(&job_id)
+                                 .execute(&pool).await.map_err(|e| e.to_string())?;
+                        }
+                        Ok(_) => {
+                             // Status is ACCEPTED, REJECTED, EXPIRED, etc.
+                             // No need to follow up.
+                             sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                                 .bind(&job_id)
+                                 .execute(&pool).await.map_err(|e| e.to_string())?;
+                        }
+                        Err(_) => {
+                            if retry_count >= MAX_RETRIES as i32 {
+                                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                                    .bind(&job_id)
+                                    .execute(&pool).await.map_err(|e| e.to_string())?;
+                            } else {
+                                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = retry_count + 1, next_retry_at = NOW() + INTERVAL '1 hour', updated_at = NOW() WHERE id = $1")
+                                    .bind(&job_id)
+                                    .execute(&pool).await.map_err(|e| e.to_string())?;
+                            }
+                        }
+                    }
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            crate::db::DbStore::Sqlite(_) => {
+                Ok(false)
+            }
+        }
+    }
+}
+\n#[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::DbStore;

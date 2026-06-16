@@ -5,7 +5,7 @@ use crate::orchestration::departments::types::{
     ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::Arc;\nuse uuid::Uuid;
 
 pub struct SalesAgent {
     orchestrator: Arc<DepartmentOrchestrator>,
@@ -258,10 +258,45 @@ impl Department for SalesAgent {
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
+                        let mut metadata = std::collections::HashMap::new();
+                        metadata.insert("tenant_id".to_string(), event.tenant_id.clone());
+                        if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
+                            metadata.insert("quote_id".to_string(), quote_id.to_string());
+                        }
+
                         match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
+
+                                if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
+                                    let db = self.orchestrator.db();
+                                    if let crate::db::DbStore::Postgres = &db.store {
+                                        let pool = db.pool.clone();
+                                        let tenant_id = event.tenant_id.clone();
+                                        let checkout_url = url.clone();
+                                        let quote_id_str = quote_id.to_string();
+                                        let quote_id_uuid = uuid::Uuid::parse_str(&quote_id_str).unwrap_or_default();
+
+                                        tokio::spawn(async move {
+                                            // Update the Quote to SENT and add the checkout_url
+                                            let _ = sqlx::query("UPDATE quotes SET status = 'SENT', checkout_url = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
+                                                .bind(&checkout_url)
+                                                .bind(quote_id_uuid)
+                                                .bind(&tenant_id)
+                                                .execute(&pool)
+                                                .await;
+
+                                            // Schedule follow-up job (48 hours)
+                                            let job_id = uuid::Uuid::new_v4().to_string();
+                                            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'quote_deposit_follow_up', $3, 'PENDING', NOW() + INTERVAL '48 hours')")
+                                                .bind(job_id)
+                                                .bind(&tenant_id)
+                                                .bind(serde_json::json!({"quote_id": quote_id_str}))
+                                                .execute(&pool)
+                                                .await;
+                                        });
+                                    }
+                                }
                             }
                             Err(e) => {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
@@ -354,9 +389,49 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
+                // First create the draft quote in the database
+                let quote_id = uuid::Uuid::new_v4();
+                let line_item_id = uuid::Uuid::new_v4();
+                let inbox_message_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("cust_unknown");
+
+                let db = self.orchestrator.db();
+                let mut tx_opt = None;
+                if let crate::db::DbStore::Postgres = &db.store {
+                    if let Ok(tx) = db.pool.begin().await {
+                        tx_opt = Some(tx);
+                    }
+                }
+
+                if let Some(mut tx) = tx_opt {
+                    let _ = sqlx::query(
+                        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+                    )
+                    .bind(quote_id)
+                    .bind(&event.tenant_id)
+                    .bind(uuid::Uuid::parse_str(customer_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .bind((price * 100.0) as i64)
+                    .bind((price * 0.20 * 100.0) as i64)
+                    .execute(&mut *tx)
+                    .await;
+
+                    let _ = sqlx::query(
+                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())"
+                    )
+                    .bind(line_item_id)
+                    .bind(quote_id)
+                    .bind(&scope)
+                    .bind((price * 100.0) as i64)
+                    .execute(&mut *tx)
+                    .await;
+
+                    let _ = tx.commit().await;
+                }
+
                 let action_payload = serde_json::json!({
-                    "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                    "inbox_message_id": inbox_message_id,
                     "feature_type": "quote_draft",
+                    "quote_id": quote_id.to_string(),
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
                     "scope": scope,

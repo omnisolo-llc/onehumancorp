@@ -479,12 +479,37 @@ pub async fn stripe_webhook_handler(
                     tokio::spawn(async move {
                         let evt = crate::orchestration::departments::types::DepartmentEvent {
                             id: uuid::Uuid::new_v4().to_string(),
-                            tenant_id: tenant_id_val,
+                            tenant_id: tenant_id_val.clone(),
                             event_type: "payment.captured".to_string(),
                             payload: payload_val,
                         };
                         let _ = orch.dispatch_event(evt).await;
                     });
+
+                    if let Some(quote_id) = obj.get("metadata").and_then(|m| m.get("quote_id")).and_then(|id| id.as_str()) {
+                        let db = webhook_state.orchestrator.db();
+                        if let crate::db::DbStore::Postgres = &db.store {
+                            let pool = db.pool.clone();
+                            let quote_id_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
+                            let tenant_id_val = tenant_id.to_string();
+                            let quote_id_val = quote_id.to_string();
+                            tokio::spawn(async move {
+                                // Update Quote status to ACCEPTED
+                                let _ = sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                    .bind(quote_id_uuid)
+                                    .bind(&tenant_id_val)
+                                    .execute(&pool)
+                                    .await;
+
+                                // Mark any pending follow up jobs as COMPLETED (or cancel them)
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE tenant_id = $1 AND job_type = 'quote_deposit_follow_up' AND payload->>'quote_id' = $2 AND status = 'PENDING'")
+                                    .bind(&tenant_id_val)
+                                    .bind(&quote_id_val)
+                                    .execute(&pool)
+                                    .await;
+                            });
+                        }
+                    }
                 }
             }
 
