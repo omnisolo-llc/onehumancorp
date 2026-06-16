@@ -1,3 +1,7 @@
+pub mod agent_feed;
+pub mod inbox;
+pub mod quotes;
+pub mod incidents;
 pub mod repository;
 pub mod organization;
 pub mod model;
