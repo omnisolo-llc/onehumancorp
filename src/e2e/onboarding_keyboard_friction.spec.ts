@@ -33,13 +33,14 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Step Context
-    await page.locator('input[value="Local Service"]').check({ force: true });
+    await page.locator('label[data-testid="context-local"]').click();
+    await page.locator('#step-context .next-step-btn').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-categories')).toHaveClass(/active/);
 
     // Step Categories
     await page.locator('#business-categories').selectOption('Handyman');
-    // For select, we need to focus it or body to press Enter, let's just press Enter globally
+    await page.locator('#step-categories .next-step-btn').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-name')).toHaveClass(/active/);
 
@@ -50,6 +51,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
 
     // Step Assistant
     await page.locator('#assistant-name').fill('Jarvis');
+    await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#assistant-name').press('Enter');
     await expect(page.locator('#step-admin')).toHaveClass(/active/);
 
@@ -57,6 +59,8 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.locator('#admin-email').fill('admin@test.com');
     await page.locator('#admin-password').fill('password123');
     await page.locator('#admin-password').press('Enter');
+    await page.locator('#step-admin .next-step-btn').focus();
+    await page.keyboard.press('Enter');
     await expect(page.locator('#step-offer')).toHaveClass(/active/);
   });
 
@@ -78,6 +82,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Try to proceed without selecting context (fails validation)
+    await page.locator('#step-context .next-step-btn').focus();
     await page.keyboard.press('Enter');
 
     // Should still be on step-context
