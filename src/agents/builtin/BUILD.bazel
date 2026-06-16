@@ -8,6 +8,8 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
+
+
         "acon_context.rs",
         "auth.rs",
         "budget.rs",
@@ -57,6 +59,10 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
+
+
+        "acon.rs",
+        "acon_test.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
         "departments.rs",

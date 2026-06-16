@@ -1,3 +1,4 @@
+pub mod acon;
 pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
@@ -387,3 +388,6 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 pub mod jit_retrieval;
 pub mod aider_repomap;
 pub mod microagent;
+
+#[cfg(test)]
+mod acon_test;

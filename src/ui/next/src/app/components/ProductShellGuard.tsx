@@ -58,6 +58,7 @@ const routesWithOwnShell = new Set([
   "/scaling",
   "/services",
   "/settings",
+  "/onboarding",
   "/triage",
 ]);
 
