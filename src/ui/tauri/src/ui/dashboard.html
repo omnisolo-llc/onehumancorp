@@ -1660,9 +1660,9 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send Proposal</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Dismiss</button>
+                    <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send Proposal</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1688,8 +1688,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1715,8 +1715,8 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
                 </div>
               </div>
             `;
@@ -1743,8 +1743,8 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1769,8 +1769,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1785,9 +1785,9 @@
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
                 <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)">Edit</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)">Deny</button>
                 </div>
               </div>
             `;
@@ -1801,8 +1801,8 @@
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
               <div class="triage-controls" style="margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
 
                 </div>
