@@ -706,19 +706,24 @@
         <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
-          <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
+          <p style="color: #86868b; margin-bottom: 16px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
+          <div id="gamified-progress" style="display:flex; justify-content: space-evenly; margin-bottom: 24px; font-weight: 600; color: #86868b; align-items:center; background: rgba(255,255,255,0.5); padding: 8px; border-radius: 12px;">
+            <span id="step-1-share" style="color:#0066FF; padding: 4px 8px; border-radius: 6px;">1. Share</span>
+            <span>&rarr;</span>
+            <span id="step-2-unlock" style="padding: 4px 8px; border-radius: 6px;">2. Unlock</span>
+          </div>
           <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
-            <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
-              Share on X to Unlock
+            <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; width: 100%;">
+              Share on X to Unlock 7 Days Free
             </button>
-            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%;">
               Upgrade to Pro
             </button>
             <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
               Maybe Later
             </button>
           </div>
-          <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500;">Verifying...</p>
+          <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 600;">Verifying...</p>
         </div>
       </div>
 
@@ -1228,9 +1233,20 @@
             // Open share dialog
             window.open(shareUrl, '_blank');
 
+            const step1Share = document.getElementById('step-1-share');
+            const step2Unlock = document.getElementById('step-2-unlock');
+
+            if (step1Share) {
+                step1Share.style.color = '#34C759';
+                step1Share.innerHTML = '✅ 1. Shared';
+            }
+            if (step2Unlock) {
+                step2Unlock.style.color = '#0066FF';
+            }
+
             softPaywallShareBtn.style.display = 'none';
             softPaywallStatus.style.display = 'block';
-            softPaywallStatus.innerText = 'Verifying Share...';
+            softPaywallStatus.innerText = '🚀 Verifying...';
 
             try {
               let url = '/api/v1/growth/trial-extension/claim';
@@ -1245,14 +1261,18 @@
               });
 
               if (response.ok) {
-                softPaywallStatus.innerText = 'Unlocked!';
+                if (step2Unlock) {
+                    step2Unlock.style.color = '#34C759';
+                    step2Unlock.innerHTML = '✅ 2. Unlocked!';
+                }
+                softPaywallStatus.innerText = '🎉 Unlocked! Welcome to Pro.';
                 softPaywallStatus.style.color = '#34C759';
                 localStorage.setItem('has_pro', 'true');
                 setTimeout(() => {
                   softPaywallModal.style.display = 'none';
                   enableAutomationsBtn.style.display = 'none';
                   advancedAutomationsStatus.style.display = 'block';
-                }, 1500);
+                }, 2000);
               } else {
                 softPaywallStatus.innerText = 'Failed to unlock features. Please try again.';
                 softPaywallStatus.style.color = '#FF3B30';
