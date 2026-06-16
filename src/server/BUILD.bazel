@@ -217,6 +217,7 @@ SERVER_RS_SRCS = [
     "//src/server/services/campaign:service.rs",
     "//src/server/services/chat:mod.rs",
     "//src/server/services/chat:service.rs",
+    "//src/server/services/cache_manager.rs",
     "//src/server/services/dashboard:mod.rs",
     "//src/server/services/dashboard:service.rs",
     "//src/server/services/growth:experiments.rs",
