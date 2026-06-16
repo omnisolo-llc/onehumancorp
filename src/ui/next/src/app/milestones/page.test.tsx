@@ -8,6 +8,10 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
 describe('MilestonesPage', () => {
   const mockPush = vi.fn();
 
@@ -106,5 +110,13 @@ describe('MilestonesPage', () => {
 
     const facebookButton = screen.getByText('Share on Facebook');
     expect(facebookButton).toBeDefined();
+  });
+
+  it('renders the PoweredByOHC component', async () => {
+    await act(async () => {
+      render(<MilestonesPage />);
+    });
+
+    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
 });
