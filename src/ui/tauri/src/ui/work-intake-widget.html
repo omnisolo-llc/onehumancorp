@@ -279,7 +279,6 @@
     themeSelect.addEventListener('change', updatePreview);
 
     removeBrandingCheckbox.addEventListener('change', (e) => {
-      // Simulate soft paywall if not Pro (for demo, assume always not pro unless mock set)
       const hasPro = localStorage.getItem('has_pro') === 'true';
       if (e.target.checked && !hasPro) {
         e.target.checked = false;
