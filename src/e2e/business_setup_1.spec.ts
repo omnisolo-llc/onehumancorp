@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard', () => {
   test.beforeEach(async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Business Setup Wizard', () => {
 
   test('moves through business type and name steps', async ({ page }) => {
     await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What kind of business are you building?" })).toBeVisible();
 
     await page.getByRole('button', { name: /Online Store/ }).click();
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
