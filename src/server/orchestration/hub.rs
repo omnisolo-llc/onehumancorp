@@ -34,7 +34,8 @@ impl RedisMeshTransport {
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
         // Enforce tenant_id boundary isolation
-        if !topic.starts_with(&format!("{}:", message.agent_id.split('_').next().unwrap_or("unknown"))) {
+        let tenant_id = message.agent_id.split('_').next().unwrap_or("unknown");
+        if !topic.starts_with(&format!("{}:", tenant_id)) {
             if !topic.contains(':') {
                 return Err("Topic must be prefixed with tenant_id for isolation".to_string());
             }
@@ -46,7 +47,17 @@ impl MeshTransport for RedisMeshTransport {
         self.publish_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
         self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
 
-        let res = self.inner.publish(topic, message).await;
+        let mut res = self.inner.publish(topic, message.clone()).await;
+
+        // Robust retry and backoff logic
+        let mut retries = 0;
+        let mut backoff_ms = 10;
+        while res.is_err() && retries < 3 {
+            retries += 1;
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
+            backoff_ms *= 2;
+            res = self.inner.publish(topic, message.clone()).await;
+        }
 
         let duration_ms = start.elapsed().as_millis() as u64;
         self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
@@ -113,8 +124,11 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        if !topic.contains(':') {
-            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+        let tenant_id = message.agent_id.split('_').next().unwrap_or("unknown");
+        if !topic.starts_with(&format!("{}:", tenant_id)) {
+            if !topic.contains(':') {
+                return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+            }
         }
 
         let start = Instant::now();
@@ -123,7 +137,17 @@ impl MeshTransport for MemoryMeshTransport {
         self.publish_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
 
-        let res = self.inner.publish(topic, message).await;
+        let mut res = self.inner.publish(topic, message.clone()).await;
+
+        // Robust retry and backoff logic
+        let mut retries = 0;
+        let mut backoff_ms = 10;
+        while res.is_err() && retries < 3 {
+            retries += 1;
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
+            backoff_ms *= 2;
+            res = self.inner.publish(topic, message.clone()).await;
+        }
 
         let duration_ms = start.elapsed().as_millis() as u64;
         self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
@@ -181,7 +205,7 @@ mod tests {
             });
         });
 
-        let cancel = transport.subscribe("test_topic", handler).await.unwrap();
+        let cancel = transport.subscribe("agent:test_topic", handler).await.unwrap();
 
         let msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "agent_1".to_string(),
@@ -191,7 +215,7 @@ mod tests {
             msg_id: "msg_1".to_string(),
         };
 
-        transport.publish("test_topic", msg.clone()).await.unwrap();
+        transport.publish("agent:test_topic", msg.clone()).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -256,7 +280,7 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let cancel = transport.subscribe("test_topic_redis", handler).await.unwrap();
+        let cancel = transport.subscribe("agent:test_topic_redis", handler).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -268,7 +292,7 @@ mod tests {
             msg_id: "msg_redis_1".to_string(),
         };
 
-        transport.publish("test_topic_redis", msg.clone()).await.unwrap();
+        transport.publish("agent:test_topic_redis", msg.clone()).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -339,7 +363,7 @@ mod tests {
                     rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 }
             });
-            let cancel = transport.subscribe("concurrent_topic", handler).await.unwrap();
+            let cancel = transport.subscribe("agent:concurrent_topic", handler).await.unwrap();
             cancels.push(cancel);
         }
 
@@ -353,7 +377,7 @@ mod tests {
             msg_id: "concurrent_msg_1".to_string(),
         };
 
-        transport.publish("concurrent_topic", msg).await.unwrap();
+        transport.publish("agent:concurrent_topic", msg).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -382,7 +406,7 @@ mod tests {
                     rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 }
             });
-            let cancel = transport.subscribe("concurrent_topic_redis", handler).await.unwrap();
+            let cancel = transport.subscribe("agent:concurrent_topic_redis", handler).await.unwrap();
             cancels.push(cancel);
         }
 
@@ -396,7 +420,7 @@ mod tests {
             msg_id: "concurrent_msg_redis_1".to_string(),
         };
 
-        transport.publish("concurrent_topic_redis", msg).await.unwrap();
+        transport.publish("agent:concurrent_topic_redis", msg).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -424,7 +448,7 @@ mod tests {
             });
         });
 
-        let cancel = transport.subscribe("subms_topic", handler).await.unwrap();
+        let cancel = transport.subscribe("agent:subms_topic", handler).await.unwrap();
 
         let msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "agent_fast".to_string(),
@@ -438,7 +462,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         let start = std::time::Instant::now();
-        transport.publish("subms_topic", msg).await.unwrap();
+        transport.publish("agent:subms_topic", msg).await.unwrap();
 
         if let Some(received_time) = rx.recv().await {
             let elapsed = received_time.duration_since(start);
@@ -469,7 +493,7 @@ mod tests {
             });
         });
 
-        let cancel = transport.subscribe("subms_topic_redis", handler).await.unwrap();
+        let cancel = transport.subscribe("agent:subms_topic_redis", handler).await.unwrap();
 
         let msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "agent_fast_redis".to_string(),
@@ -483,7 +507,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         let start = std::time::Instant::now();
-        transport.publish("subms_topic_redis", msg).await.unwrap();
+        transport.publish("agent:subms_topic_redis", msg).await.unwrap();
 
         // use timeout
         let res = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
