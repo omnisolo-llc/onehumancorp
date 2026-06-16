@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Quote Viral Badge E2E', () => {
   test('verify viral quote badge appears on quote page naturally', async ({ page }) => {

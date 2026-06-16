@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Milestone Dismissal E2E', () => {
   test('verify milestone success card can be dismissed naturally', async ({ page }) => {

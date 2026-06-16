@@ -3,7 +3,7 @@ import { adminPage } from './fixtures';
 
 test.describe('Distributed Inventory Sync POS', () => {
 
-  adminPage('should lock inventory during POS transaction and prevent online checkout', async ({ page, request }) => {
+  test('should lock inventory during POS transaction and prevent online checkout', async ({ page, request }) => {
     // Navigate to the POS Sync Product page
     await page.goto('/commerce/products/e2e-product-pos-sync');
 

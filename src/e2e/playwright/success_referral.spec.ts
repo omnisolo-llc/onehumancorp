@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Success Referral Card E2E', () => {
   test('verify referral success card appears after booking natively', async ({ page }) => {
