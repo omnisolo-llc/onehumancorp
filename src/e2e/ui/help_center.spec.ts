@@ -138,7 +138,12 @@ test.describe('Help Center & Documentation Features', () => {
 
     // Click and navigate
     await releaseNotesLink.evaluate((b) => (b as HTMLElement).click());
+<<<<<<< HEAD
+    await expect(page).toHaveURL(/\/changelog.html/);
+    await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
+=======
     await expect(page).toHaveURL(/\/changelog/);
     await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
+>>>>>>> cc743d40 (fix: resolve interactive walkthrough and api docs E2E test failures)
   });
 });
