@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Quote Edit E2E', () => {
   test('verify editing a quote works naturally', async ({ page }) => {
