@@ -116,7 +116,7 @@ export default function HelpCenterPage() {
                     <p className="text-yellow-800/80 text-xs sm:text-sm mt-1">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
                   </div>
                   <Link href="/api-docs" className="shrink-0 px-6 py-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-semibold rounded-xl shadow-sm transition-all border border-yellow-300/50 w-full sm:w-auto text-center min-h-[44px]">
-                    API Documentation
+                    API Documentation (for Advanced Users)
                   </Link>
                 </div>
               </WithTooltip>
