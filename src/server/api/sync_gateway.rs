@@ -1,11 +1,13 @@
 use axum::{
-    extract::{Extension, Query, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
+    extract::{Extension, Query, State, Json, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
     response::IntoResponse,
     http::StatusCode,
     Router,
     routing::get,
 };
 use ::server_common::Claims;
+use ::server_ohc::orchestration::{SyncMcpDeltasRequest, DeltaItem};
+use ::server_ohc::orchestration::sync_service_server::SyncService;
 use serde::Deserialize;
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::broadcast;
@@ -20,6 +22,69 @@ static REDIS_SUBSCRIBED: OnceLock<Arc<Mutex<bool>>> = OnceLock::new();
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/ws", get(ws_sync_handler))
+}
+
+#[derive(serde::Deserialize)]
+pub struct McpDeltasPayload {
+    pub deltas: Vec<DeltaItemPayload>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct DeltaItemPayload {
+    pub id: String,
+    pub entity_id: String,
+    pub data: String,
+    pub updated_at: String,
+}
+
+pub async fn sync_mcp_deltas_handler(
+    State(pool): State<sqlx::PgPool>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<McpDeltasPayload>,
+) -> impl IntoResponse {
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+    if tenant_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({
+            "status": "error",
+            "message": "missing tenant identity in session",
+            "synced_count": 0
+        }))).into_response();
+    }
+
+    let mut tonic_request = tonic::Request::new(SyncMcpDeltasRequest {
+        tenant_id: tenant_id.clone(),
+        deltas: payload.deltas.into_iter().map(|d| DeltaItem {
+            id: d.id,
+            entity_id: d.entity_id,
+            data: d.data,
+            updated_at: d.updated_at,
+        }).collect(),
+    });
+
+    if let Ok(metadata_value) = spiffe_id_str.parse() {
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
+    }
+
+    let service = crate::services::sync::service::MySyncService::new(pool);
+    match service.sync_mcp_deltas(tonic_request).await {
+        Ok(resp) => {
+            let inner = resp.into_inner();
+            (StatusCode::OK, axum::Json(serde_json::json!({
+                "status": inner.status,
+                "message": inner.message,
+                "synced_count": inner.synced_count
+            }))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
+                "status": "error",
+                "message": e.message(),
+                "synced_count": 0
+            }))).into_response()
+        }
+    }
 }
 
 #[derive(Deserialize)]

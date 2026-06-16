@@ -59,19 +59,19 @@ function UnlockContent() {
                 <strong className="text-purple-500 text-lg mt-1 block">{reward}</strong>
             </p>
 
-            <div className="w-full p-6 rounded-xl border-2 flex flex-col items-center justify-center mb-8 relative transition-all"
+            <div id="discount-code" className="w-full p-6 rounded-xl border-2 flex flex-col items-center justify-center mb-8 relative transition-all"
                  style={{
                      borderColor: theme === 'dark' ? (isUnlocked ? '#8b5cf6' : '#4b5563') : (isUnlocked ? '#8b5cf6' : '#d1d5db'),
                      background: theme === 'dark' ? (isUnlocked ? '#2e1065' : '#1f2937') : (isUnlocked ? '#f5f3ff' : '#f3f4f6'),
                      borderStyle: isUnlocked ? 'solid' : 'dashed'
                  }}>
 
-                 <span className={`font-mono text-2xl tracking-widest font-bold select-none transition-all duration-1000 ${isUnlocked ? 'blur-none opacity-100' : 'filter blur-md opacity-40'}`} style={{ color: theme === 'dark' ? (isUnlocked ? '#c4b5fd' : '#fff') : (isUnlocked ? '#6d28d9' : '#000') }}>
+                 <span id="unlocked-code-span" className={`font-mono text-2xl tracking-widest font-bold select-none transition-all duration-1000 ${isUnlocked ? 'unlocked blur-none opacity-100' : 'filter blur-md opacity-40'}`} style={{ color: theme === 'dark' ? (isUnlocked ? '#c4b5fd' : '#fff') : (isUnlocked ? '#6d28d9' : '#000') }}>
                      {hiddenCode}
                  </span>
 
                  {!isUnlocked && (
-                     <div className="absolute inset-0 flex items-center justify-center">
+                     <div id="locked-badge" className="absolute inset-0 flex items-center justify-center">
                          <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-gray-900 text-white rounded-full shadow-lg flex items-center gap-1">
                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                              Locked

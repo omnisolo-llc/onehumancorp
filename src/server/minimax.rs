@@ -122,7 +122,8 @@ impl MinimaxClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            PromptCache::truncate_context(prompt, 2000)
+            let reduced = ::server_pricing::compression::reduce_tokens(prompt);
+            PromptCache::truncate_context(&reduced, 2000)
         };
 
         // 1. Check Cache
@@ -440,7 +441,8 @@ impl LocalLLMClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            PromptCache::truncate_context(prompt, 2000)
+            let reduced = ::server_pricing::compression::reduce_tokens(prompt);
+            PromptCache::truncate_context(&reduced, 2000)
         };
 
         if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &self.model) {
