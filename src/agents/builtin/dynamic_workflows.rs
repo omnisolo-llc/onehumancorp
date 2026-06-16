@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
-    #[allow(dead_code)]
     script: String,
 
     max_concurrent: usize,

@@ -111,7 +111,7 @@ async fn get_onboarding_state(tenant_id: Option<String>, user_id: Option<String>
     }
 
     // Local file fallback ONLY if standalone
-    let is_standalone = std::env::var("OHC_STANDALONE_MODE").map(|v| v == "true").unwrap_or(false);
+    let is_standalone = ::server_lib::is_standalone_runtime();
     if is_standalone {
         let path = onboarding_state_path();
         if path.exists() {
