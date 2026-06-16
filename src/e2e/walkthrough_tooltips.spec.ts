@@ -100,7 +100,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(results).toBeVisible();
 
     // The chat widget should also be there
-    const chatBtn = page.locator('#ohc-help-btn');
+    const chatBtn = page.locator('#ohc-floating-help-btn');
     await expect(chatBtn).toBeVisible();
   });
 });
