@@ -4537,10 +4537,9 @@ mod tests {
         ];
 
         let prev_id = "resp_1".to_string();
-        let mut restored_msgs = None;
 
         // Test the actual helper method from the Agent struct
-        restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
+        let restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
 
         assert!(restored_msgs.is_some());
         let restored = restored_msgs.unwrap();

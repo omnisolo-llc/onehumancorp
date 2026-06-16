@@ -93,6 +93,21 @@ struct StartOnboardingRequest {
     target_audience: Option<String>,
     ai_agents: Option<Vec<String>>,
     ai_auto_respond: Option<bool>,
+    initial_products: Option<Vec<IntakeProduct>>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct IntakeProduct {
+    name: String,
+    price: String,
+    description: Option<String>,
+    variants: Option<Vec<IntakeProductVariant>>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct IntakeProductVariant {
+    name: String,
+    price_modifier: String,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {

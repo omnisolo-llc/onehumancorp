@@ -561,7 +561,6 @@ mod tests {
 }
     #[tokio::test]
     async fn test_predictive_restock_draft() {
-        use crate::orchestration::departments::orchestrator::Department;
         use std::sync::Arc;
         use tokio::sync::RwLock;
         use ohc_builtin_agent::mesh::transport::InProcessTransport;
