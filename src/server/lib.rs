@@ -2447,7 +2447,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
-        if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
+        if let Err(_e) = provider.send_sms(&phone, &from_number, message).await {
             tracing::warn!("Failed to dispatch critical SMS. Expected if Twilio is not configured.");
         }
     }
@@ -5535,7 +5535,7 @@ async fn create_ui_bom_item_handler(
             // Fire and forget gracefully
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
-                if let Err(e) = res {
+                if let Err(_e) = res {
                     tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured.");
                 }
             });
