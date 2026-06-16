@@ -57,7 +57,7 @@ static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<::server_utils::cache::Hybri
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
-    if is_standalone_runtime() {
+    if crate::is_standalone_runtime() {
         None
     } else {
         std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
@@ -215,7 +215,7 @@ pub fn workflow_agent_binary() -> String {
     std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
         .unwrap_or_else(|_| {
-            if is_standalone_runtime() {
+            if crate::is_standalone_runtime() {
                 if let Ok(exe_path) = std::env::current_exe() {
                     return exe_path.to_string_lossy().to_string();
                 }
@@ -269,7 +269,7 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
     let task = workflow_agent_task(&record.workflow, &record.task);
 
     tokio::spawn(async move {
-        if is_standalone_runtime() {
+        if crate::is_standalone_runtime() {
             if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
                 use ohc_builtin_agent::proto::agent_service::agent_service_server::AgentService;
                 let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
@@ -2543,7 +2543,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Ensure local database permissions are secure in standalone mode
-    if is_standalone_runtime() {
+    if crate::is_standalone_runtime() {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -2608,7 +2608,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let is_cloud = !is_standalone_runtime();
+    let is_cloud = !crate::is_standalone_runtime();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
@@ -2719,7 +2719,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // In standalone desktop mode the agent is bundled into the local server
     // process. Cluster/cloud deployments run the agent as a separate binary.
-    if is_standalone_runtime() {
+    if crate::is_standalone_runtime() {
         let builtin_transport = mesh_transport.clone();
         let builtin_mesh = handoff_mesh.clone();
         tokio::spawn(async move {
@@ -5440,7 +5440,7 @@ async fn create_ui_bom_item_handler(
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let is_standalone = is_standalone_runtime();
+    let is_standalone = crate::is_standalone_runtime();
     let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
     } else {
