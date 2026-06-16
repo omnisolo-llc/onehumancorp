@@ -1,4 +1,5 @@
 "use client";
+import { WithTooltip } from "./TooltipRegistry";
 
 
 import { WithTooltip } from "./TooltipRegistry";
