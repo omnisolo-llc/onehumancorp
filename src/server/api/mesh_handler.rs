@@ -140,12 +140,65 @@ pub async fn orchestration_broadcast_handler(
 }
 
 /// Handler for WebSockets to stream orchestration tasks
+use axum::response::sse::{Event, KeepAlive, Sse};
+use tokio_stream::wrappers::ReceiverStream;
+use std::convert::Infallible;
+use futures::stream::Stream;
+
 pub async fn orchestration_tasks_stream_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+}
+
+pub async fn mesh_stream_sse_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+) -> impl IntoResponse {
+    let tenant_id = headers.get("x-tenant-id").and_then(|val| val.to_str().ok()).unwrap_or("default").to_string();
+    let channel = format!("{}:mesh:tasks", tenant_id);
+
+    let (tx, rx) = mpsc::channel(100);
+
+    let handler = Box::new(move |msg: MeshMessage| {
+        let _ = tx.try_send(msg);
+    });
+
+    let cancel = match transport.subscribe(&channel, handler).await {
+        Ok(c) => c,
+        Err(_) => return Sse::new(tokio_stream::iter(vec![Ok::<Event, Infallible>(Event::default().data("error"))])).keep_alive(KeepAlive::default()).into_response(),
+    };
+
+    let stream = ReceiverStream::new(rx).map(|msg| {
+        let payload = String::from_utf8_lossy(&msg.payload).to_string();
+        // Send actual JSON to match what the frontend expects
+        let event_data = serde_json::json!({
+            "type": "sync",
+            "message": format!("Teammate event: {}", payload)
+        }).to_string();
+        let event = Event::default().event("sync").data(event_data);
+        Ok(event)
+    });
+
+    // Run cancel function when the stream drops
+    struct CancelOnDrop(Option<Box<dyn Fn() + Send + Sync>>);
+    impl Drop for CancelOnDrop {
+        fn drop(&mut self) {
+            if let Some(f) = self.0.take() {
+                f();
+            }
+        }
+    }
+
+    let cancel_guard = CancelOnDrop(Some(cancel));
+    let sse_stream = stream.map(move |item: Result<Event, Infallible>| {
+        let _guard = &cancel_guard;
+        item
+    });
+
+    Sse::new(sse_stream).keep_alive(KeepAlive::default()).into_response()
 }
 
 /// Broadcast handler for general mesh communication

@@ -33,6 +33,13 @@ impl RedisMeshTransport {
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+        // Enforce tenant_id boundary isolation
+        if !topic.starts_with(&format!("{}:", message.agent_id.split('_').next().unwrap_or("unknown"))) {
+            if !topic.contains(':') {
+                return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+            }
+        }
+
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
 
@@ -48,6 +55,9 @@ impl MeshTransport for RedisMeshTransport {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        if !topic.contains(':') && !topic.starts_with('*') {
+            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+        }
         self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
@@ -103,6 +113,10 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+        if !topic.contains(':') {
+            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+        }
+
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
 
@@ -118,6 +132,9 @@ impl MeshTransport for MemoryMeshTransport {
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        if !topic.contains(':') && !topic.starts_with('*') {
+            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
+        }
         self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }

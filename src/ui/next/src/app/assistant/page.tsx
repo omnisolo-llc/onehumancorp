@@ -141,6 +141,24 @@ export default function AssistantPage() {
   const [tasks, setTasks] = useState<AssistantTask[]>([]);
   const [capabilities, setCapabilities] = useState<Required<AssistantCapabilities>>(fallbackCapabilities);
   const [activeTaskId, setActiveTaskId] = useState('');
+  const [meshSyncIndicator, setMeshSyncIndicator] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Connect to real SSE endpoint for mesh events
+    const evtSource = new EventSource('/api/v1/orchestration/mesh/stream');
+    evtSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'sync') {
+          setMeshSyncIndicator(data.message);
+          setTimeout(() => setMeshSyncIndicator(null), 5000);
+        }
+      } catch (err) {
+        console.error('Failed to parse mesh event', err);
+      }
+    };
+    return () => evtSource.close();
+  }, []);
   const [section, setSection] = useState<Section>('tasks');
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [taskSearch, setTaskSearch] = useState('');
@@ -505,6 +523,26 @@ function TaskListPage({
 }) {
   return (
     <section className={styles.panel} aria-label="Task rail">
+      {meshSyncIndicator && (
+        <div
+          className="glassmorphism"
+          style={{
+            borderRadius: '16px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            color: '#34C759',
+            cursor: 'pointer'
+          }}
+          onClick={() => alert(`Log:\n[${new Date().toISOString()}] TeammateMeshEvent: ${meshSyncIndicator}`)}
+        >
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#34C759' }} />
+          {meshSyncIndicator}
+        </div>
+      )}
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>Task List</h2>

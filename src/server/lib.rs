@@ -6041,6 +6041,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
         .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/orchestration/mesh/stream", axum::routing::get(api::mesh_handler::mesh_stream_sse_handler).with_state(mesh_transport.clone()))
         .route(
             "/api/v1/advisory/insights",
             axum::routing::get({
