@@ -3233,66 +3233,37 @@ pub async fn simulate_agent_feed_item_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
     let item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
-    let action_id = format!("sim-action-{}", uuid::Uuid::new_v4());
 
     match &db.store {
         crate::db::DbStore::Postgres => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
             )
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Simulated Webhook")
-            .bind("High")
-            .bind("A new simulated event needs your attention.")
-            .bind("pending")
+            .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."})))
+            .bind("PENDING_APPROVAL")
             .execute(&db.pool)
             .await {
-                tracing::error!("Failed to insert triage_item: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
-            }
-
-            if let Err(e) = sqlx::query(
-                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
-            )
-            .bind(&action_id)
-            .bind(&item_id)
-            .bind(&tenant_id)
-            .bind("Draft Reply")
-            .bind("This is a simulated draft action payload.")
-            .execute(&db.pool)
-            .await {
-                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                tracing::error!("Failed to insert agent_feed_item: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         },
         crate::db::DbStore::Sqlite(_) => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
             )
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Simulated Webhook")
-            .bind("High")
-            .bind("A new simulated event needs your attention.")
-            .bind("pending")
+            .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."})))
+            .bind("PENDING_APPROVAL")
             .execute(&db.pool)
             .await {
-                tracing::error!("Failed to insert triage_item: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
-            }
-
-            if let Err(e) = sqlx::query(
-                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
-            )
-            .bind(&action_id)
-            .bind(&item_id)
-            .bind(&tenant_id)
-            .bind("Draft Reply")
-            .bind("This is a simulated draft action payload.")
-            .execute(&db.pool)
-            .await {
-                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                tracing::error!("Failed to insert agent_feed_item: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         }
