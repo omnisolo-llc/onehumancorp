@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
-    use crate::orchestration::departments::types::{DepartmentEvent};
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, Department};
+
+    use crate::orchestration::departments::types::{DepartmentEvent, DepartmentConfig};
     use crate::orchestration::departments::operations_agent::OperationsAgent;
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
     use crate::orchestration::departments::sales_agent::SalesAgent;
@@ -9,6 +10,8 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
+
+
     use uuid::Uuid;
     use crate::db::DbStore;
 
@@ -149,7 +152,7 @@ mod tests {
         // 1. Test Draft Mode (auto_approve_limits = 0.0)
         {
             let mut agent = cs_agent.write().await;
-            use crate::orchestration::departments::types::DepartmentConfig;
+
             agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
         }
 
@@ -564,6 +567,8 @@ mod tests {
 
         use std::sync::Arc;
         use tokio::sync::RwLock;
+
+
         use ohc_builtin_agent::mesh::transport::InProcessTransport;
         use crate::orchestration::mesh::CentrifugeNode;
         use crate::orchestration::departments::DepartmentOrchestrator;

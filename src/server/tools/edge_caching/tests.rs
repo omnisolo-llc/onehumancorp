@@ -2,6 +2,7 @@
 
 #[cfg(test)]
 mod tests {
+    use ::server_ohc::orchestration::McpInvokeRequest;
     use crate::tools::edge_caching::server::EdgeCachingMcpServer;
 
 
