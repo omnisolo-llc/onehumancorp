@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Feed - OHC Work Command Center</title>
+    <style>
+      :root {
+        --bg-color: #f5f5f7;
+        --text-color: #1d1d1f;
+        --card-bg: rgba(255, 255, 255, 0.65);
+        --card-border: rgba(255, 255, 255, 0.4);
+        --primary-color: #0066FF;
+        --secondary-text: #86868b;
+        --success-color: #34C759;
+        --danger-color: #FF3B30;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #16161a;
+          --text-color: #F5F5F7;
+          --card-bg: rgba(22, 22, 26, 0.7);
+          --card-border: rgba(255, 255, 255, 0.1);
+          --secondary-text: #A1A1A6;
+        }
+      }
+
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .mobile-container {
+        width: 100%;
+        max-width: 414px; /* Mobile first breakpoint */
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 24px 16px;
+        box-sizing: border-box;
+      }
+
+      .header {
+        margin-bottom: 24px;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+      }
+
+      .header p {
+        color: var(--secondary-text);
+        font-size: 15px;
+        margin: 0;
+      }
+
+      .feed-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .action-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      .action-card.optimistic-hide {
+        transform: scale(0.95);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .event-source {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: rgba(0, 102, 255, 0.1);
+        color: var(--primary-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .time-ago {
+        font-size: 12px;
+        color: var(--secondary-text);
+        font-weight: 500;
+      }
+
+      .card-context {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .card-draft {
+        font-size: 14px;
+        color: var(--secondary-text);
+        background: rgba(0, 0, 0, 0.03);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid var(--primary-color);
+        margin: 0;
+        white-space: pre-wrap;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .card-draft { background: rgba(255, 255, 255, 0.05); }
+      }
+
+      .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      button {
+        flex: 1;
+        min-height: 44px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+      }
+
+      button:active {
+        opacity: 0.8;
+      }
+
+      .btn-approve {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .btn-reject {
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid var(--card-border);
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--secondary-text);
+        font-weight: 500;
+      }
+
+      .loading-spinner {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--secondary-text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mobile-container">
+      <div class="header">
+        <h1>Agent Feed</h1>
+        <p>What needs attention today</p>
+      </div>
+
+      <div id="feed-list" class="feed-list">
+        <div class="loading-spinner">Loading actions...</div>
+      </div>
+    </div>
+
+    <script>
+      const feedListEl = document.getElementById('feed-list');
+
+      async function loadFeed() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          const response = await fetch(`/api/agent-feed?tenant_id=${encodeURIComponent(tenantId)}`);
+          if (!response.ok) throw new Error('Failed to load feed');
+
+          const data = await response.json();
+          const items = Array.isArray(data) ? data : (data.items || []);
+
+          renderFeed(items.filter(i => i.lifecycle_state === 'PENDING_APPROVAL' || i.lifecycle_state === 'PENDING'));
+        } catch (error) {
+          console.error("Error loading feed:", error);
+          feedListEl.innerHTML = `<div class="empty-state" style="color: var(--danger-color);">Unable to load feed. Please try again later.</div>`;
+        }
+      }
+
+      function renderFeed(items) {
+        if (!items || items.length === 0) {
+          feedListEl.innerHTML = `<div class="empty-state">All caught up! No pending actions.</div>`;
+          return;
+        }
+
+        feedListEl.innerHTML = items.map(item => {
+          const title = item.proposed_action?.title || item.context_payload?.title || "Action Required";
+          const draft = item.proposed_action?.description || item.proposed_action?.draft || item.context_payload?.description || "";
+
+          return `
+            <div class="action-card" id="card-${item.id}" data-testid="agent-feed-card">
+              <div class="card-header">
+                <span class="event-source">${(item.event_source || 'System').replace('_', ' ')}</span>
+              </div>
+              <p class="card-context">${title}</p>
+              ${draft ? `<p class="card-draft">${draft}</p>` : ''}
+              <div class="card-actions">
+                <button class="btn-reject" onclick="handleAction('${item.id}', 'REJECTED')" data-testid="feed-reject-btn">Discard</button>
+                <button class="btn-approve" onclick="handleAction('${item.id}', 'APPROVED')" data-testid="feed-approve-btn">Approve</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      async function handleAction(itemId, actionState) {
+        const cardEl = document.getElementById(`card-${itemId}`);
+        if (!cardEl) return;
+
+        // Optimistic UI Update
+        cardEl.classList.add('optimistic-hide');
+        setTimeout(() => {
+          cardEl.remove();
+          if (feedListEl.children.length === 0) {
+            feedListEl.innerHTML = `<div class="empty-state">All caught up! No pending actions.</div>`;
+          }
+        }, 200);
+
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          await fetch(`/api/agent-feed/${encodeURIComponent(itemId)}/state`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Tenant-ID': tenantId
+            },
+            body: JSON.stringify({ state: actionState })
+          });
+        } catch (error) {
+          console.error(`Failed to execute action ${actionState} for ${itemId}:`, error);
+          // In a real app we might revert the optimistic UI hide here and show an error toast.
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', loadFeed);
+    </script>
+  </body>
+</html>

@@ -535,3 +535,4 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ('e2e-feed-1', 'e2e-tenant', 'Instagram DM', '{"description": "Customer asked about vegan options"}', '{"title": "Reply to Customer", "draft": "Yes, we have vegan cakes!"}', 'PENDING_APPROVAL');
