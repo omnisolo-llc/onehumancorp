@@ -102,30 +102,31 @@ pub async fn offline_sync_handler(
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
-            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
-            let current_stock = sqlx::query(query)
+            let query = "
+                WITH old_stock AS (
+                    SELECT inventory_count FROM products WHERE id = $2 AND tenant_id = $3
+                )
+                UPDATE products
+                SET inventory_count = GREATEST(0, products.inventory_count - $1),
+                    available_quantity = GREATEST(0, products.available_quantity - $1)
+                WHERE id = $2 AND tenant_id = $3
+                RETURNING (SELECT inventory_count FROM old_stock) as old_count, products.inventory_count as new_count
+            ";
+            let update_res = sqlx::query(query)
+                .bind(mutation.quantity_deducted)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
                 .fetch_optional(&mut *db_tx)
                 .await;
 
-            match current_stock {
+            match update_res {
                 Ok(Some(row)) => {
-                    let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                    let stock: i32 = sqlx::Row::get(&row, "old_count");
+                    let _new_stock: i32 = sqlx::Row::get(&row, "new_count");
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
-
-                    let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
-
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
-                        .bind(new_stock)
-                        .bind(&mutation.product_id)
-                        .bind(&tenant_id_clone)
-                        .bind(mutation.quantity_deducted)
-                        .execute(&mut *db_tx)
-                        .await;
 
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
