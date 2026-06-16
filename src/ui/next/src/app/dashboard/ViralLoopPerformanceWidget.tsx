@@ -34,37 +34,37 @@ export function ViralLoopPerformanceWidget() {
   }, []);
 
   return (
-    <section className="app-panel mb-6">
-      <div className="app-panel-header">
+    <section className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 mb-6">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="app-panel-title">Viral Loop Performance</h2>
-          <div className="app-list-subtitle">Track your referral program and team growth.</div>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-1">Viral Loop Performance</h2>
+          <div className="text-sm text-gray-600 dark:text-gray-300">Track your referral program and team growth.</div>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100">
-          <span className="text-xs font-medium text-indigo-600">Active</span>
+        <div className="flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-black/20 rounded-full border border-white/40 dark:border-white/10">
+          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Active Loop</span>
         </div>
       </div>
-      <div className="app-panel-body">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="app-card flex flex-col justify-between">
-            <div className="text-sm font-medium mb-1 text-indigo-800">Invites Sent</div>
-            <div className="text-3xl font-bold font-outfit text-indigo-900">{invitesSent}</div>
+      <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Invites Sent</div>
+            <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">{invitesSent}</div>
           </div>
-          <div className="app-card flex flex-col justify-between">
-            <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-            <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Active Referrals</div>
+            <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">{activeReferrals}</div>
           </div>
-          <div className="app-card flex flex-col justify-between">
-            <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-            <div className="text-3xl font-bold font-outfit text-indigo-900">${revenue.toFixed(2)}</div>
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Revenue from Referrals</div>
+            <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">${revenue.toFixed(2)}</div>
           </div>
-          <div className="app-card flex flex-col justify-between">
-            <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-            <div className="text-3xl font-bold font-outfit text-indigo-900">${pendingRewards.toFixed(2)}</div>
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Pending Rewards</div>
+            <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">${pendingRewards.toFixed(2)}</div>
           </div>
         </div>
-        <div className="mt-4">
-            <Link href="/referrals" className="app-button inline-flex min-h-[44px]">View Referral Details</Link>
+        <div className="mt-6 flex justify-end">
+            <Link href="/referrals" className="app-button bg-indigo-600 hover:bg-indigo-700 text-white border-none py-2 px-6 rounded-lg text-sm font-semibold transition-colors min-h-[44px] flex items-center justify-center">View Referral Details</Link>
         </div>
       </div>
     </section>
