@@ -61,6 +61,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
     "//src/server/api:sync_gateway.rs",
+    "//src/server/api:crdt_sync.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",

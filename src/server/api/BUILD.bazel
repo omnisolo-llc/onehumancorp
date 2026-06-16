@@ -1,4 +1,4 @@
-exports_files(["chaos.rs", "sync_gateway.rs"])
+exports_files(["chaos.rs", "sync_gateway.rs", "crdt_sync.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
