@@ -330,21 +330,22 @@ export default function Dashboard() {
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
-        if (approvalsData && Array.isArray(approvalsData)) {
-            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
-            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
-        } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
-                id: a.id,
-                event_type: a.lifecycle_state,
-                department: a.event_source,
-                payload: typeof a.context_payload === 'object' ? JSON.stringify({ original_payload: a.context_payload }) : a.context_payload,
-                created_at: a.created_at
-            })));
-        }
 
         const metricsData = unifiedData.metrics || {};
+        const unifiedTriage = unifiedData.triage || [];
+        const unifiedAgentFeed = unifiedData.agent_feed || [];
+        const unifiedActivities = unifiedData.pending_approvals || [];
+
+        setInitialTriage(Array.isArray(unifiedTriage) ? unifiedTriage : []);
+        setPendingApprovals(Array.isArray(unifiedAgentFeed) ? unifiedAgentFeed.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED") : []);
+        setActivities(Array.isArray(unifiedAgentFeed) ? unifiedAgentFeed.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+                id: a.id,
+                tenant_id: a.tenant_id,
+                event_type: a.lifecycle_state,
+                department: a.event_source,
+                payload: JSON.stringify({ original_payload: { description: a.proposed_action?.message || a.proposed_action?.action_type || a.event_source } }),
+                created_at: a.updated_at || a.created_at || new Date().toISOString()
+        })) : []);
         const ordersData = unifiedData.orders || [];
         const inboxData = unifiedData.inbox || [];
         const supplyData = unifiedData.supply || {};
@@ -363,7 +364,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        setApprovals(Array.isArray(unifiedActivities) ? unifiedActivities : (Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : [])));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -497,7 +498,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-col">
         <div className="order-first md:order-last mb-6 w-full overflow-hidden">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+          <UnifiedAgentFeed initialData={{ triage: initialTriage, items: pendingApprovals, activities: activities }} />
         </div>
 
         <div className="order-last md:order-first">

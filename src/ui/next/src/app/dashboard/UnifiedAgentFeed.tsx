@@ -57,15 +57,15 @@ type ApprovalRequest = {
 };
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
-  const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
-  const [triageLoading, setTriageLoading] = useState(true);
+  const [triageItems, setTriageItems] = useState<TriageItem[]>(initialData?.triage || []);
+  const [triageLoading, setTriageLoading] = useState(false);
   const [triageError, setTriageError] = useState("");
 
-  const [items, setItems] = useState<AgentFeedItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<AgentFeedItem[]>(initialData?.items || []);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
-  const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+  const [activities, setActivities] = useState<OHCLedgerEntry[]>(initialData?.activities || []);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
@@ -136,129 +136,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchTriage() {
-      setTriageLoading(true);
-      setTriageError("");
-      try {
-        const tenant = tenantId();
-        const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenant)}`);
-        if (!res.ok) throw new Error("Failed to load triage items from the database");
-        const data = await res.json();
-        const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
-        if (mounted) setTriageItems(rows);
-      } catch (e: any) {
-        if (mounted) setTriageError(e?.message || "Failed to load triage items");
-      } finally {
-        if (mounted) setTriageLoading(false);
-      }
-    }
-
-    async function fetchAll() {
-      fetchTriage();
-      try {
-        setLoading(true);
-        setActivityLoading(true);
-        const tenant = tenantId();
-
-        let unifiedData = initialData;
-
-        if (!unifiedData) {
-          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-          });
-
-          if (!unifiedRes.ok) {
-            throw new Error("Failed to load agent feed");
-          }
-
-          unifiedData = await unifiedRes.json();
-        }
-
-        if (mounted) {
-          if (unifiedData?.items) {
-            setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-
-            // Map items for activity feed as well
-            const mappedActivities = unifiedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
-              id: a.id,
-              tenant_id: a.tenant_id,
-              event_type: a.lifecycle_state,
-              department: a.event_source,
-              payload: JSON.stringify({ original_payload: { description: a.proposed_action?.message || a.proposed_action?.action_type || a.event_source } }),
-              created_at: a.updated_at || a.created_at || new Date().toISOString()
-            }));
-            setActivities(mappedActivities);
-          }
-        }
-
-        if (mounted) {
-          // Listen to SSE updates
-          if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
-
-          eventSource.onmessage = (event) => {
-            try {
-              const payload = JSON.parse(event.data);
-
-              if (payload.event_type === "approval_request") {
-                setItems((prev) => {
-                  if (prev.find((a) => a.id === payload.data.id)) return prev;
-                  return [payload.data, ...prev];
-                });
-              } else if (payload.event_type === "approval_decision") {
-                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
-                setActivities((prev) => {
-                  const newActivity = {
-                    id: crypto.randomUUID(),
-                    tenant_id: tenant,
-                    event_type: payload.data.status || 'APPROVED',
-                    department: payload.data.department || 'general',
-                    payload: payload.data,
-                    created_at: new Date().toISOString(),
-                  };
-                  return [newActivity, ...prev];
-                });
-              }
-            } catch (e) {
-              console.error("Error parsing SSE event", e);
-            }
-          };
-
-          eventSource.onerror = (error) => {
-            console.error("SSE connection error", error);
-            eventSource.close();
-          };
-
-          return () => {
-            eventSource.close();
-            mounted = false;
-          };
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setError(err.message || "Failed to load feed");
-        }
-        console.error("Failed to load activity", err);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-          setActivityLoading(false);
-        }
-      }
-    }
-
-    const cleanup = fetchAll();
-    return () => {
-      mounted = false;
-      cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
-    };
-  }, [initialData]);
 
   useEffect(() => {
     let ws: WebSocket;

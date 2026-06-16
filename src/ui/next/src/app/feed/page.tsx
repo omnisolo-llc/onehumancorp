@@ -223,7 +223,7 @@ export default function FeedPage() {
                     </p>
                     <button
                       onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
+                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium min-h-[44px] min-w-[44px]"
                       data-testid="feed-edit-btn"
                     >
                       Edit Action
