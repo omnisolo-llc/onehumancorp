@@ -144,6 +144,11 @@
         gap: 16px;
         margin-top: 16px;
       }
+      @media (max-width: 375px) {
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+      }
       .metric-box {
         padding: 16px;
         background: rgba(0, 0, 0, 0.03);
@@ -287,7 +292,7 @@
                 <span id="payment-fees" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Bandwidth Savings</span>
+                <span style="color: #86868b;">Network & Storage Savings</span>
                 <span id="bandwidth-savings" style="font-weight: 500; color: #34C759;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
