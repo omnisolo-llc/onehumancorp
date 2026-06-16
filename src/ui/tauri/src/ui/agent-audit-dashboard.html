@@ -274,18 +274,19 @@
                 console.error("Failed to fetch ledger", e);
             }
 
-            // Real-time WebSocket connection (Mock/Placeholder for now)
-            setTimeout(() => {
+            // Real-time WebSocket connection
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/api/v1/feed/ws?tenant_id=${tenantId}&token=test`;
+            const ws = new WebSocket(wsUrl);
+            ws.onopen = () => {
                 const liveLog = document.getElementById('live-log');
                 liveLog.innerHTML += `<br>> Connected to agent telemetry stream.`;
-                liveLog.innerHTML += `<br>> [Operations] Checking booking conflicts... OK`;
-            }, 1000);
-
-            setTimeout(() => {
+            };
+            ws.onmessage = (e) => {
                 const liveLog = document.getElementById('live-log');
-                liveLog.innerHTML += `<br>> [Marketing] Processing draft promotion...`;
+                liveLog.innerHTML += `<br>> ${e.data}`;
                 liveLog.scrollTop = liveLog.scrollHeight;
-            }, 2500);
+            };
         });
     </script>
   </body>
