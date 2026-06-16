@@ -300,7 +300,7 @@ impl Department for SalesAgent {
                     .get_service_by_name_like(&event.tenant_id, &intent.service_name)
                     .await?;
 
-                let (service_name, mut price) = service.unwrap_or((intent.service_name, 75.0));
+                let (service_name, mut price) = service.unwrap_or((intent.service_name.clone(), 150.0));
 
                 let mut context_summary = String::new();
                 for r in context_records {
@@ -327,7 +327,15 @@ impl Department for SalesAgent {
                 };
 
                 let mut scope = format!("{} including labor and standard materials.", service_name);
+
+
                 let mut suggested_time = "Tomorrow at 2 PM".to_string();
+                if let Ok(Some(row)) = sqlx::query("SELECT start_time FROM calendar_events WHERE tenant_id = $1 AND status = 'available' ORDER BY start_time ASC LIMIT 1").bind(&event.tenant_id).fetch_optional(&self.orchestrator.db().pool).await {
+                    let start_time: chrono::DateTime<chrono::Utc> = sqlx::Row::get(&row, "start_time");
+                    suggested_time = start_time.format("%Y-%m-%d %I:%M %p").to_string();
+                }
+
+
                 let mut drafted_message = format!("Based on our past projects, I can offer {} starting at ${:.2}. Should I send over the formal agreement?", service_name, price);
 
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
@@ -364,18 +372,54 @@ impl Department for SalesAgent {
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
                     "price": price,
-                });
-
-                self.orchestrator
+                });                self.orchestrator
                     .execute_action(
                         DepartmentType::Sales,
                         format!("Draft quote for {}", service_name),
                         event.tenant_id.clone(),
                         risk,
-                        action_payload,
+                        action_payload.clone(),
                     )
                     .await
                     .map(|_| ())?;
+
+                let stripe_client = crate::integrations::stripe::client::StripeClient::new(
+                    std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
+                );
+
+                let deposit_amount = price * 0.20; // 20% deposit
+                let mut payment_link = String::new();
+                match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
+                    Ok(url) => {
+                        payment_link = url;
+                        tracing::info!("Generated deposit link: {}", payment_link);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to create checkout session for quote deposit: {}", e);
+                    }
+                }
+
+                let mut final_payload = action_payload.clone();
+                if let Some(obj) = final_payload.as_object_mut() {
+                    obj.insert("payment_link".to_string(), serde_json::Value::String(payment_link));
+                }
+
+                let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(self.orchestrator.db().pool.clone());
+                let feed_item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_source: "quote_draft".to_string(),
+                    context_payload: Some(sqlx::types::Json(final_payload.clone())),
+                    proposed_action: Some(sqlx::types::Json(final_payload)),
+                    lifecycle_state: "PENDING_APPROVAL".to_string(),
+                    created_at: Some(chrono::Utc::now()),
+                    updated_at: Some(chrono::Utc::now()),
+                };
+
+                if let Err(e) = repo.create(feed_item).await {
+                    tracing::error!("Failed to create agent feed item for quote draft: {}", e);
+                }
+
                 return Ok(());
             }
 

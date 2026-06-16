@@ -39,6 +39,9 @@ pub async fn twilio_webhook_post_handler(
     let _to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
     let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
 
+    // Webhook processes SMS/WhatsApp explicitly for quote drafting flow
+
+
     let num_media: usize = params.get("NumMedia").and_then(|s| s.parse().ok()).unwrap_or(0);
     for i in 0..num_media {
         if let Some(media_url) = params.get(&format!("MediaUrl{}", i)) {
