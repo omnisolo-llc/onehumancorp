@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
+import { WithTooltip } from "./TooltipRegistry";
 
 type Message = {
   id: string;
@@ -190,28 +191,30 @@ export function HelpChat() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
-              aria-label="Close help chat"
-              aria-expanded={isOpen}
-              aria-controls="ai-chat-interface"
-            >
-              <span className="sr-only">✕</span>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <WithTooltip id="close-chat-tooltip" defaultText="Close the AI chat">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
+                aria-label="Close help chat"
+                aria-expanded={isOpen}
+                aria-controls="ai-chat-interface"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <span className="sr-only">✕</span>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </WithTooltip>
           </div>
 
           {/* Messages */}
@@ -275,42 +278,44 @@ export function HelpChat() {
               disabled={isLoading}
               className="flex-1 bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
-            <button
-              type="submit"
-              disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-h-[44px] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
-              aria-label="Send message"
-            >
-              {isLoading ? (
-                <svg
-                  className="w-5 h-5 animate-spin"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              )}
-            </button>
+            <WithTooltip id="send-message-tooltip" defaultText="Send message to AI">
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isLoading}
+                className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-h-[44px] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
+                aria-label="Send message"
+              >
+                {isLoading ? (
+                  <svg
+                    className="w-5 h-5 animate-spin"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                )}
+              </button>
+            </WithTooltip>
           </form>
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ReactNode } from 'react';
+import { WithTooltip } from "./TooltipRegistry";
 
 export type Step = {
   targetId: string;
@@ -148,9 +149,11 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
         <div className="flex justify-between items-start mb-3">
           <h4 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} className="ohc-walkthrough-close text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          <WithTooltip id="close-walkthrough-tooltip" defaultText="Skip the tour">
+            <button onClick={handleSkip} className="ohc-walkthrough-close text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </WithTooltip>
         </div>
 
         <p className="text-sm text-gray-700 mb-5 leading-relaxed">{currentStep.content}</p>

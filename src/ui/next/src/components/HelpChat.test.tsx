@@ -3,7 +3,16 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HelpChat } from './HelpChat';
+import { TooltipProvider } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const renderWithTooltip = (ui: React.ReactElement) => {
+  return render(
+    <TooltipProvider>
+      {ui}
+    </TooltipProvider>
+  );
+};
 
 describe('HelpChat Component', () => {
   beforeEach(() => {
@@ -22,13 +31,13 @@ describe('HelpChat Component', () => {
   });
 
   it('renders the floating button by default', () => {
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
     expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Ask AI Help' })).not.toBeInTheDocument();
   });
 
   it('opens the chat interface when the button is clicked', () => {
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
     expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
@@ -36,7 +45,7 @@ describe('HelpChat Component', () => {
   });
 
   it('closes the chat when the close button is clicked', () => {
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
     expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
@@ -46,7 +55,7 @@ describe('HelpChat Component', () => {
   });
 
   it('sends a message and displays the response', async () => {
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
     const user = userEvent.setup({ delay: null });
 
     // Open chat
@@ -82,7 +91,7 @@ describe('HelpChat Component', () => {
   it('handles fetch errors gracefully', async () => {
     global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
 
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
     const user = userEvent.setup({ delay: null });
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
@@ -106,7 +115,7 @@ describe('HelpChat Component', () => {
     error.name = 'AbortError';
     global.fetch = vi.fn(() => Promise.reject(error));
 
-    render(<HelpChat />);
+    renderWithTooltip(<HelpChat />);
     const user = userEvent.setup({ delay: null });
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
