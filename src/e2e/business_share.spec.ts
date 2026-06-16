@@ -6,12 +6,12 @@ test.describe('Business Share & Embed', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Agents' }).click();
+    await page.getByRole('link', { name: 'AI Departments' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 

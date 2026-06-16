@@ -141,7 +141,7 @@ function InviteAndEarnWidget() {
   };
 
   return (
-    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10">
+    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10" data-testid="dashboard-viral-invite-widget">
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
