@@ -17,9 +17,79 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/orders", get(get_orders_handler))
-        .route("/inventory", get(get_inventory_handler))
+        .route("/orders", get(get_orders_handler).post(post_orders_handler))
+        .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct OrderStatusUpdate {
+    pub order_id: String,
+    pub status: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct InventoryToggle {
+    pub item_id: String,
+    pub is_sold_out: bool,
+}
+
+async fn post_orders_handler(
+    State(_hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payloads): Json<Vec<serde_json::Value>>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+    for payload in payloads {
+        if let Some(p) = payload.get("payload") {
+            let order_id = p.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+            let status = p.get("status").and_then(|v| v.as_str()).unwrap_or("");
+            if !order_id.is_empty() && !status.is_empty() {
+                let _ = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(status)
+                    .bind(order_id)
+                    .bind(tenant_id)
+                    .execute(&pool)
+                    .await;
+            }
+        }
+    }
+    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    cache.invalidate_by_tag("pos_orders").await;
+    Json(json!({"status": "ok"}))
+}
+
+async fn post_inventory_handler(
+    State(_hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payloads): Json<Vec<serde_json::Value>>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+    for payload in payloads {
+        if let Some(p) = payload.get("payload") {
+            let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
+            let is_sold_out = p.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
+            if !item_id.is_empty() {
+                let _ = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(is_sold_out)
+                    .bind(item_id)
+                    .bind(tenant_id)
+                    .execute(&pool)
+                    .await;
+            }
+        }
+    }
+    Json(json!({"status": "ok"}))
 }
 
 #[derive(serde::Deserialize)]
@@ -43,19 +113,28 @@ async fn get_orders_handler(
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
             let pool = crate::db::get_pool();
-            let rows = sqlx::query("SELECT id, total_amount, status, created_at FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+            let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
                 .bind(&tenant_id_bg)
                 .fetch_all(&pool)
                 .await
                 .unwrap_or_default();
 
             let orders: Vec<Value> = rows.into_iter().map(|row| {
-                json!({
+                let mut order_json = json!({
                     "id": row.get::<String, _>("id"),
                     "total_amount": row.get::<f64, _>("total_amount"),
                     "status": row.get::<String, _>("status"),
                     "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-                })
+                    "items": [],
+                    "customer_name": "Walk-in",
+                });
+                if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
+                    order_json["notes"] = json!(notes);
+                }
+                if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
+                    order_json["translated_notes"] = json!(translated);
+                }
+                order_json
             }).collect();
             let result = json!({ "orders": orders });
             if let Some(c) = POS_ORDERS_CACHE.get() {
@@ -67,19 +146,28 @@ async fn get_orders_handler(
 
     let pool = crate::db::get_pool();
 
-    let rows = sqlx::query("SELECT id, total_amount, status, created_at FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+    let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
         .bind(&tenant_id)
         .fetch_all(&pool)
         .await
         .unwrap_or_default();
 
     let orders: Vec<Value> = rows.into_iter().map(|row| {
-        json!({
+        let mut order_json = json!({
             "id": row.get::<String, _>("id"),
             "total_amount": row.get::<f64, _>("total_amount"),
             "status": row.get::<String, _>("status"),
             "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-        })
+            "items": [],
+            "customer_name": "Walk-in",
+        });
+        if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
+            order_json["notes"] = json!(notes);
+        }
+        if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
+            order_json["translated_notes"] = json!(translated);
+        }
+        order_json
     }).collect();
 
     let result = json!({ "orders": orders });

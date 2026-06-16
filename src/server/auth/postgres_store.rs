@@ -430,8 +430,13 @@ impl UserRepository for PgUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        }
 
         sqlx::query(
             r#"
@@ -447,10 +452,17 @@ impl UserRepository for PgUserRepository {
         .map_err(|e| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
-            .bind(org_id)
-            .execute(&mut *tx)
-            .await;
+        let query = if should_bypass {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP"
+        } else {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1"
+        };
+
+        let _ = if should_bypass {
+            sqlx::query(query).execute(&mut *tx).await
+        } else {
+            sqlx::query(query).bind(org_id).execute(&mut *tx).await
+        };
 
         tx.commit().await.map_err(|e| e.to_string())?;
 

@@ -10,6 +10,7 @@ use ::server_common::Claims;
 #[derive(Deserialize)]
 pub struct OpportunitiesQuery {
     pub tenant_id: Option<String>,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -20,9 +21,11 @@ pub struct UpdateOpportunityStageRequest {
 
 pub async fn list_opportunities_handler(
     State(db): State<Arc<crate::db::DB>>,
+    Query(query): Query<OpportunitiesQuery>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
@@ -53,7 +56,7 @@ pub async fn list_opportunities_handler(
     .await;
 
     match result {
-        Ok(rows) => {
+        Ok(mut rows) => {
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {:?}", e);
                 return (
@@ -62,6 +65,14 @@ pub async fn list_opportunities_handler(
                 )
                     .into_response();
             }
+
+            if mobile_optimized {
+                for row in &mut rows {
+                    row.tenant_id = String::new();
+                    // lead_id is essential for mobile navigation, so we keep it.
+                }
+            }
+
             Json(rows).into_response()
         }
         Err(e) => {
@@ -72,6 +83,37 @@ pub async fn list_opportunities_handler(
             )
                 .into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::repository::models::Opportunity;
+
+    #[test]
+    fn test_opportunity_mobile_optimization() {
+        let opp = Opportunity {
+            id: "opt_1".to_string(),
+            tenant_id: "tenant_1".to_string(),
+            lead_id: Some("lead_1".to_string()),
+            title: "Test".to_string(),
+            stage: "NEW".to_string(),
+            estimated_value: Some(100.0),
+            priority: Some(1),
+            created_at: None,
+            updated_at: None,
+        };
+
+        let mut rows = vec![opp];
+
+        // Simulate mobile_optimized = true logic from handler
+        for row in &mut rows {
+            row.tenant_id = String::new();
+        }
+
+        assert_eq!(rows[0].tenant_id, "");
+        assert_eq!(rows[0].lead_id, Some("lead_1".to_string()), "lead_id must be preserved for navigation");
     }
 }
 

@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "plugins": [
       {
         "name": "next"
@@ -41,6 +41,9 @@
     "vitest.config.mts",
     "vitest.setup.ts",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "src/e2e/**/*",
+    "../../e2e/**/*",
+    "../../src/e2e/**/*"
   ]
 }

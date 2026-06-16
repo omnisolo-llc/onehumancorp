@@ -282,6 +282,7 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route("/seasonal-promo/generate", post(handle_promo_generate))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
@@ -2897,4 +2898,40 @@ async fn handle_simulate_referral_checkout(
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
     }))
+}
+
+
+#[derive(Debug, serde::Deserialize)]
+pub struct GeneratePromoRequest {
+    pub occasion: Option<String>,
+    pub discount: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct GeneratePromoResponse {
+    pub content: String,
+}
+
+pub async fn handle_promo_generate(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::Json(req): axum::Json<GeneratePromoRequest>,
+) -> impl axum::response::IntoResponse {
+    let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
+    let occasion = if occasion_raw.trim().is_empty() { "Winter Wonderland".to_string() } else { occasion_raw };
+
+    let discount_raw = req.discount.unwrap_or_else(|| "25".to_string());
+    let discount = if discount_raw.trim().is_empty() { "25".to_string() } else { discount_raw };
+
+    let mut generated = format!(
+        "{} Special!\n\n{}% OFF\n\nUse code: WINTERW25",
+        occasion, discount
+    );
+
+    if !generated.contains("Powered by OHC") {
+        generated.push_str("\n\n⚡ Powered by OHC");
+    }
+
+    axum::Json(GeneratePromoResponse {
+        content: generated,
+    })
 }
