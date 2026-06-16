@@ -113,6 +113,39 @@ beforeEach(() => {
     });
   });
 
+  it('handles Subscribe & Save checkout session flow correctly', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/billing/create-checkout-session') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit-sub' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => { render(<CheckoutPage />); });
+
+    const subscribeLabel = screen.getByText('Subscribe & Save 10%');
+    fireEvent.click(subscribeLabel);
+
+    const payButton = screen.getByText('Pay');
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"is_subscription":true')
+      }));
+      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit-sub');
+    });
+  });
+
   it('handles delivery quote flow correctly', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

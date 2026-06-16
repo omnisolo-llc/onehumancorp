@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>OHC - Quick Charge</title>
+    <script src="https://js.stripe.com/terminal/v1/"></script>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -602,6 +603,40 @@
 </script>
 
 <script>
+
+      let stripeTerminal = null;
+      let connectedReader = null;
+
+      async function initializeStripeTerminal() {
+          if (!window.StripeTerminal) return;
+          try {
+              stripeTerminal = StripeTerminal.create({
+                  onFetchConnectionToken: async () => {
+                      const tokenRes = await fetch('/api/v1/payments/terminal/token', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                          }
+                      });
+                      const data = await tokenRes.json();
+                      return data.token || data.secret;
+                  },
+                  onUnexpectedReaderDisconnect: () => {
+                      console.warn('Reader disconnected unexpectedly.');
+                      connectedReader = null;
+                  }
+              });
+              console.log("Stripe Terminal Initialized");
+          } catch(e) {
+              console.error("Error initializing Stripe Terminal:", e);
+          }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+          initializeStripeTerminal();
+      });
+
       let currentAmountCents = 0;
       let selectedProductId = null;
       let isManualAmount = true;
@@ -718,16 +753,14 @@
               renderCatalog([]);
           }
       }
+>>>>>>> acf4360d (fix XSS vulnerability in pos.html and anti-mocking violations in E2E tests)
 
       async function initiateCharge() {
         tapOverlay.style.display = 'flex';
 
-        // In a real app, here we would invoke the native Tap To Pay SDK.
-        // For web and tests, we show a simulate button.
-        try {
-          const tenantId = localStorage.getItem('tenant_id') || 'default';
+        simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
 
-          // Request Terminal Token
+        // Request Terminal Token
           const tokenRes = await fetch('/api/v1/payments/terminal/token', {
             method: 'POST',
             headers: {
@@ -772,9 +805,79 @@
         }
       }
 
+
       simulateTapBtn.addEventListener('click', async () => {
           simulateTapBtn.innerText = "Processing...";
           simulateTapBtn.style.backgroundColor = "#86868b";
+
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+
+          if (stripeTerminal) {
+              try {
+                  simulateTapBtn.innerText = "Discovering Readers...";
+                  const discoverResult = await stripeTerminal.discoverReaders({ simulated: true });
+                  if (discoverResult.error) {
+                      console.error('Discover failed:', discoverResult.error);
+                  } else if (discoverResult.discoveredReaders.length > 0) {
+                      simulateTapBtn.innerText = "Connecting...";
+                      const connectResult = await stripeTerminal.connectReader(discoverResult.discoveredReaders[0]);
+                      if (connectResult.error) {
+                          console.error('Connect failed:', connectResult.error);
+                      } else {
+                          connectedReader = connectResult.reader;
+                          simulateTapBtn.innerText = "Reserving...";
+
+                          // Reserve inventory
+                          const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                              body: JSON.stringify({ tenant_id: tenantId, product_id: 'quick_charge', quantity: 1, ttl_seconds: 15 })
+                          });
+
+                          // Get Intent
+                          const intentRes = await fetch('/api/v1/payments/terminal/intent', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                              body: JSON.stringify({ amount_cents: currentAmountCents, currency: 'usd', product_id: 'quick_charge', quantity: 1, order_id: 'pos_web_' + Date.now() })
+                          });
+                          const intentData = await intentRes.json();
+
+                          if (intentData && intentData.client_secret) {
+                              simulateTapBtn.innerText = "Tap card...";
+                              const collectResult = await stripeTerminal.collectPaymentMethod(intentData.client_secret);
+                              if (collectResult.error) {
+                                  console.error('Collect failed:', collectResult.error);
+                              } else {
+                                  simulateTapBtn.innerText = "Confirming...";
+                                  const processResult = await stripeTerminal.processPayment(collectResult.paymentIntent);
+                                  if (processResult.error) {
+                                      console.error('Process failed:', processResult.error);
+                                  } else {
+                                      // Commit inventory
+                                      await fetch('/api/v1/payments/terminal/commit', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                                          body: JSON.stringify({ tenant_id: tenantId, product_id: 'quick_charge', quantity: 1, amount_cents: currentAmountCents, lock_id: intentData.lock_id })
+                                      });
+
+                                      // Success
+                                      tapOverlay.style.display = 'none';
+                                      posView.style.display = 'none';
+                                      receiptScreen.style.display = 'flex';
+                                      document.querySelector('.receipt-text').innerText = "Payment Successful";
+                                      return; // done!
+                                  }
+                              }
+                          }
+                      }
+                  }
+              } catch (e) {
+                  console.error("Stripe Terminal error during charge:", e);
+              }
+          }
+
+          // Fallback logic for offline or when Stripe Terminal SDK fails
+
 
           // Tap Success
           tapOverlay.style.display = 'none';
