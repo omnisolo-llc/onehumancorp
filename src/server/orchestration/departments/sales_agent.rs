@@ -5,7 +5,7 @@ use crate::orchestration::departments::types::{
     ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
 };
 use std::collections::HashMap;
-use std::sync::Arc;\nuse uuid::Uuid;
+use std::sync::Arc;
 
 pub struct SalesAgent {
     orchestrator: Arc<DepartmentOrchestrator>,

@@ -27,7 +27,6 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
-#[allow(dead_code)]
 fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
@@ -779,7 +778,6 @@ impl VectorRepository {
                     // Optimize by fetching only id, tenant_id, and embedding to minimize memory usage
                     struct MinimalRecord {
                         id: String,
-                        #[allow(dead_code)]
                         tenant_id: String,
                         embedding: Vec<f32>,
                     }
@@ -1155,7 +1153,6 @@ impl LongTermMemory for PersistentMemoryStore {
 /// 3) Raw transcripts (accessed via search only)
 #[derive(Clone)]
 pub struct Anthropic3TierMemoryStore {
-    #[allow(dead_code)]
     base_dir: std::path::PathBuf,
     index_file: std::path::PathBuf,
     topics_dir: std::path::PathBuf,

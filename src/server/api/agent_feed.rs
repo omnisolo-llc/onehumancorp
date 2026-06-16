@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use sqlx::PgPool;
@@ -16,7 +16,29 @@ use std::sync::{Arc, OnceLock};
 use futures::{sink::SinkExt, stream::StreamExt};
 use redis::AsyncCommands;
 
-pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MobileAgentFeedItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub event_source: String,
+    pub lifecycle_state: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MobileAgentFeedListResponse {
+    pub items: Vec<MobileAgentFeedItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum AnyAgentFeedListResponse {
+    Standard(AgentFeedListResponse),
+    Mobile(MobileAgentFeedListResponse),
+}
+
+pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AnyAgentFeedListResponse>>> = OnceLock::new();
 pub static SHARED_REDIS_CLIENT: OnceLock<redis::Client> = OnceLock::new();
 
 pub fn get_redis_client() -> redis::Client {
@@ -26,7 +48,7 @@ pub fn get_redis_client() -> redis::Client {
     }).clone()
 }
 
-pub fn get_agent_feed_cache() -> Arc<HybridCache<AgentFeedListResponse>> {
+pub fn get_agent_feed_cache() -> Arc<HybridCache<AnyAgentFeedListResponse>> {
     AGENT_FEED_CACHE.get_or_init(|| {
         let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         let redis_client = match redis::Client::open(redis_url) {
@@ -147,15 +169,22 @@ async fn list_feed_items(
     Query(query): Query<PaginationQuery>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(AgentFeedListResponse { items: vec![] })).into_response(),
+        None => {
+            if mobile_optimized {
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response();
+            } else {
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response();
+            }
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
-    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
 
@@ -172,9 +201,21 @@ async fn list_feed_items(
         tokio::spawn(async move {
             let repo = AgentFeedRepository::new(pool_bg);
             if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
-                let response = AgentFeedListResponse { items };
+                let any_response = if mobile_optimized {
+                    let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                        id: item.id,
+                        tenant_id: item.tenant_id,
+                        event_source: item.event_source,
+                        lifecycle_state: item.lifecycle_state,
+                        created_at: item.created_at,
+                        updated_at: item.updated_at,
+                    }).collect();
+                    AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+                } else {
+                    AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+                };
                 let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
-                cache_bg.set_with_tags(&cache_key_bg, response, vec![tag], std::time::Duration::from_secs(60)).await;
+                cache_bg.set_with_tags(&cache_key_bg, any_response, vec![tag], std::time::Duration::from_secs(60)).await;
             }
         });
 
@@ -185,14 +226,30 @@ async fn list_feed_items(
 
     match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
         Ok(items) => {
-            let response = AgentFeedListResponse { items };
+            let any_response = if mobile_optimized {
+                let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                    id: item.id,
+                    tenant_id: item.tenant_id,
+                    event_source: item.event_source,
+                    lifecycle_state: item.lifecycle_state,
+                    created_at: item.created_at,
+                    updated_at: item.updated_at,
+                }).collect();
+                AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+            } else {
+                AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+            };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
-            (StatusCode::OK, Json(response)).into_response()
+            cache.set_with_tags(&cache_key, any_response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
+            (StatusCode::OK, Json(any_response)).into_response()
         },
         Err(e) => {
             tracing::error!("Failed to list agent feed items: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(AgentFeedListResponse { items: vec![] })).into_response()
+            if mobile_optimized {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response()
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response()
+            }
         }
     }
 }
@@ -262,72 +319,19 @@ async fn update_feed_item_state(
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
-            // Trigger legacy execution by synchronizing the agent_approvals table
-            if payload.state == "APPROVED" || payload.state == "REJECTED" || payload.state == "DISMISSED" {
-                let legacy_status = if payload.state == "APPROVED" { "APPROVED" } else { "REJECTED" };
-                let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(legacy_status)
-                    .bind(&id)
-                    .bind(&tenant_id)
-                    .execute(&pool)
-                    .await;
-            }
+            let _ = crate::domain::agent_approvals::sync_legacy_approval_status(&tenant_id, &id, &payload.state, &pool).await;
 
-            // Handle incident resolution execution
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
                     if item.event_source == "incident_resolution" {
                         if let Some(ref payload) = item.context_payload {
-                            if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
-                                let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(incident_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                            let _ = crate::domain::incidents::handle_incident_resolution(&tenant_id, payload, &pool).await;
                         }
                     }
 
-                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
-                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
-                            // Real implementation would buffer post here to AYRSHARE.
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
-                            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved quote draft: {}", quote_id);
-                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        let feature_type = payload.get("feature_type").and_then(|v| v.as_str()).unwrap_or("");
-                        if feature_type == "instagram_dm" || feature_type == "ambassador_reply" {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
-                                tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(draft_reply)
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                    if let Some(ref payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+                            let _ = crate::domain::action_router::dispatch_action(feature_type, &tenant_id, payload, &pool).await;
                         }
                     }
                 }
@@ -349,7 +353,7 @@ async fn update_feed_item_state(
 mod tests {
     use crate::api::agent_feed;
     use sqlx::PgPool;
-    use super::{get_agent_feed_cache, AgentFeedListResponse, ws_feed_handler};
+    use super::{get_agent_feed_cache, AgentFeedListResponse, AnyAgentFeedListResponse, ws_feed_handler};
     use axum::{Router, routing::get, extract::Extension};
     use ::server_common::Claims;
     use std::net::SocketAddr;
@@ -366,16 +370,16 @@ mod tests {
     #[tokio::test]
     async fn test_agent_feed_cache_operations() {
         let cache = get_agent_feed_cache();
-        let cache_key = "agent_feed:test_tenant:20:0";
+        let cache_key = "agent_feed:test_tenant:20:0:false";
 
         // Ensure it's empty initially
         cache.invalidate(cache_key).await;
         let result = cache.get(cache_key).await;
         assert!(result.is_none());
 
-        let response = AgentFeedListResponse {
+        let response = AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
             items: vec![],
-        };
+        });
 
         // Set cache with tag
         cache.set_with_tags(

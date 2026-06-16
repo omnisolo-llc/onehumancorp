@@ -1566,7 +1566,8 @@ impl QuoteFollowUpWorker {
         }
     }
 }
-\n#[cfg(test)]
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::DbStore;

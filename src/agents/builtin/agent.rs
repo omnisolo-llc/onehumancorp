@@ -6824,7 +6824,6 @@ mod tests {
             ]),
         });
 
-        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -9613,7 +9612,6 @@ mod hierarchical_prompt_tests {
 }
 
 #[derive(Clone)]
-#[allow(dead_code)]
 struct NudgeMockLlmClient {
     call_count: std::sync::Arc<tokio::sync::Mutex<usize>>,
 }
