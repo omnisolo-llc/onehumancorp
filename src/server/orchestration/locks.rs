@@ -12,13 +12,23 @@ pub struct LockGuard {
     _local_guard: Option<OwnedMutexGuard<()>>,
     redis_client: Option<redis::Client>,
     redis_key: Option<String>,
+    redis_val: Option<String>,
 }
 
 impl Drop for LockGuard {
     fn drop(&mut self) {
-        if let (Some(client), Some(key)) = (&self.redis_client, &self.redis_key) {
+        if let (Some(client), Some(key), Some(val)) = (&self.redis_client, &self.redis_key, &self.redis_val) {
             if let Ok(mut conn) = client.get_connection() {
-                let _: redis::RedisResult<()> = redis::cmd("DEL").arg(key).query(&mut conn);
+                let script = redis::Script::new(
+                    r#"
+                    if redis.call("get", KEYS[1]) == ARGV[1] then
+                        return redis.call("del", KEYS[1])
+                    else
+                        return 0
+                    end
+                    "#,
+                );
+                let _: redis::RedisResult<()> = script.key(key).arg(val).invoke(&mut conn);
             }
         }
     }
@@ -51,6 +61,7 @@ impl DistributedLock for StandaloneLock {
             _local_guard: Some(guard),
             redis_client: None,
             redis_key: None,
+            redis_val: None,
         })
     }
 
@@ -68,6 +79,7 @@ impl DistributedLock for StandaloneLock {
             _local_guard: Some(guard),
             redis_client: None,
             redis_key: None,
+            redis_val: None,
         })
     }
 }
@@ -87,10 +99,11 @@ impl DistributedLock for RedisLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let key = format!("ohc:lock:task:{}", task_id);
+        let val = uuid::Uuid::new_v4().to_string();
 
         let acquired: bool = redis::cmd("SET")
             .arg(&key)
-            .arg("1")
+            .arg(&val)
             .arg("NX")
             .arg("EX")
             .arg(5)
@@ -106,6 +119,7 @@ impl DistributedLock for RedisLock {
             _local_guard: None,
             redis_client: Some(self.client.clone()),
             redis_key: Some(key),
+            redis_val: Some(val),
         })
     }
 
@@ -113,10 +127,11 @@ impl DistributedLock for RedisLock {
         let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
 
         let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
+        let val = uuid::Uuid::new_v4().to_string();
 
         let acquired: bool = redis::cmd("SET")
             .arg(&key)
-            .arg("1")
+            .arg(&val)
             .arg("NX")
             .arg("EX")
             .arg(5)
@@ -132,6 +147,7 @@ impl DistributedLock for RedisLock {
             _local_guard: None,
             redis_client: Some(self.client.clone()),
             redis_key: Some(key),
+            redis_val: Some(val),
         })
     }
 }
