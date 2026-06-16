@@ -152,11 +152,11 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
-build:linux --linkopt=-fuse-ld=lld
-build:linux --host_linkopt=-fuse-ld=lld
+build:linux --linkopt=-fuse-ld=bfd
+build:linux --host_linkopt=-fuse-ld=bfd
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
-build:linux_x86_64 --linkopt=-fuse-ld=lld
-build:linux_x86_64 --host_linkopt=-fuse-ld=lld
+build:linux_x86_64 --linkopt=-fuse-ld=bfd
+build:linux_x86_64 --host_linkopt=-fuse-ld=bfd
 build:linux_arm64 --platforms=//bazel/platforms:linux_arm64
 build:linux_arm64 --extra_toolchains=@zig_sdk//toolchain:linux_arm64_gnu.2.17
 build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
