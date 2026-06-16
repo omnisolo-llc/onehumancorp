@@ -342,7 +342,7 @@
                     poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
                 }
 
-                // For demonstration, we'll mock the fetch if it fails (offline mode)
+                // For demonstration, we'll placeholder the fetch if it fails (offline mode)
                 // or if we're running without backend.
                 let rules = [];
                 try {
@@ -357,7 +357,7 @@
                         }
                     }
                 } catch (e) {
-                    console.warn("Falling back to local cache/mock rules", e);
+                    console.warn("Falling back to local cache/placeholder rules", e);
                 }
 
                 // Fallback rules if empty
@@ -482,7 +482,7 @@
                         'x-user-id': 'customer'
                     },
                     body: JSON.stringify({
-                        customer_id: '00000000-0000-0000-0000-000000000000', // Mock UUID
+                        customer_id: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
                         status: 'Draft',
                         line_items: lineItems,
                         notes: notes

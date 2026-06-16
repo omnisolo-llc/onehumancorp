@@ -841,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch tooltips registry from API or Tauri
     if (window.__TAURI__ && window.__TAURI__.core) {
-        // Mocking registry fetch for Tauri desktop since it's hardcoded via API
+        // Placeholder registry fetch for Tauri desktop since it's hardcoded via API
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     } else {
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);

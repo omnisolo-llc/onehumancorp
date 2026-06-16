@@ -299,7 +299,6 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_token_reduction_integration() {

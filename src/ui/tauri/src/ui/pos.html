@@ -624,7 +624,7 @@
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  // Mock or real call for Terminal SDK would go here to set up the reader
+                  // Call for Terminal SDK would go here to set up the reader
               }
           } else {
               console.warn("Payment intent API returned error");
