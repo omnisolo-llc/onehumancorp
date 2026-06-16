@@ -241,17 +241,17 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
-            <button class="btn-outline" onclick="window.location.href='dashboard.html'" style="margin-top: 12px;">Back to My Plan</button>
+            <button id="view-detailed-costs" class="btn-outline" style="margin-top: 12px;">View Detailed Costs</button>
             <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
             <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
             <div id="plan-message" style="margin-top: 12px; font-weight: 500; font-size: 14px; color: #34C759; display: none;"></div>
           </div>
 
           <!-- Cost Dashboard Widget -->
-          <div class="ohc-growth-card" id="cost-dashboard-widget">
-            <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b; display:none;">Cost Transparency Dashboard</h2>
-            <h2 style="display:none">Business Advisory Dashboard</h2>
-            <div style="display:none">Advisory Summary</div>
+          <div class="ohc-growth-card" id="cost-dashboard-widget" style="display:none;">
+            <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b; display:none;">Cost Transparency Dashboard</h2><button id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px;">Back to My Plan</button>
+            <h2 style="display:none;">Business Advisory Dashboard</h2>
+            <div style="display:none;">Advisory Summary</div>
 
             <div class="metrics-grid">
                <div class="metric-box">
@@ -1859,4 +1859,25 @@ initWalkthrough();
 <!-- Authorized deletion line 996 -->
 <!-- Authorized deletion line 997 -->
 <!-- Authorized deletion line 998 -->
-<!-- Authorized deletion line 999 -->
+<!-- Authorized deletion line 999 --><script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const viewDetailedCostsBtn = document.getElementById('view-detailed-costs');
+        const backToMyPlanBtn = document.getElementById('back-to-my-plan');
+        const myPlanWidget = document.getElementById('my-plan-widget');
+        const costDashboardWidget = document.getElementById('cost-dashboard-widget');
+
+        if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
+            viewDetailedCostsBtn.addEventListener('click', () => {
+                myPlanWidget.style.display = 'none';
+                costDashboardWidget.style.display = 'block';
+            });
+        }
+
+        if (backToMyPlanBtn && myPlanWidget && costDashboardWidget) {
+            backToMyPlanBtn.addEventListener('click', () => {
+                myPlanWidget.style.display = 'block';
+                costDashboardWidget.style.display = 'none';
+            });
+        }
+    });
+</script>
