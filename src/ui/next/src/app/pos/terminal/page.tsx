@@ -90,9 +90,9 @@ export default function POSTerminal() {
        return;
     }
     try {
-      const res = await fetch('/api/pos/inventory');
+      const res = await fetch('/api/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
       const data = await res.json();
-      setInventory(data);
+      setInventory(data.inventory || []);
     } catch (e) {
       console.error("Failed to load inventory", e);
       setInventory([]);
