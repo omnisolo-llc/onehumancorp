@@ -450,6 +450,58 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+
+        {/* Demo Data Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Demo Data</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Reload the seeded demo scenario to reset your data for testing.</div>
+            </div>
+          </div>
+          <div className="app-panel-body p-6 flex items-center gap-4">
+            <button
+              onClick={async (e) => {
+                const btn = e.currentTarget;
+                const originalText = btn.innerText;
+                btn.innerText = "Reloading...";
+                btn.disabled = true;
+
+                try {
+                  const res = await fetch("/api/dev/seed", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ scenario: "launch-readiness" }),
+                  });
+                  if (res.ok) {
+                    btn.innerText = "Success!";
+                    setTimeout(() => {
+                      btn.innerText = originalText;
+                      btn.disabled = false;
+                    }, 2000);
+                  } else {
+                    btn.innerText = "Failed";
+                    setTimeout(() => {
+                      btn.innerText = originalText;
+                      btn.disabled = false;
+                    }, 2000);
+                  }
+                } catch (err) {
+                  console.error(err);
+                  btn.innerText = "Error";
+                  setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                  }, 2000);
+                }
+              }}
+              className="px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs disabled:opacity-50 disabled:pointer-events-none"
+              type="button"
+            >
+              Reload Demo Data
+            </button>
+          </div>
+        </section>
       </div>
     </AppShell>
   );
