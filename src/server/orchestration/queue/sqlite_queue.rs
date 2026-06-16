@@ -223,7 +223,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 let tenant_id: String = r.try_get("tenant_id").unwrap_or_default();
                 let payload: String = r.try_get("payload").unwrap_or_else(|_| String::from("{}"));
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES (?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(job_id)
                     .bind(&tenant_id)
                     .bind("job_failed")
                     .bind("job_queue")
