@@ -12,7 +12,7 @@ test.describe('Documentation Features Flow', () => {
     await page.waitForLoadState('networkidle');
 
     // Click on the first article using a simpler selector that works regardless of exact visible state transitions
-    const articleLink = page.locator('a[href="/help/getting-started-1"]').first();
+    const articleLink = page.locator('a[href="/help_article.html?id=getting-started-1"]').first();
     await articleLink.click({ force: true });
 
     // Help Article Page
