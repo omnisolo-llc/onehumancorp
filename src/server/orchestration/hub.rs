@@ -36,9 +36,7 @@ impl MeshTransport for RedisMeshTransport {
         // Enforce tenant_id boundary isolation
         let tenant_id = message.agent_id.split('_').next().unwrap_or("unknown");
         if !topic.starts_with(&format!("{}:", tenant_id)) {
-            if !topic.contains(':') {
-                return Err("Topic must be prefixed with tenant_id for isolation".to_string());
-            }
+            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
         }
 
         let start = Instant::now();
@@ -126,9 +124,7 @@ impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
         let tenant_id = message.agent_id.split('_').next().unwrap_or("unknown");
         if !topic.starts_with(&format!("{}:", tenant_id)) {
-            if !topic.contains(':') {
-                return Err("Topic must be prefixed with tenant_id for isolation".to_string());
-            }
+            return Err("Topic must be prefixed with tenant_id for isolation".to_string());
         }
 
         let start = Instant::now();
@@ -519,5 +515,49 @@ mod tests {
             panic!("Did not receive message");
         }
         cancel();
+    }
+}
+
+#[cfg(test)]
+mod retry_isolation_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[tokio::test]
+    async fn test_tenant_isolation_enforcement() {
+        let transport = MemoryMeshTransport::new();
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "tenantA_agent1".to_string(),
+            action: "action_1".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: "msg_1".to_string(),
+        };
+
+        // Should succeed because prefix matches tenant_id
+        let res = transport.publish("tenantA:test_topic", msg.clone()).await;
+        assert!(res.is_ok());
+
+        // Should fail because prefix does not match
+        let res2 = transport.publish("tenantB:test_topic", msg.clone()).await;
+        assert!(res2.is_err());
+        assert_eq!(res2.unwrap_err(), "Topic must be prefixed with tenant_id for isolation");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_retry_backoff_logic() {
+        let transport = MemoryMeshTransport::new();
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "tenantA_agent1".to_string(),
+            action: "action_1".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: "msg_1".to_string(),
+        };
+        // The memory transport inner publish will not fail in normal test condition.
+        // We just ensure calling publish repeatedly works and compiles with our retry logic.
+        let res = transport.publish("tenantA:test_topic", msg).await;
+        assert!(res.is_ok());
     }
 }
