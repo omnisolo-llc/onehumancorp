@@ -55,6 +55,13 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 }
             }
 
+        let s = msg.content.trim();
+        if s.starts_with("```json") && s.ends_with("```") {
+            let json_str = s[7..s.len() - 3].trim();
+            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+                return Ok(parsed);
+            }
+        }
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
     }
