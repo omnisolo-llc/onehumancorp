@@ -1918,7 +1918,6 @@
       }
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
-      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
@@ -2220,6 +2219,8 @@ document.addEventListener('DOMContentLoaded', () => {
               if (activeStep) {
                   // Don't auto-advance in chat if we are focused on chat input
                   if (activeStep.id === 'step-chat' && (e.target.id === 'chat-input' || e.target.id === 'chat-image-url')) {
+                      e.preventDefault();
+                      sendChatMessage();
                       return;
                   }
                   e.preventDefault();
