@@ -5,6 +5,7 @@ use uuid::Uuid;
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct OfflineMutation {
     pub transaction_id: String,
+    pub timestamp: Option<String>,
     pub product_id: String,
     pub quantity_deducted: i32,
     pub amount: Option<i64>,
@@ -32,10 +33,11 @@ impl CRDTOfflineSynchronizer {
             }
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-            // CRDT Operation: decrement inventory idempotently/commutatively
+            // CRDT Operation: PN-Counter decrement (increment pn_counter_n) and re-calculate inventory_count
             let query = "
                 UPDATE products
-                SET inventory_count = GREATEST(0, inventory_count - $1)
+                SET pn_counter_n = pn_counter_n + $1,
+                    inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1))
                 WHERE id = $2 AND tenant_id = $3
                 RETURNING id
             ";
@@ -50,17 +52,20 @@ impl CRDTOfflineSynchronizer {
             match result {
                 Ok(Some(_)) => {
                     // Record successful pos offline transaction
+                    let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
                     let res = sqlx::query(
-                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
-                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb)
-                         ON CONFLICT DO NOTHING"
+                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status)
+                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced')
+                         ON CONFLICT (id) DO UPDATE SET status = 'RESOLVED', payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at, _sync_status = 'synced'
+                         WHERE pos_offline_transactions.updated_at < EXCLUDED.updated_at"
                     )
-                    .bind(Uuid::new_v4().to_string())
+                    .bind(&mutation.transaction_id)
                     .bind(tenant_id)
                     .bind(&mutation.transaction_id)
                     .bind(mutation.amount.unwrap_or(0))
                     .bind(mutation.currency.as_deref().unwrap_or("USD"))
                     .bind(serde_json::to_value(mutation).unwrap())
+                    .bind(&mutation_ts)
                     .execute(&mut *tx)
                     .await;
 
@@ -86,17 +91,20 @@ impl CRDTOfflineSynchronizer {
             let _ = tx.rollback().await;
 
             // Record failure in pos_offline_transactions
+            let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
             let _ = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
-                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb)
-                 ON CONFLICT DO NOTHING"
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status)
+                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced')
+                 ON CONFLICT (id) DO UPDATE SET status = 'FAILED', payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at, _sync_status = 'synced'
+                 WHERE pos_offline_transactions.updated_at < EXCLUDED.updated_at"
             )
-            .bind(Uuid::new_v4().to_string())
+            .bind(&mutation.transaction_id)
             .bind(tenant_id)
             .bind(&mutation.transaction_id)
             .bind(mutation.amount.unwrap_or(0))
             .bind(mutation.currency.as_deref().unwrap_or("USD"))
             .bind(serde_json::to_value(mutation).unwrap())
+            .bind(&mutation_ts)
             .execute(pool)
             .await;
 
