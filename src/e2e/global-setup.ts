@@ -15,7 +15,7 @@ export default async function globalSetup(config: FullConfig) {
 
   // Ensure there are no hardcoded localhost:5432 ports in use
   if (databaseUrl.includes('localhost:5432') && process.env.CI) {
-      console.warn('WARNING: Using hardcoded localhost:5432 database URL in CI. This is discouraged.');
+      throw new Error('Playwright tests must use the Bazel-provided test database URL\/port. Hard-coded localhost:5432 is not allowed.');
   }
 
   // wait for app to be ready
