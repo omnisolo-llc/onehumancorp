@@ -219,6 +219,8 @@
           <div class="ohc-growth-card" id="my-plan-widget">
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
 
+            <h2 class="app-panel-title text-xl font-bold font-outfit text-gray-900" style="margin-top: 0; margin-bottom: 20px;">Your Current Usage</h2>
+
             <div style="margin-bottom: 24px;">
               <span class="stat-title" style="display:block; margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">AI actions used this month</span>
               <div class="stat-value" id="ai-actions-text">0 / Unlimited</div>
@@ -245,6 +247,7 @@
             <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
             <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
             <div id="plan-message" style="margin-top: 12px; font-weight: 500; font-size: 14px; color: #34C759; display: none;"></div>
+            <div id="usage-warning-message" style="color: #FF3B30; font-size: 13px; margin-top: 8px; display: none;"></div>
           </div>
 
           <!-- Cost Dashboard Widget -->
@@ -351,12 +354,22 @@
                 const planData = await planRes.json();
                 document.getElementById('my-plan-name').innerText = planData.current_plan;
 
+                let warningMessage = "";
+
                 // AI Actions
                 const actionsText = planData.ai_actions_limit ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / Unlimited`;
                 document.getElementById('ai-actions-text').innerText = actionsText;
                 if (planData.ai_actions_limit) {
                     const pct = Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100);
-                    document.getElementById('ai-actions-bar').style.width = pct + '%';
+                    const bar = document.getElementById('ai-actions-bar');
+                    bar.style.width = pct + '%';
+                    if (pct >= 100) {
+                        bar.style.backgroundColor = '#FF3B30';
+                        warningMessage = "You have reached your AI action limit. Consider upgrading to keep momentum.";
+                    } else if (pct >= 90) {
+                        bar.style.backgroundColor = '#FF9500';
+                        warningMessage = "You are approaching your AI action limit. Consider upgrading to keep momentum.";
+                    }
                 } else {
                     document.getElementById('ai-actions-bar').style.width = '0%';
                 }
@@ -366,9 +379,23 @@
                 document.getElementById('storage-text').innerText = storageText;
                 if (planData.storage_limit_bytes) {
                     const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);
-                    document.getElementById('storage-bar').style.width = pct + '%';
+                    const bar = document.getElementById('storage-bar');
+                    bar.style.width = pct + '%';
+                    if (pct >= 100) {
+                        bar.style.backgroundColor = '#FF3B30';
+                        if (!warningMessage) warningMessage = "You have reached your storage limit. Consider upgrading your plan.";
+                    } else if (pct >= 90) {
+                        bar.style.backgroundColor = '#FF9500';
+                        if (!warningMessage) warningMessage = "You are approaching your storage limit. Consider upgrading your plan.";
+                    }
                 } else {
                     document.getElementById('storage-bar').style.width = '0%';
+                }
+
+                if (warningMessage) {
+                    const warningDiv = document.getElementById('usage-warning-message');
+                    warningDiv.innerText = warningMessage;
+                    warningDiv.style.display = 'block';
                 }
 
                 document.getElementById('my-plan-next-bill').innerText = formatCents(planData.next_bill_estimated);
