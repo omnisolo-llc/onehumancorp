@@ -4363,39 +4363,40 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut feed_rows_json = Vec::new();
             match &db2.store {
                 crate::db::DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query(
-                        "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                    )
+                    let query_str = if mobile_optimized {
+                        "SELECT id, tenant_id, event_source, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id2)
                     .fetch_all(&db2.pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
-                                }
-                            };
-                            let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("proposed_action") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
-                                }
-                            };
-
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
-                                    "proposed_action": proposed_action,
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                 })
                             } else {
+                                let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
+                                let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
@@ -4412,39 +4413,40 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    if let Ok(rows) = sqlx::query(
-                        "SELECT * FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                    )
+                    let query_str = if mobile_optimized {
+                        "SELECT id, tenant_id, event_source, lifecycle_state, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id2)
                     .fetch_all(pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
-                                }
-                            };
-                            let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("proposed_action") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
-                                }
-                            };
-
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
-                                    "proposed_action": proposed_action,
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
                                     "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
                                 })
                             } else {
+                                let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
+                                let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
@@ -4598,7 +4600,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -4609,7 +4611,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
@@ -4638,7 +4639,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -4649,7 +4650,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
-                        "proposed_action": row.get::<Option<String>, _>("proposed_action"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
