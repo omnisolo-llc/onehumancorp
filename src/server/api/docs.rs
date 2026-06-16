@@ -155,7 +155,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </div>
             "#.to_string()
         }),
-        "my-store" => Some(HelpArticleDetail {
+        "add-products" => Some(HelpArticleDetail {
             title: "Managing My Store".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -175,7 +175,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "marketing" => Some(HelpArticleDetail {
+        "marketing-tools" => Some(HelpArticleDetail {
             title: "Finding Customers".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -195,7 +195,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "account-billing" => Some(HelpArticleDetail {
+        "billing-settings" => Some(HelpArticleDetail {
             title: "Account & Billing".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -215,7 +215,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "payments" => Some(HelpArticleDetail {
+        "accept-payments" => Some(HelpArticleDetail {
             title: "Getting Paid".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -235,7 +235,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "ai-agents" => Some(HelpArticleDetail {
+        "ai-support" => Some(HelpArticleDetail {
             title: "Your AI Helpers".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
