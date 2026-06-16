@@ -50,7 +50,6 @@ rust_library(
         "tail.rs",
         "find.rs",
         "task.rs",
-        "todowrite.rs",
         "toolsearch.rs",
         "toolsearch_test.rs",
         "create_skill_test.rs",
@@ -122,21 +121,7 @@ rust_test(
     ],
 )
 
-rust_test(
-    name = "todowrite_test",
-    srcs = ["todowrite_test.rs"],
-    edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":tools",
-        "@crates//:tokio",
-        "@crates//:serde_json",
-    ],
-)
+
 
 rust_test(
     name = "runner_test",
