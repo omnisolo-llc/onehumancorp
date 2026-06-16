@@ -103,8 +103,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
     await passwordInput.fill("SecurePass123");
 
-    // Launch Store
-    await page.getByRole('button', { name: /Launch Store/i }).click();
+    // Approve & Go Live
+    await page.getByRole('button', { name: /Approve & Go Live/i }).click();
 
     // Step 7: Loading State
 
