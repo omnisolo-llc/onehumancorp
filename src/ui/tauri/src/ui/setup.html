@@ -2278,6 +2278,12 @@ document.addEventListener('DOMContentLoaded', () => {
                       return;
                   }
                   e.preventDefault();
+
+                  // Check validation before proceeding
+                  if (!validateStep(activeStep.id)) {
+                      return;
+                  }
+
                   const nextBtn = activeStep.querySelector('.next-step-btn');
                   if (nextBtn) {
                       nextBtn.click();
