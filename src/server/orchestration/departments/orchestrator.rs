@@ -1146,6 +1146,37 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+
+                // If this is an Ambassador Reply approval, update the message and dispatch event
+                if let Some(payload) = payload_to_use {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+
+                        if !inbox_message_id.is_empty() {
+                            if let Err(e) = self.update_inbox_message_draft(inbox_message_id, tenant_id, generated_reply).await {
+                                tracing::error!("Failed to update inbox message draft: {}", e);
+                            }
+                            if let Err(e) = self.update_inbox_message_status(inbox_message_id, tenant_id, "auto_replied").await {
+                                tracing::error!("Failed to update inbox message status: {}", e);
+                            }
+                        }
+
+                        let approved_event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.to_string(),
+                            event_type: "agent:customer_success:approved".to_string(),
+                            payload: serde_json::json!({
+                                "original_payload": payload,
+                                "approval_id": request_id
+                            }),
+                        };
+                        if let Err(e) = self.dispatch_event(approved_event).await {
+                            tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,
