@@ -1350,7 +1350,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
       </div>
       {workflows.length === 0 ? (
-        <p className="rounded-[8px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
+        <p className="rounded-[16px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
           {workflows.map((workflow) => (

@@ -139,7 +139,7 @@ function QuotingContent() {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-[#1D1D1F] border-b border-gray-200 pb-2">Line Items</h3>
               {lineItems.map((item: any) => (
-                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-[8px] bg-gray-50 border border-gray-100">
+                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-[16px] bg-gray-50 border border-gray-100">
                   <div className="flex-1">
                     <h4 className="font-medium text-[#1D1D1F]">{item.description}</h4>
                   </div>
@@ -151,7 +151,7 @@ function QuotingContent() {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="w-16 px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-center text-[#1D1D1F]"
+                        className="w-16 px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-[16px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-center text-[#1D1D1F]"
                         disabled={accepted}
                         data-testid={`quote-item-quantity-${item.id}`}
                       />
@@ -164,7 +164,7 @@ function QuotingContent() {
                         step="0.01"
                         value={(item.unit_price_cents / 100).toFixed(2)}
                         onChange={(e) => handleItemChange(item.id, 'unit_price_cents', Math.round(parseFloat(e.target.value || '0') * 100))}
-                        className="w-24 px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-right text-[#1D1D1F]"
+                        className="w-24 px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-[16px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-right text-[#1D1D1F]"
                         disabled={accepted}
                         data-testid={`quote-item-price-${item.id}`}
                       />
@@ -186,7 +186,7 @@ function QuotingContent() {
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleApproveAndSend}
-                className="w-full min-h-[44px] py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-[8px] shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
+                className="w-full min-h-[44px] py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-[16px] shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
                 data-testid="quote-approve-btn"
               >
                 Approve & Send

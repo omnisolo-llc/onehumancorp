@@ -949,7 +949,7 @@ button {
   gap: 12px;
 }
 
-.setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[8px]"] {
+.setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[16px]"] {
   padding: 12px;
   border: 1px solid #d8e0ea;
   border-radius: 16px;

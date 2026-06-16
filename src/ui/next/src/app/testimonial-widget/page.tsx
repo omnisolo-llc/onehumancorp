@@ -43,7 +43,7 @@ export default function TestimonialWidgetGenerator() {
 
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Testimonial Widget 🌟</h1>
-        <button className="px-4 py-2 bg-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
+        <button className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
         </button>
       </header>
@@ -58,7 +58,7 @@ export default function TestimonialWidgetGenerator() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Reviewer Name</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. Jane Doe"
                         value={authorName}
                         onChange={(e) => setAuthorName(e.target.value)}
@@ -68,7 +68,7 @@ export default function TestimonialWidgetGenerator() {
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Review Text</label>
                     <textarea
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none h-24"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none h-24"
                         placeholder="Write a glowing review..."
                         value={reviewText}
                         onChange={(e) => setReviewText(e.target.value)}
@@ -79,7 +79,7 @@ export default function TestimonialWidgetGenerator() {
                     <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Rating (1-5)</label>
                         <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                             value={rating}
                             onChange={(e) => setRating(e.target.value)}
                         >
@@ -98,14 +98,14 @@ export default function TestimonialWidgetGenerator() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -116,7 +116,7 @@ export default function TestimonialWidgetGenerator() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Store ID (Tenant)</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. my-store"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
@@ -125,7 +125,7 @@ export default function TestimonialWidgetGenerator() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                     Get Widget Code
                 </button>
@@ -200,7 +200,7 @@ export default function TestimonialWidgetGenerator() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[8px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -216,13 +216,13 @@ export default function TestimonialWidgetGenerator() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[8px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>

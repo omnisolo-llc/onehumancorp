@@ -515,7 +515,7 @@ export default function Dashboard() {
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
           <button
             onClick={() => router.push("/incidents")}
-            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            className="h-[44px] px-6 rounded-[16px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
             data-testid="report-incident-btn"
           >
             Report Incident
@@ -552,7 +552,7 @@ export default function Dashboard() {
                   name="migration_url"
                   value={migrationUrl}
                   onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
+                  className="mt-2 w-full rounded-[16px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
@@ -602,9 +602,9 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[8px] hover:shadow-md transition-all group">
+          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[8px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
+              <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
                 <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">

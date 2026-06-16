@@ -241,7 +241,7 @@ export default function StorefrontBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[8px]"
+                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[16px]"
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   onKeyDown={(e) => {
@@ -261,7 +261,7 @@ export default function StorefrontBuilderPage() {
                 <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all rounded-[8px] ${
+                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all rounded-[16px] ${
                       bio.trim().length > 5
                         ? "text-white shadow-md active:scale-[0.98] bg-[#0066FF]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -307,7 +307,7 @@ export default function StorefrontBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200 rounded-[8px]"
+            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200 rounded-[16px]"
             onClick={() => updateStatus("idle")}
           >
             Go to Dashboard
@@ -421,10 +421,10 @@ export default function StorefrontBuilderPage() {
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
-          <div className="flex gap-2 mb-3"><button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[8px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Ask Agent to Edit</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+          <div className="flex gap-2 mb-3"><button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Ask Agent to Edit</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[16px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
