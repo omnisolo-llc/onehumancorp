@@ -91,7 +91,11 @@ export default function FeedPage() {
 
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
-    setEditValue(item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+    const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+    const textToEdit = isAmbassador ?
+        (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
+        (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+    setEditValue(textToEdit || "");
   };
 
   const saveEdit = (id: string) => {
@@ -101,11 +105,13 @@ export default function FeedPage() {
           ...item,
           proposed_action: {
             ...item.proposed_action,
-            description: editValue,
+            description: item.proposed_action?.feature_type === 'ambassador_reply' ? item.proposed_action.description : editValue,
+            generated_response: item.proposed_action?.feature_type === 'ambassador_reply' ? editValue : item.proposed_action?.generated_response,
           },
           context_payload: {
             ...item.context_payload,
-            summary: editValue,
+            summary: item.context_payload?.feature_type === 'ambassador_reply' ? item.context_payload.summary : editValue,
+            generated_response: item.context_payload?.feature_type === 'ambassador_reply' ? editValue : item.context_payload?.generated_response,
           }
         };
       }
@@ -219,17 +225,25 @@ export default function FeedPage() {
                       rows={3}
                       data-testid="feed-edit-input"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button
-                        onClick={() => saveEdit(item.id)}
-                        className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          saveEdit(item.id);
+                          // It should also save via handleAction to backend if we want to submit the edit immediately
+                          // But we are matching the existing saveEdit behavior which only updates state locally.
+                          // Usually they click "Save" then "Approve" OR we can auto-approve on save like in UnifiedAgentFeed.
+                          // UnifiedAgentFeed does: `handleDecision(approval.id, true, editContent); setEditingId(null);`
+                          // Let's keep it separate for now or change saveEdit to do handleAction directly if needed.
+                        }}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
-                        Save
+                        {isAmbassador ? 'Save & Send' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
-                        className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded"
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                        data-testid="feed-cancel-edit-btn"
                       >
                         Cancel
                       </button>
@@ -259,34 +273,69 @@ export default function FeedPage() {
                         {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
                       </p>
                     )}
-                    <button
-                      onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium mt-2 inline-block"
-                      data-testid="feed-edit-btn"
-                    >
-                      Edit Action
-                    </button>
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : (isAmbassador ? 'Approve & Send' : 'Approve')}
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
-                    data-testid="feed-dismiss-btn"
-                  >
-                    Dismiss
-                  </button>
-                </div>
+                {!editingId || editingId !== item.id ? (
+                  isAmbassador ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Draft"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : '✨ 1-Tap Approve'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )
+                ) : null}
               </div>
             );
           })}

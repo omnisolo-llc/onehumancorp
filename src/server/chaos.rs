@@ -917,8 +917,8 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<(), String>(());
-            pending
+            std::future::pending::<()>().await;
+            Ok::<(), String>(())
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
@@ -930,8 +930,8 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let inference_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await; let pending = Ok::<&str, String>("");
-            pending
+            std::future::pending::<()>().await;
+            Ok::<&str, String>("")
         };
 
         let inference_result = tokio::time::timeout(timeout_duration, inference_future).await;

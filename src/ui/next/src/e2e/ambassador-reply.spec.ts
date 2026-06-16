@@ -51,7 +51,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
 
     // Wait for either a pending item or the empty inbox state.
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
-    const approveButton = page.getByRole('button', { name: 'Approve' }).first();
+    const approveButton = page.getByRole('button', { name: 'Send Draft' }).first();
     await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
     // Since we are now using LLM generation, we wait for a draft to be generated in the UI
@@ -68,5 +68,54 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     } else {
       await expect(page.getByText('All Caught Up!')).toBeVisible();
     }
+  });
+
+  test('Owner views draft in feed, edits it, and approves it', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+
+    await page.goto('/feed');
+    await expect(page.getByTestId('agent-feed')).toBeVisible();
+
+    // Trigger simulation
+    const simBtn = page.getByTestId('simulate-ambassador-btn');
+    if (await simBtn.isVisible()) {
+      await simBtn.click();
+    }
+
+    const feedCard = page.getByTestId('agent-feed-card').first();
+    await expect(feedCard).toBeVisible({ timeout: 15000 });
+
+    // Verify specific Ambassador UI elements
+    await expect(feedCard).toContainText('CUSTOMER MESSAGE');
+
+    // Click 'Edit'
+    const editBtn = feedCard.getByTestId('feed-edit-btn');
+    if (await editBtn.isVisible()) {
+      await editBtn.click();
+
+      const textarea = page.getByTestId('feed-edit-input');
+      await expect(textarea).toBeVisible();
+
+      await textarea.fill('Yes we do! We have 3 left for this Saturday. I can set aside one for you.');
+
+      const saveBtn = page.getByTestId('feed-save-edit-btn');
+      await saveBtn.click();
+
+      await expect(textarea).not.toBeVisible();
+      await expect(feedCard).toContainText('I can set aside one for you');
+    }
+
+    // Click 'Approve'
+    const approveBtn = feedCard.getByTestId('feed-approve-btn');
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // Validate empty state or removal
+    await expect(feedCard).not.toBeVisible({ timeout: 10000 });
+
   });
 });

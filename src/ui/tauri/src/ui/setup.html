@@ -13,6 +13,7 @@
         align-items: center;
         justify-content: center;
         height: 100vh;
+        overflow-x: hidden;
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
@@ -740,6 +741,7 @@
       }
 
             @media (max-width: 375px) {
+        .container { box-sizing: border-box; overflow-x: hidden; padding: 20px; }
         .stepper {
           gap: 4px;
         }
@@ -1363,7 +1365,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1439,7 +1441,7 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -1470,15 +1472,13 @@
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              if (activeStep.id === 'step-context') stepNumber = 0;
-              if (activeStep.id === 'step-categories') stepNumber = 1;
-              if (activeStep.id === 'step-name') stepNumber = 2;
-              if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-admin') stepNumber = 4;
-              if (activeStep.id === 'step-offer') stepNumber = 5;
-              if (activeStep.id === 'step-template') stepNumber = 6;
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
+
+          // Always set localStorage directly
+          localStorage.setItem('onboardingState', JSON.stringify(state));
 
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
@@ -1918,7 +1918,6 @@
       }
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
-      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
@@ -2220,6 +2219,8 @@ document.addEventListener('DOMContentLoaded', () => {
               if (activeStep) {
                   // Don't auto-advance in chat if we are focused on chat input
                   if (activeStep.id === 'step-chat' && (e.target.id === 'chat-input' || e.target.id === 'chat-image-url')) {
+                      e.preventDefault();
+                      sendChatMessage();
                       return;
                   }
                   e.preventDefault();
