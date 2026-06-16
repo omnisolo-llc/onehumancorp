@@ -78,6 +78,57 @@
         justify-content: center;
         letter-spacing: -1px;
       }
+      .catalog-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .catalog-item {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        min-height: 64px;
+      }
+      .catalog-item:active {
+        transform: scale(0.98);
+        background: rgba(229, 229, 234, 0.8);
+      }
+      .catalog-item.selected {
+        border-color: #0066FF;
+        box-shadow: 0 0 0 1px #0066FF;
+        background: rgba(255, 255, 255, 0.9);
+      }
+      .catalog-item-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .catalog-item-name {
+        font-weight: 600;
+        font-size: 16px;
+        color: #1d1d1f;
+      }
+      .catalog-item-stock {
+        font-size: 12px;
+        color: #86868b;
+        margin-top: 4px;
+      }
+      .catalog-item-price {
+        font-weight: 700;
+        font-size: 16px;
+        color: #0066FF;
+      }
       .numpad {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -276,6 +327,11 @@
           </div>
 
           <div class="amount-display" id="amount-display">$0.00</div>
+
+          <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; text-align: left;">Product Catalog</h3>
+          <div class="catalog-grid" id="catalog-grid">
+            <div style="padding: 24px; text-align: center; color: #86868b; font-size: 14px; font-style: italic;">Loading catalog...</div>
+          </div>
 
           <div class="numpad">
             <button class="num-btn" onclick="appendDigit(1)">1</button>
@@ -547,9 +603,12 @@
 
 <script>
       let currentAmountCents = 0;
+      let selectedProductId = null;
+      let isManualAmount = true;
 
       const amountDisplay = document.getElementById('amount-display');
       const chargeBtn = document.getElementById('charge-btn');
+      const catalogGrid = document.getElementById('catalog-grid');
       const posView = document.getElementById('pos-view');
       const tapOverlay = document.getElementById('tap-overlay');
       const tapAmountSubtitle = document.getElementById('tap-amount-subtitle');
@@ -574,6 +633,14 @@
       function appendDigit(digit) {
         if (currentAmountCents.toString().length >= 8) return; // limit size
 
+        // If a product was selected and they start typing, switch to manual amount
+        if (!isManualAmount) {
+            clearAmount();
+            isManualAmount = true;
+            selectedProductId = null;
+            renderCatalog(window._cachedInventory || []);
+        }
+
         if (digit === '00') {
           currentAmountCents = currentAmountCents * 100;
         } else {
@@ -584,7 +651,72 @@
 
       function clearAmount() {
         currentAmountCents = 0;
+        selectedProductId = null;
+        isManualAmount = true;
+        renderCatalog(window._cachedInventory || []);
         updateDisplay();
+      }
+
+      function selectProduct(product) {
+        selectedProductId = product.id;
+        currentAmountCents = product.price_cents;
+        isManualAmount = false;
+        renderCatalog(window._cachedInventory || []);
+        updateDisplay();
+      }
+
+      function renderCatalog(inventory) {
+        window._cachedInventory = inventory;
+        if (!inventory || inventory.length === 0) {
+            catalogGrid.innerHTML = '<div style="padding: 24px; text-align: center; color: #86868b; font-size: 14px; font-style: italic;">No products found in catalog</div>';
+            return;
+        }
+
+        catalogGrid.innerHTML = '';
+        inventory.forEach(product => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `catalog-item ${selectedProductId === product.id ? 'selected' : ''}`;
+            itemDiv.onclick = () => selectProduct({ id: product.id, price_cents: product.price_cents });
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'catalog-item-info';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'catalog-item-name';
+            nameDiv.textContent = product.name;
+
+            const stockDiv = document.createElement('div');
+            stockDiv.className = 'catalog-item-stock';
+            stockDiv.textContent = `Stock: ${product.stock}`;
+
+            infoDiv.appendChild(nameDiv);
+            infoDiv.appendChild(stockDiv);
+
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'catalog-item-price';
+            priceDiv.textContent = `$${(product.price_cents / 100).toFixed(2)}`;
+
+            itemDiv.appendChild(infoDiv);
+            itemDiv.appendChild(priceDiv);
+
+            catalogGrid.appendChild(itemDiv);
+        });
+      }
+
+      async function fetchInventory() {
+          try {
+              const tenantId = localStorage.getItem('tenant_id') || 'default_tenant';
+              const res = await fetch(`/api/pos/inventory?tenant_id=${tenantId}`);
+              if (res.ok) {
+                  const data = await res.json();
+                  renderCatalog(data.inventory || []);
+              } else {
+                  renderCatalog([]);
+              }
+          } catch (e) {
+              console.error('Failed to fetch inventory', e);
+              renderCatalog([]);
+          }
       }
 
       async function initiateCharge() {
@@ -619,7 +751,7 @@
             body: JSON.stringify({
               amount_cents: currentAmountCents,
               currency: 'usd',
-              product_id: 'pos_custom_amount', // Using a placeholder for custom amounts
+              product_id: selectedProductId || 'pos_custom_amount', // Use selected product ID or placeholder
               quantity: 1,
               order_id: 'pos_web_' + Date.now()
             })
@@ -658,7 +790,7 @@
                   id: 'tx_' + Date.now(),
                   amount: currentAmountCents,
                   currency: 'usd',
-                  product_id: 'quick_charge',
+                  product_id: selectedProductId || 'quick_charge',
                   quantity: 1,
                   timestamp: new Date().toISOString()
               });
@@ -675,7 +807,7 @@
                           client_id: 'web_client',
                           amount_cents: currentAmountCents,
                           currency: 'usd',
-                          payload: '{}'
+                          payload: JSON.stringify([{ product_id: selectedProductId || 'quick_charge', quantity: 1 }])
                       }]
                   })
               }).catch(console.error);
@@ -697,6 +829,7 @@
       }
 
       // Initialize
+      fetchInventory();
       updateDisplay();
     </script>
 

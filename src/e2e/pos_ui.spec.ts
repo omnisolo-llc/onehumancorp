@@ -18,13 +18,28 @@ test.describe('In-Person POS UI', () => {
     await adminPage.waitForSelector('#amount-display');
     await expect(adminPage.locator('#amount-display')).toHaveText('$0.00');
 
-    // 2. Numpad Amount Entry Validation
+    // 2. Product Catalog Selection
+    // Wait for the catalog to load from the backend
+    await expect(adminPage.locator('.catalog-grid')).toBeVisible();
+
+    // E2E seed script populates 'e2e-product-cake' priced at $39.99
+    const catalogItem = adminPage.locator('.catalog-item:has-text("Vegan Celebration Cake")');
+    await expect(catalogItem).toBeVisible({ timeout: 10000 });
+    await catalogItem.click();
+
+    await expect(adminPage.locator('#amount-display')).toHaveText('$39.99');
+
+    // Numpad Amount Entry Validation (should override catalog selection)
     // Enter $15.00
     await adminPage.locator('button.num-btn:has-text("1")').click();
     await adminPage.locator('button.num-btn:has-text("5")').click();
     await adminPage.locator('button.num-btn:has-text("00")').click();
 
     await expect(adminPage.locator('#amount-display')).toHaveText('$15.00');
+
+    // Reselect product to verify it updates again
+    await catalogItem.click();
+    await expect(adminPage.locator('#amount-display')).toHaveText('$39.99');
 
     // 3. Trigger Accept Contactless Payment
     const chargeBtn = adminPage.locator('#charge-btn');
@@ -34,7 +49,7 @@ test.describe('In-Person POS UI', () => {
     // Wait for the tap overlay
     const overlay = adminPage.locator('#tap-overlay');
     await expect(overlay).toBeVisible();
-    await expect(adminPage.locator('#tap-amount-subtitle')).toHaveText('$15.00');
+    await expect(adminPage.locator('#tap-amount-subtitle')).toHaveText('$39.99');
 
     // 4. Simulate Tap to Pay processing
     const simulateBtn = adminPage.locator('#simulate-tap-btn');
@@ -49,7 +64,7 @@ test.describe('In-Person POS UI', () => {
     const receiptScreen = adminPage.locator('#receipt-screen');
     await expect(receiptScreen).toBeVisible({ timeout: 5000 });
 
-    await expect(adminPage.locator('#receipt-amount')).toHaveText('$15.00');
+    await expect(adminPage.locator('#receipt-amount')).toHaveText('$39.99');
     await expect(adminPage.locator('.receipt-text')).toHaveText('Payment Successful');
 
     // Return to New Sale
