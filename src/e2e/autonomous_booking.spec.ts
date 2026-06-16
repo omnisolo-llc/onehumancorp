@@ -6,7 +6,7 @@ test.describe('Autonomous Booking System', () => {
         const serviceId = 'test-service-1';
 
         // 1. Visit Dashboard and navigate to Bookings Dashboard
-        await page.goto('/ui/dashboard');
+        await page.goto('/ui/dashboard.html');
         // Click the Booking Dashboard link
         const bookingDashboardLink = page.locator('a[href="booking-dashboard.html"]');
         await expect(bookingDashboardLink).toBeVisible();

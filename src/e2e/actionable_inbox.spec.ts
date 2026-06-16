@@ -21,7 +21,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
 
     await page.waitForTimeout(2000);
 
-    await page.goto('/dashboard');
+    await page.goto('/dashboard.html');
 
     // We should see an Instagram DM actionable item.
     await expect(page.locator("text=Instagram DM").first()).toBeVisible({ timeout: 15000 });

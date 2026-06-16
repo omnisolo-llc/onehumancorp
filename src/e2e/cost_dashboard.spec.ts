@@ -4,7 +4,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
   test('Cost Dashboard renders the "My Plan" fields completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
-    await page.goto('/dashboard');
+    await page.goto('/dashboard.html');
     await page.waitForLoadState('networkidle');
 
     await page.goto('/cost-dashboard');

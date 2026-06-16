@@ -35,7 +35,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "no-sandbox",
     ]
     if manual:
-        pass
+        tags.append("manual")
     if exclusive:
         tags.append("exclusive")
     env = {
@@ -91,7 +91,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             name = name,
             spec_args = [spec],
             common_data = common_data,
-            manual = False,
+            manual = True,
             timeout = "eternal",
         )
 

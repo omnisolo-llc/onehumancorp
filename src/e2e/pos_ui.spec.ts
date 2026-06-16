@@ -4,9 +4,9 @@ import { pool } from './global-setup';
 test.describe('In-Person POS UI', () => {
   test('CUJ: Navigates from dashboard to POS, enters amount, taps, and sees receipt', async ({ browser }) => {
     const adminPage = await browser.newPage();
-    await adminPage.goto('/dashboard');
+    await adminPage.goto('/dashboard.html');
     // 1. Navigation from Dashboard
-    await adminPage.goto('/dashboard');
+    await adminPage.goto('/dashboard.html');
     await adminPage.waitForSelector('#dashboard-title');
 
     // Find and click the Quick Charge POS link

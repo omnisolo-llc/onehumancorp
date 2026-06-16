@@ -10,7 +10,7 @@ test('capture dashboard and quote screenshots', async ({ page }) => {
       localStorage.setItem('businessName', "Carlos' Repairs");
   });
 
-  await page.goto('/dashboard');
+  await page.goto('/dashboard.html');
   await page.screenshot({ path: 'dashboard_mobile.png' });
 
   await page.goto('/quote.html?id=123&mode=owner');

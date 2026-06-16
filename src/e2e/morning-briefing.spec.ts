@@ -4,7 +4,7 @@ test.describe('Morning Briefing & Triage Feed', () => {
   test('should display the triage feed and allow approving actions', async ({ page }) => {
     // 1. User logs into OHC on a 375px mobile screen.
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/dashboard');
+    await page.goto('/dashboard.html');
 
     // 2. User views the "Morning Briefing" Triage Feed.
     await expect(page.getByText('Unified Agent Feed')).toBeVisible();

@@ -26,7 +26,7 @@ test.describe('Pricing Page', () => {
     const backButton = page.locator('a', { hasText: 'Back to Dashboard' });
     await expect(backButton).toBeVisible();
     await backButton.click();
-    await expect(page.url()).toContain('/dashboard');
+    await expect(page.url()).toContain('/dashboard.html');
   });
 
   test('should verify upgrade button routes to checkout', async ({ page }) => {

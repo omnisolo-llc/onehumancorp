@@ -7,7 +7,7 @@ test.describe('The Promoter Agent', () => {
     await loginAs(page, unlimitedAdminUser);
 
     // 2. Navigate to Dashboard and locate the Promoter Card
-    await page.goto('/dashboard');
+    await page.goto('/dashboard.html');
     const promoterCard = page.locator('#promoter-card');
     await expect(promoterCard).toBeVisible();
     await expect(promoterCard).toContainText('The Promoter Agent');
