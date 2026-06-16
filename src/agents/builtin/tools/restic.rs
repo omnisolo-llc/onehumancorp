@@ -1,20 +1,26 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Tool, ToolExecutor};
+use super::{pydantic::{PydanticAdapter, PydanticToolExecutor}, Tool};
+
+#[derive(Deserialize)]
+struct ResticArgs {
+    action: String,
+    target: Option<String>,
+    snapshot_id: Option<String>,
+}
 
 struct ResticExecutor {
     runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ResticExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let action = args["action"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("restic: action is required (snapshot, restore, status)".to_string()))?;
+impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
+    async fn execute_typed(&self, args: ResticArgs) -> Result<String, ToolError> {
+        let action = args.action.as_str();
 
         let repo = std::env::var("RESTIC_REPOSITORY").unwrap_or_else(|_| "/tmp/restic-repo".to_string());
         let password = std::env::var("RESTIC_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
@@ -51,12 +57,12 @@ impl ToolExecutor for ResticExecutor {
 
         match action {
             "snapshot" => {
-                let target = args["target"].as_str().unwrap_or(".");
+                let target = args.target.as_deref().unwrap_or(".");
                 full_args.extend(vec!["backup", target]);
             }
             "restore" => {
-                let snapshot_id = args["snapshot_id"].as_str().unwrap_or("latest");
-                let target = args["target"].as_str().unwrap_or("/tmp/restore");
+                let snapshot_id = args.snapshot_id.as_deref().unwrap_or("latest");
+                let target = args.target.as_deref().unwrap_or("/tmp/restore");
                 full_args.extend(vec!["restore", snapshot_id, "--target", target]);
             }
             "status" => {
@@ -110,6 +116,6 @@ pub fn restic_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             },
             "required": ["action"]
         }),
-        execute: Arc::new(ResticExecutor { runner }),
+        execute: Arc::new(PydanticAdapter::new(ResticExecutor { runner })),
     }
 }
