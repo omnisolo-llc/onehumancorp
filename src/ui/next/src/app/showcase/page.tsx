@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import { useSearchParams } from 'next/navigation';
 
-export default function PublicShowcasePage() {
+function PublicShowcaseContent() {
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
 
@@ -89,5 +89,13 @@ export default function PublicShowcasePage() {
         .font-inter { font-family: 'Inter', sans-serif; }
       `}} />
     </div>
+  );
+}
+
+export default function PublicShowcasePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center text-gray-500 font-inter">Loading...</div>}>
+      <PublicShowcaseContent />
+    </Suspense>
   );
 }
