@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CheckoutPage from './page';
 import * as React from 'react';
@@ -60,7 +60,7 @@ beforeEach(() => {
       }),
     } as any);
 
-    render(<CheckoutPage />);
+    await act(async () => { render(<CheckoutPage />); });
 
     expect(screen.getByText('Plan Upgrade')).toBeDefined();
     expect(screen.getByText('OHC Starter Plan')).toBeDefined();
@@ -95,7 +95,7 @@ beforeEach(() => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    render(<CheckoutPage />);
+    await act(async () => { render(<CheckoutPage />); });
 
     expect(screen.getByText('Secure Checkout')).toBeDefined();
     expect(screen.getByText('Service Deposit')).toBeDefined();
@@ -122,7 +122,7 @@ beforeEach(() => {
       }),
     } as any);
 
-    render(<CheckoutPage />);
+    await act(async () => { render(<CheckoutPage />); });
 
     const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
     fireEvent.change(addressInput, { target: { value: '123 Main St' } });
@@ -140,8 +140,8 @@ beforeEach(() => {
     });
   });
 
-  it('renders the PoweredByOHC component', () => {
-    render(<CheckoutPage />);
+  it('renders the PoweredByOHC component', async () => {
+    await act(async () => { render(<CheckoutPage />); });
     const components = screen.getAllByTestId('powered-by-ohc');
     expect(components.length).toBeGreaterThan(0);
   });
