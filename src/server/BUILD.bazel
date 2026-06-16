@@ -48,6 +48,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
     "//src/server/api:meta_webhook.rs",
+    "//src/server/api:twilio_webhook.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
@@ -59,7 +60,9 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
+    "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
     "//src/server/api:staff_mesh.rs",
     "//src/server/api:subscription.rs",
@@ -293,6 +296,9 @@ SERVER_RS_SRCS = [
     "//src/server/tools/kvmcp:mod.rs",
     "//src/server/tools/kvmcp:server.rs",
     "//src/server/tools/kvmcp:tests.rs",
+    "//src/server/tools/edge_caching:mod.rs",
+    "//src/server/tools/edge_caching:server.rs",
+    "//src/server/tools/edge_caching:tests.rs",
     "//src/server/workers:agent_memory_pipeline.rs",
     "//src/server/workers:competitor_audit.rs",
     "//src/server/workers:department_workers.rs",
@@ -334,6 +340,7 @@ rust_library(
     compile_data = [
         "//src/ui/tauri/src/ui:all_files",
         "//src/ui/next/public/api/ui:all_files",
+        "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
@@ -943,3 +950,4 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+# To make sure it finds the edge_caching files, since they're not there

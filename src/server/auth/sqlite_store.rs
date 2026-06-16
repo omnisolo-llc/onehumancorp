@@ -77,9 +77,6 @@ impl UserRepository for SqliteUserRepository {
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
@@ -112,9 +109,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
@@ -153,9 +147,6 @@ impl UserRepository for SqliteUserRepository {
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
@@ -191,9 +182,6 @@ impl UserRepository for SqliteUserRepository {
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
@@ -226,9 +214,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
@@ -272,9 +257,6 @@ impl UserRepository for SqliteUserRepository {
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
 
         let query = if should_bypass {
             r#"
@@ -300,7 +282,6 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -333,9 +314,6 @@ impl UserRepository for SqliteUserRepository {
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -355,10 +333,13 @@ impl UserRepository for SqliteUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
-            ON CONFLICT (jti) DO NOTHING
+            ON CONFLICT (jti, tenant_id) DO NOTHING
             "#
         )
         .bind(jti)
@@ -369,10 +350,17 @@ impl UserRepository for SqliteUserRepository {
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
-            .bind(org_id)
-            .execute(&self.pool)
-            .await;
+        let query = if should_bypass {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP"
+        } else {
+            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1"
+        };
+
+        let _ = if should_bypass {
+            sqlx::query(query).execute(&self.pool).await
+        } else {
+            sqlx::query(query).bind(org_id).execute(&self.pool).await
+        };
 
         Ok(())
     }

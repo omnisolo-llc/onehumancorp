@@ -1,3 +1,5 @@
+exports_files(["Cargo.toml"])
+
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
@@ -20,6 +22,7 @@ rust_library(
         "head.rs",
         "hybrid_blob.rs",
         "lazy_load.rs",
+        "llm_judge.rs",
         "local_fs_sync.rs",
         "magentic.rs",
         "marketing.rs",
@@ -49,6 +52,10 @@ rust_library(
         "task.rs",
         "todowrite.rs",
         "toolsearch.rs",
+        "toolsearch_test.rs",
+        "create_skill_test.rs",
+        "agent_tool_test.rs",
+        "webfetch_test.rs",
         "webfetch.rs",
         "websearch.rs",
         "workflow.rs",

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export function OneTapReferral({ tenantId, source }: { tenantId: string, source: string }) {
+export function OneTapReferral({ tenantId, source, style }: { tenantId: string, source: string, style?: React.CSSProperties }) {
   const [copied, setCopied] = useState(false);
   const referralLink = `/onboarding?ref=${tenantId}&source=${source}`;
 

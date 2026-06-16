@@ -1,3 +1,5 @@
+#![allow(clippy::empty_line_after_doc_comments)]
+#![allow(unused_mut, clippy::useless_format)]
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -640,8 +642,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let mut cfg = AgentRunConfig::default();
-            cfg.enable_actor_model_message_passing = true;
+            let mut cfg = AgentRunConfig { enable_actor_model_message_passing: true, ..Default::default() };
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
                 if let AgentEvent::CostUpdate { total_cost_usd } = e {
@@ -1119,7 +1120,7 @@ mod tests {
         let resp_am_search: JsonRpcResponse = serde_json::from_str(&resp_json_am_search).unwrap();
         assert!(resp_am_search.error.is_none());
         let agents_result = resp_am_search.result.unwrap();
-        assert!(agents_result.as_array().unwrap().len() >= 1);
+        assert!(!agents_result.as_array().unwrap().is_empty());
 
         // Test Agent Marketplace am_fetch_agent method
         let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "Senior Rust Developer"}}"#;

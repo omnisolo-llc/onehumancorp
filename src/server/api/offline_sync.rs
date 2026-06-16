@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
     pub transaction_id: String,
+    pub timestamp: Option<String>,
     pub product_id: String,
     pub quantity_deducted: i32,
     pub amount: Option<i64>, // amount in cents
@@ -23,6 +24,7 @@ pub struct OfflineSyncRequest {
 #[derive(Serialize)]
 pub struct OfflineSyncResponse {
     pub success: bool,
+    pub failed_count: i32,
 }
 
 pub async fn offline_sync_handler(
@@ -38,14 +40,14 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse { success: false }),
+            Json(OfflineSyncResponse { success: false, failed_count: 0 }),
         ).into_response();
     }
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>> = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -69,7 +71,30 @@ pub async fn offline_sync_handler(
                 .execute(&mut *db_tx)
                 .await;
                 db_tx.commit().await.unwrap();
-            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
+        if mutation.mutation_type.as_deref() == Some("agent_intent") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+                let job_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(mutation.payload.unwrap_or_else(|| "{}".to_string()))
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to enqueue agent intent: {}", e);
+                    e.to_string()
+                })?;
+                db_tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
             continue;
         }
 
@@ -94,11 +119,13 @@ pub async fn offline_sync_handler(
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+                    let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $4, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $4)), available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
+                        .bind(mutation.quantity_deducted)
                         .execute(&mut *db_tx)
                         .await;
 
@@ -128,7 +155,7 @@ pub async fn offline_sync_handler(
                             "transaction_id": mutation.transaction_id,
                             "product_id": mutation.product_id,
                             "shortage": mutation.quantity_deducted - stock,
-                            "timestamp": chrono::Utc::now().to_rfc3339()
+                            "timestamp": mutation_ts
                         }).to_string();
 
                         let _ = sqlx::query(
@@ -171,6 +198,24 @@ pub async fn offline_sync_handler(
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
 
+                    // Publish to Redis Pub/Sub for Real-Time Sync Engine
+                    let redis_client_opt = crate::get_redis_client();
+                    let redis_tenant_id = tenant_id_clone.clone();
+                    let redis_product_id = mutation.product_id.clone();
+                    tokio::spawn(async move {
+                        if let Some(client) = redis_client_opt {
+                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                let topic = format!("inventory:{}", redis_tenant_id);
+                                let payload = serde_json::json!({
+                                    "event": "inventory_updated",
+                                    "product_id": redis_product_id,
+                                    "timestamp": mutation_ts
+                                }).to_string();
+                                let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
+                            }
+                        }
+                    });
+
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
@@ -187,22 +232,27 @@ pub async fn offline_sync_handler(
                         }).to_string().into_bytes(),
                     };
                     let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
+                    Ok(())
                 }
                 Ok(None) => {
                     tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone);
+                    Err("Product not found or unauthorized".to_string())
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+                    Err("Database error".to_string())
                 }
             }
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
     }
-    futures::future::join_all(futures).await;
+    let results = futures::future::join_all(futures).await;
+
+    let failed_count = results.into_iter().filter(|r| r.is_err()).count() as i32;
 
     (
         StatusCode::OK,
-        Json(OfflineSyncResponse { success: true }),
+        Json(OfflineSyncResponse { success: true, failed_count }),
     ).into_response()
 }
 
@@ -216,7 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -248,6 +298,7 @@ mod tests {
         let req = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
@@ -268,6 +319,7 @@ mod tests {
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
@@ -279,7 +331,31 @@ mod tests {
             ],
         };
 
-        let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
+        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
+
+        // Test with a non-existent product which should fail
+        let req_fail = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx3".to_string(),
+                    product_id: "prod-offline-nonexistent".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                },
+            ],
+        };
+
+        let response_fail = offline_sync_handler(state, headers, Json(req_fail)).await.into_response();
+        assert_eq!(response_fail.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response_fail.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["failed_count"], 1);
     }
 }

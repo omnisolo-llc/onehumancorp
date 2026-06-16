@@ -22,6 +22,7 @@ rust_library(
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:chrono",
+        "@crates//:dashmap",
         "@crates//:redis",
         "@crates//:serde",
         "@crates//:serde_json",

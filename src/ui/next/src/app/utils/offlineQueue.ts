@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export interface OfflineAction {
   id: string; // The action request ID or a UUID
   type: string; // E.g., 'approve_agent_feed'

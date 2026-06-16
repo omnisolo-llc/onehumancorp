@@ -51,7 +51,7 @@ const primaryNav: NavItem[] = [
   { label: "Inbox", href: "/inbox", icon: "inbox" },
   { label: "Inventory", href: "/inventory", icon: "inventory" },
   { label: "Kairos", href: "/kairos", icon: "activity" },
-  { label: "Agents", href: "/agents", icon: "team" },
+  { label: "AI Departments", href: "/agents", icon: "team" },
   { label: "Analytics", href: "/business-analytics", icon: "analytics" },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
   { label: "Settings", href: "/settings", icon: "settings" },
@@ -60,6 +60,7 @@ const primaryNav: NavItem[] = [
 
 const secondaryNav: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: "calendar" },
+  { label: "LangGraph", href: "/langgraph", icon: "activity" },
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },

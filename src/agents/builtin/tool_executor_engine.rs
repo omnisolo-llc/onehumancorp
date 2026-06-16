@@ -51,8 +51,13 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    info!("LLM-recoverable error encountered: {}", msg);
-                    return Err(ToolError::LlmRecoverable(msg));
+                    let formatted_msg = if msg.contains("Validation Error (Pydantic-first tool schema)") {
+                        msg
+                    } else {
+                        format!("Validation Error (Pydantic-first tool schema): {}", msg)
+                    };
+                    info!("LLM-recoverable error encountered: {}", formatted_msg);
+                    return Err(ToolError::LlmRecoverable(formatted_msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: immediately bubble up to the orchestrator to request human-in-loop input.

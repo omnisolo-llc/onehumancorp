@@ -1,5 +1,8 @@
 "use client";
 
+
+import { WithTooltip } from "./TooltipRegistry";
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
 export function VoiceAssistant() {
@@ -97,53 +100,55 @@ export function VoiceAssistant() {
         </div>
       )}
 
-      <button
-        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
-          isRecording
-            ? "bg-red-500 scale-110 ring-8 ring-red-500/20"
-            : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"
-        }`}
-        onMouseDown={startRecording}
-        onMouseUp={stopRecording}
-        onMouseLeave={stopRecording}
-        onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-        onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-        aria-label="Voice Assistant"
-      >
-        <svg
-          className={`w-8 h-8 ${isRecording ? "text-white" : "text-[#0066FF]"}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <WithTooltip id="voice-assistant-tooltip" defaultText="Hold to speak a command to your AI Assistant.">
+        <button
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
+            isRecording
+              ? "bg-red-500 scale-110 ring-8 ring-red-500/20"
+              : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"
+          }`}
+          onMouseDown={startRecording}
+          onMouseUp={stopRecording}
+          onMouseLeave={stopRecording}
+          onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
+          onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
+          aria-label="Voice Assistant"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-          />
-        </svg>
+          <svg
+            className={`w-8 h-8 ${isRecording ? "text-white" : "text-[#0066FF]"}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
+          </svg>
 
-        {isRecording && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-full h-full rounded-full border-4 border-white/30 animate-ping" />
-            <div className="flex gap-1 items-center justify-center">
-                {[1,2,3,4,5].map(i => (
-                    <div key={i} className="w-1 bg-white rounded-full animate-waveform" style={{
-                        height: `${Math.random() * 20 + 10}px`,
-                        animationDelay: `${i * 0.1}s`
-                    }} />
-                ))}
+          {isRecording && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-full h-full rounded-full border-4 border-white/30 animate-ping" />
+              <div className="flex gap-1 items-center justify-center">
+                  {[1,2,3,4,5].map(i => (
+                      <div key={i} className="w-1 bg-white rounded-full animate-waveform" style={{
+                          height: `${Math.random() * 20 + 10}px`,
+                          animationDelay: `${i * 0.1}s`
+                      }} />
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
-      </button>
+          )}
+        </button>
+      </WithTooltip>
 
       <style jsx>{`
         .glassmorphism {
           background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
         @media (prefers-color-scheme: dark) {
           .glassmorphism {

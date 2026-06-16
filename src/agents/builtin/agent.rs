@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 /// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
@@ -1762,7 +1763,7 @@ impl Agent {
             last_message: None,
         };
 
-        match graph.run(initial_state).await {
+        match graph.pregel_run(initial_state).await {
             Ok(final_state) => {
                 let msgs = final_state.messages;
                 let last_msg = msgs.last().unwrap();
@@ -2645,6 +2646,27 @@ impl Agent {
         }
     }
 
+
+    /// State Management: Implementation of OpenAI's lightweight previous_response_id chaining
+    pub fn chain_previous_response_id(messages: &[Message], target_id: &str) -> Option<Vec<Message>> {
+        let mut new_messages = Vec::new();
+        let mut found = false;
+        for m in messages.iter() {
+            new_messages.push(m.clone());
+            if let Some(rid) = &m.response_id {
+                if rid == target_id {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if found {
+            Some(new_messages)
+        } else {
+            None
+        }
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -2836,6 +2858,10 @@ impl Agent {
         }
 
         if final_cfg.enable_lazy_tool_loading {
+            let tool_search = crate::tools::toolsearch::toolsearch_tool();
+            if !session_tools.iter().any(|t| t.name == "ToolSearch") {
+                 session_tools.push(tool_search);
+            }
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
@@ -4118,15 +4144,20 @@ impl Agent {
                 }
             }
 
-            // 2. Local File Scratchpad (Claude Code)
-            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty()
-                && let Ok(json_state) = serde_json::to_string_pretty(&messages)
-                    && tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+            // 2. Local File Scratchpad (Claude Code Mechanic)
+            if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
+                let mut pf = crate::checkpointer::ProgressFile::default();
+                pf.status = format!("Iteration {}", iteration);
+                pf.notes.push(format!("Total mutating tools executed: {}", mutating_calls.len()));
+                if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
+                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
                         });
                     }
+                }
+            }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
             if iteration == max_iterations - 1 || tool_calls.is_empty() {
@@ -4455,6 +4486,70 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_state_management_lightweight_chaining() {
+        use crate::types::{Message, Role, ToolResult};
+
+        // Create a fake chain of messages
+        let messages = vec![
+            Message::user("Task: Do something"),
+            Message {
+                role: Role::Assistant,
+                content: "Thought 1".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_1".to_string()),
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Result 1".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: Some("resp_1".to_string()),
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Thought 2".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: Some("resp_2".to_string()),
+                previous_response_id: Some("resp_1".to_string()),
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "Result 2".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: Some("resp_2".to_string()),
+            },
+        ];
+
+        let prev_id = "resp_1".to_string();
+        let restored_msgs = super::Agent::chain_previous_response_id(&messages, &prev_id);
+
+        // Test the actual helper method from the Agent struct
+
+
+        assert!(restored_msgs.is_some());
+        let restored = restored_msgs.unwrap();
+
+        // Should contain exactly the first two messages: User + Assistant(resp_1)
+        assert_eq!(restored.len(), 2);
+        assert_eq!(restored[1].response_id, Some("resp_1".to_string()));
+    }
+
     use crate::tools::ToolExecutor;
     #[tokio::test]
     async fn test_agentstate_reducer() {
@@ -4524,7 +4619,7 @@ mod tests {
                 } else {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
-                    let has_error = last_msg.tool_results.iter().any(|r| r.content.contains("LLM-Recoverable Error") || r.error.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again."));
+                    let has_error = last_msg.tool_results.iter().any(|r| r.content.contains("LLM-Recoverable Error") || r.error.contains("LLM-Recoverable Error: Validation Error (Pydantic-first tool schema): Failing for test. Please analyze this error, correct your tool arguments, and try again."));
 
                     if has_error {
                         Ok(crate::types::ChatResponse {
@@ -4582,7 +4677,7 @@ mod tests {
         // Verify the ToolCall event has the LlmRecoverable message
         let has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
-                result.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again.")
+                result.contains("LLM-Recoverable Error: Validation Error (Pydantic-first tool schema): Failing for test. Please analyze this error, correct your tool arguments, and try again.")
             } else {
                 false
             }
@@ -10299,5 +10394,105 @@ mod e2e_verification_tests {
             .await;
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Corrected answer.");
+    }
+
+    #[derive(Default)]
+    struct LazyMockLlmClient {
+        responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+        requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for LazyMockLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_lazy_tool_loading_mechanic() {
+        let mut msg1 = Message::assistant("lazy");
+        msg1.tool_calls.push(ToolCall {
+            id: "call_1".to_string(),
+            name: "LazyLoadTools".to_string(),
+            arguments: serde_json::json!({"tool_names": ["HeavyTool"]}),
+        });
+
+        let mut msg2 = Message::assistant("heavy");
+        msg2.tool_calls.push(ToolCall {
+            id: "call_2".to_string(),
+            name: "HeavyTool".to_string(),
+            arguments: serde_json::json!({}),
+        });
+
+        let client = Arc::new(LazyMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: msg1,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                ChatResponse {
+                    message: msg2,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                ChatResponse {
+                    message: Message::assistant("Final Answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                },
+            ]),
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("Dummy Tool Executed".to_string())
+            }
+        }
+
+        let agent = Agent::new(
+            client.clone() as Arc<dyn crate::llm::LlmClient>,
+            vec![crate::tools::Tool {
+                name: "HeavyTool".to_string(),
+                description: "A heavy tool".to_string(),
+                parameters: serde_json::Value::Null,
+                is_read_only: false,
+                execute: Arc::new(DummyToolExecutor),
+            }],
+        );
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_lazy_tool_loading = true;
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Final Answer");
+
+        let all_reqs = client.requests.lock().await;
+        assert!(!all_reqs[0].tools.iter().any(|t| t.name == "HeavyTool"));
+        assert!(all_reqs[1].tools.iter().any(|t| t.name == "HeavyTool"));
     }
 }

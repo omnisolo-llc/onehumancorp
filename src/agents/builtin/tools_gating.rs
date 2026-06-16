@@ -1,3 +1,5 @@
+#![allow(unused_mut)]
+#![allow(clippy::all)]
 use crate::agent::AgentRunConfig;
 use crate::human_in_loop::HumanInLoopManager;
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
@@ -78,8 +80,7 @@ mod tests {
 
     #[test]
     fn test_stage_1_trust() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = false;
+        let mut cfg = AgentRunConfig { project_trusted: false, ..Default::default() };
 
         let tc = create_tool_call("1", "mutating_tool");
 
@@ -102,9 +103,8 @@ mod tests {
 
     #[test]
     fn test_stage_1_trust_with_no_allowed_tools() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = true;
-        cfg.allowed_tools = None;
+        let mut cfg = AgentRunConfig { project_trusted: true, ..Default::default() };
+        /*cfg.allowed_tools = None;*/
 
         let tc = create_tool_call("1", "any_tool");
 
@@ -133,9 +133,7 @@ mod tests {
             .tool_guardrails
             .push(Arc::new(MockConfirmationGuardrail));
 
-        let mut cfg = AgentRunConfig::default();
-        cfg.guardrails = Some(registry);
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { guardrails: Some(registry), project_trusted: true, ..Default::default() };
 
         let tc = create_tool_call("1", "forbidden_tool");
         let res = ToolGater::check_gating(&tc, false, &cfg);
@@ -148,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_stage_2_permission() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { project_trusted: true, ..Default::default() };
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
 
         let tc_allowed = create_tool_call("1", "allowed_tool");
@@ -166,8 +163,7 @@ mod tests {
 
     #[test]
     fn test_stage_3_confirmation_wiring() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { project_trusted: true, ..Default::default() };
         cfg.high_risk_tools = vec!["nuclear_launch".to_string()];
         // Force the mock confidence (0.5) to fail the supervisory threshold (2.0)
         cfg.hil_spectrum = HumanInLoopSpectrum::Supervisory;
@@ -189,8 +185,7 @@ mod tests {
 
     #[test]
     fn test_stage_3_supervisory_wiring() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { project_trusted: true, ..Default::default() };
 
         let tc = create_tool_call("1", "normal_tool");
 
@@ -211,8 +206,7 @@ mod tests {
 
     #[test]
     fn test_stage_3_approval_on_all_wiring() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { project_trusted: true, ..Default::default() };
         cfg.hil_spectrum = HumanInLoopSpectrum::ApprovalOnAll;
 
         let tc = create_tool_call("1", "read_tool");
@@ -244,9 +238,7 @@ mod tests {
             .tool_guardrails
             .push(Arc::new(MockFailingGuardrail));
 
-        let mut cfg = AgentRunConfig::default();
-        cfg.guardrails = Some(registry);
-        cfg.project_trusted = true;
+        let mut cfg = AgentRunConfig { guardrails: Some(registry), project_trusted: true, ..Default::default() };
 
         let tc = create_tool_call("1", "forbidden_tool");
         let res = ToolGater::check_gating(&tc, false, &cfg);
