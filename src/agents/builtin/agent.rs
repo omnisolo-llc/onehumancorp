@@ -6641,6 +6641,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     pub struct MockToolExecutor;
 
     #[async_trait::async_trait]
