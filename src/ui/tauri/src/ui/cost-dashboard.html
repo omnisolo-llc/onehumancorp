@@ -268,8 +268,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                    <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Budget Health Warning</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Soft Limit Approaching</h3>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is reaching your plan's soft limit. Keep your business momentum with a higher tier for better bulk rates!</p>
                 </div>
             </div>
 
@@ -399,7 +399,7 @@
 
                 if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
+                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is reaching your plan's soft limit. Keep your business momentum with a higher tier for better bulk rates!`;
                 } else {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
