@@ -242,6 +242,14 @@ impl Tracker {
         self.get_tenant_cost_cents(tenant_id)
     }
 
+    pub fn get_tenant_payment_fees(&self, tenant_id: &str) -> f64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_payment_fees(tenant_id)
+        } else {
+            0.0
+        }
+    }
+
     pub fn get_storage_cost_cents(&self, bytes: i64) -> i64 {
         let cost_per_gb = if let Some(ref auditor) = self.auditor { auditor.get_cost_per_gb_month() } else { 0.10 };
         crate::pricing::calculator::calculate_storage_cost_cents(bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: cost_per_gb, ..Default::default() })
