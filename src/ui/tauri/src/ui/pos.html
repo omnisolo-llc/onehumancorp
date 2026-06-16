@@ -1591,31 +1591,75 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-    // Offline Sync Logic
+    // Offline Sync Logic (IndexedDB CRDT)
 
-    function enqueueOfflineMutation(mutation) {
-        let queue = [];
+    const DB_NAME = "OHC_Offline_Queue";
+    const STORE_NAME = "actions";
+    const DB_VERSION = 1;
+
+    function getDB() {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = event => reject(request.error);
+            request.onsuccess = event => resolve(event.target.result);
+            request.onupgradeneeded = event => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                }
+            };
+        });
+    }
+
+    async function getQueue() {
+        if (!window.indexedDB) return [];
         try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-        queue.push(mutation);
-        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
-        window.dispatchEvent(new Event("ohc_queue_updated"));
+            const db = await getDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        } catch(e) {
+            return [];
+        }
+    }
+
+    async function enqueueOfflineMutation(mutation) {
+        if (!mutation.id) {
+            mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        }
+        if (!mutation.timestamp) {
+            mutation.timestamp = Date.now();
+        }
+
+        try {
+            const db = await getDB();
+            await new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(mutation);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+            window.dispatchEvent(new Event("ohc_queue_updated"));
+        } catch (e) {
+            console.error("Failed to enqueue offline mutation", e);
+        }
 
         if (navigator.onLine) {
             syncOfflineQueue();
         }
     }
 
-    function updateOfflineStatus() {
+    async function updateOfflineStatus() {
         const networkIndicator = document.getElementById("network-status-indicator");
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
+        const queue = await getQueue();
 
         const dot = document.getElementById("network-status-dot");
         const text = document.getElementById("network-status-text");
@@ -1647,11 +1691,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function syncOfflineQueue() {
         if (!navigator.onLine) return;
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
+        const queue = await getQueue();
         if (queue.length === 0) return;
 
         const posTransactions = [];
@@ -1664,7 +1704,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     amount_cents: Math.round(m.amount),
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date(m.timestamp || Date.now()).toISOString()
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
@@ -1676,18 +1716,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     payment_intent_id: null,
                     currency: null
                 });
-            } else if (m.type === "agent_intent") {
-                generalMutations.push({
-                    transaction_id: m.id,
-                    product_id: "agent_intent",
-                    quantity_deducted: 0,
-                    amount: null,
-                    payment_method: null,
-                    payment_intent_id: null,
-                    currency: "usd",
-                    mutation_type: "agent_intent",
-                    payload: typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload)
-                });
             } else {
                 generalMutations.push(m);
             }
@@ -1695,31 +1723,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
         const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
-
-
         let allOk = true;
+
         if (posTransactions.length > 0) {
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
             try {
                 const res = await fetch("/api/v1/payments/terminal/sync_offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
-                });
-                if (!res.ok) allOk = false;
-            } catch(e) {
-                allOk = false;
-            }
-        }
-
-        if (generalMutations.length > 0) {
-
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
-            try {
-                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
+                    body: JSON.stringify({ transactions: posTransactions })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
@@ -1741,7 +1752,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allOk) {
-            localStorage.setItem("ohc_offline_queue", "[]");
+            try {
+                const db = await getDB();
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], "readwrite");
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch(e) {
+                console.error("Failed to clear IndexedDB", e);
+            }
             updateOfflineStatus();
         }
     }
