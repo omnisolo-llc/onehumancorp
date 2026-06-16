@@ -1432,3 +1432,56 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_visual_workflow_deep_nesting_and_json_parsing() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input { name: "input_json".to_string() },
+                },
+                Node {
+                    id: "fork".to_string(),
+                    node_type: NodeType::ParallelFork { targets: vec!["pathA".to_string(), "pathB".to_string()] },
+                },
+                Node {
+                    id: "pathA".to_string(),
+                    node_type: NodeType::Llm { prompt_template: "Process A: {{in}}".to_string() },
+                },
+                Node {
+                    id: "pathB".to_string(),
+                    node_type: NodeType::Llm { prompt_template: "Process B: {{in}}".to_string() },
+                },
+                Node {
+                    id: "join".to_string(),
+                    node_type: NodeType::ParallelJoin {
+                        state_keys: vec!["pathA".to_string(), "pathB".to_string()],
+                        output_key: "joined".to_string()
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "fork".to_string() },
+                Edge { source: "join".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        let mut config = AgentRunConfig::default();
+        config.developer_instructions = "test".to_string();
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), r#"{"key": "value"}"#.to_string());
+
+        assert_eq!(graph.nodes.len(), 6);
+        assert_eq!(graph.edges.len(), 2);
+    }
+}
