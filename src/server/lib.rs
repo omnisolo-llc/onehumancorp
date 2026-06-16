@@ -397,8 +397,6 @@ pub mod pipeline;
 pub use ::server_oidc as oidc;
 pub mod sip;
 pub mod queue;
-pub mod agent_jobs_queue;
-#[cfg(test)]
 pub mod domain;
 pub use ::server_pricing as pricing;
 pub mod analytics;
