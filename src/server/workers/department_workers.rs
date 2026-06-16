@@ -173,15 +173,24 @@ impl OperationsWorker {
                     crate::db::DbStore::Postgres => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, $3, $4, $5, $6)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&description)
-                        .bind(&drafted_msg)
+                        .bind("operations")
+                        .bind(json!({
+                            "description": description,
+                            "feature_type": "incident_resolution",
+                            "incident_id": transaction_id
+                        }))
+                        .bind(json!({
+                            "action_type": "resolve_conflict",
+                            "draft_reply": drafted_msg,
+                            "feature_type": "incident_resolution"
+                        }))
+                        .bind("PENDING_APPROVAL")
                         .execute(&db.pool)
                         .await;
 
@@ -195,15 +204,24 @@ impl OperationsWorker {
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES (?, ?, ?, ?, ?, ?)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&description)
-                        .bind(&drafted_msg)
+                        .bind("operations")
+                        .bind(json!({
+                            "description": description,
+                            "feature_type": "incident_resolution",
+                            "incident_id": transaction_id
+                        }).to_string())
+                        .bind(json!({
+                            "action_type": "resolve_conflict",
+                            "draft_reply": drafted_msg,
+                            "feature_type": "incident_resolution"
+                        }).to_string())
+                        .bind("PENDING_APPROVAL")
                         .execute(pool)
                         .await;
 
@@ -438,30 +456,50 @@ impl OperationsWorker {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                            VALUES ($1, $2, $3, $4, $5, $6)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&tenant_id)
-                                        .bind(&title)
-                                        .bind(&description)
-                                        .bind(&drafted_msg)
+                                        .bind("operations")
+                                        .bind(json!({
+                                            "description": description,
+                                            "feature_type": "low_inventory"
+                                        }))
+                                        .bind(json!({
+                                            "action_type": "restock",
+                                            "product_id": product_id,
+                                            "product_name": product_name,
+                                            "remaining_stock": inventory_count,
+                                            "message": drafted_msg
+                                        }))
+                                        .bind("PENDING_APPROVAL")
                                         .execute(&db.pool)
                                         .await;
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                            VALUES (?, ?, ?, ?, ?, ?)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&tenant_id)
-                                        .bind(&title)
-                                        .bind(&description)
-                                        .bind(&drafted_msg)
+                                        .bind("operations")
+                                        .bind(json!({
+                                            "description": description,
+                                            "feature_type": "low_inventory"
+                                        }).to_string())
+                                        .bind(json!({
+                                            "action_type": "restock",
+                                            "product_id": product_id,
+                                            "product_name": product_name,
+                                            "remaining_stock": inventory_count,
+                                            "message": drafted_msg
+                                        }).to_string())
+                                        .bind("PENDING_APPROVAL")
                                         .execute(pool)
                                         .await;
                                     }
@@ -532,14 +570,22 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES ($1, $2, $3, $4, $5, $6)
                             "#
                         )
                         .bind(&milestone_id)
                         .bind(&tenant_id)
-                        .bind(milestone_title)
-                        .bind(milestone_msg)
+                                .bind("growth")
+                                .bind(json!({
+                                    "description": milestone_msg,
+                                    "feature_type": "milestone"
+                                }))
+                                .bind(json!({
+                                    "action_type": "celebrate",
+                                    "title": milestone_title
+                                }))
+                                .bind("PENDING_APPROVAL")
                         .execute(&db.pool)
                         .await;
                     }
@@ -596,14 +642,22 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES (?, ?, ?, ?, ?, ?)
                             "#
                         )
                         .bind(&milestone_id)
                         .bind(&tenant_id)
-                        .bind(milestone_title)
-                        .bind(milestone_msg)
+                                .bind("growth")
+                                .bind(json!({
+                                    "description": milestone_msg,
+                                    "feature_type": "milestone"
+                                }).to_string())
+                                .bind(json!({
+                                    "action_type": "celebrate",
+                                    "title": milestone_title
+                                }).to_string())
+                                .bind("PENDING_APPROVAL")
                         .execute(sqlite_pool)
                         .await;
                     }
@@ -801,12 +855,20 @@ impl CustomerSuccessWorker {
                                 final_status = "PAUSED";
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES ($1, $2, 'customer_success', $3, $4, 'PENDING_APPROVAL')
                                     "#
                                 )
                                 .bind(Uuid::new_v4().to_string())
                                 .bind(&tenant_id)
+                                .bind(json!({
+                                    "description": "The AI agent responsible for drafting replies is paused because the AI service is unavailable.",
+                                    "feature_type": "agent_paused"
+                                }))
+                                .bind(json!({
+                                    "action_type": "resume",
+                                    "message": "System is paused. Please manually reply to customer messages."
+                                }))
                                 .execute(&db.pool)
                                 .await;
                             }
@@ -856,14 +918,23 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, $3, $4, $5, $6)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind("customer_success")
+                        .bind(json!({
+                            "description": format!("The Ambassador drafted a response for your review regarding: {}", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")),
+                            "feature_type": "ambassador_reply"
+                        }))
+                        .bind(json!({
+                            "action_type": "reply",
+                            "draft_reply": drafted_msg,
+                            "feature_type": "ambassador_reply"
+                        }))
+                        .bind("PENDING_APPROVAL")
                         .execute(&db.pool)
                         .await;
                     } else {
@@ -893,14 +964,23 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES (?, ?, ?, ?, ?, ?)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind("customer_success")
+                        .bind(json!({
+                            "description": format!("The Ambassador drafted a response for your review regarding: {}", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")),
+                            "feature_type": "ambassador_reply"
+                        }).to_string())
+                        .bind(json!({
+                            "action_type": "reply",
+                            "draft_reply": drafted_msg,
+                            "feature_type": "ambassador_reply"
+                        }).to_string())
+                        .bind("PENDING_APPROVAL")
                         .execute(sqlite_pool)
                         .await;
                     } else {
@@ -1312,14 +1392,22 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES ($1, $2, $3, $4, $5, $6)
                                     "#
                                 )
                                 .bind(&milestone_id)
                                 .bind(&tenant_id)
-                                .bind(milestone_title)
-                                .bind(milestone_msg)
+                                .bind("growth")
+                                .bind(json!({
+                                    "description": milestone_msg,
+                                    "feature_type": "milestone"
+                                }))
+                                .bind(json!({
+                                    "action_type": "celebrate",
+                                    "title": milestone_title
+                                }))
+                                .bind("PENDING_APPROVAL")
                                 .execute(&db.pool)
                                 .await;
                             },
@@ -1335,14 +1423,22 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES (?, ?, ?, ?, ?, ?)
                                     "#
                                 )
                                 .bind(&milestone_id)
                                 .bind(&tenant_id)
-                                .bind(milestone_title)
-                                .bind(milestone_msg)
+                                .bind("growth")
+                                .bind(json!({
+                                    "description": milestone_msg,
+                                    "feature_type": "milestone"
+                                }).to_string())
+                                .bind(json!({
+                                    "action_type": "celebrate",
+                                    "title": milestone_title
+                                }).to_string())
+                                .bind("PENDING_APPROVAL")
                                 .execute(pool)
                                 .await;
                             }
@@ -1387,24 +1483,40 @@ impl AdvisorWorker {
                                         crate::db::DbStore::Postgres => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                VALUES ($1, $2, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
+                                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                                                VALUES ($1, $2, 'operations', $3, $4, 'PENDING_APPROVAL')
                                                 "#
                                             )
                                             .bind(Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
+                                                            .bind(json!({
+                                                                "description": "The AI agent responsible for restocking drafts is paused because the AI service is unavailable.",
+                                                                "feature_type": "agent_paused"
+                                                            }))
+                                                            .bind(json!({
+                                                                "action_type": "resume",
+                                                                "message": "System is paused. Please manually check inventory."
+                                                            }))
                                             .execute(&db.pool)
                                             .await;
                                         },
                                         crate::db::DbStore::Sqlite(pool) => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                VALUES (?, ?, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
+                                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                                                VALUES (?, ?, 'operations', ?, ?, 'PENDING_APPROVAL')
                                                 "#
                                             )
                                             .bind(Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
+                                                            .bind(json!({
+                                                                "description": "The AI agent responsible for restocking drafts is paused because the AI service is unavailable.",
+                                                                "feature_type": "agent_paused"
+                                                            }).to_string())
+                                                            .bind(json!({
+                                                                "action_type": "resume",
+                                                                "message": "System is paused. Please manually check inventory."
+                                                            }).to_string())
                                             .execute(pool)
                                             .await;
                                         }

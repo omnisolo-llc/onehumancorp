@@ -55,6 +55,7 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct UpdateStateRequest {
     pub state: String,
+    pub modified_content: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -260,17 +261,45 @@ async fn update_feed_item_state(
 
     let repo = AgentFeedRepository::new(pool.clone());
 
-    match repo.update_state(&tenant_id, &id, &payload.state).await {
+    let update_result = if let Some(ref modified) = payload.modified_content {
+        // Find if it is an ambassador_reply or similar to decide which key to update
+        if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
+            let p = item.proposed_action.clone().or(item.context_payload.clone());
+            let feature_type = p.as_ref().and_then(|v| v.get("feature_type")).and_then(|v| v.as_str()).unwrap_or("");
+            let key = if feature_type == "ambassador_reply" || feature_type == "instagram_dm" {
+                "draft_reply"
+            } else {
+                "description"
+            };
+            repo.update_payload_and_state(&tenant_id, &id, key, modified, &payload.state).await
+        } else {
+            repo.update_state(&tenant_id, &id, &payload.state).await
+        }
+    } else {
+        repo.update_state(&tenant_id, &id, &payload.state).await
+    };
+
+    match update_result {
         Ok(updated_item) => {
             // Trigger legacy execution by synchronizing the agent_approvals table
             if payload.state == "APPROVED" || payload.state == "REJECTED" || payload.state == "DISMISSED" {
                 let legacy_status = if payload.state == "APPROVED" { "APPROVED" } else { "REJECTED" };
-                let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(legacy_status)
-                    .bind(&id)
-                    .bind(&tenant_id)
-                    .execute(&pool)
-                    .await;
+                if let Some(ref modified) = payload.modified_content {
+                    let _ = sqlx::query("UPDATE agent_approvals SET status = $1, payload = jsonb_set(COALESCE(payload, '{}'::jsonb), '{draft_reply}', to_jsonb($2::text)) WHERE id = $3 AND tenant_id = $4")
+                        .bind(legacy_status)
+                        .bind(modified)
+                        .bind(&id)
+                        .bind(&tenant_id)
+                        .execute(&pool)
+                        .await;
+                } else {
+                    let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(legacy_status)
+                        .bind(&id)
+                        .bind(&tenant_id)
+                        .execute(&pool)
+                        .await;
+                }
             }
 
             // Handle incident resolution execution

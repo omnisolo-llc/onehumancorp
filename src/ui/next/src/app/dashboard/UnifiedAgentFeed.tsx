@@ -6,6 +6,7 @@ import { WorkTriageFeed } from "../components/WorkTriageFeed";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from './AmbassadorReplyCard';
 import { InstagramDMCard } from './InstagramDMCard';
+import { LowInventoryCard } from './LowInventoryCard';
 
 
 type TriageItem = {
@@ -429,7 +430,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   const submitDecision = async (id: string, approved: boolean, modified_content?: string) => {
     const tenant = tenantId();
-    const res = await fetch(`/api/agent-feed/${id}`, {
+    const res = await fetch(`/api/agent-feed/${id}/state`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -458,7 +459,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       return;
     }
 
-    // Optimistic UI update
+    // Visual transition state update
+    if (approved) {
+      setItems(prev => prev.map(item =>
+        item.id === id ? { ...item, lifecycle_state: 'APPROVED' } : item
+      ));
+
+      // Wait for animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Optimistic UI removal
     setItems(prev => prev.filter(app => app.id !== id));
 
     try {
@@ -539,46 +550,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               onDecision={handleTriageDecision}
             />
 
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
-                </h3>
-              </div>
-            </div>
-
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
-                </h3>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
-                  Approve
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
-                  Edit
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
-                  Deny
-                </button>
-              </div>
-            </div>
 
             {(loading || triageLoading) && (
               <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
@@ -597,10 +568,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
               </div>
             )}
-            {items.map((approval) => (
+            {items.map((approval) => {
+              const isApproving = false; // Add state tracking if needed for animations
+
+              return (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-500 ${
+                  approval.lifecycle_state === 'APPROVED' ? 'border-green-500 scale-95 opacity-0' : ''
+                }`}
+                data-testid="agent-feed-card"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -621,7 +598,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
+                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" || (approval.proposed_action || approval.context_payload)?.feature_type === "low_inventory") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
                         <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
@@ -638,6 +615,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && <InstagramDMCard approval={approval} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && <AmbassadorReplyCard approval={approval} />}
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "low_inventory" && <LowInventoryCard approval={approval} onApprove={(id) => handleDecision(id, true)} onDismiss={(id) => handleDecision(id, false)} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -1142,7 +1120,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </>
         )}
 

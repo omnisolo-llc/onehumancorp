@@ -157,6 +157,38 @@ impl AgentFeedRepository {
 
         Ok(rec)
     }
+
+    pub async fn update_payload_and_state(
+        &self,
+        tenant_id: &str,
+        id: &str,
+        payload_key: &str,
+        payload_value: &str,
+        new_state: &str,
+    ) -> Result<AgentFeedItem, sqlx::Error> {
+        // We update both proposed_action and context_payload for consistency in the feed
+        let rec = sqlx::query_as::<_, AgentFeedItem>(
+            r#"
+            UPDATE agent_feed_items
+            SET
+                lifecycle_state = $1,
+                proposed_action = jsonb_set(COALESCE(proposed_action, '{}'::jsonb), ARRAY[$2], to_jsonb($3::text)),
+                context_payload = jsonb_set(COALESCE(context_payload, '{}'::jsonb), ARRAY[$2], to_jsonb($3::text)),
+                updated_at = NOW()
+            WHERE tenant_id = $4 AND id = $5
+            RETURNING *
+            "#
+        )
+        .bind(new_state)
+        .bind(payload_key)
+        .bind(payload_value)
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rec)
+    }
 }
 
 #[cfg(test)]
