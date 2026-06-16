@@ -322,7 +322,6 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 use std::sync::Mutex;
 use tree_sitter::{Node, Parser};
 
-#[allow(dead_code)]
 pub struct ASTValidator {
     parser: Mutex<Parser>,
     blocked_commands: Vec<String>,
@@ -766,7 +765,6 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    #[allow(dead_code)]
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
