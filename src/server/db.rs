@@ -43,6 +43,14 @@ pub enum DbStore {
     Sqlite(SqlitePool),
 }
 
+#[derive(serde::Serialize, Clone)]
+pub struct AvailableSlot {
+    pub id: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+}
+
+
 #[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
@@ -93,6 +101,72 @@ pub struct SearchResult {
 
 
 impl DB {
+    pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
+        match &self.store {
+            DbStore::Postgres => {
+                let rows = sqlx::query(
+                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                let mut slots = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
+                    let end_time: chrono::DateTime<chrono::Utc> = row.get("end_time");
+                    slots.push(AvailableSlot {
+                        id,
+                        start_time,
+                        end_time,
+                    });
+                }
+                Ok(slots)
+            }
+            DbStore::Sqlite(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(pool)
+                .await?;
+
+                let mut slots = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+
+                    // Sqlite might return string or integer for DateTime depending on the setup.
+                    // To handle safely:
+                    let start_time = match row.try_get::<String, _>("start_time") {
+                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
+                            .with_timezone(&chrono::Utc),
+                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
+                    };
+
+                    let end_time = match row.try_get::<String, _>("end_time") {
+                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
+                            .with_timezone(&chrono::Utc),
+                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
+                    };
+
+                    slots.push(AvailableSlot {
+                        id,
+                        start_time,
+                        end_time,
+                    });
+                }
+                Ok(slots)
+            }
+        }
+    }
+
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,
