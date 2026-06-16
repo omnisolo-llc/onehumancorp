@@ -4334,18 +4334,25 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut feed_rows_json = Vec::new();
             match &db2.store {
                 crate::db::DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query(
+                    let query_str = if mobile_optimized {
+                        "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    } else {
                         "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                    )
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id2)
                     .fetch_all(&db2.pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
+                            let context_payload: Option<serde_json::Value> = if mobile_optimized {
+                                None
+                            } else {
+                                match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
                                 }
                             };
                             let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
@@ -4383,18 +4390,25 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    if let Ok(rows) = sqlx::query(
+                    let query_str = if mobile_optimized {
+                        "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+                    } else {
                         "SELECT * FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
-                    )
+                    };
+                    if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id2)
                     .fetch_all(pool)
                     .await {
                         for row in rows {
-                            let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
-                                Ok(j) => Some(j.0),
-                                Err(_) => match row.try_get::<String, _>("context_payload") {
-                                    Ok(s) => serde_json::from_str(&s).ok(),
-                                    Err(_) => None
+                            let context_payload: Option<serde_json::Value> = if mobile_optimized {
+                                None
+                            } else {
+                                match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
                                 }
                             };
                             let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
@@ -4660,15 +4674,20 @@ async fn ui_dashboard_unified_feed_handler(
     let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    // Check cache
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+    // Check cache alongside fetching supply (since supply is never cached)
+    let db_supply = db.clone();
+    let tenant_id_supply = tenant_id.clone();
+    let (cache_res, supply_res) = tokio::join!(
+        cache.get_with_swr(&cache_key),
+        tokio::spawn(async move { load_ui_supply_from_db(&db_supply, &tenant_id_supply, mobile_optimized).await })
+    );
+    let supply_data = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_else(|_| serde_json::json!({}));
+
+    if let Some((cached, is_stale)) = cache_res {
         if !is_stale {
-            // Supply should not be cached because it changes continuously (inventory counts),
-            // so we fetch supply and merge it on cache hit.
-            let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
             let mut final_cached = cached.clone();
             if let Some(obj) = final_cached.as_object_mut() {
-                obj.insert("supply".to_string(), supply_res);
+                obj.insert("supply".to_string(), supply_data);
             }
             return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
         }
@@ -4717,10 +4736,9 @@ async fn ui_dashboard_unified_feed_handler(
             }
         });
 
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
         if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_res);
+            obj.insert("supply".to_string(), supply_data);
         }
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
@@ -4734,11 +4752,10 @@ async fn ui_dashboard_unified_feed_handler(
     let db7 = db.clone(); let t7 = tenant_id.clone();
     let db8 = db.clone(); let t8 = tenant_id.clone();
 
-    let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
         tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
         tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_supply_from_db(&db4, &t4, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_triage_from_db(&db5, &t5, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_approvals_from_db(&db6, &t6, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_feed_from_db(&db7, &t7, mobile_optimized).await }),
@@ -4751,7 +4768,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+    let supply = supply_data;
 
 
     let cacheable_result = serde_json::json!({
