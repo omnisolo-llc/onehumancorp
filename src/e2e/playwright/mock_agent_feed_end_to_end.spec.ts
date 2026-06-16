@@ -34,7 +34,13 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
     // 3. Click the Approve button
-    await approveButton.click();
+    // We expect the ActionRouter to successfully process the request without returning a 500
+    const [updateResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/agent-feed/`) && response.request().method() === 'PATCH'),
+      approveButton.click(),
+    ]);
+
+    expect(updateResponse.status()).toBe(200);
 
     // Verify it disappears (UI optimistic update or refetch)
     await expect(simulatedCardText).not.toBeVisible({ timeout: 15000 });

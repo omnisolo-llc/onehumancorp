@@ -86,3 +86,18 @@ mod tests {
         }
     }
 }
+
+use sqlx::PgPool;
+
+pub async fn resolve_incident(
+    pool: &PgPool,
+    tenant_id: &str,
+    incident_id: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+        .bind(incident_id)
+        .bind(tenant_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
