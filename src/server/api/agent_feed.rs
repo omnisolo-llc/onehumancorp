@@ -262,72 +262,19 @@ async fn update_feed_item_state(
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
-            // Trigger legacy execution by synchronizing the agent_approvals table
-            if payload.state == "APPROVED" || payload.state == "REJECTED" || payload.state == "DISMISSED" {
-                let legacy_status = if payload.state == "APPROVED" { "APPROVED" } else { "REJECTED" };
-                let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(legacy_status)
-                    .bind(&id)
-                    .bind(&tenant_id)
-                    .execute(&pool)
-                    .await;
-            }
+            let _ = crate::domain::agent_approvals::sync_legacy_approval_status(&tenant_id, &id, &payload.state, &pool).await;
 
-            // Handle incident resolution execution
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
                     if item.event_source == "incident_resolution" {
                         if let Some(ref payload) = item.context_payload {
-                            if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
-                                let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(incident_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                            let _ = crate::domain::incidents::handle_incident_resolution(&tenant_id, payload, &pool).await;
                         }
                     }
 
-                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
-                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
-                            // Real implementation would buffer post here to AYRSHARE.
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
-                            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
-                                tracing::info!("Approved quote draft: {}", quote_id);
-                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
-                                    .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-
-                        let feature_type = payload.get("feature_type").and_then(|v| v.as_str()).unwrap_or("");
-                        if feature_type == "instagram_dm" || feature_type == "ambassador_reply" {
-                            if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
-                                let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
-                                tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
-                                let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(draft_reply)
-                                    .bind(inbox_id)
-                                    .bind(&tenant_id)
-                                    .execute(&pool)
-                                    .await;
-                            }
+                    if let Some(ref payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+                            let _ = crate::domain::action_router::dispatch_action(feature_type, &tenant_id, payload, &pool).await;
                         }
                     }
                 }
