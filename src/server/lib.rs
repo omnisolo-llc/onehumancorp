@@ -149,6 +149,11 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+
+    // Additional default tooltips for existing dashboard buttons
+    m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
+    m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
+    m.insert("milestone-copy-btn".to_string(), "Copy your milestone link to share with others.".to_string());
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
