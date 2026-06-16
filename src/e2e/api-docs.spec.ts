@@ -11,7 +11,7 @@ test.describe('API Documentation', () => {
 
     // Verify Swagger UI container wrapper is visible
     // Target the specific wrapper classes for verification
-    const wrapper = page.locator('.backdrop-blur-\\[20px\\].saturate-200').first();
+    const wrapper = page.locator('.backdrop-blur-\\[30px\\]\.saturate-\\[210\\%\\]').first();
     await expect(wrapper).toBeVisible();
 
     // Check if swagger-ui container renders
