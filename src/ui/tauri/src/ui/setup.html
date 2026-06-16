@@ -61,12 +61,14 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
-      select.glassmorphism, textarea.glassmorphism {
+      select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
-      input.glassmorphism {
-        border-radius: 8px;
-      }
+
       select, textarea, input {
         border-radius: 8px;
       }
@@ -558,9 +560,9 @@
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
-        overflow-x: auto;
+        flex-wrap: wrap;
+        justify-content: center;
         padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
       }
       .persona-chip {
         flex: 0 0 auto;
@@ -1218,6 +1220,7 @@
         <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
 
         <div class="btn-group">
+          <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
@@ -1312,6 +1315,26 @@
           templateSelection: ''
       };
 
+
+
+      // Auto save draft logic
+      let autoSaveTimer = null;
+      function debouncedAutoSave() {
+          clearTimeout(autoSaveTimer);
+          autoSaveTimer = setTimeout(() => {
+              saveCurrentState();
+              const msg = document.getElementById('draft-saved-msg');
+              if (msg) {
+                  msg.style.display = 'block';
+                  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+              }
+          }, 500);
+      }
+
+      document.querySelectorAll('input, select, textarea').forEach(el => {
+          el.addEventListener('input', debouncedAutoSave);
+          el.addEventListener('change', debouncedAutoSave);
+      });
 
       // Handle radio buttons selection visual state
       inputs.context.forEach(radio => {
@@ -1870,7 +1893,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                       return;
                   }
@@ -1907,7 +1933,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   } else {
                       throw new Error('Failed to start onboarding');
@@ -1999,7 +2028,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   } else {
                       const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
@@ -2041,7 +2073,10 @@
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
-                      localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                       window.location.href = "success.html";
                   }
 
@@ -2163,10 +2198,18 @@
                        localStorage.setItem('tenant_id', startData.organization_id);
                        localStorage.setItem('tenant', startData.organization_id);
                    }
+
+                   localStorage.removeItem('onboardingState');
                    localStorage.setItem('has_onboarded', 'true');
+
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
+                   const submitError = document.getElementById('submit-error');
+                   if (submitError) {
+                       submitError.style.display = 'block';
+                       submitError.innerText = (err && err.message) ? err.message : typeof err === 'string' ? err : 'Failed to launch store';
+                   }
                    goToStep('step-template');
                    finishBtn.disabled = false;
                    finishBtn.innerText = "Launch Store";
@@ -2184,16 +2227,24 @@
                  }).then(response => {
                      if (response.ok) {
                          localStorage.setItem('onboardingState', JSON.stringify(state));
-                         localStorage.setItem('has_onboarded', 'true');
+
+                   localStorage.removeItem('onboardingState');
+                   localStorage.setItem('has_onboarded', 'true');
+
                          window.location.href = "success.html";
                      } else {
                          throw new Error('Failed to start onboarding');
                      }
                  }).catch((err) => {
-                     console.error(err);
-                     goToStep('step-template');
-                     finishBtn.disabled = false;
-                     finishBtn.innerText = "Launch Store";
+                   console.error(err);
+                   const submitError = document.getElementById('submit-error');
+                   if (submitError) {
+                       submitError.style.display = 'block';
+                       submitError.innerText = (err && err.message) ? err.message : typeof err === 'string' ? err : 'Failed to launch store';
+                   }
+                   goToStep('step-template');
+                   finishBtn.disabled = false;
+                   finishBtn.innerText = "Launch Store";
                  });
                }
            }
