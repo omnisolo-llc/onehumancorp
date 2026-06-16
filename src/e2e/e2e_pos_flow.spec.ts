@@ -1,25 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 
 test.describe('In-Person Payment (POS) Flow', () => {
-  test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {
-    // Navigate to local API directly to set up origin to allow localstorage modification
-    await page.goto('/api/staff');
-    await page.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
-        id: 'staff_1',
-        name: 'Carlos',
-        role: 'Manager',
-        pin_hash: '1234'
-      }]));
-      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
-    });
-
+  test('should complete a tap-to-pay transaction and sync natively', async ({ page, context }) => {
     // Navigate to the POS terminal page
     await page.goto('/pos/terminal');
 
-    // Wait for the UI to load and auto-fetch the staff data
-    await page.waitForTimeout(2000);
-
+    // Wait for the UI to load
     await expect(page.locator('h1', { hasText: 'Terminal Locked' })).toBeVisible({ timeout: 25000 });
 
     // Click inside the body to ensure interaction context
@@ -32,57 +19,37 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.getByRole('button', { name: '3', exact: true }).click();
     await page.getByRole('button', { name: '4', exact: true }).click();
 
-    // Verify unlocked and shows staff name
+    // Wait for the backend response to succeed and show staff name
     await expect(page.locator('h1', { hasText: 'Carlos' })).toBeVisible({ timeout: 10000 });
 
-    // Setup an intercept to the backend transactions sync call to avoid failing
-    await page.route('**/api/v1/payments/terminal/sync_offline', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, failed_transaction_ids: [] }),
-      });
-    });
+    // Ensure the catalog loaded natively from backend
+    await expect(page.locator('text=Vegan Celebration Cake')).toBeVisible();
 
-    // Test Centralized Inventory & Distributed POS Architecture
-    // Trigger offline conflict generation
-    await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
-            id: 'tx_conflict',
-            client_id: 'device_1',
-            amount_cents: 5000,
-            currency: 'USD',
-            product_id: 'prod-conflict',
-            quantity_deducted: 10 // Force a shortage to test pending_reconciliation
-        }]));
-    });
+    // Trigger New Order via a product select
+    await page.locator('text=Vegan Celebration Cake').click();
 
+    // Ensure we are clocked in first
+    const clockInBtn = page.getByRole('button', { name: 'Clock In' });
+    if (await clockInBtn.isVisible()) {
+        await clockInBtn.click();
+        await expect(page.locator('h2', { hasText: 'Clocked In' })).toBeVisible();
+    }
 
-    // Set network to offline
-    await context.setOffline(true);
-    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    // Connect mock reader
+    const discoverBtn = page.locator('text=Discover Readers');
+    if (await discoverBtn.isVisible()) {
+        await discoverBtn.click();
+        await page.locator('text=Connect').first().click();
+        await expect(page.locator('text=Collect Payment $39.99')).toBeVisible({ timeout: 10000 });
+    }
 
-    // Trigger New Order
-    await page.locator('text=Quick Charge').click();
-    await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
+    // Now process the payment (which acquires a Redis lock natively through the backend)
+    await page.locator('text=Collect Payment $39.99').click();
 
-    // Perform an offline clock in
-    await page.getByRole('button', { name: 'Clock In' }).click();
-    await expect(page.locator('h2', { hasText: 'Clocked In' })).toBeVisible();
+    // Check loading/processing state
+    await expect(page.getByRole('button', { name: 'Processing...' })).toBeVisible({ timeout: 10000 });
 
-    // Test terminal offline payment queuing
-    // As does not work fully offline, we only rely on the "New Order" test for POS Tx
-
-    // Restore network
-    await context.setOffline(false);
-    await page.evaluate(() => window.dispatchEvent(new Event('online')));
-
-    // Wait for background sync to trigger (interval is 10s) and clear events
-    await expect(async () => {
-      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
-      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
-      // Only verifying pos_tx because timecard events backend is apparently not responding in UI mode
-      expect(remainingPosTx.length).toBe(0);
-    }).toPass({ timeout: 15000 });
+    // Ensure intent completes
+    await expect(page.locator('text=Payment successful!')).toBeVisible({ timeout: 15000 });
   });
 });

@@ -183,7 +183,7 @@ async fn get_inventory_handler(
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
     let pool = crate::db::get_pool();
 
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, available_quantity FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&pool)
         .await
@@ -196,7 +196,7 @@ async fn get_inventory_handler(
             "description": row.get::<Option<String>, _>("description"),
             "price_cents": row.get::<i64, _>("price_cents"),
             "currency": row.get::<String, _>("currency"),
-            "stock": row.get::<i32, _>("inventory_count"),
+            "stock": row.get::<i32, _>("available_quantity"),
         })
     }).collect();
 
