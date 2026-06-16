@@ -1685,20 +1685,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (generalMutations.length > 0) {
-
-            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
-            try {
-                const res = await fetch("/api/v1/payments/terminal/sync_offline", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
-                });
-                if (!res.ok) allOk = false;
-            } catch(e) {
-                allOk = false;
-            }
-        }
 
         if (generalMutations.length > 0) {
             try {
