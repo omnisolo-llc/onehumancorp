@@ -10,14 +10,17 @@ pub struct Vector {
     pub id: String,
     pub values: Vec<f32>,
     pub metadata: String,
+    pub norm: f32,
 }
 
 impl Vector {
     pub fn new(id: String, values: Vec<f32>, metadata: String) -> Self {
+        let norm = values.iter().map(|a| a * a).sum::<f32>().sqrt();
         Self {
             id,
             values,
             metadata,
+            norm,
         }
     }
 
@@ -29,12 +32,10 @@ impl Vector {
             .zip(other.values.iter())
             .map(|(a, b)| a * b)
             .sum();
-        let norm_a: f32 = self.values.iter().map(|a| a * a).sum::<f32>().sqrt();
-        let norm_b: f32 = other.values.iter().map(|b| b * b).sum::<f32>().sqrt();
-        if norm_a == 0.0 || norm_b == 0.0 {
+        if self.norm == 0.0 || other.norm == 0.0 {
             0.0
         } else {
-            dot_product / (norm_a * norm_b)
+            dot_product / (self.norm * other.norm)
         }
     }
 
