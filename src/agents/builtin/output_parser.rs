@@ -35,25 +35,45 @@ impl<T> StructuredOutputParser<T> {
 }
 
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
-        fn parse_message(&self, msg: &Message) -> Result<T, String> {
+    fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty()
             && let Some(call) = msg
                 .tool_calls
                 .iter()
                 .find(|t| t.name == "structured_output")
-            {
-                if let Some(data) = call.arguments.get("data") {
-                    return match serde_json::from_value::<T>(data.clone()) {
-                        Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
-                    };
-                } else {
-                    return Err(
+        {
+            if let Some(data) = call.arguments.get("data") {
+                return match serde_json::from_value::<T>(data.clone()) {
+                    Ok(parsed) => Ok(parsed),
+                    Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
+                };
+            } else {
+                return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
-                }
             }
+        }
+
+        // Fallback: If it's pure markdown JSON block, attempt to parse it directly
+        let content = msg.content.trim();
+        let json_str = if content.starts_with("```json") {
+            content
+                .trim_start_matches("```json")
+                .trim_end_matches("```")
+                .trim()
+        } else if content.starts_with("```") {
+            content
+                .trim_start_matches("```")
+                .trim_end_matches("```")
+                .trim()
+        } else {
+            content
+        };
+
+        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+            return Ok(parsed);
+        }
 
         let s = msg.content.trim();
         if s.starts_with("```json") && s.ends_with("```") {
@@ -92,7 +112,10 @@ impl Default for ExponentialBackoffWithJitter {
 
 impl ExponentialBackoffWithJitter {
     pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
-        Self { base_ms, jitter_max_ms }
+        Self {
+            base_ms,
+            jitter_max_ms,
+        }
     }
 }
 
@@ -122,7 +145,12 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         req: ChatRequest,
         max_retries: usize,
     ) -> Result<T, ToolError> {
-        self.parse_with_prompt_and_strategy(req, max_retries, &ExponentialBackoffWithJitter::default()).await
+        self.parse_with_prompt_and_strategy(
+            req,
+            max_retries,
+            &ExponentialBackoffWithJitter::default(),
+        )
+        .await
     }
 
     pub async fn parse_with_prompt_and_strategy(
@@ -202,7 +230,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             .map(|tc| crate::types::ToolResult {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
-                                error: crate::types::ToolResult::new_llm_recoverable(tc.id.clone(), &detailed_error).error,
+                                error: crate::types::ToolResult::new_llm_recoverable(
+                                    tc.id.clone(),
+                                    &detailed_error,
+                                )
+                                .error,
                             })
                             .collect();
 
@@ -251,7 +283,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 ///
 /// **Returns:**
 /// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
-    #[allow(clippy::empty_line_after_doc_comments)]
+#[allow(clippy::empty_line_after_doc_comments)]
 pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
@@ -534,7 +566,9 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
                 // 1. Model ignores tool calls and outputs raw markdown
-                create_text_resp("Here is the requested output:\n```\n{\"result\": \"success_plain\"}\n```"),
+                create_text_resp(
+                    "Here is the requested output:\n```\n{\"result\": \"success_plain\"}\n```",
+                ),
                 // 2. The LlmRecoverable feedback loop intercepts it and the model corrects itself
                 create_tool_call_resp(
                     "structured_output",
