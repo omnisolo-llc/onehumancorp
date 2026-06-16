@@ -27,7 +27,7 @@ test.describe('Grow Business Flow', () => {
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Agents' }).click();
+    await page.getByRole('link', { name: 'AI Departments' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 

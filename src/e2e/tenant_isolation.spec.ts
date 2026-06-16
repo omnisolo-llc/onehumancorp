@@ -36,7 +36,7 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
     test('verifies navigation between different product dashboard sections', async ({ page }) => {
         await page.goto('/dashboard');
 
-        await page.getByRole('link', { name: 'Agents' }).click();
+        await page.getByRole('link', { name: 'AI Departments' }).click();
         await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
     });
 
@@ -52,7 +52,7 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
     test('verifies agent history panel does not expose raw embeddings', async ({ page }) => {
         await page.goto('/dashboard');
 
-        await page.getByRole('link', { name: 'Agents' }).click();
+        await page.getByRole('link', { name: 'AI Departments' }).click();
 
         // Check for natural language instead of embeddings
         await expect(page.getByText('vector', { exact: false })).not.toBeVisible();

@@ -50,7 +50,7 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles and videos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40 backdrop-blur-2xl saturate-[210%] border border-white/50 dark:border-white/10 hover:bg-white/75 min-h-[44px] text-base placeholder:text-gray-500 transition-all rounded-xl"
+            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40 backdrop-blur-[30px] saturate-[210%] border border-white/80 dark:border-white/20 hover:bg-white/80 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-2xl"
           />
         </div>
 

@@ -812,19 +812,10 @@
         <h2>Grow Your Team</h2>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
+        <a href="/referrals" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Click here to go to the Referral Dashboard.">Referral Dashboard</a>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
-
-        <div class="link-container" id="link-container">
-          <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
-        <div class="action-buttons">
-            <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
-            <button class="btn-secondary" id="share-whatsapp-btn" data-tooltip="Share your link via WhatsApp">Share on WhatsApp</button>
-            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
-            <a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a>
-          </div>
-        </div>
+        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button></div>
+        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
       </div>
 
 
@@ -832,16 +823,9 @@
       <div class="ohc-growth-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
         <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
-        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
-          Get My Invite Link
-        </button>
-        <div id="dashboard-invite-container" style="display: none; margin-top: 15px;">
-          <input type="text" class="link-input" id="dashboard-invite-link" readonly value="" style="width: 100%;" />
-          <div class="action-buttons" style="margin-top: 10px;">
-            <button class="btn-secondary" id="dashboard-copy-btn" style="flex: 1;">Copy</button>
-            <button class="btn-secondary" id="dashboard-share-x-btn" style="flex: 1; background-color: #1DA1F2; color: white;">Share to X</button>
-          </div>
-        </div>
+        <a href="/referrals" id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
+          Go to Referral Dashboard
+        </a>
       </div>
 
       <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
@@ -2774,7 +2758,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
             </div>
         </div>
 

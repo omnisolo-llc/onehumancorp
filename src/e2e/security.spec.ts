@@ -27,14 +27,14 @@ test.describe('Navigation', () => {
     await page.goto('/dashboard');
     const primaryNav = page.getByRole('navigation', { name: 'Primary' });
     await expect(primaryNav).toBeVisible();
-    await primaryNav.getByRole('link', { name: /Agents/ }).click();
+    await primaryNav.getByRole('link', { name: /AI Departments/ }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should have nav links to all main sections', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'AI Departments' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Setup' })).toBeVisible();
   });
 });

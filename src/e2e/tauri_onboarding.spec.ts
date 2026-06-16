@@ -153,7 +153,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
-    await page.getByRole('button', { name: 'Launch Store' }).click();
+    await page.getByRole('button', { name: 'Approve & Go Live' }).click();
     await expect(page.locator('#template-error')).toBeVisible();
 
     await page.locator('#template-selection').selectOption('Modern');
@@ -228,13 +228,13 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Verify validation triggers
-    await newPage.getByRole('button', { name: 'Launch Store' }).click();
+    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
-    await newPage.getByRole('button', { name: 'Launch Store' }).click();
+    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
 
     // Success page
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
