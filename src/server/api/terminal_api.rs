@@ -560,7 +560,7 @@ pub async fn create_payment_intent_handler(
         }
     }
 
-    info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
+    info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, product_id = ?req_data.product_id, "Creating Stripe Terminal Payment Intent");
 
     let _ = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
