@@ -20,12 +20,15 @@ pub struct DynamicWorkflow {
     pub cached_results: Arc<RwLock<HashMap<String, String>>>,
     pub pause_tx: watch::Sender<bool>,
     pub pause_rx: watch::Receiver<bool>,
+
+    pub args: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Task {
     pub id: String,
     pub instructions: String,
+    pub args: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +43,7 @@ pub trait WorkflowAgent: Send + Sync {
 }
 
 impl DynamicWorkflow {
-    pub fn new(script: &str) -> Self {
+    pub fn new(script: &str, args: Option<serde_json::Value>) -> Self {
         let (pause_tx, pause_rx) = watch::channel(false);
         Self {
             script: script.to_string(),
@@ -49,6 +52,7 @@ impl DynamicWorkflow {
             cached_results: Arc::new(RwLock::new(HashMap::new())),
             pause_tx,
             pause_rx,
+            args,
         }
     }
 
@@ -64,7 +68,7 @@ impl DynamicWorkflow {
 
     pub async fn run_workflow(
         &self,
-        tasks: Vec<Task>,
+        mut tasks: Vec<Task>,
         agent_factory: Arc<dyn WorkflowAgent>,
     ) -> Result<Vec<TaskResult>, String> {
         if tasks.len() > self.max_total_agents {
@@ -73,6 +77,13 @@ impl DynamicWorkflow {
                 tasks.len(),
                 self.max_total_agents
             ));
+        }
+
+        // Inject workflow args into each task
+        for task in tasks.iter_mut() {
+            if task.args.is_none() {
+                task.args = self.args.clone();
+            }
         }
 
         let semaphore = Arc::new(Semaphore::new(self.max_concurrent));
@@ -191,7 +202,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_success() {
-        let wf = DynamicWorkflow::new("let x = 1;");
+        let wf = DynamicWorkflow::new("let x = 1;", None);
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -201,10 +212,12 @@ mod tests {
             Task {
                 id: "1".to_string(),
                 instructions: "task 1".to_string(),
+                args: None,
             },
             Task {
                 id: "2".to_string(),
                 instructions: "task 2".to_string(),
+                args: None,
             },
         ];
 
@@ -214,7 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_concurrency_limit() {
-        let wf = DynamicWorkflow::new("orchestrate();");
+        let wf = DynamicWorkflow::new("orchestrate();", None);
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -225,6 +238,7 @@ mod tests {
             tasks.push(Task {
                 id: i.to_string(),
                 instructions: format!("task {}", i),
+                args: None,
             });
         }
 
@@ -241,7 +255,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_total_limit() {
-        let wf = DynamicWorkflow::new("orchestrate();");
+        let wf = DynamicWorkflow::new("orchestrate();", None);
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -252,6 +266,7 @@ mod tests {
             tasks.push(Task {
                 id: i.to_string(),
                 instructions: format!("task {}", i),
+                args: None,
             });
         }
 
@@ -262,7 +277,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_pause_resume_caching() {
-        let wf = DynamicWorkflow::new("orchestrate();");
+        let wf = DynamicWorkflow::new("orchestrate();", None);
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -272,6 +287,7 @@ mod tests {
             Task {
                 id: "1".to_string(),
                 instructions: "task 1".to_string(),
+                args: None,
             },
         ];
 
@@ -286,5 +302,33 @@ mod tests {
         assert_eq!(results[0].output, "Cached Output");
         // Ensure the agent was NOT actively run because it was cached
         assert_eq!(agent.max_active_observed.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_workflow_with_args() {
+        let args = serde_json::json!({
+            "target_issues": [1024, 1025, 1030],
+            "config": {
+                "verbose": true
+            }
+        });
+        let wf = DynamicWorkflow::new("orchestrate();", Some(args.clone()));
+        assert_eq!(wf.args, Some(args));
+
+        let agent = Arc::new(MockAgent {
+            active_agents: Arc::new(AtomicUsize::new(0)),
+            max_active_observed: Arc::new(AtomicUsize::new(0)),
+        });
+
+        let tasks = vec![
+            Task {
+                id: "1".to_string(),
+                instructions: "task 1".to_string(),
+                args: None,
+            },
+        ];
+
+        let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
+        assert_eq!(results.len(), 1);
     }
 }
