@@ -1,5 +1,7 @@
-import { useSyncGateway } from "../../hooks/useSyncGateway";
 "use client";
+
+import { useSyncGateway } from "../../hooks/useSyncGateway";
+
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";

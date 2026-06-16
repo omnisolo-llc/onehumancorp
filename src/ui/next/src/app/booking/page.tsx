@@ -231,23 +231,8 @@ function BookingForm() {
 
         <div className="bg-gray-50 p-6 border-t border-gray-100 text-center">
           <OneTapReferral
-            tenant={tenant}
+            tenantId={tenant}
             source="booking_footer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: '#6b7280',
-              textDecoration: 'none',
-              transition: 'color 0.2s',
-              padding: '6px 12px',
-              backgroundColor: 'white',
-              borderRadius: '20px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}
           />
         </div>
       </div>

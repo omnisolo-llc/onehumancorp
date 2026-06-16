@@ -211,6 +211,7 @@ describe('CostDashboardPage', () => {
       period_end: "2023-10-31",
       trend: [],
       agent_costs: [],
+      budget_health_alert: true,
       department_tier_usage: {
         departments: [
           {
