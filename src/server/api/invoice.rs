@@ -335,6 +335,7 @@ impl InvoiceService for InvoiceServiceImpl {
 }
 
 #[derive(Deserialize)]
+
 pub struct CreateInvoiceHttp {
     pub client_id: String,
     pub client_name: String,
@@ -356,8 +357,101 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .with_state(hub)
 }
 
-async fn list_invoices_handler(
+
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct InvoiceMobileView {
+    pub id: String,
+    pub client_name: String,
+    pub status: String,
+    pub due_date: i64,
+    pub currency: String,
+    pub total_amount: f64,
+    pub total_amount_cents: i32,
+    pub payment_status: String,
+    pub amount_paid_cents: i32,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[derive(Serialize)]
+pub struct InvoiceLineItemView {
+    pub id: String,
+    pub invoice_id: String,
+    pub description: String,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub amount: f64,
+}
+
+#[derive(Serialize)]
+pub struct InvoiceStandardView {
+    pub id: String,
+    pub client_id: String,
+    pub client_name: String,
+    pub status: String,
+    pub due_date: i64,
+    pub currency: String,
+    pub total_amount: f64,
+    pub total_amount_cents: i32,
+    pub payment_status: String,
+    pub view_count: i32,
+    pub amount_paid_cents: i32,
+    pub stripe_invoice_id: String,
+    pub stripe_payment_link: String,
+    pub line_items: Vec<InvoiceLineItemView>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceMobileView> {
+    invoices.into_iter().map(|inv| InvoiceMobileView {
+        id: inv.id,
+        client_name: inv.client_name,
+        status: inv.status,
+        due_date: inv.due_date,
+        currency: inv.currency,
+        total_amount: inv.total_amount,
+        total_amount_cents: inv.total_amount_cents,
+        payment_status: inv.payment_status,
+        amount_paid_cents: inv.amount_paid_cents,
+        created_at: inv.created_at,
+        updated_at: inv.updated_at,
+    }).collect()
+}
+
+pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceStandardView> {
+    invoices.into_iter().map(|inv| InvoiceStandardView {
+        id: inv.id,
+        client_id: inv.client_id,
+        client_name: inv.client_name,
+        status: inv.status,
+        due_date: inv.due_date,
+        currency: inv.currency,
+        total_amount: inv.total_amount,
+        total_amount_cents: inv.total_amount_cents,
+        payment_status: inv.payment_status,
+        view_count: inv.view_count,
+        amount_paid_cents: inv.amount_paid_cents,
+        stripe_invoice_id: inv.stripe_invoice_id,
+        stripe_payment_link: inv.stripe_payment_link,
+        line_items: inv.line_items.into_iter().map(|li| InvoiceLineItemView {
+            id: li.id,
+            invoice_id: li.invoice_id,
+            description: li.description,
+            quantity: li.quantity,
+            unit_price: li.unit_price,
+            amount: li.amount,
+        }).collect(),
+        created_at: inv.created_at,
+        updated_at: inv.updated_at,
+    }).collect()
+}
+
+pub async fn list_invoices_handler(
     State(hub): State<Arc<Hub>>,
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
@@ -365,9 +459,17 @@ async fn list_invoices_handler(
     let service = InvoiceServiceImpl { hub };
     let req = Request::new(ListInvoicesRequest { tenant_id });
 
+    let mobile_optimized = query.get("mobile_optimized").map(|s| s == "true").unwrap_or(false);
     match service.list_invoices(req).await {
         Ok(resp) => {
-            Ok(Json(resp.into_inner()))
+            let inner = resp.into_inner();
+            if mobile_optimized {
+                let mapped = map_invoices_for_mobile(inner.invoices);
+                Ok(Json(serde_json::json!({ "invoices": mapped })))
+            } else {
+                let mapped = map_invoices_standard(inner.invoices);
+                Ok(Json(serde_json::json!({ "invoices": mapped })))
+            }
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -488,5 +590,67 @@ mod tests {
 
         let updated_invoice = update_resp.unwrap().into_inner();
         assert_eq!(updated_invoice.status, "paid");
+    }
+}
+
+
+#[cfg(test)]
+mod payload_tests {
+    use super::*;
+
+    #[test]
+    fn test_invoice_mobile_payload_optimization() {
+        let inv = ::server_ohc::invoice::Invoice {
+            id: "inv-1".to_string(),
+            client_id: "client-1".to_string(),
+            client_name: "John Doe".to_string(),
+            status: "DRAFT".to_string(),
+            due_date: 1234567890,
+            currency: "USD".to_string(),
+            total_amount: 100.0,
+            total_amount_cents: 10000,
+            payment_status: "UNPAID".to_string(),
+            view_count: 5,
+            amount_paid_cents: 0,
+            stripe_invoice_id: "in_123".to_string(),
+            stripe_payment_link: "https://stripe.com/pay/123".to_string(),
+            line_items: vec![::server_ohc::invoice::InvoiceLineItem {
+                id: "li-1".to_string(),
+                invoice_id: "inv-1".to_string(),
+                description: "Test".to_string(),
+                quantity: 1,
+                unit_price: 100.0,
+                amount: 100.0,
+            }],
+            created_at: 1234567800,
+            updated_at: 1234567800,
+        };
+
+        // Test mobile mapping
+        let mobile_mapped = map_invoices_for_mobile(vec![inv.clone()]);
+        assert_eq!(mobile_mapped.len(), 1);
+        let m_inv = &mobile_mapped[0];
+
+        // Assert fields are present
+        assert_eq!(m_inv.id, "inv-1");
+        assert_eq!(m_inv.client_name, "John Doe");
+        assert_eq!(m_inv.currency, "USD");
+        assert_eq!(m_inv.total_amount_cents, 10000);
+
+        // Serialize and verify omitted fields
+        let json_val = serde_json::to_value(m_inv).unwrap();
+        assert!(json_val.get("stripe_invoice_id").is_none());
+        assert!(json_val.get("stripe_payment_link").is_none());
+        assert!(json_val.get("client_id").is_none());
+        assert!(json_val.get("view_count").is_none());
+        assert!(json_val.get("line_items").is_none());
+
+        // Test standard mapping
+        let standard_mapped = map_invoices_standard(vec![inv]);
+        assert_eq!(standard_mapped.len(), 1);
+        let s_inv = &standard_mapped[0];
+        assert_eq!(s_inv.client_id, "client-1");
+        assert_eq!(s_inv.stripe_invoice_id, "in_123");
+        assert_eq!(s_inv.line_items.len(), 1);
     }
 }
