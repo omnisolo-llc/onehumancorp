@@ -55,7 +55,7 @@ fn test_config_sync_push_too_large() {
                 tool_id: "mcp_config_sync".to_string(),
                 action: "".to_string(),
                 agent_id: "".to_string(),
-                spiffe_id: "spiffe://test".to_string(),
+                spiffe_id: "spiffe://test/test".to_string(),
                 params: json!({
                     "action": "push_config",
                     "payload": {
