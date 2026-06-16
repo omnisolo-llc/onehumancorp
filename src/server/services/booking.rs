@@ -710,7 +710,6 @@ async fn redis_scan_count(client: &redis::Client, pattern: &str) -> Result<usize
 
 pub struct NativeBookingService {
     pub redis_client: Option<redis::Client>,
-    pub bus: Option<std::sync::Arc<dyn crate::msgbus::Bus>>,
 }
 
 impl NativeBookingService {
@@ -1117,45 +1116,14 @@ impl BookingEngineService for NativeBookingService {
         }
 
         let booking = ::server_ohc::app::UnifiedBooking {
-            id: booking_id.clone(),
-            customer_id: customer_id.clone(),
-            service_id: service_id.clone(),
+            id: booking_id,
+            customer_id,
+            service_id,
             start_time,
             end_time,
             status: "confirmed".to_string(),
             locked_resource_ids,
         };
-
-        // Emit an event that the orchestrator can listen to
-        if let Some(bus) = &self.bus {
-            let event_payload = serde_json::json!({
-                "tenant_id": tenant_id,
-                "booking_id": booking_id,
-            });
-            if let Ok(payload_bytes) = serde_json::to_vec(&event_payload) {
-                let msg = crate::msgbus::Message {
-                    topic: "system:booking_created".to_string(),
-                    payload: payload_bytes,
-                };
-                let _ = bus.publish(msg).await;
-            }
-        }
-
-        // Schedule reengagement check in 14 days
-        let pool = crate::db::get_pool();
-        let _ = sqlx::query(
-            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) \
-             VALUES ($1, $2, 'booking_reengagement_check', $3, 'PENDING', CURRENT_TIMESTAMP + INTERVAL '14 days')"
-        )
-        .bind(uuid::Uuid::new_v4().to_string())
-        .bind(&tenant_id)
-        .bind(serde_json::json!({
-            "booking_id": booking_id,
-            "customer_id": customer_id,
-            "product_id": service_id,
-        }))
-        .execute(&pool)
-        .await;
 
         Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
             success: true,
@@ -1781,7 +1749,7 @@ mod native_booking_tests {
 
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
-        let svc = NativeBookingService { redis_client: None, bus: None };
+        let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
@@ -1804,7 +1772,7 @@ mod native_booking_tests {
 
     #[tokio::test]
     async fn test_native_check_availability_invalid_date() {
-        let svc = NativeBookingService { redis_client: None, bus: None };
+        let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
             tenant_id: "t1".to_string(),
             product_id: "p1".to_string(),
@@ -1823,7 +1791,7 @@ mod native_booking_tests {
     #[tokio::test]
     #[ignore = "requires a migrated OHC_DATABASE_URL with product inventory rows"]
     async fn test_native_create_conversational_checkout() {
-        let svc = NativeBookingService { redis_client: None, bus: None };
+        let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(CreateConversationalCheckoutRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
@@ -1848,7 +1816,7 @@ mod native_booking_tests {
 
     #[tokio::test]
     async fn test_native_reserve_time_slot_with_deposit() {
-        let svc = NativeBookingService { redis_client: None, bus: None };
+        let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),

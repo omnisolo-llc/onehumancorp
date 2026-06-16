@@ -566,6 +566,16 @@
       }
 
     </style>
+    <style>
+      @media (min-width: 600px) {
+        .paywall-actions {
+          flex-direction: row !important;
+        }
+        .paywall-actions a, .paywall-actions button {
+          width: auto !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <!-- Omnibox Modal -->
@@ -610,16 +620,19 @@
       <div id="sold-out-toggle-falafel-container" style="display: none;">
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
-      <h1 id="dashboard-title">Dashboard</h1>
+      <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
+        <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
+        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
+      </div>
 
-      <div class="subtitle">Your private agentic workspace.</div>
+      <div class="subtitle" style="margin-top: 5px;">Your private agentic workspace.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
-        <a href="booking.html" class="btn-outline" style="width: auto; text-decoration: none;">Bookings</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
         <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a>
+        <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -645,6 +658,37 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <!-- OHC Wrapped: Year in Review -->
+      <div class="ohc-growth-card" id="wrapped-widget" style="display: none; background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(0, 102, 255, 0.3);">
+        <div style="text-align: center; padding: 10px;">
+          <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px;">2026 Wrapped 🎁</h2>
+          <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+              <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">$0.00</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
+              <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
+              <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 12px;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
+              <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">0</p>
+            </div>
+          </div>
+
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 12px; padding: 12px; font-weight: 700;">
+            Share 2026 Success
+          </button>
+        </div>
+      </div>
+
       <!-- Viral Soft Paywall Loop -->
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -663,7 +707,7 @@
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
@@ -678,6 +722,30 @@
         </div>
       </div>
 
+
+      <!-- AI Feature Paywall Widget -->
+      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+        <div id="ai-feature-paywall-locked">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px;">
+            <span>✨</span> Pro Feature
+          </div>
+          <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #1d1d1f;">Unlock Advanced AI Analytics</h2>
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: #86868b; line-height: 1.5;">See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.</p>
+          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;">Upgrade to Pro</a>
+            <span style="color: #86868b; font-size: 14px; text-align: center;">or</span>
+            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;">Refer a Friend to Unlock</button>
+          </div>
+        </div>
+        <div id="ai-feature-paywall-unlocked" style="display: none; align-items: center; gap: 16px;">
+          <div style="font-size: 32px; background: rgba(52, 199, 89, 0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">✨</div>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #1d1d1f;">Advanced AI Analytics Unlocked!</h3>
+            <p style="margin: 0; font-size: 14px; color: #86868b;">You have 7 days of free access to Smart Cross-Selling and Deep Insights.</p>
+          </div>
+          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;">View Insights</a>
+        </div>
+      </div>
 
       <!-- Viral Loop Performance Widget -->
       <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
@@ -744,11 +812,12 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn" data-tooltip="Share your link via WhatsApp">Share on WhatsApp</button>
             <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
+            <a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a>
           </div>
         </div>
       </div>
@@ -810,7 +879,7 @@
     </div>
 
     <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="index.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <a href="/onboarding" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -1039,7 +1108,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `index.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
+          footerLink.href = `/onboarding?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
@@ -1082,6 +1151,43 @@
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
         let currentHoursSaved = 0;
+
+        // AI Feature Paywall Logic
+        const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
+        const aiPaywallLocked = document.getElementById("ai-feature-paywall-locked");
+        const aiPaywallUnlocked = document.getElementById("ai-feature-paywall-unlocked");
+        const aiPaywallContainer = document.getElementById("ai-feature-paywall");
+
+        if (aiReferBtn) {
+          aiReferBtn.addEventListener("click", () => {
+            aiReferBtn.innerText = "Generating...";
+            aiReferBtn.disabled = true;
+            aiReferBtn.style.opacity = "0.7";
+
+            setTimeout(() => {
+              aiReferBtn.innerText = "Copy Link";
+              aiReferBtn.disabled = false;
+              aiReferBtn.style.opacity = "1";
+
+              // Once it is "Copy Link", next click will copy and unlock
+              aiReferBtn.onclick = () => {
+                const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
+                const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
+                navigator.clipboard.writeText(link).then(() => {
+                  aiReferBtn.innerText = "Copied Link!";
+                  aiReferBtn.style.background = "#34C759";
+
+                  setTimeout(() => {
+                    aiPaywallLocked.style.display = "none";
+                    aiPaywallUnlocked.style.display = "flex";
+                    aiPaywallContainer.style.background = "rgba(52, 199, 89, 0.05)";
+                    aiPaywallContainer.style.borderColor = "rgba(52, 199, 89, 0.3)";
+                  }, 1500);
+                });
+              };
+            }, 800);
+          });
+        }
 
         // Soft Paywall Logic
         const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
@@ -1350,7 +1456,33 @@
       }
       checkMilestones();
 
+      async function checkWrapped() {
+        try {
+          const res = await fetch('/api/v1/growth/wrapped');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.total_sales > 0 || data.total_orders > 0) {
+              document.getElementById('wrapped-widget').style.display = 'block';
+              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
+              document.getElementById('wrapped-orders').innerText = data.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.total_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
 
+              const shareBtn = document.getElementById('wrapped-share-btn');
+              shareBtn.onclick = () => {
+                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                navigator.clipboard.writeText(text).then(() => {
+                  shareBtn.innerText = 'Copied to Clipboard! ✨';
+                  setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);
+                });
+              };
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch Wrapped data", e);
+        }
+      }
+      checkWrapped();
 
       const generateBtn = document.getElementById('generate-link-btn');
 
@@ -1643,6 +1775,23 @@
             `;
           }
 
+          if (description.includes("reschedule") || description.includes("tentatively booked")) {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
+                </div>
+              </div>
+            `;
+          }
+
           return `
             <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
               <div class="triage-header">
@@ -1918,6 +2067,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
@@ -1943,272 +2115,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject chat CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        #ohc-help-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            background: #0066FF;
-            color: white;
-            border: none;
-            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 9999;
-            transition: transform 0.2s;
-        }
-        #ohc-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
-        #ohc-help-chat-overlay {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 350px;
-            height: 500px;
-            max-height: calc(100vh - 120px);
-            max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(2.1);
-            -webkit-backdrop-filter: blur(30px) saturate(2.1);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 9998;
-            overflow: hidden;
-            font-family: "Outfit", sans-serif;
-            transform-origin: bottom right;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        #ohc-help-chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-chat-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1d1d1f;
-        }
-        #ohc-help-close {
-            background: none;
-            border: none;
-            color: #86868b;
-            cursor: pointer;
-            padding: 5px;
-        }
-        #ohc-help-close:hover { color: #1d1d1f; }
-        #ohc-help-messages {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0066FF;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-ai {
-            align-self: flex-start;
-            background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-ai a {
-            color: #0066FF;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            margin-top: 5px;
-        }
-        #ohc-help-input-area {
-            padding: 15px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-input {
-            flex-grow: 1;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            padding: 10px 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-        }
-        #ohc-help-input:focus { border-color: #0066FF; }
-        #ohc-help-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
 
-        @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header, #ohc-help-input-area {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai {
-                background: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-            #ohc-help-input {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-                color: white;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Inject HTML
-    const btn = document.createElement('button');
-    btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-    document.body.appendChild(btn);
-
-    const overlay = document.createElement('div');
-    overlay.id = 'ohc-help-chat-overlay';
-    overlay.innerHTML = `
-        <div id="ohc-help-chat-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div id="ohc-help-messages">
-            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
-        </div>
-
-        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
-        </div>
-
-<div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
-            <button id="ohc-help-send" aria-label="Send message">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
-    const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
-
-    btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
-    });
-
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-
-        async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
-
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
-
-        try {
-            let url = '/api/chat';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/chat';
-            }
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await response.json();
-
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            if (data.link && data.link.url) {
-                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
-            } else {
-                aiMsg.textContent = data.reply;
-            }
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        } catch (e) {
-            console.error(e);
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-});
-
-</script>
 
 
 <script>
@@ -2358,6 +2265,29 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTooltip();
         }
     });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 });
 </script>
 
@@ -2392,6 +2322,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -2425,6 +2356,7 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -2448,6 +2380,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -2887,6 +2820,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
     // Walkthroughs
     if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
@@ -2913,6 +2869,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -2945,6 +2902,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
+                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -2966,6 +2924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
+                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);

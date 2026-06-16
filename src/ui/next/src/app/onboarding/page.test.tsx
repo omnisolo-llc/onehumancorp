@@ -341,7 +341,7 @@ describe('OnboardingWizard', () => {
 
     // Set initial state to Step 3 to test start API directly
     act(() => {
-      useOnboardingStore.setState({ step: 3 });
+      useOnboardingStore.setState({ step: 3, adminName: "Test Admin", adminEmail: "test@example.com", adminPassword: "Password123" });
     });
 
     // Mock start failure
@@ -540,7 +540,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Open Dashboard/i })).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByRole('link', { name: /Open Assistant/i })).toHaveAttribute('href', '/assistant');
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
   });
@@ -811,5 +811,40 @@ describe('OnboardingWizard', () => {
 
     expect(screen.getByText('10-Minute Setup Wizard')).toBeInTheDocument();
     expect(useOnboardingStore.getState().step).toBe(0);
+  });
+
+  it('Step 3: Passes initial_products from localStorage to /api/onboarding/start', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    localStorage.setItem('onboarding_initial_products', JSON.stringify([
+      { name: 'Custom AI Product', price: '99' }
+    ]));
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, adminName: "Test Admin", adminEmail: "test@example.com", adminPassword: "Password123" });
+    });
+
+    let startRequestPayload: any = null;
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/start') {
+        startRequestPayload = JSON.parse(options.body);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ organization_id: 'org_123', status: 'started' })
+        });
+      }
+      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
+      if (url === '/api/onboarding/state') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
+      if (url === '/api/onboarding/draft') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
+
+    const launchButton = await screen.findByRole('button', { name: /Launch Store/i });
+    await user.click(launchButton);
+
+    expect(startRequestPayload).toBeDefined();
+    expect(startRequestPayload.initial_products).toEqual([{ name: 'Custom AI Product', price: '99' }]);
   });
 });

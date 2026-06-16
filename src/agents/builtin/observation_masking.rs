@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
@@ -192,7 +193,7 @@ impl JetBrainsObservationMasker {
                                     if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
-                                        raw_msg
+                                        serde_json::json!({ "_masked_observation": raw_msg }).to_string()
                                     }
                                 } else {
                                     let raw_msg = format!(
@@ -203,14 +204,11 @@ impl JetBrainsObservationMasker {
                                     if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
-                                        raw_msg
+                                        serde_json::json!({ "_masked_observation": raw_msg }).to_string()
                                     }
                                 };
 
-                                // Return as valid JSON object containing the masked string.
-                                tr.content = serde_json::json!({
-                                    "_masked_observation": masked_str
-                                }).to_string();
+                                tr.content = masked_str;
                             }
                         }
                     }

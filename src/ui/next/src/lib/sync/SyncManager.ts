@@ -7,9 +7,32 @@ export class SyncManager {
   private maxRetries = 5;
 
   private constructor() {
+    this.connectWebSocket();
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.sync());
     }
+  }
+
+  private connectWebSocket() {
+    if (typeof window === 'undefined') return;
+    const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?tenant_id=${tenantId}`;
+
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ohc_queue_updated'));
+      }
+    };
+    ws.onclose = () => {
+      setTimeout(() => this.connectWebSocket(), 5000);
+    };
+    ws.onerror = (err) => {
+      console.error('Sync WebSocket error', err);
+      ws.close();
+    };
   }
 
   public static getInstance(): SyncManager {
@@ -98,8 +121,8 @@ export class SyncManager {
              mutation_type: 'draft_quote',
              payload: m.notes
           };
-        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT') {
-            return m; // keep them for KDS
+        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote') {
+            return m; // keep them for KDS or Quotes API
         }
         return m;
       });
@@ -108,6 +131,32 @@ export class SyncManager {
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
+
+      // Sync Quote Actions
+      const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
+      for (const update of quoteUpdates) {
+        const res = await fetch(`/api/quotes?id=${update.quoteId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+          body: JSON.stringify(update.payload)
+        });
+        if (!res.ok) {
+          allOk = false;
+          throw new Error(`Quote update failed with status ${res.status}`);
+        }
+      }
+
+      const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
+      for (const approval of quoteApprovals) {
+        const res = await fetch(`/api/quotes/${approval.quoteId}/approve`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
+        });
+        if (!res.ok) {
+          allOk = false;
+          throw new Error(`Quote approval failed with status ${res.status}`);
+        }
+      }
 
       // Sync POS transactions
       if (posTransactions.length > 0) {
@@ -130,7 +179,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
