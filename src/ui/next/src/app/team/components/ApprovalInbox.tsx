@@ -722,6 +722,19 @@ export default function ApprovalInbox({
                     />
                   </div>
                 </div>
+              ) : extractPayload(selectedReview.description).payload?.feature_type === "ambassador_reply" ? (
+                <div className="mb-6 space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Edit Draft Reply</label>
+                    <textarea
+                      value={editedQuote?.scope ?? extractPayload(selectedReview.description).payload?.generated_response ?? extractPayload(selectedReview.description).payload?.draft_reply ?? ''}
+                      onChange={(e) => setEditedQuote(prev => prev ? { ...prev, scope: e.target.value } : { suggested_price: '', scope: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 bg-white resize-none text-sm text-gray-800"
+                      data-testid="edit-ambassador-reply"
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="mb-6">
                   <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
@@ -756,11 +769,18 @@ export default function ApprovalInbox({
                 </button>
                 <button
                   onClick={() => {
-                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote) {
+                    const payload = extractPayload(selectedReview.description).payload;
+                    if (payload?.feature_type === "quote_draft" && editedQuote) {
                       onApprove(selectedReview.id, {
-                         ...extractPayload(selectedReview.description).payload,
+                         ...payload,
                          suggested_price: parseFloat(editedQuote.suggested_price) || 0,
                          scope: editedQuote.scope
+                      });
+                    } else if (payload?.feature_type === "ambassador_reply" && editedQuote) {
+                      onApprove(selectedReview.id, {
+                         ...payload,
+                         generated_response: editedQuote.scope,
+                         draft_reply: editedQuote.scope
                       });
                     } else {
                       onApprove(selectedReview.id);

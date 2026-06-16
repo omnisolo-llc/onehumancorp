@@ -868,6 +868,39 @@ impl DepartmentOrchestrator {
                 let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
 
                 if let Some(payload) = payload_to_use {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
+                        let generated_reply = payload.get("generated_response")
+                            .or_else(|| payload.get("draft_reply"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                        if !inbox_message_id.is_empty() {
+                            if let DbStore::Postgres = &self.db.store {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for ambassador_reply: {}", e);
+                                }
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for ambassador_reply: {}", e);
+                                }
+                            }
+                        }
+                    }
+
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;

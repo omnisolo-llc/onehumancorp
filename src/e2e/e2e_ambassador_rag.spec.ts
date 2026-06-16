@@ -59,7 +59,15 @@ test.describe('Ambassador RAG Pipeline', () => {
     // The exact drafted text could vary slightly, but it will have an Approve button
 
     // Approve the response
-    const approveButton = page.locator('button:has-text("Approve")').first();
+    const reviewButton = page.locator('button:has-text("Edit")').first();
+    await expect(reviewButton).toBeVisible();
+    await reviewButton.click();
+
+    const editReply = page.locator('[data-testid="edit-ambassador-reply"]');
+    await expect(editReply).toBeVisible();
+    await editReply.fill('Yes we have many vegan cakes! How can I help?');
+
+    const approveButton = page.locator('[data-testid="modal-approve-btn"]');
     await expect(approveButton).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box
