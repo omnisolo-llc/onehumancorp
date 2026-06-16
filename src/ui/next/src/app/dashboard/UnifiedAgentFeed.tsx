@@ -645,7 +645,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
+                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
                         <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
@@ -676,6 +676,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </div>
                         </div>
                       )}
+
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_draft" && (
+                        <div className="mb-4 p-4 rounded-xl glassmorphism flex flex-col gap-3" data-testid="ambassador-draft-card">
+                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            {(approval.proposed_action || approval.context_payload).title || 'New message'}
+                          </div>
+                          <div className="text-xs text-gray-500 font-medium break-words whitespace-pre-wrap">
+                            Customer: {(approval.context_payload)?.message}
+                          </div>
+                          <div className="text-xs text-gray-900 dark:text-gray-100 italic bg-white/50 dark:bg-black/20 p-2 rounded break-words whitespace-pre-wrap">
+                            Draft: {(approval.proposed_action)?.description}
+                          </div>
+                        </div>
+                      )}
+
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="ambassador-reply-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -908,6 +926,38 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
+
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_draft' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send"
+                        data-testid="approve-ambassador-draft"
+                      >
+                        Approve & Send
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingId(approval.id);
+                          setEditContent((approval.proposed_action)?.description || "");
+                        }}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit"
+                        data-testid="edit-ambassador-draft"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss"
+                        data-testid="dismiss-ambassador-draft"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
