@@ -251,7 +251,7 @@ async fn get_quote(
 #[cfg(test)]
 mod tests {
 
-    #[test]
+    use crate::domain::repository::models::{Quote, QuoteLineItem};
     fn test_quote_mobile_optimization() {
         let quote = Quote {
             id: "q1".to_string(),

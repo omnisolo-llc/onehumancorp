@@ -6,7 +6,8 @@ mod tests {
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
     use crate::orchestration::departments::sales_agent::SalesAgent;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+        use crate::orchestration::departments::orchestrator::Department;
+        use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
@@ -562,6 +563,7 @@ mod tests {
     async fn test_predictive_restock_draft() {
         use std::sync::Arc;
         use tokio::sync::RwLock;
+        use crate::orchestration::departments::orchestrator::Department;
         use ohc_builtin_agent::mesh::transport::InProcessTransport;
         use crate::orchestration::mesh::CentrifugeNode;
         use crate::orchestration::departments::DepartmentOrchestrator;
