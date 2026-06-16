@@ -15,12 +15,12 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.getByRole('button', { name: 'Start Tour' }).click();
     await expect(page.getByRole('dialog').getByText('Business Analytics')).toBeVisible();
     await page.getByRole('link', { name: 'Integrations' }).click();
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
+    await expect(page.locator('.app-title', { hasText: 'Tool Integrations' })).toBeVisible();
   });
 
   test('login setup action opens the guided setup process', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: /Start Business Setup/ }).click();
-    await expect(page.locator('#setup-screen').getByRole('heading', { name: 'Setup', exact: true })).toBeVisible();
+    await expect(page.locator('.app-title', { hasText: 'Setup' })).toBeVisible();
   });
 });

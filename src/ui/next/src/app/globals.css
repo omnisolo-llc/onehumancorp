@@ -1009,3 +1009,13 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+button,
+[role="button"],
+a.button,
+.app-button,
+.glassmorphism button,
+.glassmorphism a {
+  min-height: 44px;
+}

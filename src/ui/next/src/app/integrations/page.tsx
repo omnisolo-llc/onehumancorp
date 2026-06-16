@@ -137,7 +137,7 @@ export default function Integrations() {
                 </div>
                 <button
                   onClick={() => setShowWhatsAppModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                  className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -201,7 +201,7 @@ export default function Integrations() {
                 </div>
                 <button
                   onClick={() => setShowTwilioModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                  className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -218,7 +218,7 @@ export default function Integrations() {
                     <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 capitalize">{key}</span>
                     <button
                       onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                      className={`min-h-[44px] w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
                     </button>
@@ -244,7 +244,7 @@ export default function Integrations() {
                 key={tab}
                 aria-pressed={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeTab === tab
                     ? "bg-[#0f766e] text-white"
                     : "bg-white dark:bg-zinc-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-zinc-700"
@@ -283,7 +283,7 @@ export default function Integrations() {
 
                 <button
                   onClick={() => handleConnect(integration.id)}
-                  className={`w-full py-3 rounded-[16px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+                  className={`min-h-[44px] w-full py-3 rounded-[16px] font-semibold text-sm transition-transform active:scale-[0.98] ${
                     integration.status === 'connected'
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"

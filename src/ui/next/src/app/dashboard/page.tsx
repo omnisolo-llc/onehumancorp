@@ -171,14 +171,14 @@ function InviteAndEarnWidget() {
               <button
                 id="dashboard-copy-btn"
                 onClick={handleCopy}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
+                className="min-h-[44px] flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
               <button
                 id="dashboard-share-x-btn"
                 onClick={handleShareX}
-                className="flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="min-h-[44px] flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 Share to X
               </button>
