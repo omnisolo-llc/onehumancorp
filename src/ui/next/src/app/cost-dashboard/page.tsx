@@ -32,6 +32,7 @@ interface CostDashboardData {
   department_tier_usage?: DepartmentTierUsage;
   email_cost: number;
   api_cost: number;
+  budget_health_alert?: string;
 }
 
 interface DepartmentTierUsage {
