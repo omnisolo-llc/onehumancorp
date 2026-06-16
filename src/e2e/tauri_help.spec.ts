@@ -36,8 +36,8 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
   test('Persona: Business Owner views the Changelog', async ({ page }) => {
     await page.goto('/changelog');
     await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
-    await expect(page.locator('text=Version 1.0 (Latest)').first()).toBeVisible();
-    await expect(page.locator('text=New Features').first()).toBeVisible();
+    await expect(page.locator('text=v0.4.48 (Cloud) / v0.4.48+1 (Standalone)').first()).toBeVisible();
+    await expect(page.locator('text=Cloud Scaling Improvements').first()).toBeVisible();
   });
 
   test('Persona: Developer views the API documentation', async ({ page }) => {

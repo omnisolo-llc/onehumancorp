@@ -102,7 +102,7 @@ test.describe('Changelog UX', () => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/changelog');
 
-    await expect(page.getByRole('heading', { name: 'Version 1.1 (Latest)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'v0.4.48 (Cloud) / v0.4.48+1 (Standalone)' })).toBeVisible();
     // Check that we removed the test line
     await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
   });

@@ -8,11 +8,11 @@ import ChangelogPage from './page';
 describe('ChangelogPage', () => {
   global.fetch = vi.fn().mockResolvedValue({
     json: () => Promise.resolve([{
-      version: "Version 1.0 (Latest)",
+      version: "v0.4.48 (Cloud) / v0.4.48+1 (Standalone)",
       contentLines: [
         "### 🌟 New Features",
-        "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
-        "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
+        "- **Optimize Multi-Environment Promotion capabilities for multi-tenant K8s** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
+        "- **Enforce Multi-Environment Promotion behavior for Local desktop beta builds ensuring stricter local offline usage** We added helpful text bubbles to all major buttons to help you learn the system faster.",
         "Faster loading times for product images."
       ]
     }]),
@@ -27,12 +27,12 @@ describe('ChangelogPage', () => {
     expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();
+      expect(screen.getByText('v0.4.48 (Cloud) / v0.4.48+1 (Standalone)')).toBeInTheDocument();
     });
 
     // Check for some content points
-    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
+    expect(screen.getByText(/Optimize Multi-Environment Promotion capabilities for multi-tenant K8s/)).toBeInTheDocument();
+    expect(screen.getByText(/Enforce Multi-Environment Promotion behavior for Local desktop beta builds ensuring stricter local offline usage/)).toBeInTheDocument();
   });
 
   it('renders paragraph strings', async () => {

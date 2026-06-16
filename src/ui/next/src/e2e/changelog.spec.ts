@@ -9,7 +9,7 @@ test.describe('Changelog', () => {
     await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
 
     // Verify at least one version section is present
-    await expect(page.getByText('Version 1.0 (Latest)')).toBeVisible();
+    await expect(page.getByText('v0.4.48 (Cloud) / v0.4.48+1 (Standalone)')).toBeVisible();
 
     // Verify it links to the full technical changelog
     await expect(page.getByRole('link', { name: 'Read the full technical changelog on our website →' })).toBeVisible();
