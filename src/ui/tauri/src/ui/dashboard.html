@@ -870,10 +870,6 @@
           </div>
         </div>
       </section>
-
-        <div id="triage-queue">
-          <div class="triage-card empty">Loading agent feed...</div>
-        </div>
       </div>
 
       </div>
@@ -1609,14 +1605,14 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = Array.isArray(data) ? data : (data.items || []);
+          agentFeedItems = Array.isArray(data) ? data : ((data.pending_approvals || []).concat(data.entries || []));
           renderTriageItems(agentFeedItems);
         } catch (err) {
           console.error("Agent Feed load error:", err);
@@ -1800,7 +1796,7 @@
                 <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-              <div class="triage-controls" style="margin-top: 12px;">
+              <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
                 <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
                 <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
