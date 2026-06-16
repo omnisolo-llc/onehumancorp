@@ -1,17 +1,19 @@
-use flate2::write::GzEncoder;
-use flate2::read::GzDecoder;
-use flate2::Compression;
-use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use std::io::{Write, Read, Cursor};
+use base64::engine::general_purpose::STANDARD;
+use flate2::Compression;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use std::io::{Cursor, Read, Write};
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
 pub fn compress_lossless(data: &str) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+    encoder
+        .write_all(data.as_bytes())
+        .map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
-    
+
     let b64 = STANDARD.encode(&compressed);
     Ok(format!("{}{}", COMPRESSION_PREFIX, b64))
 }
@@ -23,25 +25,27 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 
     let b64_data = &data[COMPRESSION_PREFIX.len()..];
     let decoded = STANDARD.decode(b64_data).map_err(|e| e.to_string())?;
-    
+
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
-    
+    decoder
+        .read_to_end(&mut decompressed)
+        .map_err(|e| e.to_string())?;
+
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
 static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
+    "a", "an", "the", "is", "are", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by",
     "about", "as", "of",
 ];
 
 pub fn reduce_tokens(data: &str) -> String {
     data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            !STOP_WORDS
+                .iter()
+                .any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
@@ -51,7 +55,6 @@ pub fn reduce_tokens(data: &str) -> String {
             acc
         })
 }
-
 
 pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     if max_words == 0 {
@@ -66,9 +69,10 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
 
 pub fn minify_json_prompt(data: &str) -> String {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(data)
-        && let Ok(minified) = serde_json::to_string(&val) {
-            return minified;
-        }
+        && let Ok(minified) = serde_json::to_string(&val)
+    {
+        return minified;
+    }
     data.to_string()
 }
 
@@ -90,21 +94,28 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
     // We use a default quality for WebP encoding
     // This reduces storage compression and CDN transit costs significantly.
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
-    resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
+    resized
+        .write_with_encoder(encoder)
+        .map_err(|e| e.to_string())?;
 
     Ok((webp_data, "image/webp".to_string()))
 }
 
 pub fn is_image_extension(ext: &str) -> bool {
-    matches!(ext.to_lowercase().as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp")
+    matches!(
+        ext.to_lowercase().as_str(),
+        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp"
+    )
 }
 
 pub fn get_optimized_key(key: &str) -> String {
     let path = std::path::Path::new(key);
     if let Some(ext) = path.extension().and_then(|e| e.to_str())
-        && is_image_extension(ext) && ext.to_lowercase() != "webp" {
-            return path.with_extension("webp").to_string_lossy().to_string();
-        }
+        && is_image_extension(ext)
+        && ext.to_lowercase() != "webp"
+    {
+        return path.with_extension("webp").to_string_lossy().to_string();
+    }
     key.to_string()
 }
 
@@ -138,7 +149,10 @@ mod tests {
         // Result should remove "is", "a", "with", "in", "and", "about".
         // Note: 'it' and 'some' are not stop words here.
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        assert_eq!(
+            reduced,
+            "This long sentence some stop words it some things."
+        );
     }
 
     #[test]

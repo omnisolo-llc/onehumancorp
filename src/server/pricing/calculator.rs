@@ -21,50 +21,175 @@ pub struct ModelPricing {
 pub fn get_pricing(model: &str) -> ModelPricing {
     match model {
         // Anthropic — Claude 3 family
-        "claude-3-opus" => ModelPricing { input_cost: 15.00, output_cost: 75.00, cached_cost: 0.0 },
-        "claude-3-sonnet" => ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.0 },
-        "claude-3-haiku" => ModelPricing { input_cost: 0.25, output_cost: 1.25, cached_cost: 0.0 },
+        "claude-3-opus" => ModelPricing {
+            input_cost: 15.00,
+            output_cost: 75.00,
+            cached_cost: 0.0,
+        },
+        "claude-3-sonnet" => ModelPricing {
+            input_cost: 3.00,
+            output_cost: 15.00,
+            cached_cost: 0.0,
+        },
+        "claude-3-haiku" => ModelPricing {
+            input_cost: 0.25,
+            output_cost: 1.25,
+            cached_cost: 0.0,
+        },
         // Anthropic — Claude 3.5 family
-        "claude-3.5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-3-5-sonnet-20240620" => 
-            ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
-        "claude-3.5-haiku" => ModelPricing { input_cost: 0.80, output_cost: 4.00, cached_cost: 0.08 },
+        "claude-3.5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-3-5-sonnet-20240620" => {
+            ModelPricing {
+                input_cost: 3.00,
+                output_cost: 15.00,
+                cached_cost: 0.30,
+            }
+        }
+        "claude-3.5-haiku" => ModelPricing {
+            input_cost: 0.80,
+            output_cost: 4.00,
+            cached_cost: 0.08,
+        },
         // Anthropic — Claude 3.7 family
-        "claude-3.7-sonnet" => ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
+        "claude-3.7-sonnet" => ModelPricing {
+            input_cost: 3.00,
+            output_cost: 15.00,
+            cached_cost: 0.30,
+        },
         // OpenAI — GPT-4 family
-        "gpt-4" => ModelPricing { input_cost: 30.00, output_cost: 60.00, cached_cost: 0.0 },
-        "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
-        "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
-        "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
+        "gpt-4" => ModelPricing {
+            input_cost: 30.00,
+            output_cost: 60.00,
+            cached_cost: 0.0,
+        },
+        "gpt-4-turbo" => ModelPricing {
+            input_cost: 10.00,
+            output_cost: 30.00,
+            cached_cost: 0.0,
+        },
+        "gpt-4o" => ModelPricing {
+            input_cost: 5.00,
+            output_cost: 15.00,
+            cached_cost: 2.50,
+        },
+        "gpt-4o-mini" => ModelPricing {
+            input_cost: 0.15,
+            output_cost: 0.60,
+            cached_cost: 0.075,
+        },
         // OpenAI — GPT-4.1 family
-        "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },
-        "gpt-4.1-mini" => ModelPricing { input_cost: 0.40, output_cost: 1.60, cached_cost: 0.0 },
-        "gpt-4.1-nano" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
+        "gpt-4.1" => ModelPricing {
+            input_cost: 2.00,
+            output_cost: 8.00,
+            cached_cost: 0.0,
+        },
+        "gpt-4.1-mini" => ModelPricing {
+            input_cost: 0.40,
+            output_cost: 1.60,
+            cached_cost: 0.0,
+        },
+        "gpt-4.1-nano" => ModelPricing {
+            input_cost: 0.10,
+            output_cost: 0.40,
+            cached_cost: 0.0,
+        },
         // OpenAI — o-series reasoning models
-        "o1" | "o1-preview" => ModelPricing { input_cost: 15.00, output_cost: 60.00, cached_cost: 7.50 },
-        "o1-mini" => ModelPricing { input_cost: 3.00, output_cost: 12.00, cached_cost: 1.50 },
-        "o3-mini" => ModelPricing { input_cost: 1.10, output_cost: 4.40, cached_cost: 0.55 },
+        "o1" | "o1-preview" => ModelPricing {
+            input_cost: 15.00,
+            output_cost: 60.00,
+            cached_cost: 7.50,
+        },
+        "o1-mini" => ModelPricing {
+            input_cost: 3.00,
+            output_cost: 12.00,
+            cached_cost: 1.50,
+        },
+        "o3-mini" => ModelPricing {
+            input_cost: 1.10,
+            output_cost: 4.40,
+            cached_cost: 0.55,
+        },
         // DeepSeek family
-        "deepseek-chat" | "deepseek-v3" => ModelPricing { input_cost: 0.14, output_cost: 0.28, cached_cost: 0.014 },
-        "deepseek-reasoner" | "deepseek-r1" => ModelPricing { input_cost: 0.55, output_cost: 2.19, cached_cost: 0.14 },
+        "deepseek-chat" | "deepseek-v3" => ModelPricing {
+            input_cost: 0.14,
+            output_cost: 0.28,
+            cached_cost: 0.014,
+        },
+        "deepseek-reasoner" | "deepseek-r1" => ModelPricing {
+            input_cost: 0.55,
+            output_cost: 2.19,
+            cached_cost: 0.14,
+        },
         // Meta Llama 3/3.1/3.2/3.3 family via typical API providers
-        "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-8b-8192" => ModelPricing { input_cost: 0.05, output_cost: 0.08, cached_cost: 0.0 },
-        "llama-3.1-70b-versatile" | "llama3-70b-8192" => ModelPricing { input_cost: 0.15, output_cost: 0.20, cached_cost: 0.0 },
-        "llama-3.1-405b-reasoning" => ModelPricing { input_cost: 2.70, output_cost: 2.70, cached_cost: 0.0 },
+        "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-8b-8192" => ModelPricing {
+            input_cost: 0.05,
+            output_cost: 0.08,
+            cached_cost: 0.0,
+        },
+        "llama-3.1-70b-versatile" | "llama3-70b-8192" => ModelPricing {
+            input_cost: 0.15,
+            output_cost: 0.20,
+            cached_cost: 0.0,
+        },
+        "llama-3.1-405b-reasoning" => ModelPricing {
+            input_cost: 2.70,
+            output_cost: 2.70,
+            cached_cost: 0.0,
+        },
         // xAI — Grok family
-        "grok-3" | "grok-2" => ModelPricing { input_cost: 2.00, output_cost: 10.00, cached_cost: 0.0 },
-        "grok-3-mini" | "grok-2-mini" => ModelPricing { input_cost: 0.20, output_cost: 1.00, cached_cost: 0.0 },
+        "grok-3" | "grok-2" => ModelPricing {
+            input_cost: 2.00,
+            output_cost: 10.00,
+            cached_cost: 0.0,
+        },
+        "grok-3-mini" | "grok-2-mini" => ModelPricing {
+            input_cost: 0.20,
+            output_cost: 1.00,
+            cached_cost: 0.0,
+        },
         // Google — Gemini 1.5 family
-        "gemini-1.5-pro" => ModelPricing { input_cost: 3.50, output_cost: 10.50, cached_cost: 0.0 },
-        "gemini-1.5-flash" => ModelPricing { input_cost: 0.35, output_cost: 1.05, cached_cost: 0.0 },
+        "gemini-1.5-pro" => ModelPricing {
+            input_cost: 3.50,
+            output_cost: 10.50,
+            cached_cost: 0.0,
+        },
+        "gemini-1.5-flash" => ModelPricing {
+            input_cost: 0.35,
+            output_cost: 1.05,
+            cached_cost: 0.0,
+        },
         // Google — Gemini 2.0 family
-        "gemini-2.0-flash" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
-        "gemini-2.0-flash-lite" => ModelPricing { input_cost: 0.075, output_cost: 0.30, cached_cost: 0.0 },
+        "gemini-2.0-flash" => ModelPricing {
+            input_cost: 0.10,
+            output_cost: 0.40,
+            cached_cost: 0.0,
+        },
+        "gemini-2.0-flash-lite" => ModelPricing {
+            input_cost: 0.075,
+            output_cost: 0.30,
+            cached_cost: 0.0,
+        },
         // Google — Gemini 2.5 family
-        "gemini-2.5-pro" => ModelPricing { input_cost: 1.25, output_cost: 10.00, cached_cost: 0.0 },
-        "gemini-2.5-flash" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.0 },
+        "gemini-2.5-pro" => ModelPricing {
+            input_cost: 1.25,
+            output_cost: 10.00,
+            cached_cost: 0.0,
+        },
+        "gemini-2.5-flash" => ModelPricing {
+            input_cost: 0.15,
+            output_cost: 0.60,
+            cached_cost: 0.0,
+        },
         // MiniMax — M2.7 family
-        "minimax-m2.7" => ModelPricing { input_cost: 1.00, output_cost: 1.00, cached_cost: 0.0 },
-        "minimax-m2.7-turbo" => ModelPricing { input_cost: 0.50, output_cost: 0.50, cached_cost: 0.0 },
+        "minimax-m2.7" => ModelPricing {
+            input_cost: 1.00,
+            output_cost: 1.00,
+            cached_cost: 0.0,
+        },
+        "minimax-m2.7-turbo" => ModelPricing {
+            input_cost: 0.50,
+            output_cost: 0.50,
+            cached_cost: 0.0,
+        },
         // Fallback to average pricing if unknown
         m if m.contains("ollama") || m.contains("local") => ModelPricing {
             input_cost: 0.0,
@@ -79,12 +204,22 @@ pub fn get_pricing(model: &str) -> ModelPricing {
     }
 }
 
-pub fn calculate_cost_cents(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> i64 {
+pub fn calculate_cost_cents(
+    model: &str,
+    input_tokens: i64,
+    output_tokens: i64,
+    cached_input_tokens: i64,
+) -> i64 {
     let cost = calculate_cost(model, input_tokens, output_tokens, cached_input_tokens);
     (cost * 100.0).round() as i64
 }
 
-pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
+pub fn calculate_cost(
+    model: &str,
+    input_tokens: i64,
+    output_tokens: i64,
+    cached_input_tokens: i64,
+) -> f64 {
     let pricing = get_pricing(model);
 
     // Per 1M tokens
@@ -96,26 +231,53 @@ pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached
     (total * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_cost_with_config(input_tokens, output_tokens, cached_input_tokens, local_embedding_tokens, config);
+pub fn calculate_cost_with_config_cents(
+    input_tokens: i64,
+    output_tokens: i64,
+    cached_input_tokens: i64,
+    local_embedding_tokens: i64,
+    config: &CostConfig,
+) -> i64 {
+    let cost = calculate_cost_with_config(
+        input_tokens,
+        output_tokens,
+        cached_input_tokens,
+        local_embedding_tokens,
+        config,
+    );
     (cost * 100.0).round() as i64
 }
 
-pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
+pub fn calculate_cost_with_config(
+    input_tokens: i64,
+    output_tokens: i64,
+    cached_input_tokens: i64,
+    local_embedding_tokens: i64,
+    config: &CostConfig,
+) -> f64 {
     let input_cost = input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;
     let cached_cost = cached_input_tokens as f64 * config.cost_per_cached_input_token;
     let embedding_cost = local_embedding_tokens as f64 * config.cost_per_local_embedding;
-    let total = (input_cost + output_cost + cached_cost + embedding_cost) * (1.0 - config.discount_factor);
+    let total =
+        (input_cost + output_cost + cached_cost + embedding_cost) * (1.0 - config.discount_factor);
     (total * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
+pub fn calculate_storage_savings_cents(
+    original_bytes: i64,
+    compressed_bytes: i64,
+    config: &CostConfig,
+) -> i64 {
     let cost = calculate_storage_savings(original_bytes, compressed_bytes, config);
     (cost * 100.0).round() as i64
 }
 
-pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+pub fn calculate_storage_savings(
+    original_bytes: i64,
+    compressed_bytes: i64,
+    config: &CostConfig,
+) -> f64 {
     if original_bytes < 0 || compressed_bytes < 0 {
         return 0.0;
     }
@@ -126,12 +288,20 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     (savings * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_bandwidth_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
+pub fn calculate_bandwidth_savings_cents(
+    original_bytes: i64,
+    compressed_bytes: i64,
+    config: &CostConfig,
+) -> i64 {
     let cost = calculate_bandwidth_savings(original_bytes, compressed_bytes, config);
     (cost * 100.0).round() as i64
 }
 
-pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+pub fn calculate_bandwidth_savings(
+    original_bytes: i64,
+    compressed_bytes: i64,
+    config: &CostConfig,
+) -> f64 {
     if original_bytes < 0 || compressed_bytes < 0 {
         return 0.0;
     }
@@ -198,8 +368,15 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
 }
 
 // Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
-pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_tokens: i64, model: &str) -> f64 {
-    tracing::info!("💰 Miser telemetry: Calculating token efficiency for model: {}", model);
+pub fn calculate_heuristic_token_efficiency(
+    original_tokens: i64,
+    truncated_tokens: i64,
+    model: &str,
+) -> f64 {
+    tracing::info!(
+        "💰 Miser telemetry: Calculating token efficiency for model: {}",
+        model
+    );
     if original_tokens <= truncated_tokens {
         return 0.0;
     }
@@ -209,12 +386,20 @@ pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_toke
     (estimated_savings * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_projected_monthly_cost_cents(current_cost: f64, days_elapsed: u32, total_days: u32) -> i64 {
+pub fn calculate_projected_monthly_cost_cents(
+    current_cost: f64,
+    days_elapsed: u32,
+    total_days: u32,
+) -> i64 {
     let projected = calculate_projected_monthly_cost(current_cost, days_elapsed, total_days);
     (projected * 100.0).round() as i64
 }
 
-pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
+pub fn calculate_projected_monthly_cost(
+    current_cost: f64,
+    days_elapsed: u32,
+    total_days: u32,
+) -> f64 {
     if days_elapsed == 0 || current_cost < 0.0 {
         return 0.0;
     }
@@ -426,9 +611,21 @@ mod tests {
         // gpt-4o input cost is 5.00 per 1M tokens.
         // We truncate from 100,000 to 50,000 tokens, saving 50,000.
         // 50,000 / 1,000,000 * 5.00 = 0.25
-        assert_eq!(calculate_heuristic_token_efficiency(100_000, 50_000, "gpt-4o"), 0.25);
-        assert_eq!(calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"), 0.0);
-        assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
-        assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
+        assert_eq!(
+            calculate_heuristic_token_efficiency(100_000, 50_000, "gpt-4o"),
+            0.25
+        );
+        assert_eq!(
+            calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"),
+            0.0
+        );
+        assert_eq!(
+            calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"),
+            0.0
+        );
+        assert_eq!(
+            calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"),
+            0.0
+        );
     }
 }

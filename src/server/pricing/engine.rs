@@ -1,6 +1,6 @@
+use crate::dynamic::{ContextSignals, DynamicPricingEngine, PricingBounds, PricingRule};
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use chrono::{Utc, DateTime};
-use crate::dynamic::{DynamicPricingEngine, PricingBounds, ContextSignals, PricingRule};
 use uuid::Uuid;
 
 pub async fn apply_dynamic_pricing(
@@ -27,7 +27,9 @@ pub async fn apply_dynamic_pricing(
     for row in rules_rows {
         use sqlx::Row;
         // Postgres BIGINT is i64
-        actual_base_price = row.try_get::<i64, _>("base_price_cents").unwrap_or(base_price_cents);
+        actual_base_price = row
+            .try_get::<i64, _>("base_price_cents")
+            .unwrap_or(base_price_cents);
         let json: serde_json::Value = row.try_get("rules_json").unwrap_or(serde_json::json!([]));
         if let Ok(r) = serde_json::from_value::<Vec<PricingRule>>(json) {
             rules.extend(r);
@@ -38,12 +40,13 @@ pub async fn apply_dynamic_pricing(
         return base_price_cents;
     }
 
-    let inventory_count: i32 = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-        .bind(target_id)
-        .bind(tenant_id)
-        .fetch_one(pool)
-        .await
-        .unwrap_or(100);
+    let inventory_count: i32 =
+        sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(target_id)
+            .bind(tenant_id)
+            .fetch_one(pool)
+            .await
+            .unwrap_or(100);
 
     let bounds = PricingBounds {
         base_price_cents: actual_base_price,

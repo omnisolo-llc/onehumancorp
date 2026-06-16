@@ -789,12 +789,16 @@ impl VectorRepository {
                     let mut match_count = 0;
 
                     // Fetch distinct tenant_ids to process one by one
-                    let tenant_rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
-                        .fetch_all(pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    let tenant_rows =
+                        sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
 
-                    let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
+                    let tenant_ids: Vec<String> = tenant_rows
+                        .into_iter()
+                        .map(|row| row.get("tenant_id"))
+                        .collect();
 
                     'outer: for current_tenant_id in tenant_ids {
                         // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
@@ -3627,7 +3631,6 @@ mod override_tests_resolve {
         );
     }
 }
-
 
 #[cfg(test)]
 mod additional_tests_fallback {

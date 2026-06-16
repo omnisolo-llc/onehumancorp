@@ -1,5 +1,5 @@
+use chrono::{DateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, Timelike};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PricingBounds {
@@ -13,7 +13,7 @@ pub struct ContextSignals {
     pub current_time: DateTime<Utc>,
     pub inventory_level: i32,
     pub inventory_velocity_7d: f64, // avg sales per day
-    pub demand_score: f64, // 0.0 to 1.0
+    pub demand_score: f64,          // 0.0 to 1.0
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,20 +65,30 @@ impl DynamicPricingEngine {
             }
 
             match &rule.rule_type {
-                RuleType::TimeWindow { start_hour, end_hour, adjustment_percent } => {
+                RuleType::TimeWindow {
+                    start_hour,
+                    end_hour,
+                    adjustment_percent,
+                } => {
                     let hour = context.current_time.hour();
                     if hour >= *start_hour && hour < *end_hour {
                         total_adjustment_percent += adjustment_percent;
                         applied_rules.push(rule.name.clone());
                     }
                 }
-                RuleType::InventoryThreshold { threshold, adjustment_percent } => {
+                RuleType::InventoryThreshold {
+                    threshold,
+                    adjustment_percent,
+                } => {
                     if context.inventory_level <= *threshold {
                         total_adjustment_percent += adjustment_percent;
                         applied_rules.push(rule.name.clone());
                     }
                 }
-                RuleType::DemandSurge { threshold_score, adjustment_percent } => {
+                RuleType::DemandSurge {
+                    threshold_score,
+                    adjustment_percent,
+                } => {
                     if context.demand_score >= *threshold_score {
                         total_adjustment_percent += adjustment_percent;
                         applied_rules.push(rule.name.clone());
@@ -87,10 +97,12 @@ impl DynamicPricingEngine {
             }
         }
 
-        let mut adjusted_price = bounds.base_price_cents as f64 * (1.0 + total_adjustment_percent / 100.0);
+        let mut adjusted_price =
+            bounds.base_price_cents as f64 * (1.0 + total_adjustment_percent / 100.0);
 
         // Clamp to bounds
-        adjusted_price = adjusted_price.clamp(bounds.min_price_cents as f64, bounds.max_price_cents as f64);
+        adjusted_price =
+            adjusted_price.clamp(bounds.min_price_cents as f64, bounds.max_price_cents as f64);
 
         DynamicPriceResult {
             price_cents: adjusted_price.round() as i64,
@@ -116,15 +128,22 @@ mod tests {
             PricingRule {
                 id: "1".into(),
                 name: "Happy Hour".into(),
-                rule_type: RuleType::TimeWindow { start_hour: 17, end_hour: 19, adjustment_percent: -10.0 },
+                rule_type: RuleType::TimeWindow {
+                    start_hour: 17,
+                    end_hour: 19,
+                    adjustment_percent: -10.0,
+                },
                 is_active: true,
             },
             PricingRule {
                 id: "2".into(),
                 name: "Low Stock Surge".into(),
-                rule_type: RuleType::InventoryThreshold { threshold: 5, adjustment_percent: 20.0 },
+                rule_type: RuleType::InventoryThreshold {
+                    threshold: 5,
+                    adjustment_percent: 20.0,
+                },
                 is_active: true,
-            }
+            },
         ];
 
         // Scenario 1: Happy Hour (18:00) and Normal Stock (10)
@@ -159,14 +178,15 @@ mod tests {
             max_price_cents: 1050,
         };
 
-        let rules = vec![
-            PricingRule {
-                id: "1".into(),
-                name: "Big Discount".into(),
-                rule_type: RuleType::InventoryThreshold { threshold: 100, adjustment_percent: -50.0 },
-                is_active: true,
-            }
-        ];
+        let rules = vec![PricingRule {
+            id: "1".into(),
+            name: "Big Discount".into(),
+            rule_type: RuleType::InventoryThreshold {
+                threshold: 100,
+                adjustment_percent: -50.0,
+            },
+            is_active: true,
+        }];
 
         let context = ContextSignals {
             current_time: Utc::now(),

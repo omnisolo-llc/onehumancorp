@@ -24,7 +24,11 @@ impl BudgetManager {
         self
     }
 
-    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(
+        mut self,
+        tenant_id: String,
+        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
+    ) -> Self {
         self.tenant_id = Some(tenant_id);
         self.telemetry_store = Some(store);
         self
@@ -49,7 +53,7 @@ impl BudgetManager {
                 Ok(_) => {
                     final_current = next;
                     break;
-                },
+                }
                 Err(b) => current_bits = b,
             }
         }
@@ -100,7 +104,8 @@ impl BudgetManager {
         }
         let current = f64::from_bits(self.current.load(Ordering::SeqCst));
         let current_cents = (current * 100.0).round() as i64;
-        let limit_threshold_cents = ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        let limit_threshold_cents =
+            ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current_cents >= limit_threshold_cents
     }
 }
@@ -112,16 +117,16 @@ mod tests {
     #[test]
     fn test_budget_manager() {
         let manager = BudgetManager::new(100.0);
-        
+
         assert_eq!(manager.get_remaining(), 100.0);
-        
+
         assert!(manager.record_spend(50.0).unwrap());
         assert_eq!(manager.get_remaining(), 50.0);
-        
+
         // Exceed budget, it's a soft limit so it returns false but updates current
         assert!(!(manager.record_spend(60.0).unwrap()));
         assert_eq!(manager.get_remaining(), -10.0);
-        
+
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
