@@ -71,6 +71,7 @@ pub struct WorkflowExecutor {
     pub config: AgentRunConfig,
 }
 
+
 fn evaluate_condition(expr: &str) -> bool {
     let operators = ["==", "!=", ">=", "<=", ">", "<"];
     for op in operators {
@@ -90,28 +91,28 @@ fn evaluate_condition(expr: &str) -> bool {
                     } else {
                         left > right
                     }
-                }
+                },
                 "<" => {
                     if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
                         l < r
                     } else {
                         left < right
                     }
-                }
+                },
                 ">=" => {
                     if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
                         l >= r
                     } else {
                         left >= right
                     }
-                }
+                },
                 "<=" => {
                     if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
                         l <= r
                     } else {
                         left <= right
                     }
-                }
+                },
                 _ => false,
             };
         }
@@ -366,10 +367,9 @@ impl WorkflowExecutor {
                         .edges
                         .iter()
                         .find(|e| e.target == current_node_id)
-                        && let Some(val) = state.get(&edge.source)
-                    {
-                        return Ok(val.clone());
-                    }
+                        && let Some(val) = state.get(&edge.source) {
+                            return Ok(val.clone());
+                        }
                     return Ok("Visual orchestration completed with no data".to_string());
                 }
             }
@@ -698,10 +698,7 @@ mod tests {
         };
 
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
-        let config = AgentRunConfig {
-            max_workflow_cycles: Some(3),
-            ..Default::default()
-        };
+        let config = AgentRunConfig { max_workflow_cycles: Some(3), ..Default::default() };
 
         let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
 
@@ -716,16 +713,20 @@ mod tests {
     #[tokio::test]
     async fn test_visual_workflow_missing_node() {
         let graph = WorkflowGraph {
-            nodes: vec![Node {
-                id: "in".to_string(),
-                node_type: NodeType::Input {
-                    name: "input_var".to_string(),
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
                 },
-            }],
-            edges: vec![Edge {
-                source: "in".to_string(),
-                target: "missing".to_string(),
-            }],
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "missing".to_string(),
+                },
+            ],
         };
 
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
@@ -768,10 +769,12 @@ mod tests {
                     },
                 },
             ],
-            edges: vec![Edge {
-                source: "in".to_string(),
-                target: "llm1".to_string(),
-            }],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+            ],
         };
 
         let agent = Arc::new(Agent::new(Arc::new(ErrorMockVisualLlmClient), vec![]));
@@ -783,10 +786,7 @@ mod tests {
 
         let result = executor.execute(inputs).await;
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "LLM node llm1 failed: LLM error: Simulated LLM failure"
-        );
+        assert_eq!(result.unwrap_err(), "LLM node llm1 failed: LLM error: Simulated LLM failure");
     }
 
     #[tokio::test]
@@ -807,10 +807,12 @@ mod tests {
                     },
                 },
             ],
-            edges: vec![Edge {
-                source: "in".to_string(),
-                target: "tool1".to_string(),
-            }],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "tool1".to_string(),
+                },
+            ],
         };
 
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
@@ -822,11 +824,7 @@ mod tests {
 
         let result = executor.execute(inputs).await;
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Tool node tool1 failed to parse args")
-        );
+        assert!(result.unwrap_err().contains("Tool node tool1 failed to parse args"));
     }
 
     #[tokio::test]
@@ -1052,8 +1050,7 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
-            {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 // Simulate a hang that exceeds a 60-second limit (or any other timeout logic).
                 // We'll just return an error directly simulating a timeout failure from the runtime.
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -1070,22 +1067,12 @@ mod tests {
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
-        let result = tokio::time::timeout(
-            std::time::Duration::from_millis(1500),
-            executor.execute(inputs),
-        )
-        .await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(1500), executor.execute(inputs)).await;
 
         // Verify that the executor gracefully bubbles up the LLM error instead of panicking
-        assert!(
-            result.is_ok(),
-            "Workflow execution should not hang indefinitely"
-        );
+        assert!(result.is_ok(), "Workflow execution should not hang indefinitely");
         let inner_result = result.unwrap();
-        assert!(
-            inner_result.is_err(),
-            "Workflow execution must fail when LLM times out"
-        );
+        assert!(inner_result.is_err(), "Workflow execution must fail when LLM times out");
         // The error message is formatted as "LLM node {} failed: {}"
         assert!(inner_result.unwrap_err().contains("LLM Request Timed Out"));
     }

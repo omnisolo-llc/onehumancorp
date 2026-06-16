@@ -29,10 +29,7 @@ impl MicroAgentRegistry {
     }
 
     /// Loads MicroAgents from a `.openhands/microagents` or similar directory.
-    pub fn load_from_dir(
-        &mut self,
-        dir: impl AsRef<Path>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn load_from_dir(&mut self, dir: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let dir = dir.as_ref();
         if !dir.exists() || !dir.is_dir() {
             return Ok(());
@@ -41,10 +38,7 @@ impl MicroAgentRegistry {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file()
-                && (path.extension().and_then(|e| e.to_str()) == Some("yaml")
-                    || path.extension().and_then(|e| e.to_str()) == Some("json"))
-            {
+            if path.is_file() && (path.extension().and_then(|e| e.to_str()) == Some("yaml") || path.extension().and_then(|e| e.to_str()) == Some("json")) {
                 let content = fs::read_to_string(&path)?;
                 if let Ok(agent) = serde_json::from_str::<MicroAgent>(&content) {
                     self.agents.push(agent);
@@ -59,15 +53,9 @@ impl MicroAgentRegistry {
         let mut active_instructions = Vec::new();
 
         for agent in &self.agents {
-            let matches = agent
-                .triggers
-                .iter()
-                .any(|trigger| context.contains(trigger));
+            let matches = agent.triggers.iter().any(|trigger| context.contains(trigger));
             if matches {
-                active_instructions.push(format!(
-                    "--- MicroAgent: {} ---\n{}",
-                    agent.name, agent.instructions
-                ));
+                active_instructions.push(format!("--- MicroAgent: {} ---\n{}", agent.name, agent.instructions));
             }
         }
 

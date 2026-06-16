@@ -74,11 +74,7 @@ pub enum AgentEvent {
     },
 }
 
-pub type HumanInputFn = std::sync::Arc<
-    dyn Fn(&str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>>
-        + Send
-        + Sync,
->;
+pub type HumanInputFn = std::sync::Arc<dyn Fn(&str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct HumanInputCallbackWrapper(pub Option<HumanInputFn>);
@@ -285,6 +281,7 @@ impl AgentProgress {
 // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 // 5. Conversation History (happens at run loop)
 
+
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
 /// This fulfills the Master Catalog specification:
 
@@ -385,14 +382,11 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = active_cfg_cloned.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md =
-                crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
+            let cascading_md = crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
             if !cascading_md.is_empty() {
                 if !active_cfg_cloned.user_instructions.is_empty() {
-                    active_cfg_cloned.user_instructions = format!(
-                        "{}\n\n{}",
-                        cascading_md, active_cfg_cloned.user_instructions
-                    );
+                    active_cfg_cloned.user_instructions =
+                        format!("{}\n\n{}", cascading_md, active_cfg_cloned.user_instructions);
                 } else {
                     active_cfg_cloned.user_instructions = cascading_md;
                 }
@@ -402,14 +396,12 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_input(initial_message)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Input Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Input Guardrail tripwire fires: {}", e),
+                )));
+            }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
 
@@ -452,7 +444,7 @@ impl Agent {
             let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
                 &phase_cfg,
                 session_tools,
-                agents_md,
+                agents_md
             )
             .build();
 
@@ -481,14 +473,12 @@ impl Agent {
             if msg.tool_calls.is_empty() {
                 if *phase == "Verify" {
                     if let Some(guardrails) = &cfg.guardrails
-                        && let Err(e) = guardrails.check_output(&msg.content)
-                    {
-                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                        return Err(Box::new(std::io::Error::other(format!(
-                            "Termination: Output Guardrail tripwire fires: {}",
-                            e
-                        ))));
-                    }
+                        && let Err(e) = guardrails.check_output(&msg.content) {
+                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                            return Err(Box::new(std::io::Error::other(
+                                format!("Termination: Output Guardrail tripwire fires: {}", e),
+                            )));
+                        }
                     return Ok(msg.content);
                 } else {
                     continue;
@@ -502,14 +492,12 @@ impl Agent {
 
             for tc in &msg.tool_calls {
                 if let Some(guardrails) = &cfg.guardrails
-                    && let Err(e) = guardrails.check_tool(tc)
-                {
-                    on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                    return Err(Box::new(std::io::Error::other(format!(
-                        "Termination: Tool Guardrail tripwire fires: {}",
-                        e
-                    ))));
-                }
+                    && let Err(e) = guardrails.check_tool(tc) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::other(
+                            format!("Termination: Tool Guardrail tripwire fires: {}", e),
+                        )));
+                    }
                 if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
                     if tool.is_read_only {
                         read_only_calls.push(tc.clone());
@@ -581,12 +569,7 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                "".to_string(),
-                                &msg,
-                            )
-                            .error;
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -650,12 +633,7 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                "".to_string(),
-                                &msg,
-                            )
-                            .error;
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -733,14 +711,11 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = active_cfg_cloned.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md =
-                crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
+            let cascading_md = crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
             if !cascading_md.is_empty() {
                 if !active_cfg_cloned.user_instructions.is_empty() {
-                    active_cfg_cloned.user_instructions = format!(
-                        "{}\n\n{}",
-                        cascading_md, active_cfg_cloned.user_instructions
-                    );
+                    active_cfg_cloned.user_instructions =
+                        format!("{}\n\n{}", cascading_md, active_cfg_cloned.user_instructions);
                 } else {
                     active_cfg_cloned.user_instructions = cascading_md;
                 }
@@ -750,25 +725,17 @@ impl Agent {
 
         // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_input(initial_message)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Input Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Input Guardrail tripwire fires: {}", e),
+                )));
+            }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
-        let session_id = cfg
-            .thread_id
-            .clone()
-            .unwrap_or_else(|| cfg.agent_id.clone());
-        let jit_retriever = self
-            .memory_store
-            .as_ref()
-            .map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
+        let session_id = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+        let jit_retriever = self.memory_store.as_ref().map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
         let mut turn_count = 0;
         let mut total_tokens = 0;
         let mut total_session_cost = 0.0;
@@ -780,21 +747,16 @@ impl Agent {
             None
         };
 
-        let mut system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
-            cfg,
-            session_tools,
-            agents_md,
-        )
-        .build();
+        let mut system_prompt =
+            crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools, agents_md).build();
 
         if let Some(store) = &self.memory_store
             && let Ok(index_content) = store.get_lightweight_index().await
-            && !index_content.trim().is_empty()
-        {
-            system_prompt.push_str("\n\n[Lightweight Memory Index]\n");
-            system_prompt.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
-            system_prompt.push_str(&index_content);
-        }
+                && !index_content.trim().is_empty() {
+                    system_prompt.push_str("\n\n[Lightweight Memory Index]\n");
+                    system_prompt.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    system_prompt.push_str(&index_content);
+                }
 
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools
             .iter()
@@ -818,49 +780,43 @@ impl Agent {
             }
 
             // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
-            if cfg.enable_context_compaction
-                && turn_input_tokens > cfg.compaction_threshold_tokens
-                && messages.len() > 5
-            {
-                let mut compact_messages = Vec::new();
-                compact_messages.push(messages[0].clone());
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens
+                && messages.len() > 5 {
+                    let mut compact_messages = Vec::new();
+                    compact_messages.push(messages[0].clone());
 
-                let middle_start = 1;
-                let middle_end = messages.len() - 3;
+                    let middle_start = 1;
+                    let middle_end = messages.len() - 3;
 
-                if middle_end > middle_start {
-                    let mut middle_text = String::new();
-                    for m in &messages[middle_start..middle_end] {
-                        middle_text.push_str(&format!("[Role: {}]\n", m.role));
-                        if !m.content.is_empty() {
-                            middle_text.push_str(&m.content);
-                            middle_text.push('\n');
-                        }
-                        if !m.tool_calls.is_empty() {
-                            middle_text.push_str("Tool Calls:\n");
-                            for tc in &m.tool_calls {
-                                middle_text
-                                    .push_str(&format!("  {} ({})\n", tc.name, tc.arguments));
+                    if middle_end > middle_start {
+                        let mut middle_text = String::new();
+                        for m in &messages[middle_start..middle_end] {
+                            middle_text.push_str(&format!("[Role: {}]\n", m.role));
+                            if !m.content.is_empty() {
+                                middle_text.push_str(&m.content);
+                                middle_text.push('\n');
                             }
-                        }
-                        if !m.tool_results.is_empty() {
-                            middle_text.push_str("Tool Results:\n");
-                            for tr in &m.tool_results {
-                                let status = if tr.error.is_empty() {
-                                    "Success (raw output discarded during compaction)"
-                                } else {
-                                    &tr.error
-                                };
-                                middle_text.push_str(&format!(
-                                    "  tool_call_id: {} -> {}\n",
-                                    tr.tool_call_id, status
-                                ));
+                            if !m.tool_calls.is_empty() {
+                                middle_text.push_str("Tool Calls:\n");
+                                for tc in &m.tool_calls {
+                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments));
+                                }
                             }
+                            if !m.tool_results.is_empty() {
+                                middle_text.push_str("Tool Results:\n");
+                                for tr in &m.tool_results {
+                                    let status = if tr.error.is_empty() {
+                                        "Success (raw output discarded during compaction)"
+                                    } else {
+                                        &tr.error
+                                    };
+                                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
+                                }
+                            }
+                            middle_text.push_str("---\n");
                         }
-                        middle_text.push_str("---\n");
-                    }
 
-                    let summary_req = crate::types::ChatRequest {
+                        let summary_req = crate::types::ChatRequest {
                             model: cfg.model.clone(),
                             system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
                             messages: vec![crate::types::Message::user(format!("Compact this conversation:\n{}", middle_text))],
@@ -869,33 +825,25 @@ impl Agent {
                             temperature: 0.0,
                         };
 
-                    match self.llm.chat(summary_req).await {
-                        Ok(summary_resp) => {
-                            let summary = summary_resp.message.content;
-                            compact_messages.push(crate::types::Message::user(format!(
-                                "[Context Compacted by Harness]:\n{}",
-                                summary
-                            )));
-                            compact_messages.extend_from_slice(&messages[middle_end..]);
-                            messages = compact_messages;
-                        }
-                        Err(e) => {
-                            let err = format!("Context compaction failed: {}", e);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                        match self.llm.chat(summary_req).await {
+                            Ok(summary_resp) => {
+                                let summary = summary_resp.message.content;
+                                compact_messages.push(crate::types::Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
+                                compact_messages.extend_from_slice(&messages[middle_end..]);
+                                messages = compact_messages;
+                            }
+                            Err(e) => {
+                                let err = format!("Context compaction failed: {}", e);
+                                on_event(AgentEvent::TaskError { error: err.clone() });
+                            }
                         }
                     }
                 }
-            }
 
             let mut final_messages = messages.clone();
 
             if cfg.enable_observation_masking {
-                crate::observation_masking::apply_observation_masking(
-                    &mut final_messages,
-                    cfg.observation_masking_threshold,
-                    cfg.observation_masking_size_limit,
-                    cfg.observation_masking_element_limit,
-                );
+                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit, cfg.observation_masking_element_limit);
             }
 
             if cfg.enable_acon_context_strategy {
@@ -916,12 +864,11 @@ impl Agent {
             // JIT Retrieval: Only fetch and inject on the first turn of the loop to avoid duplicate I/O and context bloat.
             if turn_count == 0
                 && let Some(retriever) = &jit_retriever
-                && let Some(jit_context) = retriever.retrieve_context(&messages).await
-            {
-                // Ephemeral injection into the system prompt. Does not mutate the persistent `messages` array.
-                dynamic_system_prompt.push_str("\n\n");
-                dynamic_system_prompt.push_str(&jit_context);
-            }
+                    && let Some(jit_context) = retriever.retrieve_context(&messages).await {
+                        // Ephemeral injection into the system prompt. Does not mutate the persistent `messages` array.
+                        dynamic_system_prompt.push_str("\n\n");
+                        dynamic_system_prompt.push_str(&jit_context);
+                    }
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
                 system: system_prompt.clone(),
@@ -996,14 +943,12 @@ impl Agent {
             if msg.tool_calls.is_empty() {
                 // Guardrails & Safety: OpenAI Mechanic (Output Guardrail)
                 if let Some(guardrails) = &cfg.guardrails
-                    && let Err(e) = guardrails.check_output(&msg.content)
-                {
-                    on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                    return Err(Box::new(std::io::Error::other(format!(
-                        "Termination: Output Guardrail tripwire fires: {}",
-                        e
-                    ))));
-                }
+                    && let Err(e) = guardrails.check_output(&msg.content) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::other(
+                            format!("Termination: Output Guardrail tripwire fires: {}", e),
+                        )));
+                    }
                 let mut verification_manager =
                     crate::verification_loops::VerificationManager::new();
                 if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
@@ -1092,11 +1037,7 @@ impl Agent {
 
             for (i, tc) in msg.tool_calls.iter().enumerate() {
                 tool_results[i].tool_call_id = tc.id.clone();
-                let is_read_only = session_tools
-                    .iter()
-                    .find(|t| t.name == tc.name)
-                    .map(|t| t.is_read_only)
-                    .unwrap_or(false);
+                let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
 
                 if is_read_only {
                     current_batch.push((i, tc));
@@ -1118,22 +1059,18 @@ impl Agent {
                     for (i, tc) in batch {
                         // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
                         if let Some(guardrails) = &cfg.guardrails
-                            && let Err(e) = guardrails.check_tool(tc)
-                        {
-                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                            return Err(Box::new(std::io::Error::other(format!(
-                                "Termination: Tool Guardrail tripwire fires: {}",
-                                e
-                            ))));
-                        }
+                            && let Err(e) = guardrails.check_tool(tc) {
+                                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                                return Err(Box::new(std::io::Error::other(
+                                    format!("Termination: Tool Guardrail tripwire fires: {}", e),
+                                )));
+                            }
 
                         // Termination Condition: Guardrail tripwire fires
-                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg)
-                        {
-                            return Err(Box::new(std::io::Error::other(format!(
-                                "Termination: Guardrail tripwire fires: {:?}",
-                                e
-                            ))));
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
+                            return Err(Box::new(std::io::Error::other(
+                                format!("Termination: Guardrail tripwire fires: {:?}", e),
+                            )));
                         }
 
                         let tool = session_tools.iter().find(|t| t.name == tc.name);
@@ -1172,53 +1109,46 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::Fatal(err_msg))
                             | Err(crate::types::ToolError::Unexpected(err_msg)) => {
-                                return Err(Box::new(std::io::Error::other(format!(
-                                    "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
-                                    err_msg
-                                ))));
+                                return Err(Box::new(std::io::Error::other(
+                                    format!(
+                                        "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
+                                        err_msg
+                                    ),
+                                )));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
                                 if let Some(ref cb) = cfg.human_input_callback.0
-                                    && let Some(human_input) = cb(&err_msg).await
-                                {
-                                    on_event(AgentEvent::UserInterventionRequired {
-                                        error: err_msg.clone(),
-                                    });
-                                    let error_result = crate::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: format!(
-                                            "USER_FIXABLE: {}. Human provided fix: {}",
-                                            err_msg, human_input
-                                        ),
-                                    };
-                                    let msg_to_push = crate::types::Message {
-                                        role: crate::types::Role::Tool,
-                                        content: String::new(),
-                                        tool_calls: vec![],
-                                        tool_results: vec![error_result],
-                                        response_id: None,
-                                        previous_response_id: None,
-                                    };
-                                    messages.push(msg_to_push);
-                                    continue;
-                                }
+                                    && let Some(human_input) = cb(&err_msg).await {
+                                        on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                        let error_result = crate::types::ToolResult {
+                                            tool_call_id: tc.id.clone(),
+                                            content: String::new(),
+                                            error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
+                                        };
+                                        let msg_to_push = crate::types::Message {
+                                            role: crate::types::Role::Tool,
+                                            content: String::new(),
+                                            tool_calls: vec![],
+                                            tool_results: vec![error_result],
+                                            response_id: None,
+                                            previous_response_id: None,
+                                        };
+                                        messages.push(msg_to_push);
+                                        continue;
+                                    }
                                 let full_err = format!("USER_FIXABLE: {}", err_msg);
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: full_err.clone(),
                                 });
-                                return Err(Box::new(std::io::Error::other(format!(
-                                    "Termination: Guardrail tripwire fires (UserFixable): {}",
-                                    err_msg
-                                ))));
+                                return Err(Box::new(std::io::Error::other(
+                                    format!(
+                                        "Termination: Guardrail tripwire fires (UserFixable): {}",
+                                        err_msg
+                                    ),
+                                )));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                let self_correct_msg =
-                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                        "".to_string(),
-                                        &err_msg,
-                                    )
-                                    .error;
+                                let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
                                 on_event(AgentEvent::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
@@ -1244,22 +1174,18 @@ impl Agent {
                     for (i, tc) in batch {
                         // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
                         if let Some(guardrails) = &cfg.guardrails
-                            && let Err(e) = guardrails.check_tool(tc)
-                        {
-                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                            return Err(Box::new(std::io::Error::other(format!(
-                                "Termination: Tool Guardrail tripwire fires: {}",
-                                e
-                            ))));
-                        }
+                            && let Err(e) = guardrails.check_tool(tc) {
+                                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                                return Err(Box::new(std::io::Error::other(
+                                    format!("Termination: Tool Guardrail tripwire fires: {}", e),
+                                )));
+                            }
 
                         // Termination Condition: Guardrail tripwire fires
-                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg)
-                        {
-                            return Err(Box::new(std::io::Error::other(format!(
-                                "Termination: Guardrail tripwire fires: {:?}",
-                                e
-                            ))));
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
+                            return Err(Box::new(std::io::Error::other(
+                                format!("Termination: Guardrail tripwire fires: {:?}", e),
+                            )));
                         }
 
                         let tool = session_tools.iter().find(|t| t.name == tc.name);
@@ -1282,25 +1208,22 @@ impl Agent {
                                 }
                                 Err(crate::types::ToolError::Fatal(err_msg))
                                 | Err(crate::types::ToolError::Unexpected(err_msg)) => {
-                                    return Err(Box::new(std::io::Error::other(format!(
-                                        "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
-                                        err_msg
-                                    ))));
+                                    return Err(Box::new(std::io::Error::other(
+                                        format!(
+                                            "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
+                                            err_msg
+                                        ),
+                                    )));
                                 }
                                 Err(crate::types::ToolError::UserFixable(err_msg)) => {
                                     if let Some(ref cb) = cfg.human_input_callback.0 {
                                         // Await inside sequential block is safe here
                                         if let Some(human_input) = cb(&err_msg).await {
-                                            on_event(AgentEvent::UserInterventionRequired {
-                                                error: err_msg.clone(),
-                                            });
+                                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
                                             let error_result = crate::types::ToolResult {
                                                 tool_call_id: tc.id.clone(),
                                                 content: String::new(),
-                                                error: format!(
-                                                    "USER_FIXABLE: {}. Human provided fix: {}",
-                                                    err_msg, human_input
-                                                ),
+                                                error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
                                             };
                                             let msg_to_push = crate::types::Message {
                                                 role: crate::types::Role::Tool,
@@ -1318,10 +1241,12 @@ impl Agent {
                                     on_event(AgentEvent::UserInterventionRequired {
                                         error: full_err.clone(),
                                     });
-                                    return Err(Box::new(std::io::Error::other(format!(
-                                        "Termination: Guardrail tripwire fires (UserFixable): {}",
-                                        err_msg
-                                    ))));
+                                    return Err(Box::new(std::io::Error::other(
+                                        format!(
+                                            "Termination: Guardrail tripwire fires (UserFixable): {}",
+                                            err_msg
+                                        ),
+                                    )));
                                 }
                                 Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                                     let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
@@ -1506,7 +1431,7 @@ impl Agent {
         let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
             &cfg_arc,
             &session_tools_arc,
-            None,
+            None
         )
         .build();
 
@@ -1850,24 +1775,26 @@ impl Agent {
 
                 // Cross-Department Memory Consolidation for LangGraph
                 if !content.is_empty()
-                    && let Some(store) = &self.memory_store
-                {
-                    let content_to_store = content.clone();
-                    let store_clone = store.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) = store_clone
-                            .store(
-                                &content_to_store,
-                                vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()],
-                            )
-                            .await
-                        {
-                            tracing::error!("Failed to auto-consolidate LangGraph memory: {}", e);
-                        } else {
-                            tracing::debug!("Successfully auto-consolidated LangGraph memory.");
-                        }
-                    });
-                }
+                    && let Some(store) = &self.memory_store {
+                        let content_to_store = content.clone();
+                        let store_clone = store.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = store_clone
+                                .store(
+                                    &content_to_store,
+                                    vec!["AUTO_CONSOLIDATED_LANGGRAPH".to_string()],
+                                )
+                                .await
+                            {
+                                tracing::error!(
+                                    "Failed to auto-consolidate LangGraph memory: {}",
+                                    e
+                                );
+                            } else {
+                                tracing::debug!("Successfully auto-consolidated LangGraph memory.");
+                            }
+                        });
+                    }
 
                 Ok(content)
             }
@@ -1905,14 +1832,12 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_input(initial_message)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Input Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Input Guardrail tripwire fires: {}", e),
+                )));
+            }
 
         struct WrapperClient {
             llm: std::sync::Arc<dyn LlmClient>,
@@ -1957,14 +1882,12 @@ impl Agent {
             content: report.clone(),
         });
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_output(&report)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Output Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_output(&report) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Output Guardrail tripwire fires: {}", e),
+                )));
+            }
 
         Ok(report)
     }
@@ -2117,12 +2040,8 @@ impl Agent {
             None
         };
 
-        let planner_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
-            &planner_cfg,
-            &[],
-            agents_md,
-        )
-        .build();
+        let planner_system =
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&planner_cfg, &[], agents_md).build();
 
         let plan_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2136,14 +2055,12 @@ impl Agent {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_input(initial_message)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Input Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Input Guardrail tripwire fires: {}", e),
+                )));
+            }
         let plan_resp = self.llm.chat(plan_req.clone()).await?;
         let plan_json_text = plan_resp
             .message
@@ -2385,11 +2302,7 @@ impl Agent {
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        let error_result =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                current_tc.id.clone(),
-                                &msg,
-                            );
+                        let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &msg);
                         let msg_to_push = crate::types::Message {
                             role: crate::types::Role::Tool,
                             content: String::new(),
@@ -2404,8 +2317,7 @@ impl Agent {
                         assistant_msg.tool_calls.push(current_tc.clone());
 
                         let mut tool_defs = vec![];
-                        if let Some(tool) = session_tools.iter().find(|t| t.name == current_tc.name)
-                        {
+                        if let Some(tool) = session_tools.iter().find(|t| t.name == current_tc.name) {
                             tool_defs.push(crate::types::ToolDefinition {
                                 name: tool.name.clone(),
                                 description: tool.description.clone(),
@@ -2428,18 +2340,10 @@ impl Agent {
                                     current_tc.arguments = new_tc.arguments.clone();
                                     continue;
                                 } else {
-                                    break format!(
-                                        "Self-correction failed: LLM did not return a tool call. Original error: {}",
-                                        msg
-                                    );
+                                    break format!("Self-correction failed: LLM did not return a tool call. Original error: {}", msg);
                                 }
                             }
-                            Err(e) => {
-                                break format!(
-                                    "Self-correction failed due to LLM error: {}. Original error: {}",
-                                    e, msg
-                                );
-                            }
+                            Err(e) => break format!("Self-correction failed due to LLM error: {}. Original error: {}", e, msg),
                         }
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -2473,10 +2377,9 @@ impl Agent {
         executed_steps.sort_by_key(|s| {
             if let Some(prefix) = s.strip_prefix("Step ")
                 && let Some(colon_idx) = prefix.find(':')
-                && let Ok(idx) = prefix[..colon_idx].parse::<usize>()
-            {
-                return idx;
-            }
+                    && let Ok(idx) = prefix[..colon_idx].parse::<usize>() {
+                        return idx;
+                    }
             usize::MAX
         });
 
@@ -2503,12 +2406,8 @@ impl Agent {
             None
         };
 
-        let replier_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
-            &replier_cfg,
-            &[],
-            agents_md,
-        )
-        .build();
+        let replier_system =
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&replier_cfg, &[], agents_md).build();
 
         let replier_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2747,11 +2646,9 @@ impl Agent {
         }
     }
 
+
     /// State Management: Implementation of OpenAI's lightweight previous_response_id chaining
-    pub fn chain_previous_response_id(
-        messages: &[Message],
-        target_id: &str,
-    ) -> Option<Vec<Message>> {
+    pub fn chain_previous_response_id(messages: &[Message], target_id: &str) -> Option<Vec<Message>> {
         let mut new_messages = Vec::new();
         let mut found = false;
         for m in messages.iter() {
@@ -2763,7 +2660,11 @@ impl Agent {
                 }
             }
         }
-        if found { Some(new_messages) } else { None }
+        if found {
+            Some(new_messages)
+        } else {
+            None
+        }
     }
 
     pub async fn run<F>(
@@ -2869,49 +2770,46 @@ impl Agent {
         let mut final_cfg = cfg.clone();
         let mut actual_initial_message = initial_message.to_string();
         if final_cfg.enable_sona_patterns
-            && let Some(matcher_arc) = &self_with_memory.sona_matcher
-        {
-            let matcher = matcher_arc.lock().await;
-            if let Some(pattern) = matcher.find_best_match(initial_message) {
-                actual_initial_message = format!(
-                    "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
-                    pattern.successful_tools.join(" -> "),
-                    initial_message
-                );
+            && let Some(matcher_arc) = &self_with_memory.sona_matcher {
+                let matcher = matcher_arc.lock().await;
+                if let Some(pattern) = matcher.find_best_match(initial_message) {
+                    actual_initial_message = format!(
+                        "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
+                        pattern.successful_tools.join(" -> "),
+                        initial_message
+                    );
+                }
             }
-        }
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills
-            && let Some(ref dir) = final_cfg.progressive_skills_dir
-        {
-            let manager = crate::progressive_skills::ProgressiveSkillManager::new(
-                std::path::PathBuf::from(dir),
-            );
-            match manager.get_relevant_skills(initial_message) {
-                Ok(skills) => {
-                    for skill in skills {
-                        let skill_instr = format!(
-                            "\n[Progressive Skill Loaded: {}]\n{}\n",
-                            skill.name, skill.instruction
-                        );
-                        final_cfg.developer_instructions.push_str(&skill_instr);
+            && let Some(ref dir) = final_cfg.progressive_skills_dir {
+                let manager = crate::progressive_skills::ProgressiveSkillManager::new(
+                    std::path::PathBuf::from(dir),
+                );
+                match manager.get_relevant_skills(initial_message) {
+                    Ok(skills) => {
+                        for skill in skills {
+                            let skill_instr = format!(
+                                "\n[Progressive Skill Loaded: {}]\n{}\n",
+                                skill.name, skill.instruction
+                            );
+                            final_cfg.developer_instructions.push_str(&skill_instr);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to load progressive skills from {}: {}", dir, e);
                     }
                 }
-                Err(e) => {
-                    tracing::warn!("Failed to load progressive skills from {}: {}", dir, e);
-                }
             }
-        }
 
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md =
-                crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
+            let cascading_md = crate::prompt_construction::load_cascading_instructions(Some(start_dir)).await;
             if !cascading_md.is_empty() {
                 if !final_cfg.user_instructions.is_empty() {
                     final_cfg.user_instructions =
@@ -2962,7 +2860,7 @@ impl Agent {
         if final_cfg.enable_lazy_tool_loading {
             let tool_search = crate::tools::toolsearch::toolsearch_tool();
             if !session_tools.iter().any(|t| t.name == "ToolSearch") {
-                session_tools.push(tool_search);
+                 session_tools.push(tool_search);
             }
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
@@ -2982,22 +2880,19 @@ impl Agent {
 
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &final_cfg.guardrails
-            && let Err(e) = guard_cfg.check_input(initial_message)
-        {
-            on_event(AgentEvent::TaskError { error: e.clone() });
-            return Err(e.into());
-        }
+            && let Err(e) = guard_cfg.check_input(initial_message) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
         if let Some(guardrails) = &cfg.guardrails
-            && let Err(e) = guardrails.check_input(initial_message)
-        {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-            return Err(Box::new(std::io::Error::other(format!(
-                "Termination: Input Guardrail tripwire fires: {}",
-                e
-            ))));
-        }
+            && let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(
+                    format!("Termination: Input Guardrail tripwire fires: {}", e),
+                )));
+            }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
 
@@ -3017,23 +2912,22 @@ impl Agent {
         // Hermes Agent Serverless Hibernation Mechanic
         if final_cfg.enable_serverless_hibernation
             && let Some(thread_id) = &final_cfg.thread_id
-            && let Some(dir) = &final_cfg.workspace_path
-        {
-            let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-            let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
-            if hm.is_hibernated(thread_id).await {
-                tracing::info!(
-                    "Waking agent session {} from serverless hibernation",
-                    thread_id
-                );
-                if let Ok(state) = hm.wake(thread_id).await
-                    && let Ok(restored_msgs) =
-                        serde_json::from_str::<Vec<Message>>(&state.messages_json)
-                {
-                    messages = restored_msgs;
+                && let Some(dir) = &final_cfg.workspace_path {
+                    let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                    let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                    if hm.is_hibernated(thread_id).await {
+                        tracing::info!(
+                            "Waking agent session {} from serverless hibernation",
+                            thread_id
+                        );
+                        if let Ok(state) = hm.wake(thread_id).await
+                            && let Ok(restored_msgs) =
+                                serde_json::from_str::<Vec<Message>>(&state.messages_json)
+                            {
+                                messages = restored_msgs;
+                            }
+                    }
                 }
-            }
-        }
 
         if final_cfg.enable_actor_model_message_passing {
             return self_with_memory
@@ -3078,11 +2972,12 @@ impl Agent {
             } else {
                 if let Ok(checkpoints) = checkpointer.list_checkpoints(thread_id).await
                     && let Some(cp) = checkpoints.first()
-                    && let Ok(saved_msgs) = serde_json::from_value::<Vec<Message>>(cp.data.clone())
-                {
-                    messages = saved_msgs;
-                    last_checkpoint_id = Some(cp.checkpoint_id.clone());
-                }
+                        && let Ok(saved_msgs) =
+                            serde_json::from_value::<Vec<Message>>(cp.data.clone())
+                        {
+                            messages = saved_msgs;
+                            last_checkpoint_id = Some(cp.checkpoint_id.clone());
+                        }
             }
         }
 
@@ -3096,13 +2991,11 @@ impl Agent {
             .clone()
             .unwrap_or(generated_uuid_path);
 
-        if messages.is_empty()
-            && final_cfg.enable_state_checkpointing
+        if messages.is_empty() && final_cfg.enable_state_checkpointing
             && let Ok(contents) = tokio::fs::read_to_string(&scratchpad_path).await
-            && let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents)
-        {
-            messages = saved_msgs;
-        }
+                && let Ok(saved_msgs) = serde_json::from_str::<Vec<Message>>(&contents) {
+                    messages = saved_msgs;
+                }
 
         if messages.is_empty() {
             messages.push(Message::user(&actual_initial_message));
@@ -3126,12 +3019,9 @@ impl Agent {
             None
         };
 
-        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
-            &final_cfg,
-            &session_tools,
-            agents_md,
-        )
-        .build();
+        let mut combined_system =
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools, agents_md)
+                .build();
 
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
@@ -3157,12 +3047,11 @@ impl Agent {
 
             // Anthropic Mechanic: 3-Tier Memory Store implementation. Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
             if let Ok(index_content) = store.get_lightweight_index().await
-                && !index_content.trim().is_empty()
-            {
-                combined_system.push_str("\n\n[Lightweight Memory Index]\n");
-                combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
-                combined_system.push_str(&index_content);
-            }
+                && !index_content.trim().is_empty() {
+                    combined_system.push_str("\n\n[Lightweight Memory Index]\n");
+                    combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    combined_system.push_str(&index_content);
+                }
         }
 
         // 1. The Orchestration Loop
@@ -3245,17 +3134,15 @@ impl Agent {
 
             // FTS5 Session Messages tracking: log the user request if it's the first iteration
             if iteration == 0
-                && let Some(store) = &self.memory_store
-            {
-                // Extract the latest user message.
-                if let Some(msg) = messages.last()
-                    && msg.role == Role::User
-                {
-                    let _ = store
-                        .store_session_message(&final_cfg.agent_id, "user", &msg.content)
-                        .await;
+                && let Some(store) = &self.memory_store {
+                    // Extract the latest user message.
+                    if let Some(msg) = messages.last()
+                        && msg.role == Role::User {
+                            let _ = store
+                                .store_session_message(&final_cfg.agent_id, "user", &msg.content)
+                                .await;
+                        }
                 }
-            }
 
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
@@ -3302,9 +3189,7 @@ impl Agent {
                         on_event(AgentEvent::TaskError {
                             error: err_msg.clone(),
                         });
-                        let mut malformed_msg = Message::user(
-                            "Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted.",
-                        );
+                        let mut malformed_msg = Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted.");
                         malformed_msg.previous_response_id = last_response_id.clone();
                         messages.push(malformed_msg);
                         continue;
@@ -3457,14 +3342,15 @@ impl Agent {
             if tool_calls.is_empty() {
                 // OpenAI Guardrail: Check Output Guardrail registry
                 if let Some(guardrails) = &final_cfg.guardrails
-                    && let Err(e) = guardrails.check_output(&resp.message.content)
-                {
-                    let err_msg = format!("Output Guardrail tripped: {}", e);
-                    on_event(AgentEvent::TaskError {
-                        error: err_msg.clone(),
-                    });
-                    return Err(Box::new(std::io::Error::other(err_msg)));
-                }
+                    && let Err(e) = guardrails.check_output(&resp.message.content) {
+                        let err_msg = format!("Output Guardrail tripped: {}", e);
+                        on_event(AgentEvent::TaskError {
+                            error: err_msg.clone(),
+                        });
+                        return Err(Box::new(std::io::Error::other(
+                            err_msg,
+                        )));
+                    }
 
                 let mut verification_manager =
                     crate::verification_loops::VerificationManager::new();
@@ -3537,34 +3423,32 @@ impl Agent {
                 }
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails
-                    && let Err(e) = guard_cfg.check_output(&last_assistant_content)
-                {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
-                    return Err(e.into());
-                }
+                    && let Err(e) = guard_cfg.check_output(&last_assistant_content) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
 
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
                 if final_cfg.enable_sona_patterns
-                    && let Some(matcher_arc) = &self_with_memory.sona_matcher
-                {
-                    let mut matcher = matcher_arc.lock().await;
-                    let mut successful_tools = Vec::new();
-                    for msg in &messages {
-                        if msg.role == Role::Assistant {
-                            for tc in &msg.tool_calls {
-                                successful_tools.push(tc.name.clone());
+                    && let Some(matcher_arc) = &self_with_memory.sona_matcher {
+                        let mut matcher = matcher_arc.lock().await;
+                        let mut successful_tools = Vec::new();
+                        for msg in &messages {
+                            if msg.role == Role::Assistant {
+                                for tc in &msg.tool_calls {
+                                    successful_tools.push(tc.name.clone());
+                                }
                             }
                         }
+                        matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            initial_context: initial_message.to_string(),
+                            successful_tools,
+                            outcome_score: 1.0,
+                        });
                     }
-                    matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        initial_context: initial_message.to_string(),
-                        successful_tools,
-                        outcome_score: 1.0,
-                    });
-                }
                 return Ok(last_assistant_content);
             }
 
@@ -3676,11 +3560,10 @@ impl Agent {
 
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails
-                    && let Err(e) = guard_cfg.check_tool(tc)
-                {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
-                    return Err(e.into()); // Tripwire: halt the loop immediately
-                }
+                    && let Err(e) = guard_cfg.check_tool(tc) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into()); // Tripwire: halt the loop immediately
+                    }
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
@@ -3700,25 +3583,31 @@ impl Agent {
                         }
                         let _retry_count = 0;
                         let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        match self
-                            .execute_tool(
-                                &tc_clone,
-                                &session_tools_clone,
-                                &messages_clone,
-                                final_cfg.max_retries,
-                            )
-                            .await
-                        {
-                            Ok(r) => (tc_clone, Ok(r)),
-                            Err(ToolError::Transient(msg)) => (
-                                tc_clone,
-                                Err(ToolError::Unexpected(format!(
-                                    "Transient error after retries: {}",
-                                    msg
-                                ))),
-                            ),
-                            Err(e) => (tc_clone, Err(e)),
-                        }
+                            match self
+                                .execute_tool(
+                                    &tc_clone,
+                                    &session_tools_clone,
+                                    &messages_clone,
+                                    final_cfg.max_retries,
+                                )
+                                .await
+                            {
+                                Ok(r) => {
+                                    (tc_clone, Ok(r))
+                                }
+                                Err(ToolError::Transient(msg)) => {
+                                    (
+                                        tc_clone,
+                                        Err(ToolError::Unexpected(format!(
+                                            "Transient error after retries: {}",
+                                            msg
+                                        ))),
+                                    )
+                                }
+                                Err(e) => {
+                                    (tc_clone, Err(e))
+                                }
+                            }
                     }
                     .instrument(tool_span),
                 );
@@ -3780,21 +3669,15 @@ impl Agent {
                                                 &prev_id,
                                             )
                                             .await
-                                        && let Ok(msgs) =
-                                            serde_json::from_value::<Vec<Message>>(cp.data)
-                                    {
-                                        if let Err(e) =
-                                            checkpointer.restore_checkpoint(&prev_id).await
-                                        {
-                                            tracing::warn!(
-                                                "Failed to restore workspace to checkpoint {}: {}",
-                                                prev_id,
-                                                e
-                                            );
-                                        } else {
-                                            restored_msgs = Some(msgs);
-                                        }
-                                    }
+                                            && let Ok(msgs) =
+                                                serde_json::from_value::<Vec<Message>>(cp.data)
+                                            {
+                                                if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                    tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                } else {
+                                                    restored_msgs = Some(msgs);
+                                                }
+                                            }
 
                                     // State Management: OpenAI uses lightweight previous_response_id chaining.
                                     // Fallback to lightweight chaining if checkpointer is absent or fails.
@@ -3804,11 +3687,10 @@ impl Agent {
                                         for m in messages.iter() {
                                             new_messages.push(m.clone());
                                             if let Some(rid) = &m.response_id
-                                                && rid == &prev_id
-                                            {
-                                                found = true;
-                                                break;
-                                            }
+                                                && rid == &prev_id {
+                                                    found = true;
+                                                    break;
+                                                }
                                         }
                                         if found {
                                             restored_msgs = Some(new_messages);
@@ -3845,12 +3727,7 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                "".to_string(),
-                                &msg,
-                            )
-                            .error;
+                        let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -3873,25 +3750,21 @@ impl Agent {
                         tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
-                        if let Some(ref cb) = final_cfg.human_input_callback.0
-                            && let Some(human_input) = cb(&msg).await
-                        {
-                            on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
-                            let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-                            tool_results[idx] = crate::types::ToolResult {
-                                tool_call_id: tc.id.clone(),
-                                content: String::new(),
-                                error: format!(
-                                    "USER_FIXABLE: {}. Human provided fix: {}",
-                                    msg, human_input
-                                ),
-                            };
-                            continue;
+                            if let Some(ref cb) = final_cfg.human_input_callback.0
+                                && let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            let err = format!("USER_FIXABLE: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            return Err(err.into());
                         }
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
                     Err(ToolError::Fatal(msg)) => {
                         let err = format!("Fatal tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
@@ -3969,11 +3842,10 @@ impl Agent {
 
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails
-                    && let Err(e) = guard_cfg.check_tool(tc)
-                {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
-                    return Err(e.into()); // Tripwire: halt the loop immediately
-                }
+                    && let Err(e) = guard_cfg.check_tool(tc) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into()); // Tripwire: halt the loop immediately
+                    }
 
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, &final_cfg)
@@ -3981,22 +3853,16 @@ impl Agent {
                     match e {
                         ToolError::UserFixable(msg) => {
                             if let Some(ref cb) = final_cfg.human_input_callback.0
-                                && let Some(human_input) = cb(&msg).await
-                            {
-                                on_event(AgentEvent::UserInterventionRequired {
-                                    error: msg.clone(),
-                                });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: tc.id.clone(),
-                                    content: String::new(),
-                                    error: format!(
-                                        "USER_FIXABLE: {}. Human provided fix: {}",
-                                        msg, human_input
-                                    ),
-                                };
-                                continue;
-                            }
+                                && let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
@@ -4082,21 +3948,15 @@ impl Agent {
                                                     &prev_id,
                                                 )
                                                 .await
-                                            && let Ok(msgs) =
-                                                serde_json::from_value::<Vec<Message>>(cp.data)
-                                        {
-                                            if let Err(e) =
-                                                checkpointer.restore_checkpoint(&prev_id).await
-                                            {
-                                                tracing::warn!(
-                                                    "Failed to restore workspace to checkpoint {}: {}",
-                                                    prev_id,
-                                                    e
-                                                );
-                                            } else {
-                                                restored_msgs = Some(msgs);
-                                            }
-                                        }
+                                                && let Ok(msgs) =
+                                                    serde_json::from_value::<Vec<Message>>(cp.data)
+                                                {
+                                                    if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                        tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                    } else {
+                                                        restored_msgs = Some(msgs);
+                                                    }
+                                                }
 
                                         // State Management: OpenAI uses lightweight previous_response_id chaining.
                                         // Fallback to lightweight chaining if checkpointer is absent or fails.
@@ -4106,11 +3966,10 @@ impl Agent {
                                             for m in messages.iter() {
                                                 new_messages.push(m.clone());
                                                 if let Some(rid) = &m.response_id
-                                                    && rid == &prev_id
-                                                {
-                                                    found = true;
-                                                    break;
-                                                }
+                                                    && rid == &prev_id {
+                                                        found = true;
+                                                        break;
+                                                    }
                                             }
                                             if found {
                                                 restored_msgs = Some(new_messages);
@@ -4150,12 +4009,7 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let self_correct_msg =
-                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                    "".to_string(),
-                                    &msg,
-                                )
-                                .error;
+                            let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error;
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -4181,22 +4035,16 @@ impl Agent {
                         }
                         Err(ToolError::UserFixable(msg)) => {
                             if let Some(ref cb) = final_cfg.human_input_callback.0
-                                && let Some(human_input) = cb(&msg).await
-                            {
-                                on_event(AgentEvent::UserInterventionRequired {
-                                    error: msg.clone(),
-                                });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: tc.id.clone(),
-                                    content: String::new(),
-                                    error: format!(
-                                        "USER_FIXABLE: {}. Human provided fix: {}",
-                                        msg, human_input
-                                    ),
-                                };
-                                continue;
-                            }
+                                && let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
@@ -4250,21 +4098,21 @@ impl Agent {
             // Hermes Agent Serverless Hibernation Mechanic
             if final_cfg.enable_serverless_hibernation
                 && let Some(thread_id) = &final_cfg.thread_id
-                && let Some(dir) = &final_cfg.workspace_path
-            {
-                let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-                let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
-                if let Ok(msgs_json) = serde_json::to_string(&messages) {
-                    let state = crate::hibernation::HibernationState {
-                        session_id: thread_id.clone(),
-                        messages_json: msgs_json,
-                        current_step: iteration as usize,
-                        active_tools: vec![],
-                        memory_size_bytes: Some(messages.len()),
-                    };
-                    let _ = hm.hibernate(thread_id, &state).await;
-                }
-            }
+                    && let Some(dir) = &final_cfg.workspace_path {
+                        let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                        let hm =
+                            crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                        if let Ok(msgs_json) = serde_json::to_string(&messages) {
+                            let state = crate::hibernation::HibernationState {
+                                session_id: thread_id.clone(),
+                                messages_json: msgs_json,
+                                current_step: iteration as usize,
+                                active_tools: vec![],
+                                memory_size_bytes: Some(messages.len()),
+                            };
+                            let _ = hm.hibernate(thread_id, &state).await;
+                        }
+                    }
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
@@ -4300,10 +4148,7 @@ impl Agent {
             if final_cfg.enable_state_checkpointing && !mutating_calls.is_empty() {
                 let mut pf = crate::checkpointer::ProgressFile::default();
                 pf.status = format!("Iteration {}", iteration);
-                pf.notes.push(format!(
-                    "Total mutating tools executed: {}",
-                    mutating_calls.len()
-                ));
+                pf.notes.push(format!("Total mutating tools executed: {}", mutating_calls.len()));
                 if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
@@ -4319,21 +4164,20 @@ impl Agent {
                 // This is the last iteration or no more tool calls (terminal)
                 // We'll store the final thought in long-term memory if configured
                 if !last_assistant_content.is_empty()
-                    && let Some(store) = &self_with_memory.memory_store
-                {
-                    let content_to_store = last_assistant_content.clone();
-                    let store_clone = store.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) = store_clone
-                            .store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()])
-                            .await
-                        {
-                            tracing::error!("Failed to auto-consolidate memory: {}", e);
-                        } else {
-                            tracing::debug!("Successfully auto-consolidated memory.");
-                        }
-                    });
-                }
+                    && let Some(store) = &self_with_memory.memory_store {
+                        let content_to_store = last_assistant_content.clone();
+                        let store_clone = store.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = store_clone
+                                .store(&content_to_store, vec!["AUTO_CONSOLIDATED".to_string()])
+                                .await
+                            {
+                                tracing::error!("Failed to auto-consolidate memory: {}", e);
+                            } else {
+                                tracing::debug!("Successfully auto-consolidated memory.");
+                            }
+                        });
+                    }
             }
 
             // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
@@ -4364,8 +4208,11 @@ impl Agent {
                             if !m.tool_calls.is_empty() {
                                 middle_text.push_str("Tool Calls:\n");
                                 for tc in &m.tool_calls {
-                                    middle_text
-                                        .push_str(&format!("  {} ({})\n", tc.name, tc.arguments));
+                                    middle_text.push_str(&format!(
+                                        "  {} ({})\n",
+                                        tc.name,
+                                        tc.arguments
+                                    ));
                                 }
                             }
                             if !m.tool_results.is_empty() {
@@ -4457,13 +4304,12 @@ impl Agent {
             if let Some(args_obj) = args.as_object() {
                 for req in req_array {
                     if let Some(req_str) = req.as_str()
-                        && !args_obj.contains_key(req_str)
-                    {
-                        errors.push(format!(
-                            "missing required parameter: '{}{}'",
-                            prefix, req_str
-                        ));
-                    }
+                        && !args_obj.contains_key(req_str) {
+                            errors.push(format!(
+                                "missing required parameter: '{}{}'",
+                                prefix, req_str
+                            ));
+                        }
                 }
             } else if !req_array.is_empty() {
                 let p = if path.is_empty() {
@@ -4476,104 +4322,105 @@ impl Agent {
         }
 
         if let Some(props) = schema.get("properties").and_then(|v| v.as_object())
-            && let Some(args_obj) = args.as_object()
-        {
-            for (k, v) in args_obj {
-                if let Some(prop_schema) = props.get(k) {
-                    let current_path = format!("{}{}", prefix, k);
+            && let Some(args_obj) = args.as_object() {
+                for (k, v) in args_obj {
+                    if let Some(prop_schema) = props.get(k) {
+                        let current_path = format!("{}{}", prefix, k);
 
-                    // Validate type
-                    if let Some(expected_type) = prop_schema.get("type").and_then(|t| t.as_str()) {
-                        let type_matches = match expected_type {
-                            "string" => v.is_string(),
-                            "number" | "integer" => v.is_number(),
-                            "boolean" => v.is_boolean(),
-                            "object" => v.is_object(),
-                            "array" => v.is_array(),
-                            _ => true, // Unknown type, skip validation for now
-                        };
-                        if !type_matches {
-                            let actual_type = if v.is_string() {
-                                "string"
-                            } else if v.is_number() {
-                                "number"
-                            } else if v.is_boolean() {
-                                "boolean"
-                            } else if v.is_object() {
-                                "object"
-                            } else if v.is_array() {
-                                "array"
-                            } else if v.is_null() {
-                                "null"
-                            } else {
-                                "unknown"
+                        // Validate type
+                        if let Some(expected_type) =
+                            prop_schema.get("type").and_then(|t| t.as_str())
+                        {
+                            let type_matches = match expected_type {
+                                "string" => v.is_string(),
+                                "number" | "integer" => v.is_number(),
+                                "boolean" => v.is_boolean(),
+                                "object" => v.is_object(),
+                                "array" => v.is_array(),
+                                _ => true, // Unknown type, skip validation for now
                             };
-                            errors.push(format!(
-                                "parameter '{}' has invalid type: expected {}, got {}",
-                                current_path, expected_type, actual_type
-                            ));
-                        }
-                    }
-
-                    // Recurse into objects
-                    if v.is_object() {
-                        Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
-                    }
-
-                    // Recurse into arrays
-                    if let (Some(arr), Some(items_schema)) =
-                        (v.as_array(), prop_schema.get("items"))
-                    {
-                        for (i, item) in arr.iter().enumerate() {
-                            let item_path = format!("{}[{}]", current_path, i);
-
-                            if let Some(expected_type) =
-                                items_schema.get("type").and_then(|t| t.as_str())
-                            {
-                                let type_matches = match expected_type {
-                                    "string" => item.is_string(),
-                                    "number" | "integer" => item.is_number(),
-                                    "boolean" => item.is_boolean(),
-                                    "object" => item.is_object(),
-                                    "array" => item.is_array(),
-                                    _ => true,
+                            if !type_matches {
+                                let actual_type = if v.is_string() {
+                                    "string"
+                                } else if v.is_number() {
+                                    "number"
+                                } else if v.is_boolean() {
+                                    "boolean"
+                                } else if v.is_object() {
+                                    "object"
+                                } else if v.is_array() {
+                                    "array"
+                                } else if v.is_null() {
+                                    "null"
+                                } else {
+                                    "unknown"
                                 };
-                                if !type_matches {
-                                    let actual_type = if item.is_string() {
-                                        "string"
-                                    } else if item.is_number() {
-                                        "number"
-                                    } else if item.is_boolean() {
-                                        "boolean"
-                                    } else if item.is_object() {
-                                        "object"
-                                    } else if item.is_array() {
-                                        "array"
-                                    } else if item.is_null() {
-                                        "null"
-                                    } else {
-                                        "unknown"
-                                    };
-                                    errors.push(format!(
-                                        "parameter '{}' has invalid type: expected {}, got {}",
-                                        item_path, expected_type, actual_type
-                                    ));
-                                }
+                                errors.push(format!(
+                                    "parameter '{}' has invalid type: expected {}, got {}",
+                                    current_path, expected_type, actual_type
+                                ));
                             }
+                        }
 
-                            if item.is_object() {
-                                Self::validate_schema_recursive(
-                                    item,
-                                    items_schema,
-                                    &item_path,
-                                    errors,
-                                );
+                        // Recurse into objects
+                        if v.is_object() {
+                            Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
+                        }
+
+                        // Recurse into arrays
+                        if let (Some(arr), Some(items_schema)) =
+                            (v.as_array(), prop_schema.get("items"))
+                        {
+                            for (i, item) in arr.iter().enumerate() {
+                                let item_path = format!("{}[{}]", current_path, i);
+
+                                if let Some(expected_type) =
+                                    items_schema.get("type").and_then(|t| t.as_str())
+                                {
+                                    let type_matches = match expected_type {
+                                        "string" => item.is_string(),
+                                        "number" | "integer" => item.is_number(),
+                                        "boolean" => item.is_boolean(),
+                                        "object" => item.is_object(),
+                                        "array" => item.is_array(),
+                                        _ => true,
+                                    };
+                                    if !type_matches {
+                                        let actual_type = if item.is_string() {
+                                            "string"
+                                        } else if item.is_number() {
+                                            "number"
+                                        } else if item.is_boolean() {
+                                            "boolean"
+                                        } else if item.is_object() {
+                                            "object"
+                                        } else if item.is_array() {
+                                            "array"
+                                        } else if item.is_null() {
+                                            "null"
+                                        } else {
+                                            "unknown"
+                                        };
+                                        errors.push(format!(
+                                            "parameter '{}' has invalid type: expected {}, got {}",
+                                            item_path, expected_type, actual_type
+                                        ));
+                                    }
+                                }
+
+                                if item.is_object() {
+                                    Self::validate_schema_recursive(
+                                        item,
+                                        items_schema,
+                                        &item_path,
+                                        errors,
+                                    );
+                                }
                             }
                         }
                     }
                 }
             }
-        }
     }
 
     async fn execute_tool(
@@ -4591,17 +4438,16 @@ impl Agent {
         let mut args = tc.arguments.clone();
         if tc.name == "spawn_subagent"
             && let Some(obj) = args.as_object_mut()
-            && obj.get("mode").and_then(|v| v.as_str()) == Some("fork")
-            && let Ok(context_json) = serde_json::to_string(current_messages)
-        {
-            let id = uuid::Uuid::new_v4().to_string();
-            let file_path = format!(".ohc_fork_context_{}.json", id);
-            let _ = std::fs::write(&file_path, &context_json);
-            obj.insert(
-                "parent_context_file".to_string(),
-                serde_json::json!(file_path),
-            );
-        }
+                && obj.get("mode").and_then(|v| v.as_str()) == Some("fork")
+                    && let Ok(context_json) = serde_json::to_string(current_messages) {
+                        let id = uuid::Uuid::new_v4().to_string();
+                        let file_path = format!(".ohc_fork_context_{}.json", id);
+                        let _ = std::fs::write(&file_path, &context_json);
+                        obj.insert(
+                            "parent_context_file".to_string(),
+                            serde_json::json!(file_path),
+                        );
+                    }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
             let args_str = match serde_json::to_string(&args) {
@@ -5698,6 +5544,7 @@ mod tests {
         );
     }
 
+
     #[tokio::test]
     async fn test_human_input_callback_user_fixable() {
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
@@ -5724,20 +5571,15 @@ mod tests {
                     usage: crate::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-2".to_string()),
-                },
+                }
             ]),
         });
 
         struct UserFixableExecutor;
         #[async_trait::async_trait]
         impl crate::tools::ToolExecutor for UserFixableExecutor {
-            async fn execute(
-                &self,
-                _args: serde_json::Value,
-            ) -> Result<String, crate::types::ToolError> {
-                Err(crate::types::ToolError::UserFixable(
-                    "Missing external auth token".to_string(),
-                ))
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Missing external auth token".to_string()))
             }
         }
 
@@ -5753,17 +5595,16 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.max_iterations = 5;
         cfg.enable_tao_orchestration_loop = true;
-        cfg.human_input_callback =
-            crate::agent::HumanInputCallbackWrapper(Some(Arc::new(|msg: &str| {
-                let msg = msg.to_string();
-                Box::pin(async move {
-                    if msg.contains("Missing external auth token") {
-                        Some("Here is the token: 12345".to_string())
-                    } else {
-                        None
-                    }
-                })
-            })));
+        cfg.human_input_callback = crate::agent::HumanInputCallbackWrapper(Some(Arc::new(|msg: &str| {
+            let msg = msg.to_string();
+            Box::pin(async move {
+                if msg.contains("Missing external auth token") {
+                    Some("Here is the token: 12345".to_string())
+                } else {
+                    None
+                }
+            })
+        })));
 
         let mut events = vec![];
         let mut on_event = |e| {
@@ -5785,10 +5626,7 @@ mod tests {
                 false
             }
         });
-        assert!(
-            found_intervention_event,
-            "Should have emitted UserInterventionRequired event"
-        );
+        assert!(found_intervention_event, "Should have emitted UserInterventionRequired event");
     }
 
     #[tokio::test]
@@ -5840,8 +5678,7 @@ mod tests {
             .await
             .unwrap();
 
-        let combined =
-            crate::prompt_construction::load_cascading_instructions(Some(&deep_dir)).await;
+        let combined = crate::prompt_construction::load_cascading_instructions(Some(&deep_dir)).await;
 
         // Since it loops from deep to root, the deeper files are collected first.
         // The results should be: Deep -> Sub -> Root.
@@ -5869,8 +5706,7 @@ mod tests {
         let large_content = "A".repeat(33000);
         fs::write(&root_md, large_content).await.unwrap();
 
-        let combined =
-            crate::prompt_construction::load_cascading_instructions(Some(root_path)).await;
+        let combined = crate::prompt_construction::load_cascading_instructions(Some(root_path)).await;
 
         // Verify the size is close to 32KiB + notice
         assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
@@ -6129,7 +5965,7 @@ mod tests {
         let result = agent
             .run(&cfg, "Research quantum computing", &mut on_event)
             .await;
-        assert!(result.is_ok());
+                assert!(result.is_ok());
         let res_str = result.unwrap();
 
         assert!(res_str.contains("# Research Report: Research quantum computing"));
@@ -7591,8 +7427,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7607,8 +7442,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7634,8 +7468,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji);
 
         // This should safely truncate without panicking using char counts
-        let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
@@ -7656,8 +7489,7 @@ mod tests {
         cfg.user_instructions = "a".repeat(32768);
         cfg.user_instructions.push('€');
 
-        let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
         let user_part = prompt.replace(notice, "");
@@ -8397,14 +8229,8 @@ mod tests {
                 .content
                 .contains("[Developer Instructions Reminder: Developer instructions here.]")
         );
-        assert!(
-            last_msg
-                .content
-                .contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]")
-        );
-        assert!(last_msg.content.contains(
-            "Remember your core objective: Super long user instructions that span many many words."
-        ));
+        assert!(last_msg.content.contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]"));
+        assert!(last_msg.content.contains("Remember your core objective: Super long user instructions that span many many words."));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
@@ -9664,8 +9490,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let prompt = builder.build();
 
         assert!(
@@ -9683,8 +9508,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let prompt = builder.build();
 
         assert!(
@@ -10642,10 +10466,7 @@ mod e2e_verification_tests {
         struct DummyToolExecutor;
         #[async_trait::async_trait]
         impl ohc_builtin_agent_tools::ToolExecutor for DummyToolExecutor {
-            async fn execute(
-                &self,
-                _args: serde_json::Value,
-            ) -> Result<String, crate::types::ToolError> {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
                 Ok("Dummy Tool Executed".to_string())
             }
         }
@@ -10665,9 +10486,7 @@ mod e2e_verification_tests {
         cfg.enable_lazy_tool_loading = true;
 
         let mut events = vec![];
-        let res = agent
-            .run(&cfg, "Do the task", &mut |e| events.push(e))
-            .await;
+        let res = agent.run(&cfg, "Do the task", &mut |e| events.push(e)).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Final Answer");

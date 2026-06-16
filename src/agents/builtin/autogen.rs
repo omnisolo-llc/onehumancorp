@@ -120,11 +120,10 @@ impl GroupChatManager {
 
             // Check termination condition
             if let Some(last_msg) = current_transcript.last()
-                && last_msg.content.contains("TERMINATE")
-            {
-                tracing::info!("Group chat terminated via TERMINATE keyword.");
-                break;
-            }
+                && last_msg.content.contains("TERMINATE") {
+                    tracing::info!("Group chat terminated via TERMINATE keyword.");
+                    break;
+                }
 
             // Select next speaker
             let next_speaker = self.select_speaker(&current_transcript).await?;
@@ -307,55 +306,53 @@ impl MagenticManager {
             for line in response.lines() {
                 if let Some(route_idx) = line.find("ROUTE_TO:")
                     && let Some(task_idx) = line.find("TASK:")
-                    && route_idx < task_idx
-                {
-                    let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx]
-                        .trim()
-                        .to_string();
-                    let task_part = line[task_idx + "TASK:".len()..].trim().to_string();
-                    routed_agent = Some(agent_part);
-                    routed_task = Some(task_part);
-                }
+                        && route_idx < task_idx {
+                            let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx]
+                                .trim()
+                                .to_string();
+                            let task_part = line[task_idx + "TASK:".len()..].trim().to_string();
+                            routed_agent = Some(agent_part);
+                            routed_task = Some(task_part);
+                        }
             }
 
             if let (Some(agent_name), Some(task_id)) = (routed_agent, routed_task)
-                && let Some(agent) = self.sub_agents.iter().find(|a| a.name == agent_name)
-            {
-                let sub_sys_msg = format!(
-                    "You are participating in a magentic workflow as {}.\n\
+                && let Some(agent) = self.sub_agents.iter().find(|a| a.name == agent_name) {
+                    let sub_sys_msg = format!(
+                        "You are participating in a magentic workflow as {}.\n\
                         You have been assigned TASK: {}. \n\
                         Perform the task and provide your result.",
-                    agent.name, task_id
-                );
+                        agent.name, task_id
+                    );
 
-                let mut sub_cfg = agent.run_config.clone();
-                sub_cfg.server_system_message = sub_sys_msg;
+                    let mut sub_cfg = agent.run_config.clone();
+                    sub_cfg.server_system_message = sub_sys_msg;
 
-                let sub_prompt = format!(
-                    "Recent Transcript:\n{}\n\nPlease complete TASK: {}.",
-                    recent_history, task_id
-                );
-                let sub_response = agent
-                    .agent
-                    .run(&sub_cfg, &sub_prompt, &mut on_event)
-                    .await
-                    .map_err(|e| format!("SubAgent {} failed: {}", agent.name, e))?;
+                    let sub_prompt = format!(
+                        "Recent Transcript:\n{}\n\nPlease complete TASK: {}.",
+                        recent_history, task_id
+                    );
+                    let sub_response = agent
+                        .agent
+                        .run(&sub_cfg, &sub_prompt, &mut on_event)
+                        .await
+                        .map_err(|e| format!("SubAgent {} failed: {}", agent.name, e))?;
 
-                transcript.push(Message::assistant(format!(
-                    "{}: {}",
-                    agent.name, sub_response
-                )));
+                    transcript.push(Message::assistant(format!(
+                        "{}: {}",
+                        agent.name, sub_response
+                    )));
 
-                // Automatically update task status as complete
-                let _ = magentic_tool(self.task_store.clone())
-                    .execute
-                    .execute(serde_json::json!({
-                        "action": "update",
-                        "id": task_id,
-                        "status": "complete"
-                    }))
-                    .await;
-            }
+                    // Automatically update task status as complete
+                    let _ = magentic_tool(self.task_store.clone())
+                        .execute
+                        .execute(serde_json::json!({
+                            "action": "update",
+                            "id": task_id,
+                            "status": "complete"
+                        }))
+                        .await;
+                }
         }
 
         Ok(transcript)

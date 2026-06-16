@@ -89,8 +89,7 @@ impl Runner {
                 rt.block_on(async move { core.execute(&msg).await })
             })
         } else {
-            let rt = tokio::runtime::Runtime::new()
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            let rt = tokio::runtime::Runtime::new().map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
             rt.block_on(async move { core.execute(&msg).await })
         }
     }
@@ -240,18 +239,9 @@ impl AppServer {
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_search_agents" {
             let marketplace = crate::marketplace::Marketplace::new();
-            let query = req
-                .params
-                .get("query")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let query = req.params.get("query").and_then(|v| v.as_str()).unwrap_or("");
             let agents = marketplace.list_agents();
-            let filtered: Vec<_> = agents
-                .into_iter()
-                .filter(|a| {
-                    query.is_empty() || a.name.to_lowercase().contains(&query.to_lowercase())
-                })
-                .collect();
+            let filtered: Vec<_> = agents.into_iter().filter(|a| query.is_empty() || a.name.to_lowercase().contains(&query.to_lowercase())).collect();
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
@@ -262,11 +252,7 @@ impl AppServer {
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_fetch_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
-            let agent_id = req
-                .params
-                .get("agent_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let agent_id = req.params.get("agent_id").and_then(|v| v.as_str()).unwrap_or("");
             let result = marketplace.download_agent(agent_id);
             let resp = match result {
                 Ok(agent) => JsonRpcResponse {
@@ -285,7 +271,7 @@ impl AppServer {
                         message: e,
                     }),
                     meta: None,
-                },
+                }
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_execute_step" {
@@ -312,71 +298,44 @@ impl AppServer {
         // But AppServer calls `run_async` directly. Wait, `AppServer` uses `self.runner.run_async(&initial_message).await`.
         // Let's modify `run_agent` to surface cost in the JSON RPC response.
 
+
+
         if req.method == "verify_output" {
-            let output_text = req
-                .params
-                .get("output_text")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let task_context = req
-                .params
-                .get("task_context")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let verification_type = req
-                .params
-                .get("verification_type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+            let output_text = req.params.get("output_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let task_context = req.params.get("task_context").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let verification_type = req.params.get("verification_type").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             let mut verification_manager = crate::verification_loops::VerificationManager::new();
 
             // SOTA Harness Patterns (2025-2026): Verification Loops
             let result = match verification_type.as_str() {
                 "computational" => {
-                    verification_manager.add_computational(std::sync::Arc::new(
-                        crate::verification_loops::BashComputationalGuide {
-                            command: output_text.clone(),
-                            workspace_path: None,
-                        },
-                    ));
-                    verification_manager
-                        .run_computational_guides(&output_text, &task_context)
-                        .await
+                    verification_manager.add_computational(std::sync::Arc::new(crate::verification_loops::BashComputationalGuide {
+                        command: output_text.clone(),
+                        workspace_path: None,
+                    }));
+                    verification_manager.run_computational_guides(&output_text, &task_context).await
                 }
                 "visual" => {
-                    verification_manager.add_visual(std::sync::Arc::new(
-                        crate::verification_loops::PlaywrightVisualVerifier,
-                    ));
-                    verification_manager
-                        .run_visual_verifiers(&output_text)
-                        .await
+                    verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                    verification_manager.run_visual_verifiers(&output_text).await
                 }
                 "inferential" => {
-                    verification_manager.add_inferential(std::sync::Arc::new(
-                        crate::verification_loops::LlmJudgeSensor {
-                            llm: self.runner.core.agent.llm.clone(),
-                            model: "gpt-4o".to_string(), // Or get from config
-                            criteria: None,
-                            confidence_threshold: 0.8,
-                        },
-                    ));
-                    verification_manager
-                        .run_inferential_sensors(&output_text, &task_context)
-                        .await
+                    verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.runner.core.agent.llm.clone(),
+                        model: "gpt-4o".to_string(), // Or get from config
+                        criteria: None,
+                        confidence_threshold: 0.8,
+                    }));
+                    verification_manager.run_inferential_sensors(&output_text, &task_context).await
                 }
-                _ => Err(format!("Unknown verification type: {}", verification_type)),
+                _ => Err(format!("Unknown verification type: {}", verification_type))
             };
 
             let resp = match result {
                 Ok(_) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
-                    result: Some(
-                        serde_json::json!({ "status": "success", "message": "Verification passed successfully." }),
-                    ),
+                    result: Some(serde_json::json!({ "status": "success", "message": "Verification passed successfully." })),
                     error: None,
                     id: req.id,
                     meta: None,
@@ -394,6 +353,7 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         }
+
 
         if req.method == "run_expert_team" {
             let initial_message = req
@@ -581,20 +541,19 @@ impl AppServer {
             }
 
             if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref()
-                && let Err(e) = guardrail_cfg.check_input(&ctx_message)
-            {
-                let resp = JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    id: req.id,
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32001,
-                        message: format!("Guardrail rejected input: {}", e),
-                    }),
-                    meta: None,
-                };
-                return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
-            }
+                && let Err(e) = guardrail_cfg.check_input(&ctx_message) {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32001,
+                            message: format!("Guardrail rejected input: {}", e),
+                        }),
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                }
 
             match self
                 .runner
@@ -648,24 +607,23 @@ impl AppServer {
             };
             serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
         } else if req.method == "record_sona_pattern" {
-            let pattern: crate::sona_patterns::TrajectoryPattern = match serde_json::from_value(
-                req.params.clone(),
-            ) {
-                Ok(p) => p,
-                Err(e) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32602,
-                            message: e.to_string(),
-                        }),
-                        meta: None,
-                    };
-                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
-                }
-            };
+            let pattern: crate::sona_patterns::TrajectoryPattern =
+                match serde_json::from_value(req.params.clone()) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        let resp = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req.id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32602,
+                                message: e.to_string(),
+                            }),
+                            meta: None,
+                        };
+                        return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                    }
+                };
             if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
                 matcher.lock().await.record_pattern(pattern);
             }
@@ -684,23 +642,14 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let mut cfg = AgentRunConfig {
-                enable_actor_model_message_passing: true,
-                ..Default::default()
-            };
+            let mut cfg = AgentRunConfig { enable_actor_model_message_passing: true, ..Default::default() };
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
                 if let AgentEvent::CostUpdate { total_cost_usd } = e {
                     total_cost = total_cost_usd;
                 }
             };
-            match self
-                .runner
-                .core
-                .agent
-                .run(&cfg, &initial_message, &mut on_event)
-                .await
-            {
+            match self.runner.core.agent.run(&cfg, &initial_message, &mut on_event).await {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -1161,8 +1110,7 @@ mod tests {
             task_id
         );
         let resp_json_ap_list_steps = app_server.handle_request(&req_json_ap_list_steps).await;
-        let resp_ap_list_steps: JsonRpcResponse =
-            serde_json::from_str(&resp_json_ap_list_steps).unwrap();
+        let resp_ap_list_steps: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list_steps).unwrap();
         assert!(resp_ap_list_steps.error.is_none());
         assert!(resp_ap_list_steps.result.unwrap().get("steps").is_some());
 
@@ -1180,10 +1128,7 @@ mod tests {
         let resp_am_fetch: JsonRpcResponse = serde_json::from_str(&resp_json_am_fetch).unwrap();
         assert!(resp_am_fetch.error.is_none());
         let agent_fetch_result = resp_am_fetch.result.unwrap();
-        assert_eq!(
-            agent_fetch_result.get("name").unwrap().as_str().unwrap(),
-            "Senior Rust Developer"
-        );
+        assert_eq!(agent_fetch_result.get("name").unwrap().as_str().unwrap(), "Senior Rust Developer");
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(
