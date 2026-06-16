@@ -48,24 +48,38 @@ pub async fn list_opportunities_handler(
             .into_response();
     }
 
-    let result = sqlx::query_as::<_, crate::domain::repository::models::Opportunity>(
-        "SELECT id, tenant_id, lead_id, title, stage, estimated_value, priority, created_at, updated_at FROM opportunities WHERE tenant_id = $1 ORDER BY created_at DESC"
-    )
-    .bind(&tenant_id)
-    .fetch_all(&mut *tx)
-    .await;
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit context transaction: {:?}", e);
+    }
 
-    match result {
+    let tenant_id_clone = tenant_id.clone();
+    let db_clone = db.clone();
+
+    let pool1 = db_clone.pool.clone();
+    let pool2 = db_clone.pool.clone();
+
+    let (opps_result, stats_result) = tokio::join!(
+        tokio::spawn(async move {
+            sqlx::query_as::<_, crate::domain::repository::models::Opportunity>(
+                "SELECT id, tenant_id, lead_id, title, stage, estimated_value, priority, created_at, updated_at FROM opportunities WHERE tenant_id = $1 ORDER BY created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&pool1)
+            .await
+        }),
+        tokio::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM opportunities WHERE tenant_id = $1")
+                .bind(&tenant_id_clone)
+                .fetch_one(&pool2)
+                .await
+        })
+    );
+
+    let opps_result = opps_result.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let stats_result = stats_result.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+
+    match opps_result {
         Ok(mut rows) => {
-            if let Err(e) = tx.commit().await {
-                tracing::error!("Failed to commit transaction: {:?}", e);
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(Vec::<crate::domain::repository::models::Opportunity>::new()),
-                )
-                    .into_response();
-            }
-
             if mobile_optimized {
                 for row in &mut rows {
                     row.tenant_id = String::new();
@@ -73,13 +87,21 @@ pub async fn list_opportunities_handler(
                 }
             }
 
-            Json(rows).into_response()
+            let total_count = stats_result.unwrap_or(0);
+
+            Json(serde_json::json!({
+                "opportunities": rows,
+                "total_count": total_count
+            })).into_response()
         }
         Err(e) => {
             tracing::error!("Failed to fetch opportunities: {:?}", e);
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(Vec::<crate::domain::repository::models::Opportunity>::new()),
+                Json(serde_json::json!({
+                    "opportunities": Vec::<crate::domain::repository::models::Opportunity>::new(),
+                    "total_count": 0
+                })),
             )
                 .into_response()
         }
