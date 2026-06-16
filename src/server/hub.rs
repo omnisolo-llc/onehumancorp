@@ -720,14 +720,21 @@ impl Hub {
             sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE sync_error IS NOT NULL AND synced_to_cloud = $1").bind(false).fetch_one(&pool4).await
         });
 
-        let (db_ping_res, sync_queue_res_res, sync_errors_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future);
+        let pool5 = self.pool.clone();
+        let stuck_missions_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'").fetch_one(&pool5).await
+        });
+
+        let (db_ping_res, sync_queue_res_res, sync_errors_res_res, stuck_missions_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future, stuck_missions_future);
 
         let db_ping = db_ping_res.unwrap_or(0);
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
         let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+        let stuck_missions_res = stuck_missions_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
+        let stuck_missions = stuck_missions_res.unwrap_or(0);
 
         let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
             "standalone"
@@ -766,6 +773,7 @@ impl Hub {
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
             "checklist": checklist,
+            "stuck_missions": stuck_missions,
         }))
     }
 }
