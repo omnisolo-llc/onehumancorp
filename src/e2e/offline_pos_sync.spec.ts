@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Terminal POS Extended Flow', () => {
+test.describe('In-Person Payment (POS) Flow - Offline Sync', () => {
   test('should load POS page and handle absence of inventory gracefully', async ({ page }) => {
     await page.goto('/pos/terminal');
     await page.waitForLoadState('networkidle');
