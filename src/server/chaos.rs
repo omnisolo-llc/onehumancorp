@@ -1263,6 +1263,7 @@ mod tests {
             // we will evaluate the counts, run the asserts, and drop the table.
             // A better way is to do the assertions, but catch panics or just drop table manually inside a Drop trait.
 
+
             // To ensure cleanup, let's create a struct with Drop trait.
             struct TableDropper {
                 table_name: String,
@@ -1272,9 +1273,11 @@ mod tests {
                 fn drop(&mut self) {
                     let table_name = self.table_name.clone();
                     let pool = self.pool.clone();
-                    tokio::spawn(async move {
-                        let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
-                        let _ = sqlx::query(&drop_query).execute(&*pool).await;
+                    tokio::task::block_in_place(|| {
+                        tokio::runtime::Handle::current().block_on(async move {
+                            let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
+                            let _ = sqlx::query(&drop_query).execute(&*pool).await;
+                        });
                     });
                 }
             }
