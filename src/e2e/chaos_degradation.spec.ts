@@ -39,7 +39,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
   });
 
   test('POS terminal fallback queues transactions locally during offline mode', async ({ page }) => {
-    await page.goto('/checkout');
+    await page.goto('/api/ui/checkout.html');
     await expect(page.locator('text=Checkout').first()).toBeVisible();
 
     await page.route('**/api/v1/payments/terminal/sync_offline', async (route) => {

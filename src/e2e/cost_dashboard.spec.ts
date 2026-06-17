@@ -7,7 +7,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/plan');
+    await page.goto('/api/ui/plan.html');
     await page.waitForLoadState('networkidle');
 
     // 3. Check for My Plan components
@@ -25,7 +25,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 4. Click Upgrade
     await page.locator('button:has-text("Upgrade")').click();
-    await expect(page).toHaveURL(/.*\/pricing/);
+    await expect(page).toHaveURL(/.*\/api\/ui\/pricing\.html/);
   });
 
   test('Cost Dashboard renders limits correctly for Pro tenants', async ({ unlimitedAdminUser, loginAs, browser }) => {
@@ -36,7 +36,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     // Login as the unlimited admin user (Pro tier)
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/plan');
+    await proPage.goto('/api/ui/plan.html');
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
@@ -54,7 +54,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/plan');
+    await proPage.goto('/api/ui/plan.html');
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'AI actions used this month' }) }).first();
@@ -69,7 +69,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/plan');
+    await proPage.goto('/api/ui/plan.html');
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'Storage used' }) }).first();
@@ -81,7 +81,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
   test('Cost Dashboard renders the cost transparency section completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/cost-dashboard');
+    await page.goto('/api/ui/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Verify Cost Transparency Dashboard headers and text
@@ -97,14 +97,14 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {
     // Navigate to pricing page
-    await page.goto('/pricing');
+    await page.goto('/api/ui/pricing.html');
     await page.waitForLoadState('networkidle');
 
     // Upgrade to Starter via Stripe
     await page.locator('button:has-text("Upgrade to Starter via Stripe")').click();
 
     // Expect to be redirected to checkout with tier param
-    await expect(page).toHaveURL(/.*\/checkout\?tier=Starter/);
+    await expect(page).toHaveURL(/.*\/api\/ui\/checkout\.html\?tier=Starter/);
 
 
     // Check if the specific SaaS plan UI is displayed
@@ -121,10 +121,10 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     // We expect a fallback redirect to checkout.stripe.com, we can just intercept and fulfill to avoid navigating out of the test domain, or just wait for the URL change
 
     // We now expect to land on our local checkout page instead of stripe.
-    await expect(page).toHaveURL(/.*\/checkout\?tier=Starter/);
+    await expect(page).toHaveURL(/.*\/api\/ui\/checkout\.html\?tier=Starter/);
 
     // Now go to the My Plan page
-    await page.goto('/plan');
+    await page.goto('/api/ui/plan.html');
     await page.waitForLoadState('networkidle');
   });
 });

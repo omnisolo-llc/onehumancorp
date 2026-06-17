@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('My Plan and Cost Dashboard Screens', () => {
   test('My Plan screen routes to Pricing correctly', async ({ page }) => {
     // Navigate to My Plan
-    await page.goto('/plan');
+    await page.goto('/api/ui/plan.html');
 
     // Check heading
     await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
@@ -13,22 +13,22 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('/pricing');
+    await expect(page.url()).toContain('/api/ui/pricing.html');
   });
 
   test('My Plan screen routes to Cost Dashboard correctly', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/api/ui/plan.html');
 
     // Verify detailed costs routing
     const detailedCostsButton = page.locator('button', { hasText: 'View Detailed Costs' });
     await expect(detailedCostsButton).toBeVisible();
     await detailedCostsButton.click();
-    await expect(page.url()).toContain('/cost-dashboard');
+    await expect(page.url()).toContain('/api/ui/cost-dashboard.html');
   });
 
   test('Cost Dashboard screen metrics are visible', async ({ page }) => {
     // Go directly to Cost Dashboard
-    await page.goto('/cost-dashboard');
+    await page.goto('/api/ui/cost-dashboard.html');
 
     // Check core metric elements visibility
     await expect(page.locator('h1', { hasText: 'Cost Dashboard' })).toBeVisible({ timeout: 10000 });

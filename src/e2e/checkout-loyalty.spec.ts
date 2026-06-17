@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Checkout Loyalty UI', () => {
   test('should display neighborhood loyalty points toggle', async ({ page }) => {
     // Navigate to checkout
-    await page.goto('/checkout');
+    await page.goto('/api/ui/checkout.html');
 
     // Wait for the page to load
     await page.waitForSelector('text=Checkout');
