@@ -86,14 +86,17 @@ pub struct TaskStepsListResponse {
 
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
-    pub artifacts: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, Vec<Artifact>>>>,
+    pub artifacts:
+        std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, Vec<Artifact>>>>,
 }
 
 impl AgentProtocolServer {
     pub fn new(runner: Arc<Runner>) -> Self {
         Self {
             runner,
-            artifacts: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            artifacts: std::sync::Arc::new(tokio::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            )),
         }
     }
 
@@ -172,7 +175,12 @@ impl AgentProtocolServer {
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/artifacts
-    pub async fn upload_artifact(&self, task_id: &str, file_name: &str, content: &[u8]) -> serde_json::Value {
+    pub async fn upload_artifact(
+        &self,
+        task_id: &str,
+        file_name: &str,
+        content: &[u8],
+    ) -> serde_json::Value {
         let artifact_id = uuid::Uuid::new_v4().to_string();
         let artifact_dir = std::path::Path::new("/tmp/agent_protocol_artifacts").join(task_id);
         let _ = tokio::fs::create_dir_all(&artifact_dir).await;
@@ -181,7 +189,8 @@ impl AgentProtocolServer {
         if let Err(e) = tokio::fs::write(&file_path, content).await {
             return serde_json::to_value(&ErrorResponse {
                 error: format!("Failed to write artifact to disk: {}", e),
-            }).unwrap();
+            })
+            .unwrap();
         }
 
         let artifact = Artifact {
@@ -230,9 +239,14 @@ impl AgentProtocolServer {
     }
 
     /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}/content
-    pub async fn download_artifact(&self, task_id: &str, artifact_id: &str) -> Result<Vec<u8>, String> {
+    pub async fn download_artifact(
+        &self,
+        task_id: &str,
+        artifact_id: &str,
+    ) -> Result<Vec<u8>, String> {
         let map = self.artifacts.lock().await;
-        let artifact = map.get(task_id)
+        let artifact = map
+            .get(task_id)
             .and_then(|list| list.iter().find(|a| a.artifact_id == artifact_id))
             .cloned();
 
@@ -240,7 +254,9 @@ impl AgentProtocolServer {
 
         if let Some(a) = artifact {
             if let Some(path) = &a.relative_path {
-                return tokio::fs::read(path).await.map_err(|e| format!("Failed to read file: {}", e));
+                return tokio::fs::read(path)
+                    .await
+                    .map_err(|e| format!("Failed to read file: {}", e));
             }
         }
 
@@ -403,11 +419,16 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let task_id = "task-artifact-123";
-        let resp_json = server.upload_artifact(task_id, "test.txt", b"hello world").await;
+        let resp_json = server
+            .upload_artifact(task_id, "test.txt", b"hello world")
+            .await;
 
         let artifact: Artifact = serde_json::from_value(resp_json).unwrap();
         assert_eq!(artifact.file_name, "test.txt");
-        assert_eq!(artifact.relative_path, Some("/tmp/agent_protocol_artifacts/task-artifact-123/test.txt".to_string()));
+        assert_eq!(
+            artifact.relative_path,
+            Some("/tmp/agent_protocol_artifacts/task-artifact-123/test.txt".to_string())
+        );
         assert!(!artifact.agent_created);
     }
 
@@ -424,7 +445,8 @@ mod tests {
 
         let resp_json = server.list_artifacts(task_id).await;
 
-        let artifacts: Vec<Artifact> = serde_json::from_value(resp_json["artifacts"].clone()).unwrap();
+        let artifacts: Vec<Artifact> =
+            serde_json::from_value(resp_json["artifacts"].clone()).unwrap();
         assert_eq!(artifacts.len(), 2);
         assert!(artifacts.iter().any(|a| a.file_name == "test1.txt"));
         assert!(artifacts.iter().any(|a| a.file_name == "test2.txt"));
@@ -438,10 +460,14 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let task_id = "task-artifact-123";
-        let upload_resp = server.upload_artifact(task_id, "test.txt", b"hello world").await;
+        let upload_resp = server
+            .upload_artifact(task_id, "test.txt", b"hello world")
+            .await;
         let created_artifact: Artifact = serde_json::from_value(upload_resp).unwrap();
 
-        let get_resp = server.get_artifact(task_id, &created_artifact.artifact_id).await;
+        let get_resp = server
+            .get_artifact(task_id, &created_artifact.artifact_id)
+            .await;
         let fetched_artifact: Artifact = serde_json::from_value(get_resp).unwrap();
 
         assert_eq!(fetched_artifact.artifact_id, created_artifact.artifact_id);
@@ -461,10 +487,15 @@ mod tests {
         let server = AgentProtocolServer::new(runner);
 
         let task_id = "task-artifact-1234";
-        let upload_resp = server.upload_artifact(task_id, "download.txt", b"hello download").await;
+        let upload_resp = server
+            .upload_artifact(task_id, "download.txt", b"hello download")
+            .await;
         let created_artifact: Artifact = serde_json::from_value(upload_resp).unwrap();
 
-        let content = server.download_artifact(task_id, &created_artifact.artifact_id).await.unwrap();
+        let content = server
+            .download_artifact(task_id, &created_artifact.artifact_id)
+            .await
+            .unwrap();
         assert_eq!(content, b"hello download");
 
         let err = server.download_artifact(task_id, "fake_id").await;

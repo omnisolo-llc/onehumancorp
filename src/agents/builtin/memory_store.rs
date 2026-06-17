@@ -68,8 +68,13 @@ impl VectorRepository {
     }
 
     async fn check_sqlite_vec_extension(&self, pool: &sqlx::SqlitePool) -> bool {
-        if self.sqlite_vec_extension_checked.load(std::sync::atomic::Ordering::Relaxed) {
-            return self.has_sqlite_vec_extension.load(std::sync::atomic::Ordering::Relaxed);
+        if self
+            .sqlite_vec_extension_checked
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            return self
+                .has_sqlite_vec_extension
+                .load(std::sync::atomic::Ordering::Relaxed);
         }
 
         let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
@@ -77,8 +82,10 @@ impl VectorRepository {
             .await
             .is_ok();
 
-        self.has_sqlite_vec_extension.store(has_vec_extension, std::sync::atomic::Ordering::Relaxed);
-        self.sqlite_vec_extension_checked.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.has_sqlite_vec_extension
+            .store(has_vec_extension, std::sync::atomic::Ordering::Relaxed);
+        self.sqlite_vec_extension_checked
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         has_vec_extension
     }
 
@@ -803,12 +810,16 @@ impl VectorRepository {
                     let mut match_count = 0;
 
                     // Fetch distinct tenant_ids to process one by one
-                    let tenant_rows = sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
-                        .fetch_all(pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    let tenant_rows =
+                        sqlx::query("SELECT DISTINCT tenant_id FROM consolidated_memory")
+                            .fetch_all(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
 
-                    let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
+                    let tenant_ids: Vec<String> = tenant_rows
+                        .into_iter()
+                        .map(|row| row.get("tenant_id"))
+                        .collect();
 
                     'outer: for current_tenant_id in tenant_ids {
                         // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
@@ -3642,7 +3653,6 @@ mod override_tests_resolve {
         );
     }
 }
-
 
 #[cfg(test)]
 mod additional_tests_fallback {

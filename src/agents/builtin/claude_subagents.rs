@@ -1,10 +1,10 @@
 /// Master Catalog B.11. Subagent Orchestration
 use crate::agent::{Agent, AgentRunConfig};
 use crate::types::Message;
-use std::sync::Arc;
 use std::path::{Path, PathBuf};
-use tokio::process::Command;
+use std::sync::Arc;
 use tokio::fs;
+use tokio::process::Command;
 
 /// Subagent Orchestration: Claude Code Execution Models
 /// 1) Fork (byte-identical copy of parent context)
@@ -15,8 +15,15 @@ use tokio::fs;
 #[derive(Debug, Clone)]
 pub enum ClaudeSubagentMode {
     Fork,
-    Teammate { mailbox_dir: PathBuf },
-    Worktree { base_repo_path: PathBuf, branch_name: String, auto_cleanup: bool, auto_merge_on_success: bool },
+    Teammate {
+        mailbox_dir: PathBuf,
+    },
+    Worktree {
+        base_repo_path: PathBuf,
+        branch_name: String,
+        auto_cleanup: bool,
+        auto_merge_on_success: bool,
+    },
 }
 
 pub struct ClaudeSubagentSpawner {
@@ -26,7 +33,11 @@ pub struct ClaudeSubagentSpawner {
 }
 
 impl ClaudeSubagentSpawner {
-    pub fn new(parent_llm: Arc<dyn crate::llm::LlmClient>, subagent: Arc<Agent>, mode: ClaudeSubagentMode) -> Self {
+    pub fn new(
+        parent_llm: Arc<dyn crate::llm::LlmClient>,
+        subagent: Arc<Agent>,
+        mode: ClaudeSubagentMode,
+    ) -> Self {
         Self {
             parent_llm,
             subagent,
@@ -72,9 +83,17 @@ impl ClaudeSubagentSpawner {
                 fs::write(&out_mbox, &result).await?;
                 Ok(result)
             }
-            ClaudeSubagentMode::Worktree { base_repo_path, branch_name, auto_cleanup, auto_merge_on_success } => {
+            ClaudeSubagentMode::Worktree {
+                base_repo_path,
+                branch_name,
+                auto_cleanup,
+                auto_merge_on_success,
+            } => {
                 // Worktree: spawns its own git worktree with an isolated branch
-                let worktree_dir = base_repo_path.parent().unwrap_or(Path::new("/tmp")).join(format!("worktree_{}", branch_name));
+                let worktree_dir = base_repo_path
+                    .parent()
+                    .unwrap_or(Path::new("/tmp"))
+                    .join(format!("worktree_{}", branch_name));
 
                 // Setup worktree
                 let output = Command::new("git")
@@ -88,7 +107,11 @@ impl ClaudeSubagentSpawner {
                     .await?;
 
                 if !output.status.success() {
-                    return Err(format!("Failed to create worktree: {}", String::from_utf8_lossy(&output.stderr)).into());
+                    return Err(format!(
+                        "Failed to create worktree: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    )
+                    .into());
                 }
 
                 // Instruct agent to use worktree dir
@@ -111,7 +134,11 @@ impl ClaudeSubagentSpawner {
                         .output()
                         .await?;
                     if !merge_output.status.success() {
-                        return Err(format!("Failed to merge worktree branch: {}", String::from_utf8_lossy(&merge_output.stderr)).into());
+                        return Err(format!(
+                            "Failed to merge worktree branch: {}",
+                            String::from_utf8_lossy(&merge_output.stderr)
+                        )
+                        .into());
                     }
                 }
 
@@ -126,7 +153,11 @@ impl ClaudeSubagentSpawner {
                         .output()
                         .await?;
                     if !cleanup_output.status.success() {
-                        return Err(format!("Failed to cleanup worktree: {}", String::from_utf8_lossy(&cleanup_output.stderr)).into());
+                        return Err(format!(
+                            "Failed to cleanup worktree: {}",
+                            String::from_utf8_lossy(&cleanup_output.stderr)
+                        )
+                        .into());
                     }
 
                     if *auto_merge_on_success {
@@ -138,7 +169,10 @@ impl ClaudeSubagentSpawner {
                             .output()
                             .await?;
                         if !branch_del_output.status.success() {
-                            tracing::warn!("Failed to delete worktree branch after cleanup: {}", String::from_utf8_lossy(&branch_del_output.stderr));
+                            tracing::warn!(
+                                "Failed to delete worktree branch after cleanup: {}",
+                                String::from_utf8_lossy(&branch_del_output.stderr)
+                            );
                         }
                     }
                 }
@@ -166,7 +200,6 @@ impl ClaudeSubagentSpawner {
                 Err(e) => {
                     retry_count += 1;
                     if retry_count >= max_retries {
-
                         return Err(e);
                     }
                     tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
@@ -175,7 +208,6 @@ impl ClaudeSubagentSpawner {
             }
         };
         let _duration = start_time.elapsed().as_secs_f64();
-
 
         self.summarize_output(&raw_output, config).await
     }
@@ -253,14 +285,16 @@ impl ClaudeSubagentSpawner {
                 "{}
 
 [Output truncated. Subagent failed to condense summary.]",
-                current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
+                current_text
+                    .chars()
+                    .take(TARGET_CHARS_MAX)
+                    .collect::<String>()
             );
         }
 
         Ok(current_text)
     }
-
-    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -274,7 +308,10 @@ mod tests {
         async fn chat(
             &self,
             _req: ohc_builtin_agent_core::types::ChatRequest,
-        ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        ) -> Result<
+            ohc_builtin_agent_core::types::ChatResponse,
+            Box<dyn std::error::Error + Send + Sync>,
+        > {
             let mut resps = self.responses.lock().unwrap();
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -300,289 +337,364 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn test_claude_subagent_summarize_condensation_fails() {
+        struct BadLlmClient;
 
-        #[tokio::test]
-        async fn test_claude_subagent_summarize_condensation_fails() {
-            struct BadLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for BadLlmClient {
+            async fn chat(
+                &self,
+                _req: ohc_builtin_agent_core::types::ChatRequest,
+            ) -> Result<
+                ohc_builtin_agent_core::types::ChatResponse,
+                Box<dyn std::error::Error + Send + Sync>,
+            > {
+                let message = ohc_builtin_agent_core::types::Message {
+                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                    content: "A".repeat(9000), // always returns > 8000
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                };
 
-            #[async_trait::async_trait]
-            impl crate::llm::LlmClient for BadLlmClient {
-                async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                    let message = ohc_builtin_agent_core::types::Message {
-                        role: ohc_builtin_agent_core::types::Role::Assistant,
-                        content: "A".repeat(9000), // always returns > 8000
-                        tool_calls: vec![],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    };
-
-                    Ok(ohc_builtin_agent_core::types::ChatResponse {
-                        message,
-                        usage: Default::default(),
-                        response_id: None,
-                        stop_reason: "stop".to_string(),
-                    })
-                }
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message,
+                    usage: Default::default(),
+                    response_id: None,
+                    stop_reason: "stop".to_string(),
+                })
             }
-
-            let parent_client = std::sync::Arc::new(BadLlmClient);
-            let parent_agent = std::sync::Arc::new(Agent::new(parent_client.clone(), vec![]));
-
-            let sub_client = std::sync::Arc::new(MockLlmClient { responses: std::sync::Mutex::new(vec![]) });
-            let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
-
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Fork,
-            );
-
-            let large_input = "A".repeat(25000);
-            let config = AgentRunConfig::default();
-
-            let result = spawner.summarize_output(&large_input, &config).await.unwrap();
-
-            assert!(result.len() > 8000);
-            assert!(result.contains("[Output truncated. Subagent failed to condense summary.]"));
         }
+
+        let parent_client = std::sync::Arc::new(BadLlmClient);
+        let parent_agent = std::sync::Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+        let sub_client = std::sync::Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+        let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
+
+        let spawner =
+            ClaudeSubagentSpawner::new(parent_client.clone(), subagent, ClaudeSubagentMode::Fork);
+
+        let large_input = "A".repeat(25000);
+        let config = AgentRunConfig::default();
+
+        let result = spawner
+            .summarize_output(&large_input, &config)
+            .await
+            .unwrap();
+
+        assert!(result.len() > 8000);
+        assert!(result.contains("[Output truncated. Subagent failed to condense summary.]"));
+    }
 
     use super::*;
 
+    #[tokio::test]
+    async fn test_claude_subagent_fork() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Condensed summary of fork".to_string()]),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "Long raw output from subagent in fork mode...".to_string(),
+            ]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        let spawner =
+            ClaudeSubagentSpawner::new(parent_client.clone(), subagent, ClaudeSubagentMode::Fork);
+
+        let parent_context = vec![Message::user("Parent context message")];
+        let config = AgentRunConfig::default();
+
+        let result = spawner
+            .run_subagent("Do task", &parent_context, &config)
+            .await
+            .unwrap();
+        assert_eq!(result, "Condensed summary of fork");
+    }
 
     #[tokio::test]
-        async fn test_claude_subagent_fork() {
-            let parent_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Condensed summary of fork".to_string()
-                ]),
-            });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+    async fn test_claude_subagent_teammate() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Condensed summary of teammate".to_string()]),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
-            let sub_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Long raw output from subagent in fork mode...".to_string()
-                ]),
-            });
-            let subagent = Arc::new(Agent::new(sub_client, vec![]));
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Long raw output from teammate...".to_string()]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Fork,
-            );
+        let dir = tempfile::tempdir().unwrap();
+        let mailbox_dir = dir.path().join("mailboxes");
 
-            let parent_context = vec![Message::user("Parent context message")];
-            let config = AgentRunConfig::default();
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_client.clone(),
+            subagent,
+            ClaudeSubagentMode::Teammate {
+                mailbox_dir: mailbox_dir.clone(),
+            },
+        );
 
-            let result = spawner.run_subagent("Do task", &parent_context, &config).await.unwrap();
-            assert_eq!(result, "Condensed summary of fork");
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
+
+        assert_eq!(result, "Condensed summary of teammate");
+        assert!(mailbox_dir.join("inbox.txt").exists());
+        assert!(mailbox_dir.join("outbox.txt").exists());
+
+        let out_content = fs::read_to_string(mailbox_dir.join("outbox.txt"))
+            .await
+            .unwrap();
+        assert_eq!(out_content, "Condensed summary of teammate");
+    }
+
+    #[tokio::test]
+    async fn test_claude_subagent_worktree() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Condensed summary of worktree".to_string()]),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Long raw output from worktree...".to_string()]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        // Create a dummy git repo
+        let dir = tempfile::tempdir().unwrap();
+        let repo_dir = dir.path().join("test_repo");
+        fs::create_dir_all(&repo_dir).await.unwrap();
+
+        Command::new("git")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
+        Command::new("git")
+            .arg("add")
+            .arg(".")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.name")
+            .arg("Test")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.email")
+            .arg("test@test.com")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_client.clone(),
+            subagent,
+            ClaudeSubagentMode::Worktree {
+                base_repo_path: repo_dir.clone(),
+                branch_name: "subagent-branch".to_string(),
+                auto_cleanup: false,
+                auto_merge_on_success: false,
+            },
+        );
+
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
+
+        assert_eq!(result, "Condensed summary of worktree");
+
+        // Verify worktree was created
+        let worktree_dir = dir.path().join("worktree_subagent-branch");
+        assert!(worktree_dir.exists());
+        assert!(worktree_dir.join("test.txt").exists());
+    }
+    #[tokio::test]
+    async fn test_claude_subagent_worktree_cleanup_and_merge() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Condensed summary of worktree".to_string()]),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["Long raw output from worktree...".to_string()]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        // Create a dummy git repo
+        let dir = tempfile::tempdir().unwrap();
+        let repo_dir = dir.path().join("test_repo");
+        fs::create_dir_all(&repo_dir).await.unwrap();
+
+        Command::new("git")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
+        Command::new("git")
+            .arg("add")
+            .arg(".")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.name")
+            .arg("Test")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.email")
+            .arg("test@test.com")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_client.clone(),
+            subagent,
+            ClaudeSubagentMode::Worktree {
+                base_repo_path: repo_dir.clone(),
+                branch_name: "subagent-branch-auto".to_string(),
+                auto_cleanup: true,
+                auto_merge_on_success: true,
+            },
+        );
+
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
+
+        assert_eq!(result, "Condensed summary of worktree");
+
+        // Verify worktree was created and cleaned up
+        let worktree_dir = dir.path().join("worktree_subagent-branch-auto");
+        assert!(!worktree_dir.exists());
+
+        // Ensure branch is deleted
+        let branch_check = Command::new("git")
+            .arg("branch")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        let branches = String::from_utf8_lossy(&branch_check.stdout);
+        assert!(!branches.contains("subagent-branch-auto"));
+    }
+
+    #[tokio::test]
+    async fn test_claude_subagent_summarize_condensation() {
+        // Create an LLM client that returns progressively smaller chunks,
+        // simulating a condensation process.
+        struct CondensingLlmClient {
+            call_count: std::sync::Mutex<usize>,
         }
 
-        #[tokio::test]
-        async fn test_claude_subagent_teammate() {
-            let parent_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Condensed summary of teammate".to_string()
-                ]),
-            });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for CondensingLlmClient {
+            async fn chat(
+                &self,
+                _req: ohc_builtin_agent_core::types::ChatRequest,
+            ) -> Result<
+                ohc_builtin_agent_core::types::ChatResponse,
+                Box<dyn std::error::Error + Send + Sync>,
+            > {
+                let mut count = self.call_count.lock().unwrap();
+                *count += 1;
 
-            let sub_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Long raw output from teammate...".to_string()
-                ]),
-            });
-            let subagent = Arc::new(Agent::new(sub_client, vec![]));
+                // Return roughly 3000 chars for chunk condensations to force the loop to condense the combined chunks
+                let content = if *count <= 2 {
+                    "Chunk summary ".repeat(200) // 200 * 14 = 2800 chars
+                } else if *count == 3 {
+                    "Final condensed summary".to_string() // Small enough to break loop
+                } else {
+                    "Unexpected extra call".to_string()
+                };
 
-            let dir = tempfile::tempdir().unwrap();
-            let mailbox_dir = dir.path().join("mailboxes");
+                let message = ohc_builtin_agent_core::types::Message {
+                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                    content,
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                };
 
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Teammate { mailbox_dir: mailbox_dir.clone() },
-            );
-
-            let config = AgentRunConfig::default();
-            let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
-
-            assert_eq!(result, "Condensed summary of teammate");
-            assert!(mailbox_dir.join("inbox.txt").exists());
-            assert!(mailbox_dir.join("outbox.txt").exists());
-
-            let out_content = fs::read_to_string(mailbox_dir.join("outbox.txt")).await.unwrap();
-            assert_eq!(out_content, "Condensed summary of teammate");
-        }
-
-        #[tokio::test]
-        async fn test_claude_subagent_worktree() {
-            let parent_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Condensed summary of worktree".to_string()
-                ]),
-            });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
-
-            let sub_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Long raw output from worktree...".to_string()
-                ]),
-            });
-            let subagent = Arc::new(Agent::new(sub_client, vec![]));
-
-            // Create a dummy git repo
-            let dir = tempfile::tempdir().unwrap();
-            let repo_dir = dir.path().join("test_repo");
-            fs::create_dir_all(&repo_dir).await.unwrap();
-
-            Command::new("git").arg("init").current_dir(&repo_dir).output().await.unwrap();
-            fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
-            Command::new("git").arg("add").arg(".").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("config").arg("user.email").arg("test@test.com").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
-
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Worktree {
-                    base_repo_path: repo_dir.clone(),
-                    branch_name: "subagent-branch".to_string(),
-                    auto_cleanup: false,
-                    auto_merge_on_success: false,
-                },
-            );
-
-            let config = AgentRunConfig::default();
-            let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
-
-            assert_eq!(result, "Condensed summary of worktree");
-
-            // Verify worktree was created
-            let worktree_dir = dir.path().join("worktree_subagent-branch");
-            assert!(worktree_dir.exists());
-            assert!(worktree_dir.join("test.txt").exists());
-        }
-        #[tokio::test]
-        async fn test_claude_subagent_worktree_cleanup_and_merge() {
-            let parent_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Condensed summary of worktree".to_string()
-                ]),
-            });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
-
-            let sub_client = Arc::new(MockLlmClient {
-                responses: std::sync::Mutex::new(vec![
-                    "Long raw output from worktree...".to_string()
-                ]),
-            });
-            let subagent = Arc::new(Agent::new(sub_client, vec![]));
-
-            // Create a dummy git repo
-            let dir = tempfile::tempdir().unwrap();
-            let repo_dir = dir.path().join("test_repo");
-            fs::create_dir_all(&repo_dir).await.unwrap();
-
-            Command::new("git").arg("init").current_dir(&repo_dir).output().await.unwrap();
-            fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
-            Command::new("git").arg("add").arg(".").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("config").arg("user.email").arg("test@test.com").current_dir(&repo_dir).output().await.unwrap();
-            Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
-
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Worktree {
-                    base_repo_path: repo_dir.clone(),
-                    branch_name: "subagent-branch-auto".to_string(),
-                    auto_cleanup: true,
-                    auto_merge_on_success: true,
-                },
-            );
-
-            let config = AgentRunConfig::default();
-            let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
-
-            assert_eq!(result, "Condensed summary of worktree");
-
-            // Verify worktree was created and cleaned up
-            let worktree_dir = dir.path().join("worktree_subagent-branch-auto");
-            assert!(!worktree_dir.exists());
-
-            // Ensure branch is deleted
-            let branch_check = Command::new("git").arg("branch").current_dir(&repo_dir).output().await.unwrap();
-            let branches = String::from_utf8_lossy(&branch_check.stdout);
-            assert!(!branches.contains("subagent-branch-auto"));
-        }
-
-        #[tokio::test]
-        async fn test_claude_subagent_summarize_condensation() {
-            // Create an LLM client that returns progressively smaller chunks,
-            // simulating a condensation process.
-            struct CondensingLlmClient {
-                call_count: std::sync::Mutex<usize>,
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message,
+                    usage: Default::default(),
+                    response_id: None,
+                    stop_reason: "stop".to_string(),
+                })
             }
+        }
 
-            #[async_trait::async_trait]
-            impl crate::llm::LlmClient for CondensingLlmClient {
-                async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                    let mut count = self.call_count.lock().unwrap();
-                    *count += 1;
+        let parent_client = Arc::new(CondensingLlmClient {
+            call_count: std::sync::Mutex::new(0),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
-                    // Return roughly 3000 chars for chunk condensations to force the loop to condense the combined chunks
-                    let content = if *count <= 2 {
-                        "Chunk summary ".repeat(200) // 200 * 14 = 2800 chars
-                    } else if *count == 3 {
-                        "Final condensed summary".to_string() // Small enough to break loop
-                    } else {
-                        "Unexpected extra call".to_string()
-                    };
+        // Subagent won't actually be run, we just need it for the struct.
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
-                    let message = ohc_builtin_agent_core::types::Message {
-                        role: ohc_builtin_agent_core::types::Role::Assistant,
-                        content,
-                        tool_calls: vec![],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    };
+        let spawner =
+            ClaudeSubagentSpawner::new(parent_client.clone(), subagent, ClaudeSubagentMode::Fork);
 
-                    Ok(ohc_builtin_agent_core::types::ChatResponse {
-                        message,
-                        usage: Default::default(),
-                        response_id: None,
-                        stop_reason: "stop".to_string(),
-                    })
-                }
-            }
+        // Generate a 25,000 character string to force chunking (CHUNK_SIZE_CHARS is 20000)
+        let large_input = "A".repeat(25000);
+        let config = AgentRunConfig::default();
 
-            let parent_client = Arc::new(CondensingLlmClient { call_count: std::sync::Mutex::new(0) });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+        let result = spawner
+            .summarize_output(&large_input, &config)
+            .await
+            .unwrap();
 
-            // Subagent won't actually be run, we just need it for the struct.
-            let sub_client = Arc::new(MockLlmClient { responses: std::sync::Mutex::new(vec![]) });
-            let subagent = Arc::new(Agent::new(sub_client, vec![]));
-
-            let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
-                subagent,
-                ClaudeSubagentMode::Fork,
-            );
-
-            // Generate a 25,000 character string to force chunking (CHUNK_SIZE_CHARS is 20000)
-            let large_input = "A".repeat(25000);
-            let config = AgentRunConfig::default();
-
-            let result = spawner.summarize_output(&large_input, &config).await.unwrap();
-
-            // Wait, the combined text was 5600 chars. 5600 < 8000, loop ends.
-            // The return value will be the combined text, not "Final condensed summary" because we don't call it a 3rd time.
-            // Let's assert it starts with "Chunk summary" and the length is ~5600.
-            assert!(result.starts_with("Chunk summary"));
-            assert!(result.len() > 5000 && result.len() < 6000);
-            assert_eq!(*parent_client.call_count.lock().unwrap(), 2);
-}
+        // Wait, the combined text was 5600 chars. 5600 < 8000, loop ends.
+        // The return value will be the combined text, not "Final condensed summary" because we don't call it a 3rd time.
+        // Let's assert it starts with "Chunk summary" and the length is ~5600.
+        assert!(result.starts_with("Chunk summary"));
+        assert!(result.len() > 5000 && result.len() < 6000);
+        assert_eq!(*parent_client.call_count.lock().unwrap(), 2);
+    }
 }

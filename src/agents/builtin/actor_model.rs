@@ -58,7 +58,6 @@ impl ActorSystem {
         mb.insert(name, sender);
     }
 
-
     pub async fn broadcast(&self, mut msg: ActorMessage) -> Result<(), String> {
         let senders = {
             let mb = self.mailboxes.lock().await;
@@ -131,7 +130,10 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(t, tc, 2).await;
+                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                t, tc, 2,
+                            )
+                            .await;
                             match res {
                                 Ok(content) => {
                                     tool_results.push(ToolResult {
@@ -231,9 +233,7 @@ impl Actor for AgentActor {
                 );
 
                 // Track conversation thread using correlation_id
-                let messages = threads
-                    .entry(msg.correlation_id.clone())
-                    .or_default();
+                let messages = threads.entry(msg.correlation_id.clone()).or_default();
 
                 // Is it a tool result coming back from the ToolActor?
                 if !msg.tool_results.is_empty() {
@@ -310,10 +310,11 @@ impl Actor for AgentActor {
 
                             // Routing convention: if the response starts with "@ActorName ", route it to that actor.
                             if actual_content.starts_with('@')
-                                && let Some(space_idx) = actual_content.find(' ') {
-                                    target_recipient = actual_content[1..space_idx].to_string();
-                                    actual_content = actual_content[space_idx + 1..].to_string();
-                                }
+                                && let Some(space_idx) = actual_content.find(' ')
+                            {
+                                target_recipient = actual_content[1..space_idx].to_string();
+                                actual_content = actual_content[space_idx + 1..].to_string();
+                            }
 
                             let reply_msg = ActorMessage {
                                 sender: name.clone(),
@@ -798,5 +799,4 @@ mod tests {
         assert_eq!(received2.recipient, "Actor2");
         assert_eq!(received2.content, "Broadcast message");
     }
-
 }

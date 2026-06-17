@@ -200,23 +200,38 @@ impl CheckpointSaver for GitCheckpointer {
         if scratchpad_path.exists() {
             if let Ok(content) = tokio::fs::read_to_string(&scratchpad_path).await {
                 // Try parsing as RalphProgress
-                if let Ok(mut ralph_prog) = serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content) {
-                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint.checkpoint_id));
+                if let Ok(mut ralph_prog) =
+                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
+                {
+                    ralph_prog
+                        .notes
+                        .push(format!("Checkpoint {}", checkpoint.checkpoint_id));
                     scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
                 } else {
                     // Try parsing as generic JSON to preserve unknown fields
-                    if let Ok(mut generic_json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Ok(mut generic_json) =
+                        serde_json::from_str::<serde_json::Value>(&content)
+                    {
                         if let Some(obj) = generic_json.as_object_mut() {
-                            obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint.checkpoint_id)));
+                            obj.insert(
+                                "current_objective".to_string(),
+                                serde_json::Value::String(format!(
+                                    "Checkpoint {}",
+                                    checkpoint.checkpoint_id
+                                )),
+                            );
                         }
                         scratchpad_json_val = generic_json;
                     }
                 }
             }
         } else {
-             // Create a new ProgressFile but set objective
-             let pf = ProgressFile { current_objective: format!("Checkpoint {}", checkpoint.checkpoint_id), ..Default::default() };
-             scratchpad_json_val = serde_json::to_value(&pf).unwrap();
+            // Create a new ProgressFile but set objective
+            let pf = ProgressFile {
+                current_objective: format!("Checkpoint {}", checkpoint.checkpoint_id),
+                ..Default::default()
+            };
+            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
         }
 
         let scratchpad_json =
@@ -330,7 +345,10 @@ impl CheckpointSaver for GitCheckpointer {
             .output()
             .await;
 
-        let branch_name = format!("agent-restore-{}", Self::safe_tag_name(checkpoint_id).replace("checkpoint-", ""));
+        let branch_name = format!(
+            "agent-restore-{}",
+            Self::safe_tag_name(checkpoint_id).replace("checkpoint-", "")
+        );
         let mut success = false;
         let mut last_err = String::new();
 
@@ -691,7 +709,10 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
 
-        if tokio::time::timeout(timeout_duration, query_future).await.is_err() {
+        if tokio::time::timeout(timeout_duration, query_future)
+            .await
+            .is_err()
+        {
             return; // Skip if database is unavailable or hangs
         }
 
@@ -872,12 +893,10 @@ mod tests {
         let scratchpad_path = saver.scratchpad_file_path(thread_id);
         let initial_progress = crate::ralph_loop::RalphProgress {
             task_description: "Build a web server".to_string(),
-            features: vec![
-                crate::ralph_loop::Feature {
-                    name: "Step 1".to_string(),
-                    status: "completed".to_string(),
-                },
-            ],
+            features: vec![crate::ralph_loop::Feature {
+                name: "Step 1".to_string(),
+                status: "completed".to_string(),
+            }],
             current_feature_index: 1,
             notes: vec!["Initialized".to_string()],
             is_complete: false,
@@ -925,7 +944,11 @@ mod tests {
             "current_objective": "old_obj"
         });
 
-        std::fs::write(&scratchpad_path, serde_json::to_string(&initial_json).unwrap()).unwrap();
+        std::fs::write(
+            &scratchpad_path,
+            serde_json::to_string(&initial_json).unwrap(),
+        )
+        .unwrap();
 
         let cp1 = Checkpoint {
             thread_id: thread_id.to_string(),
@@ -1017,7 +1040,11 @@ mod additional_git_tests {
         saver.put_checkpoint(cp2.clone()).await.unwrap();
 
         // get_checkpoint should use safe_tag_name
-        let retrieved = saver.get_checkpoint("thread-git-safe", "cp bad tag :?* ").await.unwrap().unwrap();
+        let retrieved = saver
+            .get_checkpoint("thread-git-safe", "cp bad tag :?* ")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved.checkpoint_id, "cp bad tag :?* ");
 
         // list_checkpoints should still find both
