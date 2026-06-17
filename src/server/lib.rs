@@ -6144,6 +6144,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
+        .nest("/api/v1/b2b", api::b2b::router())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
