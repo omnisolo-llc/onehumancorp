@@ -493,7 +493,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 w-full w-full overflow-hidden" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full overflow-hidden" aria-label="Unified Agent Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -1159,7 +1159,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
+            <div className="flex flex-col gap-3 ">
             {activities.map((activity) => (
               <div
                 key={activity.id}
