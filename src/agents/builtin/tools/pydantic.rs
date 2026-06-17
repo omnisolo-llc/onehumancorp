@@ -50,11 +50,11 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
             Ok(v) => v,
             Err(e) => {
                 // Add the original payload snippet for context
-                let args_str = match serde_json::to_string(&args) {
+                let args_str = match serde_json::to_string_pretty(&args) {
                     Ok(s) => {
                         let char_count = s.chars().count();
-                        if char_count > 100 {
-                            let truncated: String = s.chars().take(100).collect();
+                        if char_count > 250 {
+                            let truncated: String = s.chars().take(250).collect();
                             format!("{}...", truncated)
                         } else {
                             s

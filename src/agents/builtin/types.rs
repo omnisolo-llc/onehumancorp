@@ -246,20 +246,36 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
 
 /// A version of format_pydantic_error that takes a string message instead of a serde_json::Error.
 /// Used when validation fails via manual checks rather than serde deserialization.
-pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
-    let mut msg = format!(
-        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}",
-        error_msg
-    );
-    if let Some(snippet) = args_str {
-        msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
-    }
-    if let Some(instruction) = custom_instruction {
-        msg.push_str(&format!("\n{}", instruction));
+pub fn format_pydantic_error_string(
+    error_msg: &str,
+    args_str: Option<&str>,
+    custom_instruction: Option<&str>,
+) -> String {
+    let mut msg = "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\n"
+        .to_string();
+
+    if error_msg.contains('\n') {
+        msg.push_str("Reasons:\n");
+        for line in error_msg.lines() {
+            let line = line.trim();
+            if !line.is_empty() {
+                msg.push_str(&format!("- {}\n", line));
+            }
+        }
     } else {
-        msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+        msg.push_str(&format!("Reason: Semantic validation failed: {}\n", error_msg));
     }
-    msg
+
+    if let Some(snippet) = args_str {
+        msg.push_str(&format!("Provided arguments snippet: {}\n", snippet));
+    }
+
+    if let Some(instruction) = custom_instruction {
+        msg.push_str(&format!("{}\n", instruction));
+    } else {
+        msg.push_str("Please strictly follow the tool's JSON schema and try again.\n");
+    }
+    msg.trim_end().to_string()
 }
 
 #[cfg(test)]
@@ -357,6 +373,17 @@ mod tests {
 #[cfg(test)]
 mod tests_custom {
     use super::*;
+
+    #[test]
+    fn test_format_pydantic_error_string_multi_line() {
+        let error_msg = "missing field `a`\ninvalid type for `b`";
+        let formatted = format_pydantic_error_string(error_msg, Some("{\"b\": 1}"), None);
+
+        assert!(formatted.contains("Reasons:"));
+        assert!(formatted.contains("- missing field `a`"));
+        assert!(formatted.contains("- invalid type for `b`"));
+        assert!(formatted.contains("Provided arguments snippet: {\"b\": 1}"));
+    }
 
     #[test]
     fn test_format_pydantic_error_custom_instruction() {

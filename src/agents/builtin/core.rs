@@ -5,6 +5,7 @@ pub mod expert_team;
 
 pub mod output_parser;
 pub mod pubsub;
+pub mod schema_validator;
 pub mod types;
 
 pub mod acon_context;

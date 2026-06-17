@@ -37,21 +37,26 @@ impl<T> StructuredOutputParser<T> {
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if !msg.tool_calls.is_empty()
-            && let Some(call) = msg
+        if !msg.tool_calls.is_empty() {
+            if let Some(call) = msg
                 .tool_calls
                 .iter()
                 .find(|t| t.name == "structured_output")
-        {
-            if let Some(data) = call.arguments.get("data") {
-                return match serde_json::from_value::<T>(data.clone()) {
-                    Ok(parsed) => Ok(parsed),
-                    Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
-                };
-            } else {
-                return Err(
+            {
+                if let Some(data) = call.arguments.get("data") {
+                    return match serde_json::from_value::<T>(data.clone()) {
+                        Ok(parsed) => Ok(parsed),
+                        Err(e) => Err(crate::types::format_pydantic_error(
+                            &e,
+                            Some(&serde_json::to_string_pretty(data).unwrap_or_default()),
+                            None,
+                        )),
+                    };
+                } else {
+                    return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
+                }
             }
         }
 
@@ -68,22 +73,17 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 .trim_end_matches("```")
                 .trim()
         } else {
-            content
+            ""
         };
 
-        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
-            return Ok(parsed);
-        }
-
-        let s = msg.content.trim();
-        if s.starts_with("```json") && s.ends_with("```") {
-            let json_str = s[7..s.len() - 3].trim();
+        if !json_str.is_empty() {
             if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
                 return Ok(parsed);
             }
         }
+
         // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+        Err("Expected native tool_calls API object (specifically calling 'structured_output'), but got plain text. Please use the tool to return the requested data.".to_string())
     }
 }
 
@@ -164,13 +164,13 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         // Inject the schema as a tool definition to encourage the model to use tool_calls API
         let schema_tool = crate::types::ToolDefinition {
             name: "structured_output".to_string(),
-            description: "Call this tool to output the parsed structured data.".to_string(),
+            description: "CRITICAL: You MUST call this tool to return your final structured response. Do NOT provide the response in plain text.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
                     "data": {
                         "type": "object",
-                        "description": "The structured data matching the requested schema."
+                        "description": "The structured data matching the required output schema."
                     }
                 },
                 "required": ["data"]
