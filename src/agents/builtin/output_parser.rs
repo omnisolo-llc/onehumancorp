@@ -798,3 +798,86 @@ mod retry_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod additional_parser_tests {
+    use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolCall, Usage};
+    use serde::Deserialize;
+    use tokio::sync::Mutex;
+    use std::sync::Arc;
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Output {
+        val: String,
+    }
+
+    struct MockLlm {
+        responses: Mutex<Vec<ChatResponse>>,
+        captured_requests: Mutex<Vec<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for MockLlm {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.captured_requests.lock().await.push(req);
+            let mut resps = self.responses.lock().await;
+            Ok(resps.remove(0))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry_with_feedback_loop() {
+        let client = Arc::new(MockLlm {
+            responses: Mutex::new(vec![
+                // 1. First response: Malformed text instead of tool call
+                ChatResponse {
+                    message: Message::assistant("Here is your data: { \"val\": \"oops\" }"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                },
+                // 2. Second response: Correct tool call
+                ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({ "data": { "val": "success" } }),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id2".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id2".to_string()),
+                },
+            ]),
+            captured_requests: Mutex::new(vec![]),
+        });
+
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "System".to_string(),
+            messages: vec![Message::user("Hello")],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        let result: Output = parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        assert_eq!(result.val, "success");
+
+        let requests = client.captured_requests.lock().await;
+        assert_eq!(requests.len(), 2);
+
+        // Verify the second request contains the feedback
+        let second_req = &requests[1];
+        assert_eq!(second_req.messages.len(), 3); // User(Hello), Assistant(Oops), User(Feedback)
+        assert!(second_req.messages[2].content.contains("Your previous completion failed to parse"));
+        assert!(second_req.messages[2].content.contains("Expected native tool_calls API object"));
+    }
+}

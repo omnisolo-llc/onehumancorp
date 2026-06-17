@@ -50,11 +50,19 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
             Ok(v) => v,
             Err(e) => {
                 // Add the original payload snippet for context
+<<<<<<< HEAD
+                let args_str = match serde_json::to_string(&args) {
+                    Ok(s) => {
+                        let char_count = s.chars().count();
+                        if char_count > 100 {
+                            let truncated: String = s.chars().take(100).collect();
+=======
                 let args_str = match serde_json::to_string_pretty(&args) {
                     Ok(s) => {
                         let char_count = s.chars().count();
                         if char_count > 250 {
                             let truncated: String = s.chars().take(250).collect();
+>>>>>>> 42756e3c (refactor: rename database schema columns and stabilize WebSocket tests with connection delays and environment defaults)
                             format!("{}...", truncated)
                         } else {
                             s
