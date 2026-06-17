@@ -6121,7 +6121,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
-        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), viral_loop_tracker.clone()))
+        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
@@ -6275,6 +6275,8 @@ async fn create_ui_bom_item_handler(
     });
 
 
+    let viral_loop_tracker = std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(crate::auth::Store::new());
     
