@@ -215,10 +215,7 @@ impl PlanAndExecuteOrchestrator {
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                             Ok::<_, String>((
                                 task.task_id,
-                                format!(
-                                    "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                    msg
-                                ),
+                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg),
                             ))
                         }
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
