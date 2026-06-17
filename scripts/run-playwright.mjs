@@ -59,12 +59,12 @@ async function waitForPort(port, maxAttempts = 30) {
 async function main() {
   loadDotEnv();
 
-  console.log('[run-playwright] Starting infrastructure...');
+  console.info('[run-playwright] Starting infrastructure...');
   if (process.env.E2E_SKIP_DOCKER !== 'true') {
     await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'up', '-d']);
   }
 
-  console.log('[run-playwright] Server already built in outer execution');
+  console.info('[run-playwright] Server already built in outer execution');
 
   const serverBin = process.env.SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
   const agentBin = resolveExistingPath(
@@ -86,7 +86,7 @@ async function main() {
   process.env.OHC_AGENT_TASK_TIMEOUT_SECS = process.env.OHC_AGENT_TASK_TIMEOUT_SECS || '240';
   process.env.OHC_LLM_TIMEOUT_SECS = process.env.OHC_LLM_TIMEOUT_SECS || '180';
 
-  console.log(`[run-playwright] Starting server at ${serverBin}...`);
+  console.info(`[run-playwright] Starting server at ${serverBin}...`);
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
@@ -114,7 +114,7 @@ async function main() {
     }
   }
 
-  console.log('[run-playwright] Done');
+  console.info('[run-playwright] Done');
 }
 
 async function runCommand(command, args) {
