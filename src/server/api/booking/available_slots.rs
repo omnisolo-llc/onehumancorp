@@ -7,7 +7,7 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use crate::db::Db;
+use crate::db::DB;
 
 #[derive(Serialize)]
 pub struct AvailableSlotsResponse {
@@ -21,17 +21,17 @@ pub struct Slot {
     pub end_time: String,
 }
 
-pub fn router<S>(db: Arc<Db>) -> Router<S>
+pub fn router<S>(db: Arc<DB>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/:service_id", get(handle_get_available_slots))
+        .route("/{service_id}", get(handle_get_available_slots))
         .with_state(db)
 }
 
 async fn handle_get_available_slots(
-    State(db): State<Arc<Db>>,
+    State(db): State<Arc<DB>>,
     headers: axum::http::HeaderMap,
     Path(service_id): Path<String>,
 ) -> impl IntoResponse {
@@ -40,8 +40,31 @@ async fn handle_get_available_slots(
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
-    let slots = match db.store.query_available_slots(&tenant_id, &service_id).await {
-        Ok(s) => s,
+    let pool = db.pool.clone();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("failed to begin tx: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    };
+
+    let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+
+    // Use sqlx instead of missing db.store method
+    let rows = match sqlx::query(
+        "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC",
+    )
+    .bind(&tenant_id)
+    .bind(&service_id)
+    .fetch_all(&mut *tx)
+    .await
+    {
+        Ok(r) => r,
         Err(e) => {
             tracing::error!("Failed to query available slots: {:?}", e);
             return (
@@ -53,11 +76,22 @@ async fn handle_get_available_slots(
     };
 
     let mut response_slots = Vec::new();
-    for slot in slots {
+    for row in rows {
+        use sqlx::Row;
+
+        let st: chrono::DateTime<chrono::Utc> = match row.try_get("start_time") {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let et: chrono::DateTime<chrono::Utc> = match row.try_get("end_time") {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
         response_slots.push(Slot {
-            id: slot.id,
-            start_time: slot.start_time.to_rfc3339(),
-            end_time: slot.end_time.to_rfc3339(),
+            id: row.try_get("id").unwrap_or_default(),
+            start_time: st.to_rfc3339(),
+            end_time: et.to_rfc3339(),
         });
     }
 
