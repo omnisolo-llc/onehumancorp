@@ -838,3 +838,181 @@ async fn create_file_change(
 
     Ok(Json(change))
 }
+
+#[cfg(test)]
+mod real_feature_state_tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use axum::Extension;
+    use serde_json::json;
+    use std::sync::Arc;
+    use tower::ServiceExt;
+
+    fn claims() -> Claims {
+        Claims {
+            sub: "user-1".to_string(),
+            exp: 0,
+            iat: 0,
+            organization_id: Some("tenant-real".to_string()),
+            username: "tester".to_string(),
+            email: "tester@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "jti-1".to_string(),
+        }
+    }
+
+    async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(2)
+            .connect(&uri)
+            .await
+            .unwrap()
+    }
+
+    async fn create_dummy_pg_pool() -> sqlx::PgPool {
+        sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap()
+    }
+
+    fn test_router<S>(db: Arc<DB>) -> Router<S>
+    where
+        S: Clone + Send + Sync + 'static,
+    {
+        Router::new()
+            .without_v07_checks()
+            .route("/workspaces", get(list_workspaces).post(create_workspace))
+            .route("/workspaces/:id", get(get_workspace))
+            .route("/tasks", get(list_tasks).post(create_task))
+            .route("/tasks/:id", get(get_task))
+            .route("/tasks/:id/messages", get(list_messages).post(create_message))
+            .route("/tasks/:id/artifacts", get(list_artifacts).post(create_artifact))
+            .route("/tasks/:id/file_changes", get(list_file_changes).post(create_file_change))
+            .layer(Extension(db))
+    }
+
+    async fn test_db() -> Arc<DB> {
+        let pool = create_sqlite_pool_for_test().await;
+        for statement in [
+            "CREATE TABLE assistant_workspaces (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, default_work_dir TEXT, default_model TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_tasks (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL, title TEXT NOT NULL, prompt TEXT NOT NULL, status TEXT NOT NULL, mode TEXT, permission_profile TEXT NOT NULL, model_config TEXT, current_step TEXT, archived INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_messages (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, tool_metadata TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_artifacts (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, type TEXT NOT NULL, filename TEXT NOT NULL, path TEXT NOT NULL, mime_type TEXT NOT NULL, size INTEGER, preview_ref TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_file_changes (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, path TEXT NOT NULL, change_type TEXT NOT NULL, summary TEXT, approval_status TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_memory_records (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, content TEXT NOT NULL, scope TEXT NOT NULL DEFAULT 'global', source TEXT, enabled INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE assistant_skills (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'Custom', source TEXT NOT NULL DEFAULT 'database', status TEXT NOT NULL, version TEXT, description TEXT, config TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (tenant_id, name))",
+            "CREATE TABLE assistant_connectors (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'custom', status TEXT NOT NULL, oauth INTEGER DEFAULT 0, config TEXT, last_error TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (tenant_id, name))",
+        ] {
+            sqlx::query(statement).execute(&pool).await.unwrap();
+        }
+
+        Arc::new(DB {
+            pool: create_dummy_pg_pool().await,
+            store: DbStore::Sqlite(pool),
+        })
+    }
+
+    async fn request_json(db: Arc<DB>, method: &str, uri: &str, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
+        let app = test_router::<()>(db).layer(Extension(claims()));
+        let request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+        let response = app.oneshot(request).await.unwrap();
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let value = serde_json::from_slice(&bytes).unwrap_or_else(|_| json!({}));
+        (status, value)
+    }
+
+    #[tokio::test]
+    async fn memory_import_edit_and_forget_uses_database() {
+        let db = test_db().await;
+
+        let (status, value) = request_json(db.clone(), "PATCH", "/memory", json!({
+            "action": "import",
+            "content": "Real persisted memory",
+            "scope": "global"
+        })).await;
+        assert_eq!(status, StatusCode::OK);
+        let memory_id = value["memories"][0]["id"].as_str().unwrap().to_string();
+
+        let (_, listed) = request_json(db.clone(), "GET", "/memory", json!({})).await;
+        assert_eq!(listed["memories"][0]["content"], "Real persisted memory");
+
+        let (_, edited) = request_json(db.clone(), "PATCH", "/memory", json!({
+            "action": "edit",
+            "id": memory_id,
+            "content": "Edited real memory"
+        })).await;
+        assert_eq!(edited["memories"][0]["content"], "Edited real memory");
+
+        let (_, forgotten) = request_json(db, "PATCH", "/memory", json!({
+            "action": "forget",
+            "id": memory_id
+        })).await;
+        assert_eq!(forgotten["memories"].as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn skill_enable_disable_uses_database() {
+        let db = test_db().await;
+        let (_, installed) = request_json(db.clone(), "PATCH", "/skills", json!({
+            "action": "install",
+            "name": "Real Skill",
+            "category": "Testing"
+        })).await;
+        assert_eq!(installed["skills"][0]["status"], "installed");
+
+        let (_, disabled) = request_json(db.clone(), "PATCH", "/skills", json!({
+            "action": "disable",
+            "name": "Real Skill"
+        })).await;
+        assert_eq!(disabled["skills"][0]["status"], "disabled");
+
+        let (_, listed) = request_json(db, "GET", "/skills", json!({})).await;
+        assert_eq!(listed["skills"][0]["name"], "Real Skill");
+        assert_eq!(listed["skills"][0]["status"], "disabled");
+    }
+
+    #[tokio::test]
+    async fn connector_connect_disconnect_uses_database() {
+        let db = test_db().await;
+        let (_, connected) = request_json(db.clone(), "PATCH", "/connectors", json!({
+            "action": "connect",
+            "name": "Real Connector",
+            "kind": "repository"
+        })).await;
+        assert_eq!(connected["connectors"][0]["status"], "connected");
+
+        let (_, disconnected) = request_json(db.clone(), "PATCH", "/connectors", json!({
+            "action": "disconnect",
+            "name": "Real Connector"
+        })).await;
+        assert_eq!(disconnected["connectors"][0]["status"], "disconnected");
+
+        let (_, listed) = request_json(db, "GET", "/connectors", json!({})).await;
+        assert_eq!(listed["connectors"][0]["name"], "Real Connector");
+        assert_eq!(listed["connectors"][0]["status"], "disconnected");
+    }
+}
