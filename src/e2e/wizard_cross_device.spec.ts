@@ -13,6 +13,7 @@ test.describe('Wizard Cross Device E2E', () => {
 
     // 2. Click Start My Business to advance to step 1
     // The first screen is "10-Minute Setup Wizard", clicking "Start My Business" moves to step 1
+    await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 

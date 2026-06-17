@@ -223,7 +223,8 @@ impl std::fmt::Display for PermissionArchitecture {
 /// Centralized Pydantic-first tool schema error formatter.
 pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
     let detail = if e.is_data() {
-        format!("Semantic validation failed: {}", e)
+        // Feed precise JSON validation mismatch details for self-correction
+        format!("Semantic schema mismatch: {}", e)
     } else if e.is_syntax() {
         format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
     } else if e.is_eof() {
@@ -239,7 +240,7 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
     if let Some(instruction) = custom_instruction {
         msg.push_str(&format!("\n{}", instruction));
     } else {
-        msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+        msg.push_str("\nPlease strictly follow the tool's JSON schema and verify that all required fields are present and of the correct type.");
     }
     msg
 }
@@ -248,7 +249,7 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
 /// Used when validation fails via manual checks rather than serde deserialization.
 pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
     let mut msg = format!(
-        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}",
+        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Schema mismatch: {}",
         error_msg
     );
     if let Some(snippet) = args_str {
@@ -257,7 +258,7 @@ pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, cus
     if let Some(instruction) = custom_instruction {
         msg.push_str(&format!("\n{}", instruction));
     } else {
-        msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+        msg.push_str("\nPlease strictly follow the tool's JSON schema and verify that all required fields are present and of the correct type.");
     }
     msg
 }

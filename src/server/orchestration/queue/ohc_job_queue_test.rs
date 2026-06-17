@@ -313,7 +313,7 @@ async fn test_chaos_redis_mailbox_corruption() {
         }
     };
 
-    let tenant_id = "tenant_chaos_mailbox";
+    let _tenant_id = "tenant_chaos_mailbox";
     let queue_name = "test_queue";
 
     // Corrupt the queue by pushing a non-JSON / invalid string
