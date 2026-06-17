@@ -18,7 +18,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .without_v07_checks()
+
         .route("/workspaces", get(list_workspaces).post(create_workspace))
         .route("/workspaces/{id}", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
