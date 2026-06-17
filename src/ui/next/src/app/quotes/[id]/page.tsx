@@ -115,7 +115,7 @@ export default function QuoteReviewPage() {
             <div className="flex justify-between items-center">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
               {quote.status === 'DRAFT' && !isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-[10px] text-[#0066FF] font-bold">EDIT</button>
+                <button onClick={() => setIsEditing(true)} id="edit-quote-btn" className="text-[10px] text-[#0066FF] font-bold">EDIT</button>
               )}
             </div>
             {quote.line_items?.map((item) => (
@@ -164,6 +164,7 @@ export default function QuoteReviewPage() {
         {quote.status === 'DRAFT' && (
           isEditing ? (
             <button
+              id="btn-save-edits"
               onClick={saveQuoteChanges}
               disabled={approving}
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[16px] shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
