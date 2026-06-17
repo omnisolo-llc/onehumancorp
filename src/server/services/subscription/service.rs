@@ -101,8 +101,6 @@ impl SubscriptionService {
             created_at: Utc::now().timestamp(),
         };
 
-        self.ensure_subscription_schema().await?;
-
         match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query(
@@ -155,8 +153,6 @@ impl SubscriptionService {
             created_at: Utc::now().timestamp(),
             predicted_restock_date: None,
         };
-
-        self.ensure_subscription_schema().await?;
 
         let status_str = match subscriber.status {
             SubscriptionStatus::Active => "ACTIVE",
@@ -346,8 +342,6 @@ impl SubscriptionService {
             return Err("fulfillment date is required".to_string());
         }
 
-        self.ensure_subscription_schema().await?;
-
         let subscriber_count: i64 = match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query(
@@ -438,112 +432,6 @@ impl SubscriptionService {
         })
     }
 
-    async fn ensure_subscription_schema(&self) -> Result<(), String> {
-        match &self.db.store {
-            DbStore::Postgres => {
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS subscription_plans (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        description TEXT,
-                        price_cents BIGINT NOT NULL,
-                        currency TEXT NOT NULL DEFAULT 'USD',
-                        frequency TEXT NOT NULL,
-                        cutoff_day INTEGER,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )",
-                )
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS subscribers (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        customer_id TEXT NOT NULL,
-                        subscription_plan_id TEXT NOT NULL REFERENCES subscription_plans(id) ON DELETE CASCADE,
-                        status TEXT NOT NULL DEFAULT 'ACTIVE',
-                        stripe_subscription_id TEXT,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        predicted_restock_date BIGINT
-                    )",
-                )
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        subscription_plan_id TEXT NOT NULL REFERENCES subscription_plans(id) ON DELETE CASCADE,
-                        fulfillment_date DATE NOT NULL,
-                        subscriber_count INTEGER NOT NULL DEFAULT 0,
-                        status TEXT NOT NULL DEFAULT 'PENDING',
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )",
-                )
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-            DbStore::Sqlite(pool) => {
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS subscription_plans (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        description TEXT,
-                        price_cents INTEGER NOT NULL,
-                        currency TEXT NOT NULL DEFAULT 'USD',
-                        frequency TEXT NOT NULL,
-                        cutoff_day INTEGER,
-                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )",
-                )
-                .execute(pool)
-                .await
-                .map_err(|e| e.to_string())?;
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS subscribers (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        customer_id TEXT NOT NULL,
-                        subscription_plan_id TEXT NOT NULL,
-                        status TEXT NOT NULL DEFAULT 'ACTIVE',
-                        stripe_subscription_id TEXT,
-                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        predicted_restock_date INTEGER
-                    )",
-                )
-                .execute(pool)
-                .await
-                .map_err(|e| e.to_string())?;
-                sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS fulfillment_schedules (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        subscription_plan_id TEXT NOT NULL,
-                        fulfillment_date TEXT NOT NULL,
-                        subscriber_count INTEGER NOT NULL DEFAULT 0,
-                        status TEXT NOT NULL DEFAULT 'PENDING',
-                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )",
-                )
-                .execute(pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]

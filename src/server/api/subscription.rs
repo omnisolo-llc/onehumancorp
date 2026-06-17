@@ -336,6 +336,90 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     router_with_orchestrator(hub, None)
 }
 
+async fn get_customer_subscriptions(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let customer_id = &claims.sub;
+    let tenant_id = claims.organization_id.unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let result = sqlx::query(
+        "SELECT s.id, s.status, sp.name as plan_name, sp.price_cents as amount, sp.frequency, s.current_period_end \
+         FROM subscribers s JOIN subscription_plans sp ON s.subscription_plan_id = sp.id \
+         WHERE s.customer_id = $1 AND s.tenant_id = $2"
+    )
+    .bind(customer_id)
+    .bind(tenant_id)
+    .fetch_all(&mut *conn)
+    .await;
+
+    match result {
+        Ok(rows) => {
+            use sqlx::Row;
+            let subs: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                serde_json::json!({
+                    "id": r.get::<String, _>("id"),
+                    "status": r.get::<String, _>("status"),
+                    "plan_name": r.get::<String, _>("plan_name"),
+                    "amount": r.get::<i64, _>("amount"),
+                    "frequency": r.get::<String, _>("frequency"),
+                    "current_period_end": r.get::<Option<i64>, _>("current_period_end").unwrap_or(0),
+                })
+            }).collect();
+            (StatusCode::OK, Json(subs)).into_response()
+        },
+        Err(e) => {
+            tracing::error!("Failed to fetch customer subscriptions: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
+async fn handle_subscription_action(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path((id, action)): axum::extract::Path<(String, String)>,
+) -> impl IntoResponse {
+    let customer_id = &claims.sub;
+    let tenant_id = claims.organization_id.unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let new_status = match action.as_str() {
+        "pause" => "PAUSED",
+        "resume" => "ACTIVE",
+        "cancel" => "CANCELED",
+        _ => return (StatusCode::BAD_REQUEST, "Invalid action").into_response(),
+    };
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let update = sqlx::query(
+        "UPDATE subscribers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND customer_id = $3 AND tenant_id = $4"
+    )
+    .bind(new_status)
+    .bind(&id)
+    .bind(customer_id)
+    .bind(tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    match update {
+        Ok(res) if res.rows_affected() > 0 => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+        Ok(_) => (StatusCode::NOT_FOUND, "Subscription not found").into_response(),
+        Err(e) => {
+            tracing::error!("Failed to update subscription: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
 pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
     hub: Arc<Hub>,
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
@@ -345,6 +429,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         .route("/subscribers", get(get_subscribers))
         .route("/fulfillment-batches", get(get_fulfillment_batches).post(create_fulfillment_batch))
         .route("/magic-link", post(handle_magic_link))
+        .route("/customer/my", get(get_customer_subscriptions))
+        .route("/customer/{id}/{action}", post(handle_subscription_action))
         .layer(Extension(orchestrator))
         .layer(Extension(hub))
 }

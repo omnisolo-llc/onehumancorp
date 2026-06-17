@@ -290,9 +290,149 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+async fn handle_get_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let product_row = sqlx::query(
+        "SELECT id, tenant_id, title, description, type as item_type, price_cents FROM products WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(&id)
+    .bind(&tenant_id)
+    .fetch_optional(&mut *conn)
+    .await;
+
+    match product_row {
+        Ok(Some(row)) => {
+            let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
+            let mut product_json = serde_json::json!({
+                "id": row.get::<String, _>("id"),
+                "name": row.get::<String, _>("title"),
+                "description": row.get::<String, _>("description"),
+                "item_type": row.get::<String, _>("item_type"),
+                "price": format!("{:.2}", price_cents as f64 / 100.0),
+            });
+
+            // Fetch associated subscription plan if any
+            let plan_row = sqlx::query(
+                "SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2 LIMIT 1"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .fetch_optional(&mut *conn)
+            .await;
+
+            if let Ok(Some(p_row)) = plan_row {
+                if let Some(obj) = product_json.as_object_mut() {
+                    obj.insert("is_subscription".to_string(), serde_json::json!(true));
+                    obj.insert("subscription_interval".to_string(), serde_json::json!(p_row.get::<String, _>("interval")));
+                    obj.insert("subscription_discount".to_string(), serde_json::json!(p_row.get::<i32, _>("discount_percentage")));
+                }
+            } else {
+                if let Some(obj) = product_json.as_object_mut() {
+                    obj.insert("is_subscription".to_string(), serde_json::json!(false));
+                }
+            }
+
+            (StatusCode::OK, Json(product_json)).into_response()
+        }
+        Ok(None) => (StatusCode::NOT_FOUND, "Product not found").into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch product: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(payload): Json<CreateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let price_cents = (payload.price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+
+    let update_product = sqlx::query(
+        "UPDATE products SET title = $1, description = $2, type = $3, price_cents = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND tenant_id = $6"
+    )
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(&payload.item_type)
+    .bind(price_cents)
+    .bind(&id)
+    .bind(&tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    if let Err(e) = update_product {
+        tracing::error!("Failed to update product: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update product").into_response();
+    }
+
+    // Update or create/delete subscription plan
+    if payload.is_subscription.unwrap_or(false) {
+        let interval = payload
+            .subscription_interval
+            .unwrap_or_else(|| "monthly".to_string())
+            .to_lowercase();
+        let discount = payload.subscription_discount.unwrap_or(0);
+
+        let _ = sqlx::query(
+            "INSERT INTO subscription_plans (id, tenant_id, product_id, interval, frequency, discount_percentage, name, price_cents, updated_at)
+             VALUES ($1, $2, $3, $4, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+             ON CONFLICT (product_id, tenant_id) DO UPDATE SET
+                interval = EXCLUDED.interval,
+                frequency = EXCLUDED.frequency,
+                discount_percentage = EXCLUDED.discount_percentage,
+                name = EXCLUDED.name,
+                price_cents = EXCLUDED.price_cents,
+                updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(&tenant_id)
+        .bind(&id)
+        .bind(&interval)
+        .bind(discount)
+        .bind(&payload.name)
+        .bind(price_cents)
+        .execute(&mut *conn)
+        .await;
+
+    } else {
+        // Delete plan if it existed
+        let _ = sqlx::query("DELETE FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
+            .bind(&id)
+            .bind(&tenant_id)
+            .execute(&mut *conn)
+            .await;
+    }
+
+    (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some("Updated successfully".to_string()) })).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/product/{id}", get(handle_get_product).put(handle_update_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }

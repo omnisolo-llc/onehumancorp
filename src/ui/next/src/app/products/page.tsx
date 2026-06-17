@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { useRouter } from "next/navigation";
 
 const importedProducts = [
-  { name: "Chocolate Cake", price: "$20.00", status: "Imported" },
-  { name: "Vanilla Celebration Cake", price: "$24.00", status: "Imported" },
-  { name: "Wedding Cake Consultation", price: "$75.00", status: "Imported" },
+  { id: "prod_chocolate_cake", name: "Chocolate Cake", price: "$20.00", status: "Imported" },
+  { id: "prod_vanilla_cake", name: "Vanilla Celebration Cake", price: "$24.00", status: "Imported" },
+  { id: "prod_consultation", name: "Wedding Cake Consultation", price: "$75.00", status: "Imported" },
 ];
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [selectedProduct, setSelectedProduct] = useState<{ name: string; price: string; status: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
@@ -54,8 +56,8 @@ export default function ProductsPage() {
         </div>
         <div className="app-list">
           {importedProducts.map((product) => (
-            <div key={product.name} className="app-list-item flex items-center justify-between">
-              <div>
+            <div key={product.id} className="app-list-item flex items-center justify-between">
+              <div className="flex-1 cursor-pointer" onClick={() => router.push(`/products/${product.id}/edit`)}>
                 <div className="app-list-title">{product.name}</div>
                 <div className="app-list-subtitle">{product.price}</div>
               </div>

@@ -496,6 +496,28 @@ pub async fn stripe_webhook_handler(
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
 
             if let Some(tenant_id) = tenant_id_opt {
+                // Check if it's a product subscription instead of a tier upgrade
+                if let Some(prod_id) = obj.get("metadata").and_then(|m| m.get("product_id")).and_then(|id| id.as_str()) {
+                    let hub = webhook_state.db.pool.clone();
+                    let tenant_id = tenant_id.to_string();
+                    let prod_id = prod_id.to_string();
+                    let stripe_sub_id = obj.get("subscription").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+                    let customer_id = obj.get("customer").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+
+                    tokio::spawn(async move {
+                        let service = crate::services::subscription::service::SubscriptionService::new(Arc::new(hub));
+                        // Find plan ID for this product
+                        let mut conn = service.db.pool.acquire().await.unwrap();
+                        let row = sqlx::query("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2 LIMIT 1")
+                            .bind(&prod_id).bind(&tenant_id).fetch_optional(&mut *conn).await.unwrap();
+                        if let Some(r) = row {
+                            use sqlx::Row;
+                            let plan_id: String = r.get("id");
+                            let _ = service.subscribe_customer(&tenant_id, &plan_id, &customer_id, &stripe_sub_id).await;
+                        }
+                    });
+                }
+
                 // Determine new tier based on price ID or plan name or metadata
                 // For this example, let's assume we pass the target tier in metadata.tier
                 // or we deduce it. For simplicity in this demo, let's read metadata.tier
