@@ -112,9 +112,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let row = if should_bypass {
-            sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         // Parse roles from JSON string
@@ -160,9 +160,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let row = if should_bypass {
-            sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(username).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -207,9 +207,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let row = if should_bypass {
-            sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(email).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -254,9 +254,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let row = if should_bypass {
-            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(sub).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let roles_json: String = row.get("roles");
@@ -298,9 +298,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let rows = if should_bypass {
-            sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).fetch_all(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         let mut users = Vec::new();
@@ -366,7 +366,7 @@ impl UserRepository for PgUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
         } else {
@@ -380,7 +380,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .bind(org_id)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
         };
@@ -414,9 +414,9 @@ impl UserRepository for PgUserRepository {
         }
 
         let res = if should_bypass {
-            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         };
 
         if res.is_none() {
@@ -447,7 +447,7 @@ impl UserRepository for PgUserRepository {
         .bind(jti)
         .bind(exp)
         .bind(org_id)
-        .execute(&mut *tx)
+        .execute(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -460,9 +460,9 @@ impl UserRepository for PgUserRepository {
 
         let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).bind(now).execute(&mut *tx).await
+            sqlx::query(query).bind(now).execute(&self.pool).await
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await
+            sqlx::query(query).bind(now).bind(org_id).execute(&self.pool).await
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -479,7 +479,7 @@ impl UserRepository for PgUserRepository {
             .bind(jti)
             .bind(org_id)
             .bind(chrono::Utc::now())
-            .fetch_one(&mut *tx)
+            .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
