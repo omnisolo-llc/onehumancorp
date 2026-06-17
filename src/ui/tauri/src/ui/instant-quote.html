@@ -360,12 +360,8 @@
 
                 // Fallback rules if empty
                 if (!rules || rules.length === 0) {
-                    basePrice = 5000; // $50 base
-                    rules = [
-                        { id: 'rush', name: 'Rush Delivery (Next Day)', adjustment_percent: 20, description: 'Get it faster' },
-                        { id: 'vegan', name: 'Vegan Ingredients', adjustment_cents: 1500, description: 'Special dietary preparation' },
-                        { id: 'weekend', name: 'Weekend Service', adjustment_cents: 2500, description: 'Saturday/Sunday' }
-                    ];
+                    basePrice = 0;
+                    rules = [];
                 }
 
                 pricingRules = rules;
@@ -380,6 +376,12 @@
         function renderOptions() {
             const container = document.getElementById('options-container');
             container.innerHTML = '';
+
+            if (pricingRules.length === 0) {
+                container.innerHTML = '<div class="toggle-item text-center text-muted">No service options available</div>';
+                document.getElementById('submit-btn').disabled = true;
+                return;
+            }
 
             pricingRules.forEach(rule => {
                 const item = document.createElement('label');
