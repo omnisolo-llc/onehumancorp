@@ -1005,6 +1005,9 @@ impl DB {
                         supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1148,6 +1151,36 @@ impl DB {
                         owner_override BOOLEAN DEFAULT FALSE,
                         metadata TEXT
                     );
+
+                    CREATE TABLE IF NOT EXISTS subscription_plans (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        interval TEXT NOT NULL,
+                        discount_percentage INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        price_cents INTEGER NOT NULL,
+                        frequency TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active'
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscribers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        status TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS fulfillment_batches (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        fulfillment_date TEXT NOT NULL,
+                        subscriber_count INTEGER NOT NULL,
+                        status TEXT NOT NULL
+                    );
+
                     CREATE TABLE IF NOT EXISTS agents (
                         id TEXT PRIMARY KEY,
                         name TEXT NOT NULL,

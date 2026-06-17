@@ -13,7 +13,7 @@ test.describe('Subscription Box Engine', () => {
     await page.goto('/subscriptions');
 
     // Check for the subscription card visibility
-    await expect(page.getByRole('heading', { name: 'Subscriptions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Subscriptions' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Active Plans' })).toBeVisible();
     await expect(page.getByText('Vegan Cake')).toBeVisible();
     await expect(page.getByText('Subscribers (2)')).toBeVisible();

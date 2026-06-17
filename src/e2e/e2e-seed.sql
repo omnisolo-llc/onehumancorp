@@ -535,3 +535,16 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO products (id, tenant_id, title, description, type, price_cents, is_subscription_enabled, subscription_interval, subscription_discount) VALUES
+('prod-vegan', 'test-tenant', 'Vegan Cake', 'Delicious vegan cake', 'Product', 2000, true, 'monthly', 10);
+
+INSERT INTO subscription_plans (id, tenant_id, product_id, interval, discount_percentage, name, price_cents, frequency) VALUES
+('plan-vegan', 'test-tenant', 'prod-vegan', 'monthly', 10, 'Vegan Cake', 1800, 'monthly');
+
+INSERT INTO subscribers (id, tenant_id, customer_id, plan_id, status) VALUES
+('sub-1', 'test-tenant', 'cust-1234', 'plan-vegan', 'active'),
+('sub-2', 'test-tenant', 'cust-5678', 'plan-vegan', 'active');
+
+INSERT INTO fulfillment_batches (id, tenant_id, plan_id, fulfillment_date, subscriber_count, status) VALUES
+('batch-1', 'test-tenant', 'plan-vegan', '2024-06-05', 2, 'pending');
