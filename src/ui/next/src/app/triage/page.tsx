@@ -132,7 +132,7 @@ export default function TriagePage() {
         </div>
       )}
 
-      <div className="mb-6 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+      <div className="mb-6 p-6 rounded-[16px] shadow-sm bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
           Action Center
         </h2>
@@ -142,8 +142,8 @@ export default function TriagePage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full">
-        <section className="flex-[1.5] w-full app-panel glassmorphism shadow-sm flex flex-col">
-          <div className="app-panel-header">
+        <section className="flex-[1.5] w-full app-panel shadow-sm flex flex-col rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10">
+          <div className="app-panel-header border-b border-white/20 dark:border-white/5">
             <div>
               <div className="app-panel-title">Triage Queue</div>
             </div>
@@ -200,8 +200,8 @@ export default function TriagePage() {
           </div>
         </section>
 
-        <section className="flex-[0.8] w-full app-panel glassmorphism shadow-sm flex flex-col">
-          <div className="app-panel-header">
+        <section className="flex-[0.8] w-full app-panel shadow-sm flex flex-col rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10">
+          <div className="app-panel-header border-b border-white/20 dark:border-white/5">
             <div className="app-panel-title">Triage Detail</div>
           </div>
           {loading ? (
@@ -215,7 +215,7 @@ export default function TriagePage() {
           ) : (
             <div className="app-panel-body p-6 flex flex-col gap-6 w-full">
               {/* Action Card Container */}
-              <div className="w-full glassmorphism border border-white/40 dark:border-white/10 rounded-[16px] shadow-sm overflow-hidden flex flex-col">
+              <div className="w-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-sm overflow-hidden flex flex-col">
                 {/* Header Context */}
                 <div className="p-4 border-b border-gray-200 dark:border-white/10 bg-white/30 dark:bg-black/10">
                   <div className="flex justify-between items-start mb-2">

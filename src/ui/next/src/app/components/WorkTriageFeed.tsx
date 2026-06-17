@@ -98,7 +98,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
+            className="mb-6 p-6 rounded-[16px] shadow-sm relative overflow-hidden bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-orange-400/50 dark:border-orange-500/30"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
@@ -151,7 +151,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
+            className="mb-6 p-6 rounded-[16px] shadow-sm overflow-hidden flex flex-col gap-4 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="flex justify-between items-start">
