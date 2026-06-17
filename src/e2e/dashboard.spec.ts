@@ -24,6 +24,6 @@ test.describe('Dashboard Core', () => {
   test('opens setup from dashboard quick actions', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('button', { name: 'Launch Site' }).click();
-    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
   });
 });

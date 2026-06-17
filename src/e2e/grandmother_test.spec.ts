@@ -26,6 +26,6 @@ test.describe('Grandmother Test - Plain Language Check', () => {
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Setup Assistant')).toBeVisible();
   });
 });

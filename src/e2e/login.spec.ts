@@ -39,6 +39,6 @@ test.describe('Navigation', () => {
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Setup Assistant')).toBeVisible({ timeout: 15000 });
   });
 });
