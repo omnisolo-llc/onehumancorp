@@ -525,8 +525,14 @@ impl WorkerPool {
                             match res {
                                 Ok(payload) => {
                                     tracing::debug!("Worker {} processing job", i);
-                                    if let Err(e) = handler.handle(payload).await {
-                                        tracing::trace!("Worker {} handler failed: {}", i, e);
+                                    let handle_res = tokio::time::timeout(
+                                        ohc_builtin_agent::agent::agent_task_timeout(),
+                                        handler.handle(payload),
+                                    ).await;
+                                    match handle_res {
+                                        Ok(Ok(())) => {}
+                                        Ok(Err(e)) => tracing::trace!("Worker {} handler failed: {}", i, e),
+                                        Err(_) => tracing::trace!("Worker {} handler timed out", i),
                                     }
                                 }
                                 Err(e) => {
