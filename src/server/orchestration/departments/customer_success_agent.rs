@@ -188,7 +188,7 @@ impl Department for CustomerSuccessAgent {
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
             let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Identity Resolution: Look up customer by phone, email, or name
+            // Identity Resolution: Extract customer_id provided by webhook handler
             let mut customer_id = "".to_string();
             let mut past_orders = "".to_string();
             let pool = crate::db::get_pool();
@@ -196,14 +196,15 @@ impl Department for CustomerSuccessAgent {
             if !payload_customer_id.is_empty() {
                 customer_id = payload_customer_id.to_string();
             } else if !sender_id.is_empty() && sender_id != "unknown" {
-                let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2) LIMIT 1")
+                // Fallback for older events without customer_id in payload, but check references as well
+                let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2 OR preferences->>'social_handle' = $2 OR preferences->>'instagram_handle' = $2) LIMIT 1")
                     .bind(&event.tenant_id)
                     .bind(&sender_id)
                     .fetch_one(&pool)
                     .await;
                 if let Ok((id,)) = result {
                     customer_id = id.clone();
-                    tracing::info!("Resolved sender {} to customer {}", sender_id, customer_id);
+                    tracing::info!("Resolved sender {} to customer {} via fallback", sender_id, customer_id);
                 }
             }
 

@@ -205,7 +205,8 @@ export default function FeedPage() {
             return (
               <div
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[16px] ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                style={{ backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)' }}
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
