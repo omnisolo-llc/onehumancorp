@@ -202,7 +202,7 @@
       btn.disabled = true;
       btn.innerText = 'Drafting...';
 
-      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
 
       try {
         const res = await fetch('/api/v1/growth/campaign/generate-win-back', {
@@ -240,7 +240,7 @@
         btn.disabled = true;
         btn.innerText = 'Scheduling...';
 
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
 
         try {
             const res = await fetch('/api/v1/growth/campaign/send-cart', {

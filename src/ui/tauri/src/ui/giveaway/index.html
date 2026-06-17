@@ -156,7 +156,7 @@
       }
 
       const baseUrl = window.location.origin;
-      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
       fetch('/api/v1/growth/referrals/generate', {
           method: 'POST',
           headers: {

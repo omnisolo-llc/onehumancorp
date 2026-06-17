@@ -334,7 +334,7 @@
             try {
                 // In a real app, tenantId would be injected via subdomain or token
                 // We use default for local testing
-                const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'e2e-tenant';
+                const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'default';
 
                 // Update powered-by-link
                 const poweredByLink = document.getElementById('powered-by-link');
@@ -450,7 +450,7 @@
             btn.disabled = true;
             btn.innerText = 'Submitting...';
 
-            const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'e2e-tenant';
+            const tenantId = new URLSearchParams(window.location.search).get('tenant') || 'default';
             const notes = document.getElementById('notes').value;
 
             const lineItems = Array.from(selectedOptions).map(id => {

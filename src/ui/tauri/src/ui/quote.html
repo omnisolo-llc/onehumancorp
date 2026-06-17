@@ -628,7 +628,7 @@
         // Show viral badge
         const viralBadge = document.getElementById('viral-badge');
         const viralLink = document.getElementById('viral-badge-link');
-        const tenantId = urlParams.get('tenant') || 'e2e-tenant';
+        const tenantId = urlParams.get('tenant') || 'default';
 
         viralBadge.style.display = 'block';
         viralLink.href = `/onboarding?ref=${encodeURIComponent(tenantId)}&source=quote_viewer`;

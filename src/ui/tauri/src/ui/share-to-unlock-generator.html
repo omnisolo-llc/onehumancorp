@@ -322,7 +322,7 @@
       }
 
       const baseUrl = window.location.origin;
-      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
 
       const params = new URLSearchParams({
         title: title,

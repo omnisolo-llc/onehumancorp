@@ -363,7 +363,7 @@
       scrollToBottom();
 
       try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
         const res = await fetch('/api/v1/growth/conversational-manager/chat', {
           method: 'POST',
           headers: {

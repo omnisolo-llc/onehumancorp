@@ -101,7 +101,7 @@
     <script>
       const urlParams = new URLSearchParams(window.location.search);
       const successType = urlParams.get('type');
-      const tenantId = urlParams.get('tenant') || 'e2e-tenant';
+      const tenantId = urlParams.get('tenant') || 'default';
 
       function showSuccess(name, assistantName) {
         if (successType === 'booking_deposit') {

@@ -211,7 +211,7 @@
       const reward = params.get('reward') || '20% Off Your Entire Order';
       const code = params.get('code') || 'SECRET20';
       const shareMsg = params.get('msg') || 'I just unlocked a secret discount!';
-      const tenant = params.get('tenant') || 'e2e-tenant';
+      const tenant = params.get('tenant') || 'default';
 
       document.getElementById('campaign-title').textContent = title;
       document.getElementById('reward-desc').textContent = reward;

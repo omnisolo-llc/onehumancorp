@@ -1326,7 +1326,7 @@
 
       async function checkReferralTier() {
         try {
-          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`/api/v1/growth/referrals/tier`, {
             headers: {
               'authorization': `Bearer ${localStorage.getItem('ohc_token')}` // Ensure auth header if needed, backend relies on AuthInfo extension
@@ -1378,7 +1378,7 @@
       // Milestone logic
       async function checkMilestones() {
         try {
-          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           // Using exact backend URL from playwright config for API requests
           let url = `/api/v1/growth/milestones/check?tenant=${encodeURIComponent(tenantId)}`;
 
