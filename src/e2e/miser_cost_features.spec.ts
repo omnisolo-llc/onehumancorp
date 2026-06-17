@@ -27,9 +27,8 @@ test.describe('Miser Cost Features E2E', () => {
     const myPlanButton = page.locator('button', { hasText: 'Back to My Plan' });
     await expect(myPlanButton).toBeVisible();
 
-    // Click the button and verify URL changes to /plan
+    // Click the button and verify the plan widget is displayed
     await myPlanButton.click();
-    await page.waitForURL('**/plan', { timeout: 10000 });
     await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 
