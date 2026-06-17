@@ -36,6 +36,7 @@ SERVER_RS_SRCS = [
     "//src/server/agents/mcp:proxy/server.rs",
     "//src/server/agents/mcp:proxy/tests.rs",
     "//src/server/api:autodream.rs",
+    "//src/server/api:assistant.rs",
     "//src/server/api:terminal_api.rs",
     "//src/server/api:billing_api.rs",
     "//src/server/api:billing_webhook.rs",
