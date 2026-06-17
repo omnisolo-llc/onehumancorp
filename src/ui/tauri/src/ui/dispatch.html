@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Today's Route - OHC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --apple-glass-bg: rgba(255, 255, 255, 0.65);
+            --apple-glass-border: rgba(255, 255, 255, 0.4);
+            --apple-glass-blur: blur(30px) saturate(210%);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --apple-glass-bg: rgba(22, 22, 26, 0.7);
+                --apple-glass-border: rgba(255, 255, 255, 0.1);
+            }
+        }
+        body {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            background-color: #F5F5F7;
+            margin: 0;
+            padding: 0;
+            color: #1D1D1F;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #000000;
+                color: #F5F5F7;
+            }
+        }
+        .mac-glass {
+            background: var(--apple-glass-bg);
+            backdrop-filter: var(--apple-glass-blur);
+            -webkit-backdrop-filter: var(--apple-glass-blur);
+            border: 1px solid var(--apple-glass-border);
+            border-radius: 16px;
+        }
+        .btn-primary {
+            background-color: #0066FF;
+            color: white;
+            border-radius: 8px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            width: 100%;
+        }
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        .offline-badge {
+            background-color: #34C759;
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        /* Mobile strict container */
+        .mobile-container {
+            max-width: 375px;
+            margin: 0 auto;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-semibold">Today's Route</h1>
+        <span class="offline-badge flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            Offline Ready
+        </span>
+    </div>
+
+    <!-- Map Placeholder Card -->
+    <div class="mac-glass p-4 mb-4 flex flex-col gap-3">
+        <div class="w-full h-32 bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center text-sm text-gray-500">
+            [Map Render Area]
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total estimated travel: 45 mins</p>
+    </div>
+
+    <!-- Stop 1 (Active) -->
+    <div class="mac-glass p-4 mb-4 border-l-4 border-l-[#0066FF]">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <p class="font-semibold text-lg">1. Plumbing Repair</p>
+                <p class="text-sm text-gray-500">123 Main St, Austin TX</p>
+            </div>
+            <p class="font-medium text-[#0066FF]">9:00 AM</p>
+        </div>
+        <div class="text-sm mb-4">
+            <p><strong>Customer:</strong> Jane Doe</p>
+            <p><strong>Note:</strong> Gate code 4321.</p>
+        </div>
+        <button class="btn-primary touch-target" onclick="completeJob(this)">Complete Job</button>
+    </div>
+
+    <!-- Stop 2 -->
+    <div class="mac-glass p-4 mb-4 opacity-70">
+         <div class="flex justify-between items-start mb-2">
+            <div>
+                <p class="font-semibold text-lg">2. Faucet Install</p>
+                <p class="text-sm text-gray-500">456 Oak Rd, Austin TX</p>
+            </div>
+            <p class="font-medium text-gray-600 dark:text-gray-400">11:30 AM</p>
+        </div>
+        <div class="text-sm mb-4">
+            <p><strong>Customer:</strong> John Smith</p>
+        </div>
+        <button class="btn-primary touch-target opacity-50 cursor-not-allowed" disabled>Start Next Job</button>
+    </div>
+
+    <!-- Estimate Action Card Example -->
+    <div class="mac-glass p-4 mt-8">
+        <h3 class="font-semibold text-lg mb-2">New Quote Request</h3>
+        <p class="text-sm mb-4 text-gray-600 dark:text-gray-400">AI drafted estimate for "Fix leaky pipe in basement" from Sarah T.</p>
+        <div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-sm mb-4">
+            <div class="flex justify-between"><span>Labor (2 hrs)</span><span>$150.00</span></div>
+            <div class="flex justify-between"><span>Materials</span><span>$45.00</span></div>
+            <div class="flex justify-between font-semibold mt-2 border-t pt-2 border-gray-300 dark:border-gray-700"><span>Total</span><span>$195.00</span></div>
+        </div>
+        <button class="btn-primary touch-target bg-green-600" onclick="alert('Estimate sent via SMS!')">Approve & Send SMS</button>
+    </div>
+</div>
+
+<script>
+    function completeJob(btn) {
+        btn.innerText = "Completed";
+        btn.style.backgroundColor = "#34C759";
+        btn.classList.add('cursor-not-allowed');
+        btn.disabled = true;
+
+        // Enable next job
+        const nextJobBtn = document.querySelectorAll('.mac-glass')[2].querySelector('button');
+        nextJobBtn.disabled = false;
+        nextJobBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        document.querySelectorAll('.mac-glass')[2].classList.remove('opacity-70');
+    }
+</script>
+</body>
+</html>
