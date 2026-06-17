@@ -38,6 +38,9 @@ pub mod agent_feed;
 pub mod invoice;
 pub mod audio_command;
 pub mod incidents;
+pub mod event_ingestion;
+#[cfg(test)]
+pub mod event_ingestion_test;
 pub mod cart;
 
 pub mod quotes;

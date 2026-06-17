@@ -2475,6 +2475,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
+    let job_queue = std::sync::Arc::new(crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(db.pool.clone())));
+    let _event_worker_pool = crate::orchestration::queue::worker_pool::WorkerPool::new(job_queue, 1, vec!["event_ingestion".to_string()], std::sync::Arc::new(crate::orchestration::queue::event_worker::EventIngestionWorker));
     db.run_migrations().await?;
 
     let grpc_port = std::env::var("OHC_GRPC_PORT")
@@ -5514,6 +5516,7 @@ async fn create_ui_bom_item_handler(
         ),
     );
     let app = axum::Router::new()
+        .merge(crate::api::event_ingestion::router(std::sync::Arc::new(db.pool.clone())))
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
