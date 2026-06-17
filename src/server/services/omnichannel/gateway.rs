@@ -50,8 +50,8 @@ pub fn router(pool: PgPool) -> Router {
 
     Router::new()
         .route("/webhooks/omnichannel", post(handle_webhook))
-        .route("/feed/action_required/:tenant_id", get(get_action_required))
-        .route("/feed/action_required/:tenant_id/:item_id/approve", post(approve_action))
+        .route("/feed/action_required/{tenant_id}", get(get_action_required))
+        .route("/feed/action_required/{tenant_id}/{item_id}/approve", post(approve_action))
         .with_state(state)
 }
 
