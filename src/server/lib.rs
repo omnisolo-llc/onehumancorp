@@ -2551,7 +2551,25 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
-                "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                "                    CREATE TABLE IF NOT EXISTS triage_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        source TEXT,
+                        priority TEXT,
+                        context TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS triage_proposed_actions (
+                        id TEXT PRIMARY KEY,
+                        triage_item_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT,
+                        payload TEXT,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS consolidated_memory (
                     id TEXT PRIMARY KEY,
                     tenant_id TEXT NOT NULL,
                     agent_id TEXT,

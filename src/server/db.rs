@@ -1233,7 +1233,25 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
-                    CREATE TABLE IF NOT EXISTS ohc_universal_ledger (
+                                        CREATE TABLE IF NOT EXISTS triage_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        source TEXT,
+                        priority TEXT,
+                        context TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS triage_proposed_actions (
+                        id TEXT PRIMARY KEY,
+                        triage_item_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT,
+                        payload TEXT,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS ohc_universal_ledger (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         department TEXT NOT NULL,

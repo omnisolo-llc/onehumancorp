@@ -5,6 +5,27 @@ package ohc.orchestration;
 
 option go_package = "github.com/onehumancorp/mono/src/proto;pb";
 
+
+message TriageProposedAction {
+  string id = 1;
+  string triage_item_id = 2;
+  string tenant_id = 3;
+  string action_type = 4;
+  string payload = 5;
+  string created_at = 6;
+}
+
+message TriageItem {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string source = 4;
+  string priority = 5;
+  string context = 6;
+  string status = 7;
+  string created_at = 8;
+  repeated TriageProposedAction proposed_actions = 9;
+}
 message Agent {
   string id = 1;
   string name = 2;
