@@ -5513,7 +5513,7 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
-    let app = axum::Router::new()
+    let app = axum::Router::new().without_v07_checks()
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
