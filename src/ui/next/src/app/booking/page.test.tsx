@@ -31,17 +31,30 @@ describe('BookingPage', () => {
   });
 
   it('submits the form and shows the success screen with OneTapReferral', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        available_slots: [{ start_time: "2026-10-10T09:00:00Z", end_time: "2026-10-10T10:00:00Z" }]
-      }),
-    }).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-            booking_id: "test",
-            deposit_stripe_link: ""
-        }),
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/api/v1/booking/engine/reserve')) {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    booking_id: "test",
+                    deposit_stripe_link: ""
+                }),
+            });
+        }
+        if (url.includes('/api/v1/growth/referrals/generate')) {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    referral_link: "ohc://join?ref=test"
+                }),
+            });
+        }
+        return Promise.resolve({
+            ok: true,
+            json: async () => ({
+                available_slots: [{ start_time: "2026-10-10T09:00:00Z", end_time: "2026-10-10T10:00:00Z" }]
+            }),
+        });
     });
 
     render(<BookingPage />);

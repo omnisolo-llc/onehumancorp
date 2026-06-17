@@ -1942,7 +1942,10 @@ async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
-    let ref_code = uuid::Uuid::new_v4().to_string();
+    let raw_code = state.hub.referral_tracker().generate_referral_code(&auth_info.agent_id);
+    let ref_link = crate::services::growth::referral_api::generate_referral_link(&auth_info.agent_id)
+        .unwrap_or_else(|_| format!("https://ohc.app/onboarding?ref={}", raw_code));
+
     let ref_id = uuid::Uuid::new_v4().to_string();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
 
@@ -1950,16 +1953,16 @@ async fn handle_referral_generate(
         .bind(&ref_id)
         .bind(&auth_info.org_id)
         .bind(&auth_info.agent_id)
-        .bind(&ref_code)
+        .bind(&raw_code)
         .bind(now)
         .execute(&state.pool)
         .await
     {
         Ok(_) => {
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": raw_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://ohc.app/ref/{}", ref_code),
+                referral_link: ref_link,
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -2338,7 +2341,7 @@ mod tests {
 
         let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+        assert!(ref_link.starts_with("ohc://join?ref="));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
