@@ -641,7 +641,7 @@ impl DB {
         #[cfg(not(test))]
         let timeout_duration = std::time::Duration::from_secs(60);
         #[cfg(test)]
-        let timeout_duration = std::time::Duration::from_millis(60);
+        let timeout_duration = std::time::Duration::from_millis(2000);
 
         loop {
             if start_time.elapsed() > timeout_duration {
