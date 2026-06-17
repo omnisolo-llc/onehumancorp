@@ -31,22 +31,20 @@ export default function LocationManagerDashboard() {
   const [isDrafting, setIsDrafting] = useState(false);
 
   useEffect(() => {
-    // Mock data for the dashboard based on the PR requirements
-    setTasks([
-      { id: '1', title: 'Restock coffee beans', status: 'PENDING' },
-      { id: '2', title: 'Clean espresso machine', status: 'COMPLETED' },
-      { id: '3', title: 'Fix receipt printer', status: 'PENDING' },
-    ]);
-
-    setAlerts([
-      { id: 'a1', message: '3 customer complaints regarding slow pickup in the last hour.', severity: 'high' },
-      { id: 'a2', message: 'Milk supply running low.', severity: 'medium' },
-    ]);
-
-    setStaff([
-      { id: 's1', name: 'Alice', role: 'Barista', status: 'On Shift' },
-      { id: 's2', name: 'Bob', role: 'Cashier', status: 'On Shift' },
-    ]);
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/location/dashboard');
+        if (response.ok) {
+          const data = await response.json();
+          setTasks(data.tasks || []);
+          setAlerts(data.alerts || []);
+          setStaff(data.staff || []);
+        }
+      } catch (error) {
+        // Silently handle error
+      }
+    };
+    fetchData();
   }, []);
 
   const handleEscalateClick = (alert: Alert) => {
@@ -54,18 +52,40 @@ export default function LocationManagerDashboard() {
     setShowEscalationModal(true);
     setIsDrafting(true);
 
-    // Simulate agent drafting
-    setTimeout(() => {
-      setEscalationDraft(`Spike in pickup complaints at Location A. Staffing appears adequate, but the kitchen printer is offline. Requesting IT support. Context: ${alert.message}`);
-      setIsDrafting(false);
-    }, 1500);
+    const draftEscalation = async () => {
+      try {
+        const response = await fetch('/api/agent/draft-escalation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alertId: alert.id, context: alert.message })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEscalationDraft(data.draft || '');
+        }
+      } catch (error) {
+        // Silently handle error
+      } finally {
+        setIsDrafting(false);
+      }
+    };
+    draftEscalation();
   };
 
   const submitEscalation = async () => {
-    // In a real app, this would call the gRPC endpoint
-    console.log("Submitting escalation:", escalationDraft);
+    try {
+      await fetch('/api/location/escalate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+           alertId: selectedAlert?.id,
+           draft: escalationDraft
+        })
+      });
+    } catch (e) {
+      // Handle error implicitly
+    }
     setShowEscalationModal(false);
-    // Remove the alert for demo purposes
     if (selectedAlert) {
       setAlerts(alerts.filter(a => a.id !== selectedAlert.id));
     }
