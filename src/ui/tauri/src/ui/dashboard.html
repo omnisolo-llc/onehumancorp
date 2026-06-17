@@ -613,6 +613,22 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="referral-tier-widget" style="display: none; margin-top: 20px;" data-testid="referral-tier-widget">
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Referral Tier</h2>
+        <p id="referral-tier-status" style="margin-top: 0; margin-bottom: 16px; color: #6b7280;">Loading your referral tier...</p>
+
+        <div style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <p id="referral-tier-progress" style="margin: 0; font-weight: 600;"></p>
+        </div>
+
+        <input type="text" id="referral-link-input" readonly style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; background: white; text-align: center; color: #1d1d1f; font-family: monospace;" value="Loading link..." />
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-primary" id="referral-tier-copy-btn" style="flex: 1; padding: 12px;">Copy Link</button>
+          <button class="btn-outline" id="referral-tier-share-x-btn" style="flex: 1; padding: 12px;">Share on X</button>
+        </div>
+      </div>
+
 
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
@@ -1454,6 +1470,52 @@
         }
       }
       checkMilestones();
+
+      async function loadReferralTierWidget() {
+          try {
+              const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+              const res = await fetch(`/api/v1/growth/referrals/tier`, {
+                  headers: { 'X-Tenant-ID': tenantId }
+              });
+              if (!res.ok) return;
+
+              const data = await res.json();
+              document.getElementById('referral-tier-widget').style.display = 'block';
+
+              let statusText = `You are on the <strong>${data.current_tier}</strong> Tier.`;
+              document.getElementById('referral-tier-status').innerHTML = statusText;
+
+              let progressText = `Total Conversions: ${data.total_conversions}`;
+              if (data.next_tier && data.referrals_needed_for_next) {
+                  progressText += `<br/>Just <strong>${data.referrals_needed_for_next}</strong> more referrals needed for <strong>${data.next_tier}</strong>!`;
+              } else {
+                  progressText += `<br/>You reached the highest tier!`;
+              }
+              document.getElementById('referral-tier-progress').innerHTML = progressText;
+
+              const inviteLink = window.__TAURI__ && window.__TAURI__.core
+                ? await window.__TAURI__.core.invoke("generate_cloud_invite")
+                : "https://ohc.app/join?ref=" + tenantId;
+
+              const inputEl = document.getElementById('referral-link-input');
+              inputEl.value = inviteLink;
+
+              document.getElementById('referral-tier-copy-btn').addEventListener('click', () => {
+                  navigator.clipboard.writeText(inviteLink);
+                  document.getElementById('referral-tier-copy-btn').innerText = 'Copied!';
+                  setTimeout(() => { document.getElementById('referral-tier-copy-btn').innerText = 'Copy Link'; }, 2000);
+              });
+
+              document.getElementById('referral-tier-share-x-btn').addEventListener('click', () => {
+                  const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ Powered by OHC`;
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+              });
+
+          } catch (e) {
+              console.error("Failed to load referral tier", e);
+          }
+      }
+      loadReferralTierWidget();
 
       async function checkWrapped() {
         try {
