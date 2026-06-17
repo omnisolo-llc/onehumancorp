@@ -21,12 +21,12 @@ test.describe('In-App Video Tutorials', () => {
 
         // Wait for the videos to be fetched and rendered
         // The API returns 10 videos. We'll wait for at least one to show up.
-        // The videos are rendered with titles, like 'How to set up your first store easily'
-        const firstVideoTitle = page.locator('p', { hasText: 'How to set up your first store easily' });
+        // The videos are rendered with titles, like 'How to set up your store in 5 minutes'
+        const firstVideoTitle = page.locator('p', { hasText: 'How to set up your store in 5 minutes' });
         await expect(firstVideoTitle).toBeVisible();
 
         // Verify some other videos are present
-        await expect(page.locator('p', { hasText: 'Accept your first payment' })).toBeVisible();
+        await expect(page.locator('p', { hasText: 'Connecting a bank account to accept payments' })).toBeVisible();
 
         // Click on the first video to open the modal player
         // The video container is a div parent of the title
@@ -41,7 +41,7 @@ test.describe('In-App Video Tutorials', () => {
         await expect(modalContainer.locator('div.max-w-\\[375px\\]')).toBeVisible();
 
         // Verify the video title is shown in the modal header
-        await expect(modalContainer.locator('h3', { hasText: 'How to set up your first store easily' })).toBeVisible();
+        await expect(modalContainer.locator('h3', { hasText: 'How to set up your store in 5 minutes' })).toBeVisible();
 
         // Click the close button
         const closeButton = modalContainer.locator('button[aria-label="Close video"]');

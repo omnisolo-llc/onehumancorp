@@ -35,8 +35,8 @@ test.describe('Extended Documentation & Help Features', () => {
     // Wait for the video list to load
     await expect(page.getByRole('heading', { name: 'Video Guides', exact: true })).toBeVisible();
 
-    // We expect the specific duration "1:20" from the mocked API / E2E backend for "How to set up your first store easily"
-    await expect(page.getByText('1:20', { exact: true })).toBeVisible({ timeout: 10000 });
+    // We expect the specific duration "1:15" from the mocked API / E2E backend for "How to set up your store in 5 minutes"
+    await expect(page.getByText('1:15', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('should display external link to full technical changelog in release notes', async ({ page }) => {
