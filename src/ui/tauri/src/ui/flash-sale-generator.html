@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flash Sale Generator</title>
+  <style>
+    /* Premium Translucent Glass Design Tokens */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .glass-container {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    .btn-primary {
+      background-color: #0066ff;
+      color: white;
+    }
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #1d1d1f;
+      color: #1d1d1f;
+    }
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <h1>Flash Sale Generator ⚡</h1>
+
+  <div class="glass-container">
+    <h2>Widget Settings</h2>
+    <label>Title</label>
+    <input type="text" id="widget-title" placeholder="e.g. 24-Hour Flash Sale!" value="Weekend Flash Sale!">
+
+    <label>Discount Code</label>
+    <input type="text" id="widget-code" placeholder="e.g. FLASH20" value="SAVE20">
+
+    <label>Discount Percent</label>
+    <input type="number" id="widget-percent" placeholder="20" value="20">
+
+    <label>Theme</label>
+    <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+      <button class="btn-outline" id="theme-light">Light</button>
+      <button class="btn-outline" id="theme-dark">Dark</button>
+    </div>
+
+    <button class="btn-primary" id="get-widget-btn">Get Widget</button>
+  </div>
+
+  <div class="glass-container">
+    <h2>Live Preview</h2>
+    <div id="live-preview" style="padding: 20px; border-radius: 12px; background: #fff; border: 1px solid #eee; text-align: center;">
+      <h3 id="preview-title" style="margin-top: 0;">Weekend Flash Sale!</h3>
+      <p id="preview-percent" style="font-size: 24px; font-weight: bold; color: #FF3B30;">20% OFF</p>
+      <div style="margin-bottom: 10px;">Use code: <span id="preview-code" style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: bold;">SAVE20</span></div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal-content">
+      <h2 style="margin-top: 0;">Embed Flash Sale</h2>
+      <p>Copy and paste this code into your website.</p>
+      <textarea id="embed-textarea" readonly></textarea>
+      <div style="text-align: right;">
+        <button class="btn-outline" id="close-modal-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTheme = 'light';
+
+    const titleInput = document.getElementById('widget-title');
+    const codeInput = document.getElementById('widget-code');
+    const percentInput = document.getElementById('widget-percent');
+
+    const previewTitle = document.getElementById('preview-title');
+    const previewPercent = document.getElementById('preview-percent');
+    const previewCode = document.getElementById('preview-code');
+
+    function updatePreview() {
+      previewTitle.textContent = titleInput.value || 'Weekend Flash Sale!';
+      previewPercent.textContent = (percentInput.value || '20') + '% OFF';
+      previewCode.textContent = codeInput.value || 'SAVE20';
+    }
+
+    titleInput.addEventListener('input', updatePreview);
+    codeInput.addEventListener('input', updatePreview);
+    percentInput.addEventListener('input', updatePreview);
+
+    document.getElementById('theme-light').addEventListener('click', () => {
+      currentTheme = 'light';
+      document.getElementById('live-preview').style.background = '#fff';
+      document.getElementById('live-preview').style.color = '#000';
+    });
+
+    document.getElementById('theme-dark').addEventListener('click', () => {
+      currentTheme = 'dark';
+      document.getElementById('live-preview').style.background = '#1a1a1a';
+      document.getElementById('live-preview').style.color = '#fff';
+    });
+
+    document.getElementById('get-widget-btn').addEventListener('click', () => {
+      const title = encodeURIComponent(titleInput.value);
+      const code = encodeURIComponent(codeInput.value);
+      const percent = encodeURIComponent(percentInput.value);
+
+      const embedCode = `<iframe src="https://ohc.app/api/v1/growth/widgets/flash-sale?theme=${currentTheme}&percent=${percent}&code=${code}&title=${title}" width="100%" height="200" frameborder="0"></iframe>\n<!-- Powered by OHC -->`;
+
+      document.getElementById('embed-textarea').value = embedCode;
+      document.getElementById('embed-modal').style.display = 'flex';
+    });
+
+    document.getElementById('close-modal-btn').addEventListener('click', () => {
+      document.getElementById('embed-modal').style.display = 'none';
+    });
+  </script>
+</body>
+</html>
