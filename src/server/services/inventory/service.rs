@@ -143,22 +143,31 @@ impl InventoryService {
                     }
                     let _ = tx.commit().await;
 
-
-        // Publish to Redis Pub/Sub for Real-Time Sync
-        if let Some(_) = &self.redis_client {
-            let topic = format!("inventory:{}", tenant_id);
-            let payload = serde_json::json!({
-                "product_id": product_id,
-                "action": "reserve",
-                "quantity": quantity
-            }).to_string();
-            let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.unwrap_or(());
-        }
+                    // Publish to Redis Pub/Sub for Real-Time Sync
+                    if let Some(_) = &self.redis_client {
+                        let topic = format!("inventory:{}", tenant_id);
+                        let payload = serde_json::json!({
+                            "product_id": product_id,
+                            "action": "reserve",
+                            "quantity": quantity
+                        }).to_string();
+                        let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.unwrap_or(());
+                    }
                 } else {
                     let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    return Ok(ReserveResult {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: "Failed to set org context".to_string()
+                    });
                 }
             } else {
                 let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                return Ok(ReserveResult {
+                    success: false,
+                    lock_id: "".to_string(),
+                    error_message: "Database error".to_string()
+                });
             }
         }
 
