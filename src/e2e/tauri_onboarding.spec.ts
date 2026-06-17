@@ -7,7 +7,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Serve the local files dynamically
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : path.resolve(__dirname, '..', '..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -153,8 +153,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
-    await page.getByRole('button', { name: 'Approve & Go Live' }).click();
-    await expect(page.locator('#template-error')).toBeVisible();
+    await page.locator('#finish-btn').click();
+    await expect(page.locator('#template-error')).toBeVisible({ timeout: 5000 });
 
     await page.locator('#template-selection').selectOption('Modern');
 
@@ -228,13 +228,13 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Verify validation triggers
-    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await newPage.locator('#finish-btn').click();
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
-    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await newPage.locator('#finish-btn').click();
 
     // Success page
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
@@ -247,7 +247,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
   test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : path.resolve(__dirname, '..', '..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -293,8 +293,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
   test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-        : process.cwd();
+        ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : path.resolve(__dirname, '..', '..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -316,7 +316,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : path.resolve(__dirname, '..', '..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
