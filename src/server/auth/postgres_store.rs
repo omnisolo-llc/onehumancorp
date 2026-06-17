@@ -453,15 +453,16 @@ impl UserRepository for PgUserRepository {
 
         // GC expired entries
         let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP"
+            "DELETE FROM revoked_tokens WHERE expires_at < $1"
         } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1"
+            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
         };
 
+        let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).execute(&mut *tx).await
+            sqlx::query(query).bind(now).execute(&mut *tx).await
         } else {
-            sqlx::query(query).bind(org_id).execute(&mut *tx).await
+            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -474,9 +475,10 @@ impl UserRepository for PgUserRepository {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
+        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $3 AND tenant_id = $2")
             .bind(jti)
             .bind(org_id)
+            .bind(chrono::Utc::now())
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
