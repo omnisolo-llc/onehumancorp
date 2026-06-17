@@ -1607,7 +1607,7 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/agent-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
@@ -1929,7 +1929,7 @@
           let bodyPayload;
 
           if (isAgentFeed) {
-             url = `/api/v1/feed/${encodeURIComponent(id)}/state`;
+             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
