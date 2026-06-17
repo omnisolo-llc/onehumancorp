@@ -202,6 +202,63 @@
       animation: pulse 1.5s infinite;
     }
 
+    .cm-footer-viral {
+      text-align: center;
+      padding: 8px 0;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.4);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .cm-footer-viral a {
+      color: #0066FF;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .cm-footer-viral span {
+      background: #0066FF;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .share-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-share-x {
+      background-color: #0f1419;
+      color: white;
+    }
+    .btn-share-wa {
+      background-color: #25D366;
+      color: white;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .cm-footer-viral {
+        background: rgba(22, 22, 26, 0.85);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .cm-footer-viral a {
+        color: #60a5fa;
+      }
+      .cm-footer-viral span {
+        background: #60a5fa;
+        color: #16161a;
+      }
+      .btn-share-x { background-color: #e7e9ea; color: #0f1419; }
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -268,6 +325,11 @@
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </div>
+  </div>
+  <div class="cm-footer-viral">
+    <a href="/onboarding" id="cm-footer-viral-link">
+      <span>OHC</span> Powered by OneHumanCorp
+    </a>
   </div>
 
   <script>
@@ -407,7 +469,28 @@
                 if (execRes.ok) {
                   approveBtn.textContent = 'Published';
                   approveBtn.style.backgroundColor = '#10B981'; // Green success
-                  appendAgentMessage("Successfully published the changes to your storefront.");
+                  const msgDiv = appendAgentMessage("Successfully published the changes to your storefront.");
+
+                  // Inject viral share buttons
+                  const shareDiv = document.createElement('div');
+                  shareDiv.className = 'share-btns';
+
+                  const shareText = encodeURIComponent(`I just updated my store instantly using AI! Launch your own today: https://cloud.ohc.network/invite/ai ⚡ Powered by OHC`);
+
+                  const btnX = document.createElement('button');
+                  btnX.className = 'btn btn-share-x';
+                  btnX.textContent = 'Share on X';
+                  btnX.onclick = () => window.open(`https://twitter.com/intent/tweet?text=${shareText}`, '_blank');
+
+                  const btnWa = document.createElement('button');
+                  btnWa.className = 'btn btn-share-wa';
+                  btnWa.textContent = 'Share on WhatsApp';
+                  btnWa.onclick = () => window.open(`https://wa.me/?text=${shareText}`, '_blank');
+
+                  shareDiv.appendChild(btnX);
+                  shareDiv.appendChild(btnWa);
+                  msgDiv.appendChild(shareDiv);
+                  scrollToBottom();
                 } else {
                   approveBtn.textContent = 'Failed';
                   approveBtn.style.backgroundColor = '#EF4444'; // Red error

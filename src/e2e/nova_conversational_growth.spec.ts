@@ -34,4 +34,32 @@ test('Conversational Growth Loop CUJ', async ({ page, loginAs, adminUser }) => {
   await input.fill('What is my current rating?');
   await page.click('#send-btn');
   await expect(page.locator('.message.agent').last()).toContainText(/average rating is/i);
+
+  // 5. Verify Growth Loop Branding (Powered by OHC watermark)
+  const viralFooter = page.locator('#cm-footer-viral-link');
+  await expect(viralFooter).toBeVisible();
+  await expect(viralFooter).toContainText('Powered by OneHumanCorp');
+
+  // 6. Verify Viral Share Loop after Action Execution
+  // Simulate an intent that generates a draft action
+  await input.fill('Create a 10% discount code');
+  await page.click('#send-btn');
+
+  // Verify the agent creates an Action Card
+  const approveBtn = page.locator('.btn-approve').last();
+  await expect(approveBtn).toBeVisible();
+  await expect(approveBtn).toHaveText('Approve & Publish');
+
+  // Click the execute/publish button
+  await approveBtn.click();
+  await expect(approveBtn).toHaveText('Published', { timeout: 5000 });
+
+  // Verify the viral share buttons are appended to the success message
+  const shareXBtn = page.locator('.btn-share-x').last();
+  await expect(shareXBtn).toBeVisible();
+  await expect(shareXBtn).toHaveText('Share on X');
+
+  const shareWaBtn = page.locator('.btn-share-wa').last();
+  await expect(shareWaBtn).toBeVisible();
+  await expect(shareWaBtn).toHaveText('Share on WhatsApp');
 });
