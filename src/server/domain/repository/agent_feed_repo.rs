@@ -167,7 +167,7 @@ mod tests {
     use uuid::Uuid;
 
     #[tokio::test]
-    #[ignore] // Integration test requiring database
+     // Integration test requiring database
     async fn test_agent_feed_repo_lifecycle() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = PgPool::connect(&database_url).await.unwrap();
