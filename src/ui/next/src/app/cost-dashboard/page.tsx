@@ -141,7 +141,10 @@ export default function CostDashboardPage() {
   }
 
   const formatCurrency = (cents: number) => {
-      return '$' + (cents / 100).toFixed(2);
+      const isNegative = cents < 0;
+      const amount = Math.abs(cents) / 100;
+      return (isNegative ? "-" : "") + "$" + amount.toFixed(2);
+
   };
 
   const formatStorage = (bytes: number) => {
@@ -386,7 +389,7 @@ export default function CostDashboardPage() {
                         <span className="font-medium text-green-700">Network & Storage Savings</span>
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
                     </div>
-                    <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
+                    <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">{formatCurrency(-(data?.bandwidth_savings || 0))}</span>
                 </div>
             </div>
         </section>
