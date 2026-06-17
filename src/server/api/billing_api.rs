@@ -99,18 +99,39 @@ pub struct CreateCheckoutSessionResponse {
 }
 
 pub async fn create_checkout_session_handler(
-    _headers: HeaderMap,
+    headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
-) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>();
+    let tenant_id = match auth_info {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
+        None => {
+            if let Some(tenant) = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()) {
+                tenant.to_string()
+            } else {
+                return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response();
+            }
+        }
     };
 
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.unwrap_or_default();
+    let req: CreateCheckoutSessionRequest = match serde_json::from_slice(&body_bytes) {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "bad request" }))).into_response(),
+    };
+
+    if let Some(mut conn) = hub.redis_client.as_ref().and_then(|c| c.get_connection().ok()) {
+        if let Some(product_id) = &req.product_id {
+            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+            let is_locked: bool = redis::cmd("EXISTS").arg(&lock_key).query(&mut conn).unwrap_or(false);
+            if is_locked {
+                return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "Item just sold out", "message": "Item just sold out."}))).into_response();
+            }
+        }
+    }
 
     let amount_usd;
     let item_name;
@@ -120,17 +141,22 @@ pub async fn create_checkout_session_handler(
             "starter" => 29.0,
             "pro" => 79.0,
             "business" => 299.0,
-            _ => return Err(StatusCode::BAD_REQUEST),
+            _ => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "bad request" }))).into_response(),
         };
         item_name = tier.clone();
     } else if let Some(product_id) = &req.product_id {
-        let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let row = sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+        let mut conn = match hub.pool.acquire().await {
+            Ok(c) => c,
+            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "internal error" }))).into_response(),
+        };
+        let row = match sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
             .bind(product_id)
             .bind(&tenant_id)
             .fetch_one(&mut *conn)
-            .await
-            .map_err(|_| StatusCode::NOT_FOUND)?;
+            .await {
+                Ok(r) => r,
+                Err(_) => return (StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "not found" }))).into_response(),
+        };
         use sqlx::Row;
         let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
         let title: String = row.try_get("title").unwrap_or_else(|_| "Product".to_string());
@@ -138,7 +164,7 @@ pub async fn create_checkout_session_handler(
         amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
         item_name = title;
     } else {
-        return Err(StatusCode::BAD_REQUEST);
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "bad request" }))).into_response();
     }
 
     let mut acquired_lock_id = "".to_string();
@@ -149,12 +175,12 @@ pub async fn create_checkout_session_handler(
             match inventory_service.reserve_inventory(&tenant_id, product_id, quantity, ttl).await {
                 Ok(result) => {
                     if !result.success {
-                        return Err(StatusCode::CONFLICT);
+                        return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "Item just sold out", "message": "Item just sold out."}))).into_response();
                     }
                     acquired_lock_id = result.lock_id;
                 }
                 Err(_) => {
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "internal error" }))).into_response();
                 }
             }
         }
