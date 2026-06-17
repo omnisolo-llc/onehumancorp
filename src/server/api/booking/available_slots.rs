@@ -26,7 +26,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/:service_id", get(handle_get_available_slots))
+        .route("/{service_id}", get(handle_get_available_slots))
         .with_state(db)
 }
 
