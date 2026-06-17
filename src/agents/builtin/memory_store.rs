@@ -25,6 +25,8 @@ pub enum VectorMemoryStore {
 
 pub struct VectorRepository {
     store: VectorMemoryStore,
+    has_sqlite_vec_extension: std::sync::atomic::AtomicBool,
+    sqlite_vec_extension_checked: std::sync::atomic::AtomicBool,
 }
 
 fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
@@ -48,17 +50,36 @@ impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository {
             store: VectorMemoryStore::Postgres(pool),
+            has_sqlite_vec_extension: std::sync::atomic::AtomicBool::new(false),
+            sqlite_vec_extension_checked: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
         VectorRepository {
             store: VectorMemoryStore::Sqlite(pool),
+            has_sqlite_vec_extension: std::sync::atomic::AtomicBool::new(false),
+            sqlite_vec_extension_checked: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
     pub fn get_store(&self) -> &VectorMemoryStore {
         &self.store
+    }
+
+    async fn check_sqlite_vec_extension(&self, pool: &sqlx::SqlitePool) -> bool {
+        if self.sqlite_vec_extension_checked.load(std::sync::atomic::Ordering::Relaxed) {
+            return self.has_sqlite_vec_extension.load(std::sync::atomic::Ordering::Relaxed);
+        }
+
+        let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
+            .execute(pool)
+            .await
+            .is_ok();
+
+        self.has_sqlite_vec_extension.store(has_vec_extension, std::sync::atomic::Ordering::Relaxed);
+        self.sqlite_vec_extension_checked.store(true, std::sync::atomic::Ordering::Relaxed);
+        has_vec_extension
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
@@ -213,10 +234,7 @@ impl VectorRepository {
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
-                let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
-                    .execute(pool)
-                    .await
-                    .is_ok();
+                let has_vec_extension = self.check_sqlite_vec_extension(pool).await;
 
                 if has_vec_extension {
                     let rows = sqlx::query(
@@ -685,10 +703,7 @@ impl VectorRepository {
             }
             VectorMemoryStore::Sqlite(pool) => {
                 // Determine if we have the vector extension loaded (e.g. by checking if vec_distance_cosine exists)
-                let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")
-                    .execute(pool)
-                    .await
-                    .is_ok();
+                let has_vec_extension = self.check_sqlite_vec_extension(pool).await;
 
                 if has_vec_extension {
                     // SQLite doesn't natively support LATERAL joins in the same way, but we can use a correlated subquery
