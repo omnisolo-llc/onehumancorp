@@ -5010,51 +5010,93 @@ async fn list_ui_bookings_handler(
         tokio::spawn(async move {
             let bookings = match &db.store {
                 crate::db::DbStore::Postgres => {
-                    match sqlx::query(
-                        "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                         FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                         LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                         WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-                    )
-                    .bind(&t)
-                    .fetch_all(&db.pool)
-                    .await {
-                        Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "status": row.get::<String, _>("status"),
-                            })
-                        }).collect::<Vec<_>>()),
-                        Err(e) => Err(e),
+                    if mobile_optimized {
+                        match sqlx::query(
+                            "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                             FROM bookings b LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                             WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+                        )
+                        .bind(&t)
+                        .fetch_all(&db.pool)
+                        .await {
+                            Ok(rows) => Ok(rows.into_iter().map(|row| {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "status": row.get::<String, _>("status"),
+                                })
+                            }).collect::<Vec<_>>()),
+                            Err(e) => Err(e),
+                        }
+                    } else {
+                        match sqlx::query(
+                            "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                             FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                             LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                             WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+                        )
+                        .bind(&t)
+                        .fetch_all(&db.pool)
+                        .await {
+                            Ok(rows) => Ok(rows.into_iter().map(|row| {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "customer_name": row.get::<String, _>("customer_name"),
+                                    "product_id": row.get::<String, _>("product_id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                    "status": row.get::<String, _>("status"),
+                                })
+                            }).collect::<Vec<_>>()),
+                            Err(e) => Err(e),
+                        }
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    match sqlx::query(
-                        "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                         FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                         LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                         WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-                    )
-                    .bind(&t)
-                    .fetch_all(pool)
-                    .await {
-                        Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.get::<String, _>("start_time"),
-                                "end_time": row.get::<String, _>("end_time"),
-                                "status": row.get::<String, _>("status"),
-                            })
-                        }).collect::<Vec<_>>()),
-                        Err(e) => Err(e),
+                    if mobile_optimized {
+                        match sqlx::query(
+                            "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                             FROM bookings b LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                             WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+                        )
+                        .bind(&t)
+                        .fetch_all(pool)
+                        .await {
+                            Ok(rows) => Ok(rows.into_iter().map(|row| {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.get::<String, _>("start_time"),
+                                    "status": row.get::<String, _>("status"),
+                                })
+                            }).collect::<Vec<_>>()),
+                            Err(e) => Err(e),
+                        }
+                    } else {
+                        match sqlx::query(
+                            "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                             FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                             LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                             WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+                        )
+                        .bind(&t)
+                        .fetch_all(pool)
+                        .await {
+                            Ok(rows) => Ok(rows.into_iter().map(|row| {
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "customer_name": row.get::<String, _>("customer_name"),
+                                    "product_id": row.get::<String, _>("product_id"),
+                                    "product_title": row.get::<String, _>("product_title"),
+                                    "start_time": row.get::<String, _>("start_time"),
+                                    "end_time": row.get::<String, _>("end_time"),
+                                    "status": row.get::<String, _>("status"),
+                                })
+                            }).collect::<Vec<_>>()),
+                            Err(e) => Err(e),
+                        }
                     }
                 }
             };
@@ -5069,24 +5111,36 @@ async fn list_ui_bookings_handler(
 
     let bookings = match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(&db.pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
+            if mobile_optimized {
+                match sqlx::query(
+                    "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                     FROM bookings b LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                     WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
                         })
-                    } else {
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+            } else {
+                match sqlx::query(
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                     FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                     LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                     WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
@@ -5096,30 +5150,42 @@ async fn list_ui_bookings_handler(
                             "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
                         })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
             }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
-                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool)
-            .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                    if query.mobile_optimized.unwrap_or(false) {
+            if mobile_optimized {
+                match sqlx::query(
+                    "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                     FROM bookings b LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                     WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.get::<String, _>("start_time"),
                             "status": row.get::<String, _>("status"),
                         })
-                    } else {
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+            } else {
+                match sqlx::query(
+                    "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                     FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                     LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                     WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
@@ -5129,9 +5195,9 @@ async fn list_ui_bookings_handler(
                             "end_time": row.get::<String, _>("end_time"),
                             "status": row.get::<String, _>("status"),
                         })
-                    }
-                }).collect::<Vec<_>>()),
-                Err(e) => Err(e),
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
             }
         }
     };
