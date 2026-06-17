@@ -1,24 +1,23 @@
 use std::sync::Arc;
 use crate::db::DB;
 use std::time::Duration;
-
 use uuid::Uuid;
-use sqlx::Row;
 use serde_json::json;
+use chrono::Utc;
 use tokio::time::timeout;
-
-const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub struct BookingReengagementWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
 }
 
+const DB_OP_TIMEOUT: Duration = Duration::from_secs(10);
+
 impl BookingReengagementWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            poll_interval: Duration::from_secs(10), // Run frequently, jobs are scheduled for 14 days out
+            poll_interval: Duration::from_secs(300), // Run every 5 minutes
         }
     }
 
@@ -26,17 +25,30 @@ impl BookingReengagementWorker {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
-            let pool = db.pool.clone();
             loop {
+                let _ = Self::process_jobs(&db).await;
                 tokio::time::sleep(interval_duration).await;
+            }
+        });
+    }
 
+    async fn process_jobs(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let pool = match &db.store {
+            crate::db::DbStore::Postgres => db.pool.clone(),
+            _ => return Ok(()),
+        };
+
+        // We process jobs in a loop until none are left or timeout
+        loop {
+            let task = {
                 let poll_op = async {
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-                            let row = sqlx::query(
+
+                            let row: Option<(String, String, serde_json::Value, i32, i32)> = sqlx::query_as(
                                 r#"
-                                SELECT id, tenant_id, payload FROM ohc_job_queue
+                                SELECT id, tenant_id, payload, retry_count, max_retries FROM ohc_job_queue
                                 WHERE status = 'PENDING' AND job_type = 'booking_reengagement_check'
                                 AND next_retry_at <= CURRENT_TIMESTAMP
                                 ORDER BY created_at ASC
@@ -48,16 +60,14 @@ impl BookingReengagementWorker {
                             .map_err(|e| e.to_string())?;
 
                             if let Some(r) = row {
-                                let id: String = r.get("id");
-                                let tenant_id: String = r.get("tenant_id");
-                                let payload: serde_json::Value = r.get("payload");
+                                let (id, tenant_id, payload, retry_count, max_retries) = r;
 
                                 sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                                     .bind(&id)
                                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                                 tx.commit().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(Some((id, tenant_id, payload)))
+                                Ok::<_, String>(Some((id, tenant_id, payload, retry_count, max_retries)))
                             } else {
                                 tx.rollback().await.map_err(|e| e.to_string())?;
                                 Ok::<_, String>(None)
@@ -65,9 +75,9 @@ impl BookingReengagementWorker {
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                              let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-                            let row = sqlx::query(
+                            let row: Option<(String, String, String, i32, i32)> = sqlx::query_as(
                                 r#"
-                                SELECT id, tenant_id, payload FROM ohc_job_queue
+                                SELECT id, tenant_id, payload, retry_count, max_retries FROM ohc_job_queue
                                 WHERE status = 'PENDING' AND job_type = 'booking_reengagement_check'
                                 AND next_retry_at <= CURRENT_TIMESTAMP
                                 ORDER BY created_at ASC
@@ -79,9 +89,7 @@ impl BookingReengagementWorker {
                             .map_err(|e| e.to_string())?;
 
                             if let Some(r) = row {
-                                let id: String = r.get("id");
-                                let tenant_id: String = r.get("tenant_id");
-                                let payload_str: String = r.get("payload");
+                                let (id, tenant_id, payload_str, retry_count, max_retries) = r;
                                 let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                                 sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -89,7 +97,7 @@ impl BookingReengagementWorker {
                                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                                 tx.commit().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(Some((id, tenant_id, payload)))
+                                Ok::<_, String>(Some((id, tenant_id, payload, retry_count, max_retries)))
                             } else {
                                 tx.rollback().await.map_err(|e| e.to_string())?;
                                 Ok::<_, String>(None)
@@ -98,13 +106,16 @@ impl BookingReengagementWorker {
                     }
                 };
 
-                let task = match timeout(DB_OP_TIMEOUT, poll_op).await {
+                match timeout(DB_OP_TIMEOUT, poll_op).await {
                     Ok(Ok(Some(res))) => res,
-                    Ok(Ok(None)) => continue,
-                    _ => continue,
-                };
+                    Ok(Ok(None)) => break, // Break the loop if no more tasks
+                    _ => break,
+                }
+            };
 
-                let (job_id, tenant_id, payload) = task;
+            let (job_id, tenant_id, payload, retry_count, max_retries) = task;
+
+            let work_result = async {
                 let customer_id = payload.get("customer_id").and_then(|c| c.as_str()).unwrap_or("");
                 let _product_id = payload.get("product_id").and_then(|p| p.as_str()).unwrap_or("");
 
@@ -183,7 +194,7 @@ impl BookingReengagementWorker {
                             .bind(&customer_name)
                             .bind(&drafted_message)
                             .execute(&pool)
-                            .await;
+                            .await?;
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                              let _ = sqlx::query(
@@ -198,23 +209,64 @@ impl BookingReengagementWorker {
                             .bind(&customer_name)
                             .bind(&drafted_message)
                             .execute(sqlite_pool)
-                            .await;
+                            .await?;
                         }
                     }
                 }
 
-                // 3. Mark Job as Completed
-                 match &db.store {
-                     crate::db::DbStore::Postgres => {
-                          let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                          .bind(&job_id).execute(&pool).await;
-                     },
-                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                           let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                          .bind(&job_id).execute(sqlite_pool).await;
+                Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+            }.await;
+
+            match work_result {
+                Ok(_) => {
+                    // 3. Mark Job as Completed
+                     match &db.store {
+                         crate::db::DbStore::Postgres => {
+                              let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                              .bind(&job_id).execute(&pool).await;
+                         },
+                         crate::db::DbStore::Sqlite(sqlite_pool) => {
+                               let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                              .bind(&job_id).execute(sqlite_pool).await;
+                         }
                      }
-                 }
+                }
+                Err(e) => {
+                    tracing::error!("Job {} failed: {}", job_id, e);
+                    let new_retry_count = retry_count + 1;
+                    if new_retry_count >= max_retries {
+                        // Mark as FAILED (DLQ)
+                        tracing::warn!("Job {} reached max retries. Moving to FAILED state.", job_id);
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                                    .bind(new_retry_count).bind(&job_id).execute(&pool).await;
+                            },
+                            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                    .bind(new_retry_count).bind(&job_id).execute(sqlite_pool).await;
+                            }
+                        }
+                    } else {
+                        // Exponential backoff
+                        let backoff_secs = 2_i64.pow(new_retry_count as u32) * 60; // 2^n minutes
+                        let next_retry = Utc::now() + chrono::Duration::seconds(backoff_secs);
+
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                                    .bind(new_retry_count).bind(next_retry).bind(&job_id).execute(&pool).await;
+                            },
+                            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                    .bind(new_retry_count).bind(next_retry.to_rfc3339()).bind(&job_id).execute(sqlite_pool).await;
+                            }
+                        }
+                    }
+                }
             }
-        });
+        }
+
+        Ok(())
     }
 }

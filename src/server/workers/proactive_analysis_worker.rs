@@ -4,6 +4,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use serde_json::json;
 use crate::domain::repository::agent_feed_repo::{AgentFeedItem};
+use chrono::Utc;
 
 pub struct ProactiveAnalysisWorker {
     pub db: Arc<DB>,
@@ -36,15 +37,16 @@ impl ProactiveAnalysisWorker {
         let mut tx = db.pool.begin().await?;
 
         // 1. Find jobs
-        let task: Option<(String, String, String)> = sqlx::query_as(
-            "SELECT id, tenant_id, payload FROM ohc_job_queue
-             WHERE status = 'PENDING' AND job_type = 'proactive_context_analysis'
+        // Use next_retry_at to adhere to backoff
+        let task: Option<(String, String, String, i32, i32)> = sqlx::query_as(
+            "SELECT id, tenant_id, payload, retry_count, max_retries FROM ohc_job_queue
+             WHERE status = 'PENDING' AND job_type = 'proactive_context_analysis' AND next_retry_at <= CURRENT_TIMESTAMP
              LIMIT 1 FOR UPDATE SKIP LOCKED"
         )
         .fetch_optional(&mut *tx)
         .await?;
 
-        let (job_id, tenant_id, payload_str) = match task {
+        let (job_id, tenant_id, payload_str, retry_count, max_retries) = match task {
             Some(t) => t,
             None => {
                 tx.rollback().await?;
@@ -60,65 +62,94 @@ impl ProactiveAnalysisWorker {
 
         tx.commit().await?;
 
-        tracing::info!("ProactiveAnalysisWorker processing job {} for tenant {}", job_id, tenant_id);
+        tracing::info!("ProactiveAnalysisWorker processing job {} for tenant {} (retry {}/{})", job_id, tenant_id, retry_count, max_retries);
 
         let _payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
-        // 2. Perform analysis (Simulation of LLM call/context query)
-        // In a real scenario, this would query upcoming bookings, unread messages, stock, etc.
-        // For now, we'll create a synthetic actionable insight.
-        let proposed_action = json!({
-            "action_type": "review_insight",
-            "description": "You have 3 pending estimates from yesterday that need follow-up. Would you like me to send a reminder?"
-        });
+        // Execute task work, handling failure specifically to implement DLQ
+        let work_result = async {
+            // 2. Perform analysis (Simulation of LLM call/context query)
+            // In a real scenario, this would query upcoming bookings, unread messages, stock, etc.
+            // For now, we'll create a synthetic actionable insight.
+            let proposed_action = json!({
+                "action_type": "review_insight",
+                "description": "You have 3 pending estimates from yesterday that need follow-up. Would you like me to send a reminder?"
+            });
 
-        let context_payload = json!({
-            "trigger": "stale_estimates",
-            "insight_type": "operations"
-        });
+            let context_payload = json!({
+                "trigger": "stale_estimates",
+                "insight_type": "operations"
+            });
 
-        // 3. Insert into Agent Feed
-        let item = AgentFeedItem {
-            id: Uuid::new_v4().to_string(),
-            tenant_id: tenant_id.clone(),
-            event_source: "proactive_analysis".to_string(),
-            context_payload: Some(sqlx::types::Json(context_payload)),
-            proposed_action: Some(sqlx::types::Json(proposed_action)),
-            lifecycle_state: "PENDING_APPROVAL".to_string(),
-            created_at: Some(chrono::Utc::now()),
-            updated_at: Some(chrono::Utc::now()),
-        };
+            // 3. Insert into Agent Feed
+            let item = AgentFeedItem {
+                id: Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.clone(),
+                event_source: "proactive_analysis".to_string(),
+                context_payload: Some(sqlx::types::Json(context_payload)),
+                proposed_action: Some(sqlx::types::Json(proposed_action)),
+                lifecycle_state: "PENDING_APPROVAL".to_string(),
+                created_at: Some(chrono::Utc::now()),
+                updated_at: Some(chrono::Utc::now()),
+            };
 
-        // We use an admin override or the repo directly
-        // The repository itself doesn't set the app.current_tenant context,
-        // so we must do it manually for RLS if required, or execute a direct query bypassing RLS as admin worker.
-        // However, repo.create does a direct insert. If RLS is enabled, we need to set context.
+            // We use an admin override or the repo directly
+            let mut conn = db.pool.acquire().await?;
+            ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await.map_err(|e| e.to_string())?;
 
-        let mut conn = db.pool.acquire().await?;
-        ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await.map_err(|e| e.to_string())?;
-
-        sqlx::query(
-            r#"
-            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            "#
-        )
-        .bind(&item.id)
-        .bind(&item.tenant_id)
-        .bind(&item.event_source)
-        .bind(&item.context_payload)
-        .bind(&item.proposed_action)
-        .bind(&item.lifecycle_state)
-        .bind(&item.created_at)
-        .bind(&item.updated_at)
-        .execute(&mut *conn)
-        .await?;
-
-        // 4. Mark Job as Completed
-        sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-            .bind(&job_id)
-            .execute(&db.pool)
+            sqlx::query(
+                r#"
+                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                "#
+            )
+            .bind(&item.id)
+            .bind(&item.tenant_id)
+            .bind(&item.event_source)
+            .bind(&item.context_payload)
+            .bind(&item.proposed_action)
+            .bind(&item.lifecycle_state)
+            .bind(&item.created_at)
+            .bind(&item.updated_at)
+            .execute(&mut *conn)
             .await?;
+
+            Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+        }.await;
+
+        match work_result {
+            Ok(_) => {
+                // 4. Mark Job as Completed
+                sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&job_id)
+                    .execute(&db.pool)
+                    .await?;
+            }
+            Err(e) => {
+                tracing::error!("Job {} failed: {}", job_id, e);
+                let new_retry_count = retry_count + 1;
+                if new_retry_count >= max_retries {
+                    // Mark as FAILED (DLQ)
+                    tracing::warn!("Job {} reached max retries. Moving to FAILED state.", job_id);
+                    sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                        .bind(new_retry_count)
+                        .bind(&job_id)
+                        .execute(&db.pool)
+                        .await?;
+                } else {
+                    // Exponential backoff
+                    let backoff_secs = 2_i64.pow(new_retry_count as u32) * 60; // 2^n minutes
+                    let next_retry = Utc::now() + chrono::Duration::seconds(backoff_secs);
+
+                    sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                        .bind(new_retry_count)
+                        .bind(next_retry)
+                        .bind(&job_id)
+                        .execute(&db.pool)
+                        .await?;
+                }
+            }
+        }
 
         Ok(())
     }
