@@ -38,15 +38,61 @@ export default function LinkInBioGeneratorPage() {
     setLinks(links.filter(link => link.id !== id));
   };
 
-  // Save to local storage whenever settings change to simulate backend persistence
+  const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    if (!tenant || tenant === 'my-store') return;
+
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
+        if (res.ok) {
+          const data = await res.json();
+          setStoreName(data.store_name);
+          setBio(data.bio);
+          setTheme(data.theme);
+          setLinks(data.links);
+        }
+      } catch (err) {
+        console.error("Failed to load Link-in-Bio config", err);
+      }
+    };
+    fetchConfig();
+  }, [tenant]);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      const payload = {
+        store_name: storeName,
+        bio,
+        theme,
+        links
+      };
+      const res = await fetch('/api/v1/growth/link-in-bio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        throw new Error('Failed to publish changes');
+      }
+      alert('Changes published successfully!');
+    } catch (err) {
+      console.error("Failed to publish", err);
+      alert('Failed to publish changes.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  // Keep local storage write for backwards-compat during transition if needed,
+  // but main persistence is now the API via handlePublish.
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-        const payload = {
-            storeName,
-            bio,
-            links,
-            theme
-        };
+        const payload = { storeName, bio, links, theme };
         localStorage.setItem(`ohc_bio_${tenant}`, JSON.stringify(payload));
     }
   }, [storeName, bio, links, theme, tenant]);
@@ -154,12 +200,19 @@ export default function LinkInBioGeneratorPage() {
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Publish & Share</h2>
                 <div className="flex flex-col gap-3">
                     <button
+                        onClick={handlePublish}
+                        disabled={publishing}
+                        className={`w-full py-3 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700`}
+                    >
+                        {publishing ? 'Publishing...' : 'Publish Changes'}
+                    </button>
+                    <button
                         onClick={() => {
                             navigator.clipboard.writeText(shareLink);
                             setCopied(true);
                             setTimeout(() => setCopied(false), 2000);
                         }}
-                        className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                        className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                     >
                         {copied ? 'Copied Link!' : 'Copy Link-in-Bio URL'}
                     </button>
