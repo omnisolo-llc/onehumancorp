@@ -2447,7 +2447,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
-        if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
+        if let Err(_e) = provider.send_sms(&phone, &from_number, message).await {
             tracing::warn!("Failed to dispatch critical SMS. Expected if Twilio is not configured.");
         }
     }
@@ -5539,7 +5539,7 @@ async fn create_ui_bom_item_handler(
             // Fire and forget gracefully
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
-                if let Err(e) = res {
+                if let Err(_e) = res {
                     tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured.");
                 }
             });
@@ -6093,6 +6093,40 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
+                .route("/rpc", axum::routing::post({
+            let app_server = std::sync::Arc::new(
+                ohc_builtin_agent::codex_runner::AppServer::new(
+                    std::sync::Arc::new(ohc_builtin_agent::codex_runner::Runner::new(
+                        std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(
+                        {
+                            let provider = std::env::var("LLM_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+                            let openai_key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
+                            let anthropic_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+                            let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            if provider == "anthropic" || (!anthropic_key.is_empty() && openai_key.is_empty()) {
+                                std::sync::Arc::new(ohc_builtin_agent::llm::anthropic::AnthropicClient::new(anthropic_key))
+                                    as std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>
+                            } else if provider == "minimax" || !minimax_key.is_empty() {
+                                std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::minimax(minimax_key, None))
+                                    as std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>
+                            } else {
+                                std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new(openai_key))
+                                    as std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>
+                            }
+                        }, vec![]))
+                    ))
+                )
+            );
+            move |axum::Json(payload): axum::Json<serde_json::Value>| {
+                let app_server = app_server.clone();
+                async move {
+                    let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+                    let response_str = app_server.handle_request(&payload_str).await;
+                    let response_json: serde_json::Value = serde_json::from_str(&response_str).unwrap_or(serde_json::json!({"error": "Failed to parse response"}));
+                    axum::Json(response_json)
+                }
+            }
+        }))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
