@@ -27,6 +27,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.waitForTimeout(1000);
 
     // Enter PIN: 1234
+    await page.waitForSelector('button:has-text("1")');
     await page.getByRole('button', { name: '1', exact: true }).click();
     await page.getByRole('button', { name: '2', exact: true }).click();
     await page.getByRole('button', { name: '3', exact: true }).click();
@@ -63,8 +64,8 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
-    await page.locator('text=Quick Charge').click();
-    await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
+    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
+    await expect(page.locator('text=Offline Quick Charge Saved.')).toBeVisible();
 
     // Perform an offline clock in
     await page.getByRole('button', { name: 'Clock In' }).click();

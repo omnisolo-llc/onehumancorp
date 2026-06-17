@@ -255,7 +255,7 @@ export default function POSTerminal() {
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
-            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
+            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900 min-h-44px min-w-[44px]">
               {t('Lock')}
             </button>
           </div>
@@ -264,7 +264,7 @@ export default function POSTerminal() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
 
-           <div className="app-card rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
+           <div className="app-card rounded-2xl p-6 backdrop-blur-md bg-white/30 border border-white/20 shadow-lg mb-6 text-center">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -280,14 +280,14 @@ export default function POSTerminal() {
              {clockedIn ? (
                <button
                  onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors min-h-44px min-w-[44px]"
                >
                  {t('Clock Out')}
                </button>
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="charge-btn w-full py-4 rounded-[16px] bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+                 className="charge-btn w-full py-4 rounded-[16px] bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-44px min-w-[44px]"
                >
                  {t('Clock In')}
                </button>
@@ -300,7 +300,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-44px min-w-[44px] p-4 rounded-[16px] text-left backdrop-blur-md bg-white/30 border border-white/20 shadow-lg ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -308,7 +308,7 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="p-4 rounded-[16px] text-left bg-white/65 backdrop-blur-[30px] border border-white/40 shadow-sm active:scale-[0.98]">
+             <button className="min-h-44px min-w-[44px] p-4 rounded-[16px] text-left backdrop-blur-md bg-white/30 border border-white/20 shadow-lg active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -325,7 +325,7 @@ export default function POSTerminal() {
                 <button
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}
-                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] ${selectedProduct?.id === product.id ? 'bg-white/80 border-[#0066FF] ring-1 ring-[#0066FF]' : 'bg-white/65 border-white/40'} backdrop-blur-[30px] border shadow-sm`}
+                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] ${selectedProduct?.id === product.id ? 'bg-white/80 border-[#0066FF] ring-1 ring-[#0066FF]' : 'bg-white/65 border-white/40'} backdrop-blur-md border border-white/20 shadow-lg`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -365,6 +365,7 @@ export default function POSTerminal() {
         </div>
 
         {syncing && (
+
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-44px flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -374,7 +375,7 @@ export default function POSTerminal() {
           </div>
         )}
         {offlineConversion && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100/80 backdrop-blur-md border border-amber-200 shadow-xl shadow-amber-500/20 text-amber-900 px-4 py-2 rounded-full text-xs font-bold animate-bounce">
             {t('Using cached rates - Syncing soon')}
           </div>
         )}

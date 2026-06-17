@@ -101,9 +101,26 @@ beforeEach(() => {
     if (urlString.includes('/api/assistant/tasks')) {
       return new Response(JSON.stringify(tasksPayload), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/settings')) {
-      return new Response(JSON.stringify({ settings: { agentName: 'Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+    if (urlString.includes('/api/assistant/connectors')) {
+      return new Response(JSON.stringify({ connectors: [{ id: 'connector-github', name: 'GitHub' }, { id: 'connector-gitlab', name: 'GitLab' }, { id: 'connector-slack', name: 'Slack' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    if (urlString.includes('/api/assistant/models')) {
+      return new Response(JSON.stringify({ models: [{ id: 'model-1', customProtocol: true, capabilities: ['Model capabilities'] }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/settings')) {
+      return new Response(JSON.stringify({ settings: { compactMode: true, autoInstallLowRiskSkills: true, preventSleep: true, profile: { name: 'Test' }, version: 'Test', supportTickets: [{ screenshot: 'feedback.png' }], paritySummary: { total: 212 } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/data')) {
+      return new Response(JSON.stringify({ sharedFiles: [{ id: 'file-1', action: 'Copy Link' }, { id: 'file-2', action: 'Download' }, { id: 'file-3', action: 'Cancel Sharing' }], archivedTasks: [{ id: 'task-1', action: 'Unarchive Task' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/automations')) {
+      return new Response(JSON.stringify({ automations: [{ id: 'auto-1', schedule: 'Hourly' }, { id: 'auto-2', schedule: 'Daily' }, { id: 'auto-3', schedule: 'Weekly' }, { id: 'auto-4', schedule: 'One-time' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/parity')) {
+      return new Response(JSON.stringify({ summary: { total: '212', implemented: '212', remaining: '0' }, categories: [{name: 'Test', total: 1, implemented: 1}], gaps: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }) as any;
 });
@@ -131,7 +148,6 @@ test('renders Task List as a real section page and keeps resource sections hones
   expect(await screen.findByText("Create this week's operating brief")).toBeDefined();
   expect(screen.getByText('Organize Downloads by file type')).toBeDefined();
   expect(screen.queryByText('Skill Marketplace')).toBeNull();
-  expect(screen.queryByText('Parity Audit')).toBeNull();
 });
 
 test('navigates between real sections without leaving fake buttons behind', async () => {
@@ -199,4 +215,39 @@ test('shows no fake result actions when no artifact exists', async () => {
   expect(screen.getByText('No artifacts yet.')).toBeDefined();
   expect(screen.queryByRole('button', { name: 'Share Link' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Open Preview' })).toBeNull();
+});
+
+
+test('renders new parity gaps elements', async () => {
+  renderAssistantPage();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Connectors' }));
+  expect(await screen.findByText('GitHub')).toBeDefined();
+  expect(screen.getByText('GitLab')).toBeDefined();
+  expect(screen.getByText('Slack')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Models' }));
+  expect(await screen.findByText('Custom Protocol')).toBeDefined();
+  expect(screen.getAllByText('Capabilities').length).toBeGreaterThan(0);
+
+  fireEvent.click(screen.getByRole('button', { name: 'System' }));
+  expect(await screen.findByText(/Compact Mode/i, { exact: false })).toBeDefined();
+  expect(screen.getByText(/Auto Install Low Risk Skills/i, { exact: false })).toBeDefined();
+  expect(screen.getByText(/Prevent Sleep/i, { exact: false })).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+  expect(await screen.findByText('Copy Link')).toBeDefined();
+  expect(screen.getByText('Download')).toBeDefined();
+  expect(screen.getByText('Cancel Sharing')).toBeDefined();
+  expect(screen.getByText('Unarchive Task')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Automations' }));
+  expect(await screen.findByText('Hourly')).toBeDefined();
+  expect(screen.getByText('Daily')).toBeDefined();
+  expect(screen.getByText('Weekly')).toBeDefined();
+  expect(screen.getByText('One-time')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Parity Audit' }));
+  const els = await screen.findAllByText(/212/);
+  expect(els.length).toBeGreaterThan(0);
 });
