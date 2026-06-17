@@ -80,82 +80,37 @@
         background-color: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
+      }      .app-feed {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
       }
 
-      .app-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-
-      @media (min-width: 768px) {
-        .app-grid {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-
-      .app-panel {
+      .action-card {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(20px) saturate(210%);
+        -webkit-backdrop-filter: blur(20px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        padding: 16px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        text-align: left;
       }
 
-      .app-panel-header {
-        font-weight: 600;
-        font-size: 18px;
-        margin-bottom: 16px;
-        color: #1d1d1f;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        padding-bottom: 12px;
-      }
-
-      .app-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .app-list-item {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        padding: 16px;
-        cursor: pointer;
+      .action-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: background 0.2s;
-        text-align: left;
-      }
-      .app-list-item:hover {
-        background: rgba(255, 255, 255, 0.8);
-      }
-      .app-list-item.selected {
-        background: rgba(255, 255, 255, 0.9);
-        border-color: #0066FF;
-        box-shadow: 0 0 0 1px #0066FF;
+        margin-bottom: 12px;
       }
 
-      .app-list-title {
+      .action-card-title {
         font-weight: 600;
-        font-size: 15px;
+        font-size: 16px;
         color: #1d1d1f;
-        margin-bottom: 4px;
-      }
-      .app-list-subtitle {
-        font-size: 13px;
-        color: #86868b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
       }
 
       .app-empty {
@@ -258,19 +213,13 @@
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
         }
-        h1, .app-panel-header, .app-list-title { color: #f5f5f7; }
+        h1, .action-card-title { color: #f5f5f7; }
         .subtitle, .app-metric-label { color: #a1a1a6; }
-        .app-panel {
+        .action-card {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(20px) saturate(210%);
+          -webkit-backdrop-filter: blur(20px) saturate(210%);
           border-color: rgba(255, 255, 255, 0.1);
-        }
-        .app-list-item { border-color: rgba(255, 255, 255, 0.1); }
-        .app-list-item:hover { background: rgba(255, 255, 255, 0.1); }
-        .app-list-item.selected {
-          background: rgba(0, 102, 255, 0.1);
-          border-color: #0066FF;
         }
         .detail-value {
           background: rgba(255, 255, 255, 0.05);
@@ -307,20 +256,8 @@
 
       <div id="action-status" class="action-status"></div>
 
-      <div class="app-grid">
-        <section class="app-panel">
-          <div class="app-panel-header">Triage Queue</div>
-          <div id="triage-list" class="app-list">
-            <div class="app-empty">Loading triage items...</div>
-          </div>
-        </section>
-
-        <section class="app-panel">
-          <div class="app-panel-header">Triage Detail</div>
-          <div id="triage-detail">
-            <div class="app-empty">Select a triage item to review it.</div>
-          </div>
-        </section>
+      <div class="app-feed" id="triage-feed">
+        <div class="app-empty">Loading triage items...</div>
       </div>
     </div>
 
@@ -341,7 +278,7 @@
       }
 
       async function loadItems() {
-        const listEl = document.getElementById("triage-list");
+        const feedEl = document.getElementById("triage-feed");
         try {
           const res = await fetch(`/api/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId())}&mobile_optimized=false`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
@@ -349,13 +286,11 @@
           const data = await res.json();
           items = Array.isArray(data) ? data : [];
 
-          if (!selectedId && items.length > 0) {
-            selectedId = items[0].id;
-          }
+
 
           renderUI();
         } catch (e) {
-          listEl.innerHTML = `<div class="app-empty" style="color: #d9534f;">${e.message || "Failed to load triage items"}</div>`;
+          feedEl.innerHTML = `<div class="app-empty" style="color: #d9534f;">${e.message || "Failed to load triage items"}</div>`;
         }
       }
 
@@ -373,7 +308,7 @@
       async function handleDecision(id, approved) {
         let editedReply = null;
         if (approved) {
-           const textarea = document.getElementById('edit-draft-reply');
+           const textarea = document.getElementById(`edit-draft-reply-${id}`);
            if (textarea) {
                editedReply = textarea.value;
            }
@@ -391,9 +326,7 @@
           showStatus(approved ? "Approved!" : "Dismissed.", true);
 
           items = items.filter(i => i.id !== id);
-          if (selectedId === id) {
-            selectedId = items.length > 0 ? items[0].id : null;
-          }
+
 
           renderUI();
         } catch (e) {
@@ -419,47 +352,24 @@
           urgentBadge.style.display = "none";
         }
 
-        // List
-        const listEl = document.getElementById("triage-list");
+        const feedEl = document.getElementById("triage-feed");
         if (items.length === 0) {
-          listEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
-        } else {
-          listEl.innerHTML = items.map(item => `
-            <button
-              type="button"
-              data-testid="triage-card-${item.id}"
-              class="app-list-item ${selectedId === item.id ? 'selected' : ''}"
-              onclick="selectItem('${item.id}')"
-            >
-              <div style="min-width: 0;">
-                <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.original_content || "No content"}</div>
-              </div>
-              <span class="app-badge neutral">${item.status || "unread"}</span>
-            </button>
-          `).join('');
+          feedEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
+          return;
         }
 
-        // Detail
-        const detailEl = document.getElementById("triage-detail");
-        const selected = items.find(i => i.id === selectedId);
-
-        if (!selected) {
-          detailEl.innerHTML = `<div class="app-empty">Select a message to review it.</div>`;
-        } else {
-          const dateStr = selected.created_at
-            ? new Date(selected.created_at).toLocaleString()
+        feedEl.innerHTML = items.map(item => {
+          const dateStr = item.created_at
+            ? new Date(item.created_at).toLocaleString()
             : new Date().toLocaleString();
 
           let actionHtml = '';
-          if (selected.draft_reply) {
+          if (item.draft_reply) {
             actionHtml = `
-
               <div class="detail-group">
                 <div class="app-metric-label">AI Draft Reply (Edit before sending)</div>
-                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical;">${selected.draft_reply}</textarea>
+                <textarea id="edit-draft-reply-${item.id}" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical; box-sizing: border-box;">${item.draft_reply}</textarea>
               </div>
-
             `;
           }
 
@@ -467,56 +377,40 @@
             <div class="btn-group">
               <button
                 class="btn-primary"
-                data-testid="approve-btn"
-                onclick="handleDecision('${selected.id}', true)"
+                data-testid="approve-btn-${item.id}"
+                onclick="handleDecision('${item.id}', true)"
               >
                 ✨ Send Reply
               </button>
               <button
                 class="btn-secondary"
-                data-testid="dismiss-btn"
-                onclick="handleDecision('${selected.id}', false)"
+                data-testid="dismiss-btn-${item.id}"
+                onclick="handleDecision('${item.id}', false)"
               >
                 Dismiss
               </button>
             </div>
           `;
 
-          detailEl.innerHTML = `
-            <div class="detail-group">
-              <div class="app-metric-label">Source</div>
-              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.source || "Unknown source"}</div>
-            </div>
-
-            <div class="detail-group">
-              <div class="app-metric-label">Message</div>
-              <div class="detail-value">
-                ${selected.original_content || "No message content"}
+          return `
+            <div class="action-card" data-testid="triage-card-${item.id}">
+              <div class="action-card-header">
+                <div class="action-card-title">${item.source || "Unknown Source"}</div>
+                <span class="app-badge neutral">${item.status || "unread"}</span>
               </div>
-            </div>
-
-            ${actionHtml}
-
-            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-              <div>
-                <div class="app-metric-label">Status</div>
-                <div style="margin-top: 8px;"><span class="app-badge neutral">${selected.status || "unread"}</span></div>
+              <div class="detail-group">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <div class="app-metric-label">From: ${item.sender_id || 'Unknown'}</div>
+                  <div style="font-size: 12px; color: #86868b;">${dateStr}</div>
+                </div>
+                <div class="detail-value">${item.original_content || 'No content provided.'}</div>
               </div>
-              <div>
-                <div class="app-metric-label">Created</div>
-                <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${dateStr}</div>
-              </div>
+              ${actionHtml}
+              ${buttonsHtml}
             </div>
-
-            ${buttonsHtml}
           `;
-        }
+        }).join('');
       }
-
-      window.selectItem = function(id) {
-        selectedId = id;
-        renderUI();
-      };
 
       document.addEventListener("DOMContentLoaded", () => {
         loadItems();
