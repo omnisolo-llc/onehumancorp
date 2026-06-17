@@ -51,6 +51,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE swarm_truth_embeddings (
                 memory_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
                 context TEXT,
                 embedding TEXT,
                 escalation_required INTEGER DEFAULT 0,
@@ -101,8 +102,9 @@ mod tests {
         })
         .to_string();
 
-        sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, escalation_required, sync_status) VALUES (?, ?, 1, 'PENDING')")
+        sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, escalation_required, sync_status) VALUES (?, ?, ?, 1, 'PENDING')")
             .bind("test_mem_1")
+            .bind("test_tenant")
             .bind(&raw_context)
             .execute(&sqlite_pool)
             .await
@@ -308,6 +310,7 @@ async fn test_hybrid_sync_clears_error_on_success() {
 
     sqlx::query("CREATE TABLE swarm_truth_embeddings (
             memory_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
             context TEXT,
             embedding TEXT,
             escalation_required INTEGER DEFAULT 0,
@@ -369,8 +372,9 @@ async fn test_hybrid_sync_clears_error_on_success() {
     })
     .to_string();
 
-    sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, escalation_required, sync_status, sync_error) VALUES (?, ?, 1, 'PENDING', 'previous error')")
+    sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, escalation_required, sync_status, sync_error) VALUES (?, ?, ?, 1, 'PENDING', 'previous error')")
         .bind("test_mem_error_clear")
+        .bind("test_tenant")
         .bind(&raw_context)
         .execute(&sqlite_pool)
         .await
