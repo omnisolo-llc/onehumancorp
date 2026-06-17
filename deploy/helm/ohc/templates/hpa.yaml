@@ -14,7 +14,7 @@ spec:
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 600
+      stabilizationWindowSeconds: 60
       policies:
       - type: Pods
         value: 1
@@ -50,7 +50,7 @@ spec:
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 600
+      stabilizationWindowSeconds: 60
       policies:
       - type: Pods
         value: 1
@@ -86,7 +86,7 @@ spec:
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 600
+      stabilizationWindowSeconds: 60
       policies:
       - type: Pods
         value: 1
@@ -122,7 +122,7 @@ spec:
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 600
+      stabilizationWindowSeconds: 60
       policies:
       - type: Pods
         value: 1

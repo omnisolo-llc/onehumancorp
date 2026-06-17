@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
     pub transaction_id: String,
+    pub timestamp: Option<String>,
     pub product_id: String,
     pub quantity_deducted: i32,
     pub amount: Option<i64>, // amount in cents
@@ -75,6 +76,28 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("agent_intent") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+                let job_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(mutation.payload.unwrap_or_else(|| "{}".to_string()))
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to enqueue agent intent: {}", e);
+                    e.to_string()
+                })?;
+                db_tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
         futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
@@ -96,11 +119,13 @@ pub async fn offline_sync_handler(
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+                    let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $4, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $4)), available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
+                        .bind(mutation.quantity_deducted)
                         .execute(&mut *db_tx)
                         .await;
 
@@ -130,7 +155,7 @@ pub async fn offline_sync_handler(
                             "transaction_id": mutation.transaction_id,
                             "product_id": mutation.product_id,
                             "shortage": mutation.quantity_deducted - stock,
-                            "timestamp": chrono::Utc::now().to_rfc3339()
+                            "timestamp": mutation_ts
                         }).to_string();
 
                         let _ = sqlx::query(
@@ -172,6 +197,24 @@ pub async fn offline_sync_handler(
                     if let Err(e) = job_res {
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
+
+                    // Publish to Redis Pub/Sub for Real-Time Sync Engine
+                    let redis_client_opt = crate::get_redis_client();
+                    let redis_tenant_id = tenant_id_clone.clone();
+                    let redis_product_id = mutation.product_id.clone();
+                    tokio::spawn(async move {
+                        if let Some(client) = redis_client_opt {
+                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                let topic = format!("inventory:{}", redis_tenant_id);
+                                let payload = serde_json::json!({
+                                    "event": "inventory_updated",
+                                    "product_id": redis_product_id,
+                                    "timestamp": mutation_ts
+                                }).to_string();
+                                let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
+                            }
+                        }
+                    });
 
                     db_tx.commit().await.unwrap();
 
@@ -255,6 +298,7 @@ mod tests {
         let req = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
@@ -275,6 +319,7 @@ mod tests {
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
@@ -293,6 +338,7 @@ mod tests {
         let req_fail = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
                     transaction_id: "tx3".to_string(),
                     product_id: "prod-offline-nonexistent".to_string(),
                     quantity_deducted: 1,

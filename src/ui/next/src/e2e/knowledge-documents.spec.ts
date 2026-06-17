@@ -8,19 +8,28 @@ test.describe('Knowledge & Documents Sync UX', () => {
     const uploadBtn = page.locator('button:has-text("Upload New Document")');
     await expect(uploadBtn).toBeVisible();
 
-    // Click upload
-    await uploadBtn.click();
+    // Create a temporary file to upload
+    const tempFile = require('path').join(__dirname, 'test-doc.txt');
+    require('fs').writeFileSync(tempFile, 'Test Document Content');
 
-    // Verify "Syncing..." state appears
-    await expect(page.locator('button:has-text("Syncing...")')).toBeVisible();
+    // Set the input file
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await page.locator('button:has-text("Upload New Document")').click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(tempFile);
 
-    // Wait for the simulated sync to complete and the document to appear
-    await expect(page.locator('h3:has-text("New Policy Document.pdf")')).toBeVisible({ timeout: 5000 });
+    // Wait for the sync to complete and the document to appear
+    await expect(page.locator('h3:has-text("test-doc.txt")')).toBeVisible({ timeout: 5000 });
 
     // Ensure the button returns to normal
     await expect(page.locator('button:has-text("Upload New Document")')).toBeVisible();
 
     // Verify status indicator
     await expect(page.locator('span:has-text("Active")')).toBeVisible();
+
+    // Cleanup test file
+    try {
+        require('fs').unlinkSync(tempFile);
+    } catch(e) {}
   });
 });

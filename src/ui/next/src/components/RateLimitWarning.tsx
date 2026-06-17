@@ -1,5 +1,8 @@
 "use client";
 
+
+import { WithTooltip } from "./TooltipRegistry";
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 interface RateLimitWarningContextType {
@@ -66,13 +69,15 @@ export function RateLimitWarningProvider({ children }: { children: ReactNode }) 
             <h3 className="font-semibold text-sm">Limit Reached</h3>
             <p className="text-sm mt-1 leading-relaxed">{warningMessage}</p>
           </div>
-          <button
-            onClick={hideWarning}
-            className="text-amber-500 hover:text-amber-700 transition-colors p-1"
-            aria-label="Close warning"
-          >
-            ✕
-          </button>
+          <WithTooltip id="rate-limit-close-tooltip" defaultText="Dismiss this warning.">
+            <button
+              onClick={hideWarning}
+              className="text-amber-500 hover:text-amber-700 transition-colors p-1"
+              aria-label="Close warning"
+            >
+              ✕
+            </button>
+          </WithTooltip>
         </div>
       )}
     </RateLimitWarningContext.Provider>

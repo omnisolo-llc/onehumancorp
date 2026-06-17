@@ -92,18 +92,19 @@ pub async fn handle_omnichannel_webhook(
         }
     };
 
-    if let Err(e) = insert_result {
-        tracing::error!("Failed to insert into inbox_messages: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
-    }
-
-    let job_id = Uuid::new_v4().to_string();
     let payload_json = serde_json::json!({
         "message_id": id,
+        "inbox_message_id": id,
         "source": payload.source,
         "content": payload.message,
         "sender_id": payload.sender_id
     });
+    let job_id = Uuid::new_v4().to_string();
+
+    if let Err(e) = insert_result {
+        tracing::error!("Failed to insert into inbox_messages: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+    }
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {

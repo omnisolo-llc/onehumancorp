@@ -3,6 +3,10 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReferralsPage from './page';
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />
+}));
+
 describe('ReferralsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,7 +101,6 @@ describe('ReferralsPage', () => {
     await act(async () => {
       render(<ReferralsPage />);
     });
-    const footerLink = screen.getByText('Powered by OHC');
-    expect(footerLink).toBeDefined();
+    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
 });

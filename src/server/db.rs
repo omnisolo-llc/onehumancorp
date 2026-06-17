@@ -64,6 +64,20 @@ pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
 #[cfg(test)]
 pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
     sqlx::postgres::PgPoolOptions::new()
+        .before_acquire(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("SET app.current_tenant = ''").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .unwrap()
 }
@@ -168,31 +182,33 @@ impl DB {
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
 
-                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
-                        if sym_meta.file_type().is_symlink() {
-                            ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
-                            tracing::error!("Security error: DB path is a symlink. Aborting.");
-                            return Err("Security error: DB path is a symlink.".into());
+                    if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
+                        if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
+                            if sym_meta.file_type().is_symlink() {
+                                ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
+                                tracing::error!("Security error: DB path is a symlink. Aborting.");
+                                return Err("Security error: DB path is a symlink.".into());
+                            }
                         }
-                    }
 
-                    if let Ok(file) = OpenOptions::new()
-                        .read(true)
-                        .write(true)
-                        .create(true) // Use create(true) instead of create_new(true) to handle existing files but still apply mode if creating
-                        .mode(0o600)
-                        .open(&db_path)
-                    {
-                        if let Ok(metadata) = file.metadata() {
-                            let mut perms = metadata.permissions();
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!(
-                                        "Failed to securely update existing standalone database file permissions: {}",
-                                        e
-                                    );
-                                    return Err(e.into());
+                        if let Ok(file) = OpenOptions::new()
+                            .read(true)
+                            .write(true)
+                            .create(true) // Use create(true) instead of create_new(true) to handle existing files but still apply mode if creating
+                            .mode(0o600)
+                            .open(&db_path)
+                        {
+                            if let Ok(metadata) = file.metadata() {
+                                let mut perms = metadata.permissions();
+                                if (perms.mode() & 0o777) != 0o600 {
+                                    perms.set_mode(0o600);
+                                    if let Err(e) = file.set_permissions(perms) {
+                                        tracing::error!(
+                                            "Failed to securely update existing standalone database file permissions: {}",
+                                            e
+                                        );
+                                        return Err(e.into());
+                                    }
                                 }
                             }
                         }
@@ -200,7 +216,9 @@ impl DB {
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::File::create(&db_path);
+                    if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
+                        let _ = std::fs::File::create(&db_path);
+                    }
                 }
             }
 
@@ -208,33 +226,7 @@ impl DB {
             let mut conn_opts =
                 SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
 
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::OpenOptionsExt;
-                use std::os::unix::fs::PermissionsExt;
-                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
-                    let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
-                    if db_path.exists() {
-                         let mut perms = std::fs::metadata(&db_path)?.permissions();
-                         if (perms.mode() & 0o777) != 0o600 {
-                             perms.set_mode(0o600);
-                             std::fs::set_permissions(&db_path, perms)?;
-                         }
-                    } else if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                         let file = std::fs::OpenOptions::new()
-                            .read(true)
-                            .write(true)
-                            .create(true) // Strengthen: Use create(true) for atomic permissions if possible
-                            .mode(0o600)
-                            .open(&db_path)?;
-                         let mut perms = file.metadata()?.permissions();
-                         if (perms.mode() & 0o777) != 0o600 {
-                             perms.set_mode(0o600);
-                             std::fs::set_permissions(&db_path, perms)?;
-                         }
-                    }
-                }
-            }
+
 
 
             // sqlite-vec is optional at runtime. The memory repository probes for
@@ -428,7 +420,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -440,7 +432,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
                     let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
@@ -452,7 +444,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (original_content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -464,7 +456,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -503,7 +495,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -514,7 +506,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_amount").unwrap_or_default();
+                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
                     let amount: f64 = amount.unwrap_or(0.0);
                     results.push(SearchResult {
                         id: id.clone(),
@@ -526,7 +518,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -537,7 +529,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("content").unwrap_or_default();
+                    let content: String = row.try_get("original_content").unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -570,7 +562,14 @@ impl DB {
         #[cfg(test)]
         let mut backoff = std::time::Duration::from_millis(1);
 
+        // Enforce the 60-second ML-Resilience rule for database operations
+        let start_time = std::time::Instant::now();
+        let timeout_duration = std::time::Duration::from_secs(60);
+
         loop {
+            if start_time.elapsed() > timeout_duration {
+                return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+            }
             match f().await {
                 Ok(val) => return Ok(val),
                 Err(err) => {
@@ -814,6 +813,7 @@ impl DB {
                         owner_id TEXT,
                         name TEXT,
                         plan_tier TEXT DEFAULT 'free',
+                        has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1704,6 +1704,20 @@ mod autodream_db_tests {
         .expect("Database URL or operation failed in test");
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .expect("Database URL or operation failed in test");
 
@@ -2151,16 +2165,21 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE orders (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, status TEXT, total_amount REAL)")
+        sqlx::query("CREATE TABLE vendors (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT)")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE purchase_orders (id TEXT PRIMARY KEY, tenant_id TEXT, vendor_id TEXT, status TEXT, total_cost REAL)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, content TEXT)")
+        sqlx::query("CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, status TEXT)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
 
         // Insert into SQLite
+        sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES (?, ?, ?)")
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
             .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
@@ -2168,23 +2187,27 @@ mod e2e_search_workspace_tests {
             .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
-            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind(150.25)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
+            .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind(150.25)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
-            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<f64>)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<f64>)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
-            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
-            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         // Insert into Postgres
         sqlx::query("INSERT INTO tenants (id, name, ceo_name) VALUES ($1, $1, $1) ON CONFLICT DO NOTHING")
             .bind(&unique_tenant)
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES ($1, $2, $3)")
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
@@ -2196,18 +2219,18 @@ mod e2e_search_workspace_tests {
 
         // Wait, for DECIMAL, sqlx handles it depending on Cargo.toml features, we might need a workaround for `rust_decimal` missing, but `total_amount` is `DECIMAL` in Postgres.
         // As seen from previous error `use of unresolved module or unlinked crate rust_decimal`, we should insert using direct string casting or float casting.
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind("150.25")
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind("150.25")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<&str>)
+        sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<&str>)
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
-            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
-            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Query both and compare

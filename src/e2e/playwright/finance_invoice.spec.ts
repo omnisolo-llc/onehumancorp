@@ -23,9 +23,9 @@ test.describe('Agentic Invoicing Flow', () => {
         await expect(modalTitle).toBeVisible();
 
         // 5. Verify pre-filled data in the modal
-        await expect(page.locator('input[value="Nora\'s Design Project"]')).toBeVisible();
-        await expect(page.locator('input[value="Logo Design"]')).toBeVisible();
-        await expect(page.locator('input[value="1500"]')).toBeVisible();
+        await expect(page.locator('input[value="New Client"]')).toBeVisible();
+        await expect(page.locator('input[value="Consulting Services"]')).toBeVisible();
+        await expect(page.locator('input[value="100"]')).toBeVisible();
 
         // 6. Click Approve & Send
         const sendBtn = page.locator('button', { hasText: 'Approve & Send' });

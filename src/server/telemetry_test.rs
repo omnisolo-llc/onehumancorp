@@ -583,6 +583,11 @@ fn test_value_based_pii_redaction() {
         "safe_field_3": "sk-1234567890abcdefg", // API key pattern
         "safe_field_4": "+1 (555) 123-4567", // Phone pattern
         "safe_field_5": "just a normal string",
+        "safe_field_7": "hello@world.com", // Email pattern
+        "safe_field_8": "John Doe", // Name pattern
+        "safe_field_9": 123,
+        "safe_field_10": true,
+        "safe_field_11": null,
         "nested": {
             "safe_field_6": "ak-abcdefghijklmnopqrstuvwxyz"
         }
@@ -595,6 +600,11 @@ fn test_value_based_pii_redaction() {
     assert_eq!(redacted["safe_field_3"], "[REDACTED]");
     assert_eq!(redacted["safe_field_4"], "[REDACTED]");
     assert_eq!(redacted["safe_field_5"], "just a normal string");
+    assert_eq!(redacted["safe_field_7"], "[EMAIL_REDACTED]");
+    assert_eq!(redacted["safe_field_8"], "John Doe");
+    assert_eq!(redacted["safe_field_9"], 123);
+    assert_eq!(redacted["safe_field_10"], true);
+    assert!(redacted["safe_field_11"].is_null());
     assert_eq!(redacted["nested"]["safe_field_6"], "[REDACTED]");
 }
 

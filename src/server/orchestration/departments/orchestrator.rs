@@ -1146,6 +1146,37 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+
+                // If this is an Ambassador Reply approval, update the message and dispatch event
+                if let Some(payload) = payload_to_use {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+
+                        if !inbox_message_id.is_empty() {
+                            if let Err(e) = self.update_inbox_message_draft(inbox_message_id, tenant_id, generated_reply).await {
+                                tracing::error!("Failed to update inbox message draft: {}", e);
+                            }
+                            if let Err(e) = self.update_inbox_message_status(inbox_message_id, tenant_id, "auto_replied").await {
+                                tracing::error!("Failed to update inbox message status: {}", e);
+                            }
+                        }
+
+                        let approved_event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.to_string(),
+                            event_type: "agent:customer_success:approved".to_string(),
+                            payload: serde_json::json!({
+                                "original_payload": payload,
+                                "approval_id": request_id
+                            }),
+                        };
+                        if let Err(e) = self.dispatch_event(approved_event).await {
+                            tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,
@@ -1218,9 +1249,13 @@ impl DepartmentOrchestrator {
             DbStore::Postgres => {
                 sqlx::query("UPDATE inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(new_status).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(new_status).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
             }
         }
@@ -1276,15 +1311,63 @@ impl DepartmentOrchestrator {
             DbStore::Postgres => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
             }
         }
         Ok(())
     }
 
+
+    pub async fn predict_replenishment(&self, tenant_id: &str, customer_id: &str) -> Result<Option<String>, String> {
+        let pool = &self.db.pool;
+        let query = "SELECT created_at FROM orders WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 5";
+
+        // Use a generic query to support both Pg and Sqlite dynamically if needed, but since we rely on created_at parsing:
+        let orders_res: Result<Vec<(chrono::DateTime<chrono::Utc>,)>, _> = match &self.db.store {
+            crate::db::DbStore::Postgres => sqlx::query_as(query)
+                .bind(tenant_id)
+                .bind(customer_id)
+                .fetch_all(pool)
+                .await,
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let sqlite_query = "SELECT created_at FROM orders WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 5";
+                let rows: Result<Vec<(String,)>, _> = sqlx::query_as(sqlite_query)
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(sqlite_pool)
+                    .await;
+
+                rows.map(|r| r.into_iter()
+                    .filter_map(|(s,)| chrono::DateTime::parse_from_rfc3339(&s).ok().map(|d| (d.with_timezone(&chrono::Utc),)))
+                    .collect())
+            }
+        };
+
+        let orders = orders_res.map_err(|e| e.to_string())?;
+
+        if orders.len() < 2 {
+            return Ok(None);
+        }
+
+        let mut total_duration = chrono::Duration::zero();
+        for i in 0..(orders.len() - 1) {
+            total_duration = total_duration + (orders[i].0 - orders[i + 1].0);
+        }
+
+        let avg_duration = total_duration / (orders.len() as i32 - 1);
+
+        let last_order_date = orders[0].0;
+        let predicted_date = last_order_date + avg_duration;
+
+        Ok(Some(predicted_date.to_rfc3339()))
+    }
 
     pub async fn get_inventory_summary(&self, tenant_id: &str) -> Result<String, String> {
         match &self.db.store {

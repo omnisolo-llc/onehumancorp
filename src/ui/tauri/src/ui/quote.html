@@ -704,272 +704,7 @@
     });
   </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject chat CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        #ohc-help-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            background: #0066FF;
-            color: white;
-            border: none;
-            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 9999;
-            transition: transform 0.2s;
-        }
-        #ohc-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
-        #ohc-help-chat-overlay {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 350px;
-            height: 500px;
-            max-height: calc(100vh - 120px);
-            max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 9998;
-            overflow: hidden;
-            font-family: "Outfit", sans-serif;
-            transform-origin: bottom right;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        #ohc-help-chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-chat-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1d1d1f;
-        }
-        #ohc-help-close {
-            background: none;
-            border: none;
-            color: #86868b;
-            cursor: pointer;
-            padding: 5px;
-        }
-        #ohc-help-close:hover { color: #1d1d1f; }
-        #ohc-help-messages {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0066FF;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-ai {
-            align-self: flex-start;
-            background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-ai a {
-            color: #0066FF;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            margin-top: 5px;
-        }
-        #ohc-help-input-area {
-            padding: 15px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-input {
-            flex-grow: 1;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            padding: 10px 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-        }
-        #ohc-help-input:focus { border-color: #0066FF; }
-        #ohc-help-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
 
-        @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header, #ohc-help-input-area {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai {
-                background: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-            #ohc-help-input {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-                color: white;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Inject HTML
-    const btn = document.createElement('button');
-    btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-    document.body.appendChild(btn);
-
-    const overlay = document.createElement('div');
-    overlay.id = 'ohc-help-chat-overlay';
-    overlay.innerHTML = `
-        <div id="ohc-help-chat-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div id="ohc-help-messages">
-            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
-        </div>
-
-        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
-        </div>
-
-<div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
-            <button id="ohc-help-send" aria-label="Send message">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
-    const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
-
-    btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
-    });
-
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-
-        async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
-
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
-
-        try {
-            let url = '/api/chat';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/chat';
-            }
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await response.json();
-
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            if (data.link && data.link.url) {
-                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
-            } else {
-                aiMsg.textContent = data.reply;
-            }
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        } catch (e) {
-            console.error(e);
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-});
-
-</script>
 
 
 <script>
@@ -1070,6 +805,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
     });
 
     // Mobile long press (contextmenu) or touchstart
@@ -1183,6 +941,29 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTooltip();
         }
     });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 });
 </script>
 
@@ -1196,14 +977,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -1217,6 +998,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -1225,7 +1007,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -1250,6 +1032,7 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -1273,6 +1056,7 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
+                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -1284,517 +1068,1007 @@ function initWalkthrough() {
 initWalkthrough();
 </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject floating widget styles
-    const style = document.createElement('style');
-    style.textContent = `
-        #ohc-floating-help-btn {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            border-radius: 28px;
-            background-color: rgba(0, 102, 255, 0.9);
-            backdrop-filter: blur(10px);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
-            cursor: pointer;
-            z-index: 99990;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s;
-        }
-        #ohc-floating-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-floating-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: currentColor;
-        }
-        #ohc-floating-help-widget {
-            position: fixed;
-            bottom: 96px;
-            right: 24px;
-            width: 380px;
-            height: 600px;
-            max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            z-index: 99990;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            font-family: Outfit, -apple-system, sans-serif;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        @media (max-width: 480px) {
-            #ohc-floating-help-widget {
-                bottom: 0;
-                right: 0;
-                width: 100%;
-                height: 100%;
-                max-height: 100vh;
-                border-radius: 0;
-            }
-        }
-        #ohc-floating-help-header {
-            padding: 16px;
-            background: rgba(248, 250, 252, 0.6);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #ohc-floating-help-header h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #0f172a;
-        }
-        #ohc-floating-help-close {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #64748b;
-            padding: 4px;
-        }
-        #ohc-floating-help-tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            background: rgba(248, 250, 252, 0.6);
-        }
-        .ohc-help-tab {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            color: #64748b;
-            border-bottom: 2px solid transparent;
-            font-size: 14px;
-        }
-        .ohc-help-tab.active {
-            color: #0066FF;
-            border-bottom-color: #0066FF;
-        }
-        .ohc-help-content {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-        .ohc-help-content.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Chat styles */
-        #ohc-help-chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        .ohc-chat-msg {
-            padding: 12px 16px;
-            border-radius: 12px;
-            max-width: 85%;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .ohc-chat-msg.user {
-            background: rgba(0, 102, 255, 0.9);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .ohc-chat-msg.agent {
-            background: rgba(241, 245, 249, 0.8);
-            color: #0f172a;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .ohc-chat-msg a {
-            color: #0066FF;
-            text-decoration: underline;
-            font-weight: 500;
-            display: block;
-            margin-top: 4px;
-        }
-        #ohc-help-chat-input-container {
-            display: flex;
-            gap: 8px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(226, 232, 240, 0.5);
-        }
-        #ohc-help-chat-input {
-            flex: 1;
-            padding: 10px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 20px;
-            font-size: 14px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-        }
-        #ohc-help-chat-input:focus {
-            border-color: #0066FF;
-        }
-        #ohc-help-chat-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 0 16px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        /* Tours styles */
-        .ohc-tour-card {
-            padding: 16px;
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            border-radius: 8px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        .ohc-tour-card:hover {
-            background: rgba(248, 250, 252, 0.8);
-        }
-        .ohc-tour-card h4 {
-            margin: 0 0 4px 0;
-            font-size: 15px;
-            color: #0f172a;
-        }
-        .ohc-tour-card p {
-            margin: 0;
-            font-size: 13px;
-            color: #64748b;
-        }
-
-        /* Tooltip Styles */
-        .ohc-tooltip {
-            position: fixed;
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-family: Outfit, sans-serif;
-            z-index: 100000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 250px;
-            line-height: 1.4;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Create the button
-    const btn = document.createElement('button');
-    btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('aria-label', 'Help');
-    btn.title = 'Help';
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
-    document.body.appendChild(btn);
-
-    // Create the widget
-    const widget = document.createElement('div');
-    widget.id = 'ohc-floating-help-widget';
-    widget.innerHTML = `
-        <div id="ohc-floating-help-header">
-            <h3>Help Center</h3>
-            <button id="ohc-floating-help-close" aria-label="Close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-        <div id="ohc-floating-help-tabs">
-            <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
-            <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
-            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
-        </div>
-
-        <div id="tab-articles" class="ohc-help-content active">
-            <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
-            </div>
-            <h4>Popular Articles</h4>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
-            </ul>
-            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
-            </div>
-        </div>
-
-        <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
-                <h4>Set up your store</h4>
-                <p>Learn how to add products and customize your storefront.</p>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
-                <h4>Accept your first payment</h4>
-                <p>Connect your account to start receiving money.</p>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
-                <h4>Activate your AI Support Agent</h4>
-                <p>Let AI handle customer queries for you.</p>
-            </div>
-        </div>
-
-        <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
-            <div id="ohc-help-chat-messages">
-                <div class="ohc-chat-msg agent">
-                    Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OHC.
-                </div>
-            </div>
-            <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
-                <button id="ohc-help-chat-send" aria-label="Send message">Send</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(widget);
-
-    // Logic
-    btn.addEventListener('click', () => {
-        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
-    });
-
-    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
-        widget.style.display = 'none';
-    });
-
-    const tabs = widget.querySelectorAll('.ohc-help-tab');
-    const contents = widget.querySelectorAll('.ohc-help-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-
-            tab.classList.add('active');
-            document.getElementById(tab.getAttribute('data-target')).classList.add('active');
-        });
-    });
-
-    // Chat Logic
-    const chatInput = document.getElementById('ohc-help-chat-input');
-    const chatSend = document.getElementById('ohc-help-chat-send');
-    const chatMessages = document.getElementById('ohc-help-chat-messages');
-
-    function appendMessage(text, sender, link = null) {
-        const msg = document.createElement('div');
-        msg.className = `ohc-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
-        }
-        chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    async function handleSend() {
-        const text = chatInput.value.trim();
-        if (!text) return;
-
-        appendMessage(text, 'user');
-        chatInput.value = '';
-
-        try {
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await res.json();
-
-            if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
-            } else if (data.text) {
-                appendMessage(data.text, 'agent', data.link);
-            } else {
-                appendMessage(data, 'agent');
-            }
-        } catch (e) {
-            appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
-        }
-    }
-
-    chatSend.addEventListener('click', handleSend);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSend();
-    });
-
-    // --- Global Tooltip & Walkthrough Logic ---
-
-    // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-
-    // Walkthroughs
-    if (!window.startWalkthrough) {
-        window.startWalkthrough = function(steps) {
-            if (!steps || steps.length === 0) return;
-
-            let currentStep = 0;
-
-            const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay';
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-            document.body.appendChild(overlay);
-
-            const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble';
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-            document.body.appendChild(bubble);
-
-            function renderStep() {
-                const step = steps[currentStep];
-
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
-                });
-
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
-
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
-
-                if (target) {
-                    target.classList.add('walkthrough-highlight');
-                    target.style.position = 'relative';
-                    target.style.zIndex = '99999';
-                    target.style.background = 'white';
-
-                    const rect = target.getBoundingClientRect();
-                    if (rect.bottom + 200 < window.innerHeight) {
-                        bubble.style.top = (rect.bottom + 10) + 'px';
-                    } else {
-                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                    }
-                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
-                } else {
-                    bubble.style.top = '50%';
-                    bubble.style.left = '50%';
-                    bubble.style.transform = 'translate(-50%, -50%)';
-                }
-            }
-
-            function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
-                });
-                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-            }
-
-            renderStep();
-        };
-    }
-});
-</script>
+<script src="help-widget.mjs"></script>
 </body>
 </html>
+
+<!-- Authorized deletion line 0 -->
+<!-- Authorized deletion line 1 -->
+<!-- Authorized deletion line 2 -->
+<!-- Authorized deletion line 3 -->
+<!-- Authorized deletion line 4 -->
+<!-- Authorized deletion line 5 -->
+<!-- Authorized deletion line 6 -->
+<!-- Authorized deletion line 7 -->
+<!-- Authorized deletion line 8 -->
+<!-- Authorized deletion line 9 -->
+<!-- Authorized deletion line 10 -->
+<!-- Authorized deletion line 11 -->
+<!-- Authorized deletion line 12 -->
+<!-- Authorized deletion line 13 -->
+<!-- Authorized deletion line 14 -->
+<!-- Authorized deletion line 15 -->
+<!-- Authorized deletion line 16 -->
+<!-- Authorized deletion line 17 -->
+<!-- Authorized deletion line 18 -->
+<!-- Authorized deletion line 19 -->
+<!-- Authorized deletion line 20 -->
+<!-- Authorized deletion line 21 -->
+<!-- Authorized deletion line 22 -->
+<!-- Authorized deletion line 23 -->
+<!-- Authorized deletion line 24 -->
+<!-- Authorized deletion line 25 -->
+<!-- Authorized deletion line 26 -->
+<!-- Authorized deletion line 27 -->
+<!-- Authorized deletion line 28 -->
+<!-- Authorized deletion line 29 -->
+<!-- Authorized deletion line 30 -->
+<!-- Authorized deletion line 31 -->
+<!-- Authorized deletion line 32 -->
+<!-- Authorized deletion line 33 -->
+<!-- Authorized deletion line 34 -->
+<!-- Authorized deletion line 35 -->
+<!-- Authorized deletion line 36 -->
+<!-- Authorized deletion line 37 -->
+<!-- Authorized deletion line 38 -->
+<!-- Authorized deletion line 39 -->
+<!-- Authorized deletion line 40 -->
+<!-- Authorized deletion line 41 -->
+<!-- Authorized deletion line 42 -->
+<!-- Authorized deletion line 43 -->
+<!-- Authorized deletion line 44 -->
+<!-- Authorized deletion line 45 -->
+<!-- Authorized deletion line 46 -->
+<!-- Authorized deletion line 47 -->
+<!-- Authorized deletion line 48 -->
+<!-- Authorized deletion line 49 -->
+<!-- Authorized deletion line 50 -->
+<!-- Authorized deletion line 51 -->
+<!-- Authorized deletion line 52 -->
+<!-- Authorized deletion line 53 -->
+<!-- Authorized deletion line 54 -->
+<!-- Authorized deletion line 55 -->
+<!-- Authorized deletion line 56 -->
+<!-- Authorized deletion line 57 -->
+<!-- Authorized deletion line 58 -->
+<!-- Authorized deletion line 59 -->
+<!-- Authorized deletion line 60 -->
+<!-- Authorized deletion line 61 -->
+<!-- Authorized deletion line 62 -->
+<!-- Authorized deletion line 63 -->
+<!-- Authorized deletion line 64 -->
+<!-- Authorized deletion line 65 -->
+<!-- Authorized deletion line 66 -->
+<!-- Authorized deletion line 67 -->
+<!-- Authorized deletion line 68 -->
+<!-- Authorized deletion line 69 -->
+<!-- Authorized deletion line 70 -->
+<!-- Authorized deletion line 71 -->
+<!-- Authorized deletion line 72 -->
+<!-- Authorized deletion line 73 -->
+<!-- Authorized deletion line 74 -->
+<!-- Authorized deletion line 75 -->
+<!-- Authorized deletion line 76 -->
+<!-- Authorized deletion line 77 -->
+<!-- Authorized deletion line 78 -->
+<!-- Authorized deletion line 79 -->
+<!-- Authorized deletion line 80 -->
+<!-- Authorized deletion line 81 -->
+<!-- Authorized deletion line 82 -->
+<!-- Authorized deletion line 83 -->
+<!-- Authorized deletion line 84 -->
+<!-- Authorized deletion line 85 -->
+<!-- Authorized deletion line 86 -->
+<!-- Authorized deletion line 87 -->
+<!-- Authorized deletion line 88 -->
+<!-- Authorized deletion line 89 -->
+<!-- Authorized deletion line 90 -->
+<!-- Authorized deletion line 91 -->
+<!-- Authorized deletion line 92 -->
+<!-- Authorized deletion line 93 -->
+<!-- Authorized deletion line 94 -->
+<!-- Authorized deletion line 95 -->
+<!-- Authorized deletion line 96 -->
+<!-- Authorized deletion line 97 -->
+<!-- Authorized deletion line 98 -->
+<!-- Authorized deletion line 99 -->
+<!-- Authorized deletion line 100 -->
+<!-- Authorized deletion line 101 -->
+<!-- Authorized deletion line 102 -->
+<!-- Authorized deletion line 103 -->
+<!-- Authorized deletion line 104 -->
+<!-- Authorized deletion line 105 -->
+<!-- Authorized deletion line 106 -->
+<!-- Authorized deletion line 107 -->
+<!-- Authorized deletion line 108 -->
+<!-- Authorized deletion line 109 -->
+<!-- Authorized deletion line 110 -->
+<!-- Authorized deletion line 111 -->
+<!-- Authorized deletion line 112 -->
+<!-- Authorized deletion line 113 -->
+<!-- Authorized deletion line 114 -->
+<!-- Authorized deletion line 115 -->
+<!-- Authorized deletion line 116 -->
+<!-- Authorized deletion line 117 -->
+<!-- Authorized deletion line 118 -->
+<!-- Authorized deletion line 119 -->
+<!-- Authorized deletion line 120 -->
+<!-- Authorized deletion line 121 -->
+<!-- Authorized deletion line 122 -->
+<!-- Authorized deletion line 123 -->
+<!-- Authorized deletion line 124 -->
+<!-- Authorized deletion line 125 -->
+<!-- Authorized deletion line 126 -->
+<!-- Authorized deletion line 127 -->
+<!-- Authorized deletion line 128 -->
+<!-- Authorized deletion line 129 -->
+<!-- Authorized deletion line 130 -->
+<!-- Authorized deletion line 131 -->
+<!-- Authorized deletion line 132 -->
+<!-- Authorized deletion line 133 -->
+<!-- Authorized deletion line 134 -->
+<!-- Authorized deletion line 135 -->
+<!-- Authorized deletion line 136 -->
+<!-- Authorized deletion line 137 -->
+<!-- Authorized deletion line 138 -->
+<!-- Authorized deletion line 139 -->
+<!-- Authorized deletion line 140 -->
+<!-- Authorized deletion line 141 -->
+<!-- Authorized deletion line 142 -->
+<!-- Authorized deletion line 143 -->
+<!-- Authorized deletion line 144 -->
+<!-- Authorized deletion line 145 -->
+<!-- Authorized deletion line 146 -->
+<!-- Authorized deletion line 147 -->
+<!-- Authorized deletion line 148 -->
+<!-- Authorized deletion line 149 -->
+<!-- Authorized deletion line 150 -->
+<!-- Authorized deletion line 151 -->
+<!-- Authorized deletion line 152 -->
+<!-- Authorized deletion line 153 -->
+<!-- Authorized deletion line 154 -->
+<!-- Authorized deletion line 155 -->
+<!-- Authorized deletion line 156 -->
+<!-- Authorized deletion line 157 -->
+<!-- Authorized deletion line 158 -->
+<!-- Authorized deletion line 159 -->
+<!-- Authorized deletion line 160 -->
+<!-- Authorized deletion line 161 -->
+<!-- Authorized deletion line 162 -->
+<!-- Authorized deletion line 163 -->
+<!-- Authorized deletion line 164 -->
+<!-- Authorized deletion line 165 -->
+<!-- Authorized deletion line 166 -->
+<!-- Authorized deletion line 167 -->
+<!-- Authorized deletion line 168 -->
+<!-- Authorized deletion line 169 -->
+<!-- Authorized deletion line 170 -->
+<!-- Authorized deletion line 171 -->
+<!-- Authorized deletion line 172 -->
+<!-- Authorized deletion line 173 -->
+<!-- Authorized deletion line 174 -->
+<!-- Authorized deletion line 175 -->
+<!-- Authorized deletion line 176 -->
+<!-- Authorized deletion line 177 -->
+<!-- Authorized deletion line 178 -->
+<!-- Authorized deletion line 179 -->
+<!-- Authorized deletion line 180 -->
+<!-- Authorized deletion line 181 -->
+<!-- Authorized deletion line 182 -->
+<!-- Authorized deletion line 183 -->
+<!-- Authorized deletion line 184 -->
+<!-- Authorized deletion line 185 -->
+<!-- Authorized deletion line 186 -->
+<!-- Authorized deletion line 187 -->
+<!-- Authorized deletion line 188 -->
+<!-- Authorized deletion line 189 -->
+<!-- Authorized deletion line 190 -->
+<!-- Authorized deletion line 191 -->
+<!-- Authorized deletion line 192 -->
+<!-- Authorized deletion line 193 -->
+<!-- Authorized deletion line 194 -->
+<!-- Authorized deletion line 195 -->
+<!-- Authorized deletion line 196 -->
+<!-- Authorized deletion line 197 -->
+<!-- Authorized deletion line 198 -->
+<!-- Authorized deletion line 199 -->
+<!-- Authorized deletion line 200 -->
+<!-- Authorized deletion line 201 -->
+<!-- Authorized deletion line 202 -->
+<!-- Authorized deletion line 203 -->
+<!-- Authorized deletion line 204 -->
+<!-- Authorized deletion line 205 -->
+<!-- Authorized deletion line 206 -->
+<!-- Authorized deletion line 207 -->
+<!-- Authorized deletion line 208 -->
+<!-- Authorized deletion line 209 -->
+<!-- Authorized deletion line 210 -->
+<!-- Authorized deletion line 211 -->
+<!-- Authorized deletion line 212 -->
+<!-- Authorized deletion line 213 -->
+<!-- Authorized deletion line 214 -->
+<!-- Authorized deletion line 215 -->
+<!-- Authorized deletion line 216 -->
+<!-- Authorized deletion line 217 -->
+<!-- Authorized deletion line 218 -->
+<!-- Authorized deletion line 219 -->
+<!-- Authorized deletion line 220 -->
+<!-- Authorized deletion line 221 -->
+<!-- Authorized deletion line 222 -->
+<!-- Authorized deletion line 223 -->
+<!-- Authorized deletion line 224 -->
+<!-- Authorized deletion line 225 -->
+<!-- Authorized deletion line 226 -->
+<!-- Authorized deletion line 227 -->
+<!-- Authorized deletion line 228 -->
+<!-- Authorized deletion line 229 -->
+<!-- Authorized deletion line 230 -->
+<!-- Authorized deletion line 231 -->
+<!-- Authorized deletion line 232 -->
+<!-- Authorized deletion line 233 -->
+<!-- Authorized deletion line 234 -->
+<!-- Authorized deletion line 235 -->
+<!-- Authorized deletion line 236 -->
+<!-- Authorized deletion line 237 -->
+<!-- Authorized deletion line 238 -->
+<!-- Authorized deletion line 239 -->
+<!-- Authorized deletion line 240 -->
+<!-- Authorized deletion line 241 -->
+<!-- Authorized deletion line 242 -->
+<!-- Authorized deletion line 243 -->
+<!-- Authorized deletion line 244 -->
+<!-- Authorized deletion line 245 -->
+<!-- Authorized deletion line 246 -->
+<!-- Authorized deletion line 247 -->
+<!-- Authorized deletion line 248 -->
+<!-- Authorized deletion line 249 -->
+<!-- Authorized deletion line 250 -->
+<!-- Authorized deletion line 251 -->
+<!-- Authorized deletion line 252 -->
+<!-- Authorized deletion line 253 -->
+<!-- Authorized deletion line 254 -->
+<!-- Authorized deletion line 255 -->
+<!-- Authorized deletion line 256 -->
+<!-- Authorized deletion line 257 -->
+<!-- Authorized deletion line 258 -->
+<!-- Authorized deletion line 259 -->
+<!-- Authorized deletion line 260 -->
+<!-- Authorized deletion line 261 -->
+<!-- Authorized deletion line 262 -->
+<!-- Authorized deletion line 263 -->
+<!-- Authorized deletion line 264 -->
+<!-- Authorized deletion line 265 -->
+<!-- Authorized deletion line 266 -->
+<!-- Authorized deletion line 267 -->
+<!-- Authorized deletion line 268 -->
+<!-- Authorized deletion line 269 -->
+<!-- Authorized deletion line 270 -->
+<!-- Authorized deletion line 271 -->
+<!-- Authorized deletion line 272 -->
+<!-- Authorized deletion line 273 -->
+<!-- Authorized deletion line 274 -->
+<!-- Authorized deletion line 275 -->
+<!-- Authorized deletion line 276 -->
+<!-- Authorized deletion line 277 -->
+<!-- Authorized deletion line 278 -->
+<!-- Authorized deletion line 279 -->
+<!-- Authorized deletion line 280 -->
+<!-- Authorized deletion line 281 -->
+<!-- Authorized deletion line 282 -->
+<!-- Authorized deletion line 283 -->
+<!-- Authorized deletion line 284 -->
+<!-- Authorized deletion line 285 -->
+<!-- Authorized deletion line 286 -->
+<!-- Authorized deletion line 287 -->
+<!-- Authorized deletion line 288 -->
+<!-- Authorized deletion line 289 -->
+<!-- Authorized deletion line 290 -->
+<!-- Authorized deletion line 291 -->
+<!-- Authorized deletion line 292 -->
+<!-- Authorized deletion line 293 -->
+<!-- Authorized deletion line 294 -->
+<!-- Authorized deletion line 295 -->
+<!-- Authorized deletion line 296 -->
+<!-- Authorized deletion line 297 -->
+<!-- Authorized deletion line 298 -->
+<!-- Authorized deletion line 299 -->
+<!-- Authorized deletion line 300 -->
+<!-- Authorized deletion line 301 -->
+<!-- Authorized deletion line 302 -->
+<!-- Authorized deletion line 303 -->
+<!-- Authorized deletion line 304 -->
+<!-- Authorized deletion line 305 -->
+<!-- Authorized deletion line 306 -->
+<!-- Authorized deletion line 307 -->
+<!-- Authorized deletion line 308 -->
+<!-- Authorized deletion line 309 -->
+<!-- Authorized deletion line 310 -->
+<!-- Authorized deletion line 311 -->
+<!-- Authorized deletion line 312 -->
+<!-- Authorized deletion line 313 -->
+<!-- Authorized deletion line 314 -->
+<!-- Authorized deletion line 315 -->
+<!-- Authorized deletion line 316 -->
+<!-- Authorized deletion line 317 -->
+<!-- Authorized deletion line 318 -->
+<!-- Authorized deletion line 319 -->
+<!-- Authorized deletion line 320 -->
+<!-- Authorized deletion line 321 -->
+<!-- Authorized deletion line 322 -->
+<!-- Authorized deletion line 323 -->
+<!-- Authorized deletion line 324 -->
+<!-- Authorized deletion line 325 -->
+<!-- Authorized deletion line 326 -->
+<!-- Authorized deletion line 327 -->
+<!-- Authorized deletion line 328 -->
+<!-- Authorized deletion line 329 -->
+<!-- Authorized deletion line 330 -->
+<!-- Authorized deletion line 331 -->
+<!-- Authorized deletion line 332 -->
+<!-- Authorized deletion line 333 -->
+<!-- Authorized deletion line 334 -->
+<!-- Authorized deletion line 335 -->
+<!-- Authorized deletion line 336 -->
+<!-- Authorized deletion line 337 -->
+<!-- Authorized deletion line 338 -->
+<!-- Authorized deletion line 339 -->
+<!-- Authorized deletion line 340 -->
+<!-- Authorized deletion line 341 -->
+<!-- Authorized deletion line 342 -->
+<!-- Authorized deletion line 343 -->
+<!-- Authorized deletion line 344 -->
+<!-- Authorized deletion line 345 -->
+<!-- Authorized deletion line 346 -->
+<!-- Authorized deletion line 347 -->
+<!-- Authorized deletion line 348 -->
+<!-- Authorized deletion line 349 -->
+<!-- Authorized deletion line 350 -->
+<!-- Authorized deletion line 351 -->
+<!-- Authorized deletion line 352 -->
+<!-- Authorized deletion line 353 -->
+<!-- Authorized deletion line 354 -->
+<!-- Authorized deletion line 355 -->
+<!-- Authorized deletion line 356 -->
+<!-- Authorized deletion line 357 -->
+<!-- Authorized deletion line 358 -->
+<!-- Authorized deletion line 359 -->
+<!-- Authorized deletion line 360 -->
+<!-- Authorized deletion line 361 -->
+<!-- Authorized deletion line 362 -->
+<!-- Authorized deletion line 363 -->
+<!-- Authorized deletion line 364 -->
+<!-- Authorized deletion line 365 -->
+<!-- Authorized deletion line 366 -->
+<!-- Authorized deletion line 367 -->
+<!-- Authorized deletion line 368 -->
+<!-- Authorized deletion line 369 -->
+<!-- Authorized deletion line 370 -->
+<!-- Authorized deletion line 371 -->
+<!-- Authorized deletion line 372 -->
+<!-- Authorized deletion line 373 -->
+<!-- Authorized deletion line 374 -->
+<!-- Authorized deletion line 375 -->
+<!-- Authorized deletion line 376 -->
+<!-- Authorized deletion line 377 -->
+<!-- Authorized deletion line 378 -->
+<!-- Authorized deletion line 379 -->
+<!-- Authorized deletion line 380 -->
+<!-- Authorized deletion line 381 -->
+<!-- Authorized deletion line 382 -->
+<!-- Authorized deletion line 383 -->
+<!-- Authorized deletion line 384 -->
+<!-- Authorized deletion line 385 -->
+<!-- Authorized deletion line 386 -->
+<!-- Authorized deletion line 387 -->
+<!-- Authorized deletion line 388 -->
+<!-- Authorized deletion line 389 -->
+<!-- Authorized deletion line 390 -->
+<!-- Authorized deletion line 391 -->
+<!-- Authorized deletion line 392 -->
+<!-- Authorized deletion line 393 -->
+<!-- Authorized deletion line 394 -->
+<!-- Authorized deletion line 395 -->
+<!-- Authorized deletion line 396 -->
+<!-- Authorized deletion line 397 -->
+<!-- Authorized deletion line 398 -->
+<!-- Authorized deletion line 399 -->
+<!-- Authorized deletion line 400 -->
+<!-- Authorized deletion line 401 -->
+<!-- Authorized deletion line 402 -->
+<!-- Authorized deletion line 403 -->
+<!-- Authorized deletion line 404 -->
+<!-- Authorized deletion line 405 -->
+<!-- Authorized deletion line 406 -->
+<!-- Authorized deletion line 407 -->
+<!-- Authorized deletion line 408 -->
+<!-- Authorized deletion line 409 -->
+<!-- Authorized deletion line 410 -->
+<!-- Authorized deletion line 411 -->
+<!-- Authorized deletion line 412 -->
+<!-- Authorized deletion line 413 -->
+<!-- Authorized deletion line 414 -->
+<!-- Authorized deletion line 415 -->
+<!-- Authorized deletion line 416 -->
+<!-- Authorized deletion line 417 -->
+<!-- Authorized deletion line 418 -->
+<!-- Authorized deletion line 419 -->
+<!-- Authorized deletion line 420 -->
+<!-- Authorized deletion line 421 -->
+<!-- Authorized deletion line 422 -->
+<!-- Authorized deletion line 423 -->
+<!-- Authorized deletion line 424 -->
+<!-- Authorized deletion line 425 -->
+<!-- Authorized deletion line 426 -->
+<!-- Authorized deletion line 427 -->
+<!-- Authorized deletion line 428 -->
+<!-- Authorized deletion line 429 -->
+<!-- Authorized deletion line 430 -->
+<!-- Authorized deletion line 431 -->
+<!-- Authorized deletion line 432 -->
+<!-- Authorized deletion line 433 -->
+<!-- Authorized deletion line 434 -->
+<!-- Authorized deletion line 435 -->
+<!-- Authorized deletion line 436 -->
+<!-- Authorized deletion line 437 -->
+<!-- Authorized deletion line 438 -->
+<!-- Authorized deletion line 439 -->
+<!-- Authorized deletion line 440 -->
+<!-- Authorized deletion line 441 -->
+<!-- Authorized deletion line 442 -->
+<!-- Authorized deletion line 443 -->
+<!-- Authorized deletion line 444 -->
+<!-- Authorized deletion line 445 -->
+<!-- Authorized deletion line 446 -->
+<!-- Authorized deletion line 447 -->
+<!-- Authorized deletion line 448 -->
+<!-- Authorized deletion line 449 -->
+<!-- Authorized deletion line 450 -->
+<!-- Authorized deletion line 451 -->
+<!-- Authorized deletion line 452 -->
+<!-- Authorized deletion line 453 -->
+<!-- Authorized deletion line 454 -->
+<!-- Authorized deletion line 455 -->
+<!-- Authorized deletion line 456 -->
+<!-- Authorized deletion line 457 -->
+<!-- Authorized deletion line 458 -->
+<!-- Authorized deletion line 459 -->
+<!-- Authorized deletion line 460 -->
+<!-- Authorized deletion line 461 -->
+<!-- Authorized deletion line 462 -->
+<!-- Authorized deletion line 463 -->
+<!-- Authorized deletion line 464 -->
+<!-- Authorized deletion line 465 -->
+<!-- Authorized deletion line 466 -->
+<!-- Authorized deletion line 467 -->
+<!-- Authorized deletion line 468 -->
+<!-- Authorized deletion line 469 -->
+<!-- Authorized deletion line 470 -->
+<!-- Authorized deletion line 471 -->
+<!-- Authorized deletion line 472 -->
+<!-- Authorized deletion line 473 -->
+<!-- Authorized deletion line 474 -->
+<!-- Authorized deletion line 475 -->
+<!-- Authorized deletion line 476 -->
+<!-- Authorized deletion line 477 -->
+<!-- Authorized deletion line 478 -->
+<!-- Authorized deletion line 479 -->
+<!-- Authorized deletion line 480 -->
+<!-- Authorized deletion line 481 -->
+<!-- Authorized deletion line 482 -->
+<!-- Authorized deletion line 483 -->
+<!-- Authorized deletion line 484 -->
+<!-- Authorized deletion line 485 -->
+<!-- Authorized deletion line 486 -->
+<!-- Authorized deletion line 487 -->
+<!-- Authorized deletion line 488 -->
+<!-- Authorized deletion line 489 -->
+<!-- Authorized deletion line 490 -->
+<!-- Authorized deletion line 491 -->
+<!-- Authorized deletion line 492 -->
+<!-- Authorized deletion line 493 -->
+<!-- Authorized deletion line 494 -->
+<!-- Authorized deletion line 495 -->
+<!-- Authorized deletion line 496 -->
+<!-- Authorized deletion line 497 -->
+<!-- Authorized deletion line 498 -->
+<!-- Authorized deletion line 499 -->
+<!-- Authorized deletion line 500 -->
+<!-- Authorized deletion line 501 -->
+<!-- Authorized deletion line 502 -->
+<!-- Authorized deletion line 503 -->
+<!-- Authorized deletion line 504 -->
+<!-- Authorized deletion line 505 -->
+<!-- Authorized deletion line 506 -->
+<!-- Authorized deletion line 507 -->
+<!-- Authorized deletion line 508 -->
+<!-- Authorized deletion line 509 -->
+<!-- Authorized deletion line 510 -->
+<!-- Authorized deletion line 511 -->
+<!-- Authorized deletion line 512 -->
+<!-- Authorized deletion line 513 -->
+<!-- Authorized deletion line 514 -->
+<!-- Authorized deletion line 515 -->
+<!-- Authorized deletion line 516 -->
+<!-- Authorized deletion line 517 -->
+<!-- Authorized deletion line 518 -->
+<!-- Authorized deletion line 519 -->
+<!-- Authorized deletion line 520 -->
+<!-- Authorized deletion line 521 -->
+<!-- Authorized deletion line 522 -->
+<!-- Authorized deletion line 523 -->
+<!-- Authorized deletion line 524 -->
+<!-- Authorized deletion line 525 -->
+<!-- Authorized deletion line 526 -->
+<!-- Authorized deletion line 527 -->
+<!-- Authorized deletion line 528 -->
+<!-- Authorized deletion line 529 -->
+<!-- Authorized deletion line 530 -->
+<!-- Authorized deletion line 531 -->
+<!-- Authorized deletion line 532 -->
+<!-- Authorized deletion line 533 -->
+<!-- Authorized deletion line 534 -->
+<!-- Authorized deletion line 535 -->
+<!-- Authorized deletion line 536 -->
+<!-- Authorized deletion line 537 -->
+<!-- Authorized deletion line 538 -->
+<!-- Authorized deletion line 539 -->
+<!-- Authorized deletion line 540 -->
+<!-- Authorized deletion line 541 -->
+<!-- Authorized deletion line 542 -->
+<!-- Authorized deletion line 543 -->
+<!-- Authorized deletion line 544 -->
+<!-- Authorized deletion line 545 -->
+<!-- Authorized deletion line 546 -->
+<!-- Authorized deletion line 547 -->
+<!-- Authorized deletion line 548 -->
+<!-- Authorized deletion line 549 -->
+<!-- Authorized deletion line 550 -->
+<!-- Authorized deletion line 551 -->
+<!-- Authorized deletion line 552 -->
+<!-- Authorized deletion line 553 -->
+<!-- Authorized deletion line 554 -->
+<!-- Authorized deletion line 555 -->
+<!-- Authorized deletion line 556 -->
+<!-- Authorized deletion line 557 -->
+<!-- Authorized deletion line 558 -->
+<!-- Authorized deletion line 559 -->
+<!-- Authorized deletion line 560 -->
+<!-- Authorized deletion line 561 -->
+<!-- Authorized deletion line 562 -->
+<!-- Authorized deletion line 563 -->
+<!-- Authorized deletion line 564 -->
+<!-- Authorized deletion line 565 -->
+<!-- Authorized deletion line 566 -->
+<!-- Authorized deletion line 567 -->
+<!-- Authorized deletion line 568 -->
+<!-- Authorized deletion line 569 -->
+<!-- Authorized deletion line 570 -->
+<!-- Authorized deletion line 571 -->
+<!-- Authorized deletion line 572 -->
+<!-- Authorized deletion line 573 -->
+<!-- Authorized deletion line 574 -->
+<!-- Authorized deletion line 575 -->
+<!-- Authorized deletion line 576 -->
+<!-- Authorized deletion line 577 -->
+<!-- Authorized deletion line 578 -->
+<!-- Authorized deletion line 579 -->
+<!-- Authorized deletion line 580 -->
+<!-- Authorized deletion line 581 -->
+<!-- Authorized deletion line 582 -->
+<!-- Authorized deletion line 583 -->
+<!-- Authorized deletion line 584 -->
+<!-- Authorized deletion line 585 -->
+<!-- Authorized deletion line 586 -->
+<!-- Authorized deletion line 587 -->
+<!-- Authorized deletion line 588 -->
+<!-- Authorized deletion line 589 -->
+<!-- Authorized deletion line 590 -->
+<!-- Authorized deletion line 591 -->
+<!-- Authorized deletion line 592 -->
+<!-- Authorized deletion line 593 -->
+<!-- Authorized deletion line 594 -->
+<!-- Authorized deletion line 595 -->
+<!-- Authorized deletion line 596 -->
+<!-- Authorized deletion line 597 -->
+<!-- Authorized deletion line 598 -->
+<!-- Authorized deletion line 599 -->
+<!-- Authorized deletion line 600 -->
+<!-- Authorized deletion line 601 -->
+<!-- Authorized deletion line 602 -->
+<!-- Authorized deletion line 603 -->
+<!-- Authorized deletion line 604 -->
+<!-- Authorized deletion line 605 -->
+<!-- Authorized deletion line 606 -->
+<!-- Authorized deletion line 607 -->
+<!-- Authorized deletion line 608 -->
+<!-- Authorized deletion line 609 -->
+<!-- Authorized deletion line 610 -->
+<!-- Authorized deletion line 611 -->
+<!-- Authorized deletion line 612 -->
+<!-- Authorized deletion line 613 -->
+<!-- Authorized deletion line 614 -->
+<!-- Authorized deletion line 615 -->
+<!-- Authorized deletion line 616 -->
+<!-- Authorized deletion line 617 -->
+<!-- Authorized deletion line 618 -->
+<!-- Authorized deletion line 619 -->
+<!-- Authorized deletion line 620 -->
+<!-- Authorized deletion line 621 -->
+<!-- Authorized deletion line 622 -->
+<!-- Authorized deletion line 623 -->
+<!-- Authorized deletion line 624 -->
+<!-- Authorized deletion line 625 -->
+<!-- Authorized deletion line 626 -->
+<!-- Authorized deletion line 627 -->
+<!-- Authorized deletion line 628 -->
+<!-- Authorized deletion line 629 -->
+<!-- Authorized deletion line 630 -->
+<!-- Authorized deletion line 631 -->
+<!-- Authorized deletion line 632 -->
+<!-- Authorized deletion line 633 -->
+<!-- Authorized deletion line 634 -->
+<!-- Authorized deletion line 635 -->
+<!-- Authorized deletion line 636 -->
+<!-- Authorized deletion line 637 -->
+<!-- Authorized deletion line 638 -->
+<!-- Authorized deletion line 639 -->
+<!-- Authorized deletion line 640 -->
+<!-- Authorized deletion line 641 -->
+<!-- Authorized deletion line 642 -->
+<!-- Authorized deletion line 643 -->
+<!-- Authorized deletion line 644 -->
+<!-- Authorized deletion line 645 -->
+<!-- Authorized deletion line 646 -->
+<!-- Authorized deletion line 647 -->
+<!-- Authorized deletion line 648 -->
+<!-- Authorized deletion line 649 -->
+<!-- Authorized deletion line 650 -->
+<!-- Authorized deletion line 651 -->
+<!-- Authorized deletion line 652 -->
+<!-- Authorized deletion line 653 -->
+<!-- Authorized deletion line 654 -->
+<!-- Authorized deletion line 655 -->
+<!-- Authorized deletion line 656 -->
+<!-- Authorized deletion line 657 -->
+<!-- Authorized deletion line 658 -->
+<!-- Authorized deletion line 659 -->
+<!-- Authorized deletion line 660 -->
+<!-- Authorized deletion line 661 -->
+<!-- Authorized deletion line 662 -->
+<!-- Authorized deletion line 663 -->
+<!-- Authorized deletion line 664 -->
+<!-- Authorized deletion line 665 -->
+<!-- Authorized deletion line 666 -->
+<!-- Authorized deletion line 667 -->
+<!-- Authorized deletion line 668 -->
+<!-- Authorized deletion line 669 -->
+<!-- Authorized deletion line 670 -->
+<!-- Authorized deletion line 671 -->
+<!-- Authorized deletion line 672 -->
+<!-- Authorized deletion line 673 -->
+<!-- Authorized deletion line 674 -->
+<!-- Authorized deletion line 675 -->
+<!-- Authorized deletion line 676 -->
+<!-- Authorized deletion line 677 -->
+<!-- Authorized deletion line 678 -->
+<!-- Authorized deletion line 679 -->
+<!-- Authorized deletion line 680 -->
+<!-- Authorized deletion line 681 -->
+<!-- Authorized deletion line 682 -->
+<!-- Authorized deletion line 683 -->
+<!-- Authorized deletion line 684 -->
+<!-- Authorized deletion line 685 -->
+<!-- Authorized deletion line 686 -->
+<!-- Authorized deletion line 687 -->
+<!-- Authorized deletion line 688 -->
+<!-- Authorized deletion line 689 -->
+<!-- Authorized deletion line 690 -->
+<!-- Authorized deletion line 691 -->
+<!-- Authorized deletion line 692 -->
+<!-- Authorized deletion line 693 -->
+<!-- Authorized deletion line 694 -->
+<!-- Authorized deletion line 695 -->
+<!-- Authorized deletion line 696 -->
+<!-- Authorized deletion line 697 -->
+<!-- Authorized deletion line 698 -->
+<!-- Authorized deletion line 699 -->
+<!-- Authorized deletion line 700 -->
+<!-- Authorized deletion line 701 -->
+<!-- Authorized deletion line 702 -->
+<!-- Authorized deletion line 703 -->
+<!-- Authorized deletion line 704 -->
+<!-- Authorized deletion line 705 -->
+<!-- Authorized deletion line 706 -->
+<!-- Authorized deletion line 707 -->
+<!-- Authorized deletion line 708 -->
+<!-- Authorized deletion line 709 -->
+<!-- Authorized deletion line 710 -->
+<!-- Authorized deletion line 711 -->
+<!-- Authorized deletion line 712 -->
+<!-- Authorized deletion line 713 -->
+<!-- Authorized deletion line 714 -->
+<!-- Authorized deletion line 715 -->
+<!-- Authorized deletion line 716 -->
+<!-- Authorized deletion line 717 -->
+<!-- Authorized deletion line 718 -->
+<!-- Authorized deletion line 719 -->
+<!-- Authorized deletion line 720 -->
+<!-- Authorized deletion line 721 -->
+<!-- Authorized deletion line 722 -->
+<!-- Authorized deletion line 723 -->
+<!-- Authorized deletion line 724 -->
+<!-- Authorized deletion line 725 -->
+<!-- Authorized deletion line 726 -->
+<!-- Authorized deletion line 727 -->
+<!-- Authorized deletion line 728 -->
+<!-- Authorized deletion line 729 -->
+<!-- Authorized deletion line 730 -->
+<!-- Authorized deletion line 731 -->
+<!-- Authorized deletion line 732 -->
+<!-- Authorized deletion line 733 -->
+<!-- Authorized deletion line 734 -->
+<!-- Authorized deletion line 735 -->
+<!-- Authorized deletion line 736 -->
+<!-- Authorized deletion line 737 -->
+<!-- Authorized deletion line 738 -->
+<!-- Authorized deletion line 739 -->
+<!-- Authorized deletion line 740 -->
+<!-- Authorized deletion line 741 -->
+<!-- Authorized deletion line 742 -->
+<!-- Authorized deletion line 743 -->
+<!-- Authorized deletion line 744 -->
+<!-- Authorized deletion line 745 -->
+<!-- Authorized deletion line 746 -->
+<!-- Authorized deletion line 747 -->
+<!-- Authorized deletion line 748 -->
+<!-- Authorized deletion line 749 -->
+<!-- Authorized deletion line 750 -->
+<!-- Authorized deletion line 751 -->
+<!-- Authorized deletion line 752 -->
+<!-- Authorized deletion line 753 -->
+<!-- Authorized deletion line 754 -->
+<!-- Authorized deletion line 755 -->
+<!-- Authorized deletion line 756 -->
+<!-- Authorized deletion line 757 -->
+<!-- Authorized deletion line 758 -->
+<!-- Authorized deletion line 759 -->
+<!-- Authorized deletion line 760 -->
+<!-- Authorized deletion line 761 -->
+<!-- Authorized deletion line 762 -->
+<!-- Authorized deletion line 763 -->
+<!-- Authorized deletion line 764 -->
+<!-- Authorized deletion line 765 -->
+<!-- Authorized deletion line 766 -->
+<!-- Authorized deletion line 767 -->
+<!-- Authorized deletion line 768 -->
+<!-- Authorized deletion line 769 -->
+<!-- Authorized deletion line 770 -->
+<!-- Authorized deletion line 771 -->
+<!-- Authorized deletion line 772 -->
+<!-- Authorized deletion line 773 -->
+<!-- Authorized deletion line 774 -->
+<!-- Authorized deletion line 775 -->
+<!-- Authorized deletion line 776 -->
+<!-- Authorized deletion line 777 -->
+<!-- Authorized deletion line 778 -->
+<!-- Authorized deletion line 779 -->
+<!-- Authorized deletion line 780 -->
+<!-- Authorized deletion line 781 -->
+<!-- Authorized deletion line 782 -->
+<!-- Authorized deletion line 783 -->
+<!-- Authorized deletion line 784 -->
+<!-- Authorized deletion line 785 -->
+<!-- Authorized deletion line 786 -->
+<!-- Authorized deletion line 787 -->
+<!-- Authorized deletion line 788 -->
+<!-- Authorized deletion line 789 -->
+<!-- Authorized deletion line 790 -->
+<!-- Authorized deletion line 791 -->
+<!-- Authorized deletion line 792 -->
+<!-- Authorized deletion line 793 -->
+<!-- Authorized deletion line 794 -->
+<!-- Authorized deletion line 795 -->
+<!-- Authorized deletion line 796 -->
+<!-- Authorized deletion line 797 -->
+<!-- Authorized deletion line 798 -->
+<!-- Authorized deletion line 799 -->
+<!-- Authorized deletion line 800 -->
+<!-- Authorized deletion line 801 -->
+<!-- Authorized deletion line 802 -->
+<!-- Authorized deletion line 803 -->
+<!-- Authorized deletion line 804 -->
+<!-- Authorized deletion line 805 -->
+<!-- Authorized deletion line 806 -->
+<!-- Authorized deletion line 807 -->
+<!-- Authorized deletion line 808 -->
+<!-- Authorized deletion line 809 -->
+<!-- Authorized deletion line 810 -->
+<!-- Authorized deletion line 811 -->
+<!-- Authorized deletion line 812 -->
+<!-- Authorized deletion line 813 -->
+<!-- Authorized deletion line 814 -->
+<!-- Authorized deletion line 815 -->
+<!-- Authorized deletion line 816 -->
+<!-- Authorized deletion line 817 -->
+<!-- Authorized deletion line 818 -->
+<!-- Authorized deletion line 819 -->
+<!-- Authorized deletion line 820 -->
+<!-- Authorized deletion line 821 -->
+<!-- Authorized deletion line 822 -->
+<!-- Authorized deletion line 823 -->
+<!-- Authorized deletion line 824 -->
+<!-- Authorized deletion line 825 -->
+<!-- Authorized deletion line 826 -->
+<!-- Authorized deletion line 827 -->
+<!-- Authorized deletion line 828 -->
+<!-- Authorized deletion line 829 -->
+<!-- Authorized deletion line 830 -->
+<!-- Authorized deletion line 831 -->
+<!-- Authorized deletion line 832 -->
+<!-- Authorized deletion line 833 -->
+<!-- Authorized deletion line 834 -->
+<!-- Authorized deletion line 835 -->
+<!-- Authorized deletion line 836 -->
+<!-- Authorized deletion line 837 -->
+<!-- Authorized deletion line 838 -->
+<!-- Authorized deletion line 839 -->
+<!-- Authorized deletion line 840 -->
+<!-- Authorized deletion line 841 -->
+<!-- Authorized deletion line 842 -->
+<!-- Authorized deletion line 843 -->
+<!-- Authorized deletion line 844 -->
+<!-- Authorized deletion line 845 -->
+<!-- Authorized deletion line 846 -->
+<!-- Authorized deletion line 847 -->
+<!-- Authorized deletion line 848 -->
+<!-- Authorized deletion line 849 -->
+<!-- Authorized deletion line 850 -->
+<!-- Authorized deletion line 851 -->
+<!-- Authorized deletion line 852 -->
+<!-- Authorized deletion line 853 -->
+<!-- Authorized deletion line 854 -->
+<!-- Authorized deletion line 855 -->
+<!-- Authorized deletion line 856 -->
+<!-- Authorized deletion line 857 -->
+<!-- Authorized deletion line 858 -->
+<!-- Authorized deletion line 859 -->
+<!-- Authorized deletion line 860 -->
+<!-- Authorized deletion line 861 -->
+<!-- Authorized deletion line 862 -->
+<!-- Authorized deletion line 863 -->
+<!-- Authorized deletion line 864 -->
+<!-- Authorized deletion line 865 -->
+<!-- Authorized deletion line 866 -->
+<!-- Authorized deletion line 867 -->
+<!-- Authorized deletion line 868 -->
+<!-- Authorized deletion line 869 -->
+<!-- Authorized deletion line 870 -->
+<!-- Authorized deletion line 871 -->
+<!-- Authorized deletion line 872 -->
+<!-- Authorized deletion line 873 -->
+<!-- Authorized deletion line 874 -->
+<!-- Authorized deletion line 875 -->
+<!-- Authorized deletion line 876 -->
+<!-- Authorized deletion line 877 -->
+<!-- Authorized deletion line 878 -->
+<!-- Authorized deletion line 879 -->
+<!-- Authorized deletion line 880 -->
+<!-- Authorized deletion line 881 -->
+<!-- Authorized deletion line 882 -->
+<!-- Authorized deletion line 883 -->
+<!-- Authorized deletion line 884 -->
+<!-- Authorized deletion line 885 -->
+<!-- Authorized deletion line 886 -->
+<!-- Authorized deletion line 887 -->
+<!-- Authorized deletion line 888 -->
+<!-- Authorized deletion line 889 -->
+<!-- Authorized deletion line 890 -->
+<!-- Authorized deletion line 891 -->
+<!-- Authorized deletion line 892 -->
+<!-- Authorized deletion line 893 -->
+<!-- Authorized deletion line 894 -->
+<!-- Authorized deletion line 895 -->
+<!-- Authorized deletion line 896 -->
+<!-- Authorized deletion line 897 -->
+<!-- Authorized deletion line 898 -->
+<!-- Authorized deletion line 899 -->
+<!-- Authorized deletion line 900 -->
+<!-- Authorized deletion line 901 -->
+<!-- Authorized deletion line 902 -->
+<!-- Authorized deletion line 903 -->
+<!-- Authorized deletion line 904 -->
+<!-- Authorized deletion line 905 -->
+<!-- Authorized deletion line 906 -->
+<!-- Authorized deletion line 907 -->
+<!-- Authorized deletion line 908 -->
+<!-- Authorized deletion line 909 -->
+<!-- Authorized deletion line 910 -->
+<!-- Authorized deletion line 911 -->
+<!-- Authorized deletion line 912 -->
+<!-- Authorized deletion line 913 -->
+<!-- Authorized deletion line 914 -->
+<!-- Authorized deletion line 915 -->
+<!-- Authorized deletion line 916 -->
+<!-- Authorized deletion line 917 -->
+<!-- Authorized deletion line 918 -->
+<!-- Authorized deletion line 919 -->
+<!-- Authorized deletion line 920 -->
+<!-- Authorized deletion line 921 -->
+<!-- Authorized deletion line 922 -->
+<!-- Authorized deletion line 923 -->
+<!-- Authorized deletion line 924 -->
+<!-- Authorized deletion line 925 -->
+<!-- Authorized deletion line 926 -->
+<!-- Authorized deletion line 927 -->
+<!-- Authorized deletion line 928 -->
+<!-- Authorized deletion line 929 -->
+<!-- Authorized deletion line 930 -->
+<!-- Authorized deletion line 931 -->
+<!-- Authorized deletion line 932 -->
+<!-- Authorized deletion line 933 -->
+<!-- Authorized deletion line 934 -->
+<!-- Authorized deletion line 935 -->
+<!-- Authorized deletion line 936 -->
+<!-- Authorized deletion line 937 -->
+<!-- Authorized deletion line 938 -->
+<!-- Authorized deletion line 939 -->
+<!-- Authorized deletion line 940 -->
+<!-- Authorized deletion line 941 -->
+<!-- Authorized deletion line 942 -->
+<!-- Authorized deletion line 943 -->
+<!-- Authorized deletion line 944 -->
+<!-- Authorized deletion line 945 -->
+<!-- Authorized deletion line 946 -->
+<!-- Authorized deletion line 947 -->
+<!-- Authorized deletion line 948 -->
+<!-- Authorized deletion line 949 -->
+<!-- Authorized deletion line 950 -->
+<!-- Authorized deletion line 951 -->
+<!-- Authorized deletion line 952 -->
+<!-- Authorized deletion line 953 -->
+<!-- Authorized deletion line 954 -->
+<!-- Authorized deletion line 955 -->
+<!-- Authorized deletion line 956 -->
+<!-- Authorized deletion line 957 -->
+<!-- Authorized deletion line 958 -->
+<!-- Authorized deletion line 959 -->
+<!-- Authorized deletion line 960 -->
+<!-- Authorized deletion line 961 -->
+<!-- Authorized deletion line 962 -->
+<!-- Authorized deletion line 963 -->
+<!-- Authorized deletion line 964 -->
+<!-- Authorized deletion line 965 -->
+<!-- Authorized deletion line 966 -->
+<!-- Authorized deletion line 967 -->
+<!-- Authorized deletion line 968 -->
+<!-- Authorized deletion line 969 -->
+<!-- Authorized deletion line 970 -->
+<!-- Authorized deletion line 971 -->
+<!-- Authorized deletion line 972 -->
+<!-- Authorized deletion line 973 -->
+<!-- Authorized deletion line 974 -->
+<!-- Authorized deletion line 975 -->
+<!-- Authorized deletion line 976 -->
+<!-- Authorized deletion line 977 -->
+<!-- Authorized deletion line 978 -->
+<!-- Authorized deletion line 979 -->
+<!-- Authorized deletion line 980 -->
+<!-- Authorized deletion line 981 -->
+<!-- Authorized deletion line 982 -->
+<!-- Authorized deletion line 983 -->
+<!-- Authorized deletion line 984 -->
+<!-- Authorized deletion line 985 -->
+<!-- Authorized deletion line 986 -->
+<!-- Authorized deletion line 987 -->
+<!-- Authorized deletion line 988 -->
+<!-- Authorized deletion line 989 -->
+<!-- Authorized deletion line 990 -->
+<!-- Authorized deletion line 991 -->
+<!-- Authorized deletion line 992 -->
+<!-- Authorized deletion line 993 -->
+<!-- Authorized deletion line 994 -->
+<!-- Authorized deletion line 995 -->
+<!-- Authorized deletion line 996 -->
+<!-- Authorized deletion line 997 -->
+<!-- Authorized deletion line 998 -->
+<!-- Authorized deletion line 999 -->

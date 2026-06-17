@@ -1,5 +1,8 @@
 "use client";
 
+
+import { WithTooltip } from "./TooltipRegistry";
+
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../lib/sync/SyncManager';
 
@@ -35,12 +38,14 @@ export function NetworkStatusIndicator() {
     <div
       className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none"
     >
-      <div className="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
-        <span className="text-sm font-semibold text-gray-800">
-          {isOffline ? 'Working Offline' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
-        </span>
-      </div>
+      <WithTooltip id="network-status-tooltip" defaultText={isOffline ? "You are currently disconnected. Changes will be saved locally." : "Your changes are syncing to the cloud."}>
+        <div className="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
+          <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
+          <span className="text-sm font-semibold text-gray-800">
+            {isOffline ? 'Working Offline' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
+          </span>
+        </div>
+      </WithTooltip>
     </div>
   );
 }

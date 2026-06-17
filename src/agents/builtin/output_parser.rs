@@ -36,74 +36,52 @@ impl<T> StructuredOutputParser<T> {
 
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        let completion = msg.content.clone();
-
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty()
             && let Some(call) = msg
                 .tool_calls
                 .iter()
                 .find(|t| t.name == "structured_output")
-            {
-                if let Some(data) = call.arguments.get("data") {
-                    return match serde_json::from_value::<T>(data.clone()) {
-                        Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
-                    };
-                } else {
-                    return Err(
+        {
+            if let Some(data) = call.arguments.get("data") {
+                return match serde_json::from_value::<T>(data.clone()) {
+                    Ok(parsed) => Ok(parsed),
+                    Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
+                };
+            } else {
+                return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
-                }
-            }
-
-        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
-        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
-        let mut text_to_parse = completion.trim();
-
-        if let Some(start) = text_to_parse.find("```json") {
-            if let Some(end) = text_to_parse[start + 7..].find("```") {
-                text_to_parse = &text_to_parse[start + 7..start + 7 + end];
-            }
-        } else if let Some(start) = text_to_parse.find("```") {
-            if let Some(end) = text_to_parse[start + 3..].find("```") {
-                text_to_parse = &text_to_parse[start + 3..start + 3 + end];
-            }
-        } else if let Some(start) = text_to_parse.find("{") {
-            if let Some(end) = text_to_parse.rfind("}") {
-                let is_valid = end > start;
-                if is_valid {
-                    text_to_parse = &text_to_parse[start..end + 1];
-                }
-            }
-        } else if let Some(start) = text_to_parse.find("[") { #[allow(clippy::collapsible_if)]
-            if let Some(end) = text_to_parse.rfind("]") {
-                 let is_valid = end > start;
-                 if is_valid {
-                     text_to_parse = &text_to_parse[start..end + 1];
-                 }
             }
         }
 
-        let text_to_parse = text_to_parse.trim();
+        // Fallback: If it's pure markdown JSON block, attempt to parse it directly
+        let content = msg.content.trim();
+        let json_str = if content.starts_with("```json") {
+            content
+                .trim_start_matches("```json")
+                .trim_end_matches("```")
+                .trim()
+        } else if content.starts_with("```") {
+            content
+                .trim_start_matches("```")
+                .trim_end_matches("```")
+                .trim()
+        } else {
+            content
+        };
 
-        if text_to_parse.starts_with("{") || text_to_parse.starts_with("[") {
-            if let Ok(parsed) = serde_json::from_str::<T>(text_to_parse) {
+        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+            return Ok(parsed);
+        }
+
+        let s = msg.content.trim();
+        if s.starts_with("```json") && s.ends_with("```") {
+            let json_str = s[7..s.len() - 3].trim();
+            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
                 return Ok(parsed);
             }
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
-                #[allow(clippy::collapsible_if)]
-                if let Some(data) = val.get("data") {
-                    if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
-                        return Ok(parsed);
-                    }
-                }
-            }
-            if let Err(e) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
-                return Err(crate::types::format_pydantic_error(&e, Some(text_to_parse), None));
-            }
         }
-
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
     }
@@ -134,7 +112,10 @@ impl Default for ExponentialBackoffWithJitter {
 
 impl ExponentialBackoffWithJitter {
     pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
-        Self { base_ms, jitter_max_ms }
+        Self {
+            base_ms,
+            jitter_max_ms,
+        }
     }
 }
 
@@ -164,7 +145,12 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         req: ChatRequest,
         max_retries: usize,
     ) -> Result<T, ToolError> {
-        self.parse_with_prompt_and_strategy(req, max_retries, &ExponentialBackoffWithJitter::default()).await
+        self.parse_with_prompt_and_strategy(
+            req,
+            max_retries,
+            &ExponentialBackoffWithJitter::default(),
+        )
+        .await
     }
 
     pub async fn parse_with_prompt_and_strategy(
@@ -244,7 +230,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             .map(|tc| crate::types::ToolResult {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
-                                error: crate::types::ToolResult::new_llm_recoverable(tc.id.clone(), &detailed_error).error,
+                                error: crate::types::ToolResult::new_llm_recoverable(
+                                    tc.id.clone(),
+                                    &detailed_error,
+                                )
+                                .error,
                             })
                             .collect();
 
@@ -293,7 +283,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 ///
 /// **Returns:**
 /// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
-    #[allow(clippy::empty_line_after_doc_comments)]
+#[allow(clippy::empty_line_after_doc_comments)]
 pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
@@ -575,16 +565,25 @@ mod tests {
     async fn test_parse_structured_output_plain_markdown_wrapper() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("Here is the requested output:\n```\n{\"result\": \"success_plain\"}\n```"),
+                // 1. Model ignores tool calls and outputs raw markdown
+                create_text_resp(
+                    "Here is the requested output:\n```\n{\"result\": \"success_plain\"}\n```",
+                ),
+                // 2. The LlmRecoverable feedback loop intercepts it and the model corrects itself
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success_plain_recovered"}}),
+                ),
             ]),
         });
 
         let req = create_test_req();
-        let result: TestOutput =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
-                .await
-                .unwrap();
-        assert_eq!(result.result, "success_plain");
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+
+        // Because of the strict native tool_calls enforcement, it must retry and succeed on the second attempt
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success_plain_recovered");
     }
 
     #[tokio::test]

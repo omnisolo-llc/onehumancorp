@@ -3,10 +3,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 enum AuthMode {
-    #[allow(dead_code)]
-    Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
 }
@@ -32,7 +29,6 @@ impl AuthConfig {
 
     pub fn authenticate(&self, req: &Request<()>) -> Result<(), Status> {
         match &self.mode {
-            AuthMode::Disabled => Ok(()),
             AuthMode::Token(expected_hash) => self.check_token(req, expected_hash),
             AuthMode::SPIFFE { allowed_id } => self.check_spiffe(req, allowed_id.as_deref()),
         }
@@ -56,9 +52,9 @@ impl AuthConfig {
         let app_key = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
-                let secret_path = std::path::Path::new(".ohc_jwt_secret");
+                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
                 if secret_path.exists() {
-                    if let Ok(bytes) = std::fs::read(secret_path) {
+                    if let Ok(bytes) = std::fs::read(&secret_path) {
                         if bytes.len() >= 32 {
                             return bytes;
                         }
@@ -102,9 +98,9 @@ fn hmac_token(tok: &str) -> Vec<u8> {
     let app_key = std::env::var("JWT_SECRET")
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| {
-            let secret_path = std::path::Path::new(".ohc_jwt_secret");
+            let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
             if secret_path.exists() {
-                if let Ok(bytes) = std::fs::read(secret_path) {
+                if let Ok(bytes) = std::fs::read(&secret_path) {
                     if bytes.len() >= 32 {
                         return bytes;
                     }

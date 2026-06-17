@@ -220,7 +220,7 @@ export default function BuilderPage() {
            <div className="absolute bottom-0 w-full p-6 glassmorphism border-t border-white/40 dark:border-white/10 z-50">
               <button
                 onClick={() => setStatus("draft")}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[16px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
               >
                 Customize Selected Draft
               </button>
@@ -479,7 +479,7 @@ export default function BuilderPage() {
           <div className="w-full glassmorphism backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="app-card dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
+            <div className="app-card dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[16px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="/embed.js" data-store="${tenantId}"></script>
@@ -493,7 +493,7 @@ export default function BuilderPage() {
                         navigator.clipboard.writeText(code);
                         setSaveMessage("Embed code copied.");
                     }}
-                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[16px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
                 >
                     Copy
                 </button>
@@ -581,7 +581,7 @@ export default function BuilderPage() {
           </div>
 
           <button
-            className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
+            className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[16px] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
             onClick={() => setStatus("idle")}
           >
             Go to Dashboard
@@ -665,7 +665,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 glassmorphism backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
+                  className="w-full p-4 glassmorphism backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -674,11 +674,11 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 glassmorphism backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 glassmorphism backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
                   </button>
-                  <button className="p-4 glassmorphism backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 glassmorphism backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>✨</span>
                     <span>AI Generate</span>
                   </button>
@@ -690,7 +690,7 @@ export default function BuilderPage() {
             )}
             <button
               onClick={() => setIsActionSheetOpen(false)}
-              className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+              className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[16px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
             >
               Save Changes
             </button>
@@ -701,7 +701,7 @@ export default function BuilderPage() {
         <div className="absolute bottom-0 w-full p-4 glassmorphism border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
             <WithTooltip id="change-vibe-tooltip" defaultText="Change the theme and colors of your website.">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
+            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[16px] inline-flex items-center justify-center gap-2">
               <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
                 <path d="M4 7h16" />
                 <path d="M7 12h10" />
@@ -713,7 +713,7 @@ export default function BuilderPage() {
             {!isPremium && (
               <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OHC branding.">
               <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
+                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[16px] inline-flex items-center justify-center gap-2"
                 onClick={() => setShowUpgradeModal(true)}
               >
                 <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
@@ -729,7 +729,7 @@ export default function BuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2"
+              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[16px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -743,7 +743,7 @@ export default function BuilderPage() {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[60] flex flex-col justify-end">
             <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[16px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
                   👑
                 </div>
                 <button
@@ -778,7 +778,7 @@ export default function BuilderPage() {
                   setIsPremium(true);
                   setShowUpgradeModal(false);
                 }}
-                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 rounded-[8px] shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-between items-center"
+                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 rounded-[16px] shadow-lg active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-between items-center"
               >
                 <span>Upgrade Now</span>
                 <span className="font-normal opacity-80">$15 / mo</span>

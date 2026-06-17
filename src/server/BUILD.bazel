@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
@@ -39,6 +40,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:billing_api.rs",
     "//src/server/api:billing_webhook.rs",
     "//src/server/api:billing_webhook_test.rs",
+    "//src/server/api:billing_api_test.rs",
     "//src/server/api:dynamic_workflows.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
@@ -48,6 +50,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
     "//src/server/api:meta_webhook.rs",
+    "//src/server/api:twilio_webhook.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
@@ -59,7 +62,9 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
+    "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
     "//src/server/api:staff_mesh.rs",
     "//src/server/api:subscription.rs",
@@ -99,9 +104,14 @@ SERVER_RS_SRCS = [
     "//src/server/domain:blueprint.rs",
     "//src/server/domain:compute.rs",
     "//src/server/domain:federation.rs",
+    "//src/server/domain:action_router.rs",
+    "//src/server/domain:agent_approvals.rs",
+    "//src/server/domain:inbox.rs",
+    "//src/server/domain:incidents.rs",
     "//src/server/domain:mod.rs",
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
+    "//src/server/domain:quotes.rs",
     "//src/server/domain:subscription.rs",
     "//src/server/domain:sre.rs",
     "//src/server/domain:unified_tenant_test.rs",
@@ -293,6 +303,9 @@ SERVER_RS_SRCS = [
     "//src/server/tools/kvmcp:mod.rs",
     "//src/server/tools/kvmcp:server.rs",
     "//src/server/tools/kvmcp:tests.rs",
+    "//src/server/tools/edge_caching:mod.rs",
+    "//src/server/tools/edge_caching:server.rs",
+    "//src/server/tools/edge_caching:tests.rs",
     "//src/server/workers:agent_memory_pipeline.rs",
     "//src/server/workers:competitor_audit.rs",
     "//src/server/workers:department_workers.rs",
@@ -302,6 +315,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:proactive_analysis_job.rs",
     "//src/server/workers:message_triage_worker.rs",
     "//src/server/workers:pricing_analysis_worker.rs",
+    "//src/server/workers:deposit_follow_up_worker.rs",
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
@@ -334,6 +348,7 @@ rust_library(
     compile_data = [
         "//src/ui/tauri/src/ui:all_files",
         "//src/ui/next/public/api/ui:all_files",
+        "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
     edition = "2024",
@@ -942,4 +957,13 @@ rust_test(
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
+)
+# To make sure it finds the edge_caching files, since they're not there
+
+sh_test(
+    name = "pii_leakage_check_test",
+    size = "small",
+    srcs = ["pii_leakage_check.sh"],
+    data = glob(["**/*.rs"]),
+    args = ["src/server"],
 )

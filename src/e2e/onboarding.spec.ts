@@ -103,8 +103,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
     await passwordInput.fill("SecurePass123");
 
-    // Launch Store
-    await page.getByRole('button', { name: /Launch Store/i }).click();
+    // Approve & Go Live
+    await page.getByRole('button', { name: /Approve & Go Live/i }).click();
 
     // Step 7: Loading State
 
@@ -195,7 +195,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await expect(bioInput).toBeVisible();
     await expect(bioInput).toHaveClass(/glassmorphism/);
 
@@ -220,7 +220,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Test business description.");
 
     const imageUrlInput = page.locator('#instant-image-url');
@@ -240,7 +240,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Test business description without image.");
 
     const imageUrlInput = page.locator('#instant-image-url');
@@ -266,7 +266,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
 
     await page.route('**/api/onboarding/**', route => route.abort('failed'));
@@ -313,7 +313,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
@@ -332,7 +332,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const bioInput = page.getByPlaceholder("Tell us about your business that sells custom vegan cakes...");
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     const box = await bioInput.boundingBox();
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);

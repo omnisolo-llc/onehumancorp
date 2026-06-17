@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
 
 interface FeedItem {
@@ -15,6 +16,7 @@ interface FeedItem {
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,11 @@ export default function FeedPage() {
 
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
-    setEditValue(item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+    const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+    const textToEdit = isAmbassador ?
+        (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
+        (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+    setEditValue(textToEdit || "");
   };
 
   const saveEdit = (id: string) => {
@@ -101,11 +107,13 @@ export default function FeedPage() {
           ...item,
           proposed_action: {
             ...item.proposed_action,
-            description: editValue,
+            description: item.proposed_action?.feature_type === 'ambassador_reply' ? item.proposed_action.description : editValue,
+            generated_response: item.proposed_action?.feature_type === 'ambassador_reply' ? editValue : item.proposed_action?.generated_response,
           },
           context_payload: {
             ...item.context_payload,
-            summary: editValue,
+            summary: item.context_payload?.feature_type === 'ambassador_reply' ? item.context_payload.summary : editValue,
+            generated_response: item.context_payload?.feature_type === 'ambassador_reply' ? editValue : item.context_payload?.generated_response,
           }
         };
       }
@@ -119,9 +127,15 @@ export default function FeedPage() {
   };
 
   const handleAction = async (id: string, state: string) => {
+    const item = items.find(i => i.id === id);
+    if (state === 'APPROVED' && item?.proposed_action?.action_type === 'Draft Quote') {
+      router.push(`/quotes/${item.proposed_action.quote_id}`);
+      return;
+    }
+
     try {
       setProcessingId(id);
-      const res = await fetch(`/api/agent-feed/${id}`, {
+      const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state }),
@@ -134,6 +148,21 @@ export default function FeedPage() {
       alert(err.message);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const simulateAmbassadorDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
+      // The websocket should pick it up, but we can also refetch
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,6 +199,8 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+            const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -180,7 +211,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {item.event_source.replace(/_/g, ' ')}
+                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -188,7 +219,13 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {item.proposed_action?.title || 'Review Required'}
+                  {isAmbassador
+                    ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Draft Quote'
+                    ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Draft Follow-up'
+                    ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
+                    : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
                 {editingId === item.id ? (
@@ -200,17 +237,25 @@ export default function FeedPage() {
                       rows={3}
                       data-testid="feed-edit-input"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button
-                        onClick={() => saveEdit(item.id)}
-                        className="text-xs bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          saveEdit(item.id);
+                          // It should also save via handleAction to backend if we want to submit the edit immediately
+                          // But we are matching the existing saveEdit behavior which only updates state locally.
+                          // Usually they click "Save" then "Approve" OR we can auto-approve on save like in UnifiedAgentFeed.
+                          // UnifiedAgentFeed does: `handleDecision(approval.id, true, editContent); setEditingId(null);`
+                          // Let's keep it separate for now or change saveEdit to do handleAction directly if needed.
+                        }}
+                        className="flex-1 min-h-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
-                        Save
+                        {isAmbassador ? 'Save & Send' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
-                        className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded"
+                        className="flex-1 min-h-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                        data-testid="feed-cancel-edit-btn"
                       >
                         Cancel
                       </button>
@@ -218,40 +263,107 @@ export default function FeedPage() {
                   </div>
                 ) : (
                   <div className="mb-5">
-                    <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                      {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
-                    </p>
-                    <button
-                      onClick={() => startEditing(item)}
-                      className="text-xs text-[#0066FF] hover:text-[#0052CC] font-medium"
-                      data-testid="feed-edit-btn"
-                    >
-                      Edit Action
-                    </button>
+                    {isAmbassador ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
+                          {ambassadorPayload.past_orders && (
+                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
+                              {ambassadorPayload.past_orders}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
+                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed">
+                            {ambassadorPayload.generated_response}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
+                        {item.proposed_action?.action_type === 'Draft Quote'
+                          ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
+                          : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
+                      </p>
+                    )}
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : 'Approve'}
-                  </button>
-                  <button
-                    onClick={() => handleAction(item.id, 'DISMISSED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
-                    data-testid="feed-dismiss-btn"
-                  >
-                    Dismiss
-                  </button>
-                </div>
+                {!editingId || editingId !== item.id ? (
+                  isAmbassador ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Draft"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : '✨ 1-Tap Approve'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )
+                ) : null}
               </div>
             );
           })}
+        </div>
+
+        {/* Hidden test button to trigger simulation easily during development/testing */}
+        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center">
+          <button
+             onClick={simulateAmbassadorDraft}
+             data-testid="simulate-ambassador-btn"
+             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded"
+          >
+            Simulate Ambassador Draft
+          </button>
         </div>
       </div>
     </AppShell>
