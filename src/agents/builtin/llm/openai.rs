@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};

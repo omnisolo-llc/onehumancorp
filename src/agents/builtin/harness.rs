@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 
 
 use ::server_harness::sandbox::{SandboxAdapter, SandboxManager};

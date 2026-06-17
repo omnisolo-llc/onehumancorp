@@ -1,8 +1,8 @@
-use axum::{
+
     extract::{Extension, Path, State},
-    response::IntoResponse,
+
     http::StatusCode,
-    routing::{get, post, put, delete},
+    routing::{get, post},
     Router,
     Json,
 };

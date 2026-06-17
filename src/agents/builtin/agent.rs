@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 #![allow(clippy::all)]
 /// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
