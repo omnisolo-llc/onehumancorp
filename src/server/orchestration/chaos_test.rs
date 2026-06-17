@@ -588,7 +588,7 @@ mod chaos_tests {
             pool: sqlx::postgres::PgPoolOptions::new()
                 .max_connections(1)
                 .acquire_timeout(std::time::Duration::from_millis(50))
-                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+                .connect_lazy(&std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://dummy".to_string()))
                 .unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
@@ -620,11 +620,11 @@ mod chaos_tests {
         temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             let start_s = std::time::Instant::now();
             let standalone_tasks = standalone_state_manager.pull_available_tasks(10).await;
-            let elapsed_s = start_s.elapsed();
+            let _elapsed_s = start_s.elapsed();
 
             let start_c = std::time::Instant::now();
             let cloud_tasks = cloud_state_manager.pull_available_tasks(10).await;
-            let elapsed_c = start_c.elapsed();
+            let _elapsed_c = start_c.elapsed();
 
             // Under severe sync lag / timeout restrictions, both should fail gracefully.
             // Neither should panic. They should return Ok(vec![]) due to fail-safe logic in pull_available_tasks
