@@ -34,8 +34,10 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await page.goto('http://mock/setup.html');
 
     // Wait for the container to be visible
+
     const container = page.locator('.container');
     await expect(container).toBeVisible({ timeout: 30000 });
+
 
     // Step 0: Welcome Screen -> Click "Conversational Setup"
     const chatButton = page.locator('button', { hasText: 'Conversational Setup' });
@@ -61,7 +63,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await sendBtn.click();
 
     // Check that the user message appears
-    await expect(chatMessages).toContainText('User: I am a plumber fixing pipes and stuff.');
+    await expect(chatMessages).toContainText('You: I am a plumber fixing pipes and stuff.');
     // Check that the assistant replies (via the real backend fallback)
     await expect(chatMessages).toContainText('Assistant: Great! Could you provide an example photo or a little more detail about what you sell?');
 
@@ -69,7 +71,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await chatInput.fill("I fix leaky pipes and install faucets.");
     await sendBtn.click();
 
-    await expect(chatMessages).toContainText('User: I fix leaky pipes and install faucets.');
+    await expect(chatMessages).toContainText('You: I fix leaky pipes and install faucets.');
     await expect(chatMessages).toContainText("Assistant: Give me a minute... I'm building your business.");
 
     // It should automatically transition to the approval step

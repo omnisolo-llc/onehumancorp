@@ -122,6 +122,7 @@ rust_library(
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:serde_yaml",
+        "@crates//:rust_decimal",
         "@crates//:sha2",
         "@crates//:sqlx",
         "@crates//:temp-env",
