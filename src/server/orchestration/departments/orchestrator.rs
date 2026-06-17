@@ -873,7 +873,7 @@ impl DepartmentOrchestrator {
                         let deposit_amount = (price * 0.20) as i64 * 100;
                         let total_amount_cents = (price * 100.0) as i64;
                         let now = Utc::now();
-                        let expires_at = now + chrono::Duration::days(2);
+                        let _expires_at = now + chrono::Duration::days(2);
                         let quote_id = uuid::Uuid::new_v4().to_string();
 
 
