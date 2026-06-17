@@ -562,7 +562,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-[#00C24B] hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
                   Approve
                 </button>
