@@ -2071,21 +2071,106 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
 
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
 
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
 
+        // Position above the element
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if out of bounds
+        if (top < 10) {
+            top = rect.bottom + 10; // show below if not enough space above
+        }
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
 
     // Hover (desktop)
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target;
+        if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
 
 
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
 
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 
-
-
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
 
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
 
     document.addEventListener('touchmove', () => {
         clearTimeout(touchTimeout);
@@ -2228,15 +2313,89 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            hideTooltip();
+        }
+    });
 
 
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
 
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 
-
-
-
-
-
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 });
 </script>
 
@@ -2657,23 +2816,231 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
+    const chatInput = document.getElementById('ohc-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send');
+    const chatMessages = document.getElementById('ohc-help-chat-messages');
 
+    function appendMessage(text, sender, link = null) {
+        const msg = document.createElement('div');
+        msg.className = `ohc-chat-msg ${sender}`;
+        msg.innerHTML = text;
+        if (link && link.url && link.title) {
+            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+        }
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function handleSend() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        chatInput.value = '';
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+
+            if (data.reply) {
+                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+            } else if (data.text) {
+                appendMessage(data.text, 'agent', data.link);
+            } else {
+                appendMessage(data, 'agent');
+            }
+        } catch (e) {
+            appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
+        }
+    }
+
+    chatSend.addEventListener('click', handleSend);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSend();
+    });
 
     // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            hideTooltip();
+        }
+    });
 
 
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
 
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 
-
-
-
-
-
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
 
     // Walkthroughs
+    if (!window.startWalkthrough) {
+        window.startWalkthrough = function(steps) {
+            if (!steps || steps.length === 0) return;
 
+            let currentStep = 0;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+            document.body.appendChild(overlay);
+
+            const bubble = document.createElement('div');
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+            bubble.setAttribute('role', 'dialog');
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            document.body.appendChild(bubble);
+
+            function renderStep() {
+                const step = steps[currentStep];
+
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                    el.style.background = '';
+                el.style.pointerEvents = '';
+                });
+
+                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+
+                bubble.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    </div>
+                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                `;
+
+                document.getElementById('wt-close').onclick = closeWalkthrough;
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+                document.getElementById('wt-next').onclick = () => {
+                    if (currentStep === steps.length - 1) {
+                        closeWalkthrough();
+                    } else {
+                        currentStep++;
+                        renderStep();
+                    }
+                };
+
+                if (target) {
+                    target.classList.add('walkthrough-highlight');
+                    target.style.position = 'relative';
+                    target.style.zIndex = '99999';
+                    target.style.background = 'white';
+                    target.style.pointerEvents = 'none';
+
+                    const rect = target.getBoundingClientRect();
+                    if (rect.bottom + 200 < window.innerHeight) {
+                        bubble.style.top = (rect.bottom + 10) + 'px';
+                    } else {
+                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                    }
+                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+                } else {
+                    bubble.style.top = '50%';
+                    bubble.style.left = '50%';
+                    bubble.style.transform = 'translate(-50%, -50%)';
+                }
+            }
+
+            function closeWalkthrough() {
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                    el.style.background = '';
+                el.style.pointerEvents = '';
+                });
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+            }
+
+            renderStep();
+        };
+    }
 });
 </script>
 
