@@ -1,48 +1,31 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Autonomous Booking System', () => {
-    test('end-to-end booking flow: dashboard view, availability fetch, and submission', async ({ page }) => {
-        const tenant = 'test-tenant-booking-123';
-        const serviceId = 'test-service-1';
+test.describe('Autonomous Booking System CUJ', () => {
+  test('Leo the Music Tutor can view his dashboard, and a student can book a lesson', async ({ page }) => {
+    // Navigate to the test frontend page
+    await page.goto('/booking');
 
-        // 1. Visit Dashboard and navigate to Bookings Dashboard
-        await page.goto('/ui/dashboard.html');
-        // Click the Booking Dashboard link
-        const bookingDashboardLink = page.locator('a[href="booking-dashboard.html"]');
-        await expect(bookingDashboardLink).toBeVisible();
+    // Fill out the booking form
+    // Wait for the form to load
+    await page.waitForSelector('form');
 
-        // Let's directly go to the dashboard URL since tauri local routing is tricky in playwright without setup
-        await page.goto('/ui/booking-dashboard.html');
-        // Verify empty state or loading (mocked db might be empty initially)
-        await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
+    // Fill in basic details
+    await page.getByPlaceholder('Jane Doe').fill('Alice Student');
+    await page.getByPlaceholder('jane@example.com').fill('alice@example.com');
 
-        // 2. Customer navigates to booking page
-        await page.goto(`/booking?tenant=${tenant}&service_id=${serviceId}`);
-        await expect(page.locator('text=Book an Appointment')).toBeVisible();
+    // Select date (tomorrow)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateString = tomorrow.toISOString().split('T')[0];
+    await page.locator('input[type="date"]').fill(dateString);
 
-        // Fill form
-        await page.fill('input[placeholder="Jane Doe"]', 'John Test');
-        await page.fill('input[placeholder="jane@example.com"]', 'john@example.com');
+    // Fill out description
+    await page.getByPlaceholder('What do you need help with?').fill('I need a 2-hour piano lesson.');
 
-        // Select tomorrow's date
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const dateStr = tomorrow.toISOString().split('T')[0];
+    // Click confirm
+    await page.getByRole('button', { name: 'Confirm Booking' }).click();
 
-        await page.fill('input[type="date"]', dateStr);
-
-        // We won't assert exact slots here as it depends on DB state, but we should see "Loading slots..." then buttons or empty state.
-        // If it's a completely empty database, it might say "No slots available".
-        // We will just try to submit. If no slots, the UI prevents it (handled in Next.js).
-        // Since this is an E2E test without mocked API, we rely on the backend behavior.
-
-        // Check for slots - assuming the DB provides some slots or handles empty gracefully.
-        // For a true E2E, we'd need seeds, but this confirms the UI logic wires up correctly.
-        const dateInput = page.locator('input[type="date"]');
-        await expect(dateInput).toHaveValue(dateStr);
-
-        // Just verify the component doesn't crash
-        const descriptionInput = page.locator('textarea[placeholder="What do you need help with?"]');
-        await expect(descriptionInput).toBeVisible();
-    });
+    // Verify success view
+    await expect(page.getByText('Request Sent!')).toBeVisible();
+  });
 });

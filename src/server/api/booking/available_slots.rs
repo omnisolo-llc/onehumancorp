@@ -7,7 +7,7 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use crate::db::Db;
+use crate::db::DB;
 
 #[derive(Serialize)]
 pub struct AvailableSlotsResponse {
@@ -21,7 +21,7 @@ pub struct Slot {
     pub end_time: String,
 }
 
-pub fn router<S>(db: Arc<Db>) -> Router<S>
+pub fn router<S>(db: Arc<DB>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -31,7 +31,7 @@ where
 }
 
 async fn handle_get_available_slots(
-    State(db): State<Arc<Db>>,
+    State(db): State<Arc<DB>>,
     headers: axum::http::HeaderMap,
     Path(service_id): Path<String>,
 ) -> impl IntoResponse {
@@ -40,7 +40,7 @@ async fn handle_get_available_slots(
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
-    let slots = match db.store.query_available_slots(&tenant_id, &service_id).await {
+    let slots = match db.query_available_slots(&tenant_id, &service_id).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to query available slots: {:?}", e);

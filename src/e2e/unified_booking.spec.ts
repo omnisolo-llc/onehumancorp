@@ -12,7 +12,7 @@ test.describe('Unified Booking & Quoting Engine CUJ', () => {
     await page.locator('#description').fill('I need a quote for a 2-hour piano lesson.');
 
     // Submit request
-    await page.getByRole('button', { name: 'Get a Quote' }).click();
+    await page.getByRole('button', { name: 'Book Now' }).click();
 
     // Verify success view
     await expect(page.getByText('Request Sent!')).toBeVisible();

@@ -2248,3 +2248,36 @@ mod e2e_search_workspace_tests {
         }
     }
 }
+impl DB {
+    pub async fn query_available_slots(
+        &self,
+        tenant_id: &str,
+        service_id: &str,
+    ) -> Result<Vec<crate::domain::repository::models::AvailabilityBlock>, Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query_as::<_, crate::domain::repository::models::AvailabilityBlock>(
+                    "SELECT id, tenant_id, service_id, start_time, end_time, is_available, created_at, updated_at FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC LIMIT 50"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(sqlite_pool)
+                .await?;
+                Ok(rows)
+            }
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let rows = sqlx::query_as::<_, crate::domain::repository::models::AvailabilityBlock>(
+                    "SELECT id, tenant_id, service_id, start_time, end_time, is_available, created_at, updated_at FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC LIMIT 50"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(&mut *tx)
+                .await?;
+                tx.commit().await?;
+                Ok(rows)
+            }
+        }
+    }
+}
