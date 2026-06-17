@@ -29,13 +29,13 @@ test.describe('Help Center', () => {
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'AI Departments' })).toBeVisible();
   });
 });
 test.describe('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: '10-Minute Setup Wizard' })).toBeVisible();
   });
   test('should show setup wizard text', async ({ page }) => {
     await page.goto('/website-builder');
@@ -47,7 +47,7 @@ test.describe('Dashboard', () => {
     await page.goto('/dashboard');
     // wait and click
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('h1', { hasText: 'AI Departments' })).toBeVisible({ timeout: 30000 });
   });
 });
 

@@ -84,6 +84,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_customer_success_message_handling() {
+        #[allow(unused_imports)]
         use crate::orchestration::departments::orchestrator::Department;
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
@@ -561,6 +562,7 @@ mod tests {
 }
     #[tokio::test]
     async fn test_predictive_restock_draft() {
+        #[allow(unused_imports)]
         use crate::orchestration::departments::orchestrator::Department;
         use std::sync::Arc;
         use tokio::sync::RwLock;
