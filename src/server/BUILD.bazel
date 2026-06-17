@@ -49,6 +49,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
+    "//src/server/api:b2b.rs",
     "//src/server/api:meta_webhook.rs",
     "//src/server/api:twilio_webhook.rs",
     "//src/server/api:docs.rs",

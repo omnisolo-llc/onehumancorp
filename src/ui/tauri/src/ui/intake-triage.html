@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OHC - Intake Triage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; }
+    </style>
+</head>
+<body class="text-gray-900 pb-20">
+    <header class="p-4 border-b border-gray-200 bg-white sticky top-0 z-10 flex justify-between items-center">
+        <h1 class="text-xl font-semibold">Intake Triage</h1>
+        <a href="dashboard.html" class="text-blue-500 text-sm">Dashboard</a>
+    </header>
+
+    <main class="p-4 space-y-4">
+        <div id="loading" class="text-center py-8 text-gray-500">Loading intakes...</div>
+        <div id="intakes-list" class="space-y-4 hidden">
+            <!-- Intake Cards will be injected here -->
+        </div>
+    </main>
+
+    <!-- Review Proposal Modal -->
+    <div id="proposal-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex flex-col justify-end">
+        <div class="bg-white w-full rounded-t-2xl p-6 h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Review AI Proposal</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-black">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div id="proposal-content" class="space-y-4">
+                <div class="p-3 bg-gray-50 rounded text-sm text-gray-600 mb-4" id="original-inquiry">
+                    <!-- Inquiry text -->
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Client Name</label>
+                    <input type="text" id="prop-client-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Total Price ($)</label>
+                    <input type="number" id="prop-price" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" value="1500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Proposal Details</label>
+                    <textarea id="prop-details" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"></textarea>
+                </div>
+
+                <div class="pt-4 flex space-x-3">
+                    <button onclick="closeModal()" class="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium">Cancel</button>
+                    <button onclick="approveAndSend()" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium">Approve & Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? '' : 'http://127.0.0.1:18789';
+        let currentIntakeId = null;
+
+        async function fetchIntakes() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/b2b/intake`);
+                const intakes = await res.json();
+
+                document.getElementById('loading').classList.add('hidden');
+                const list = document.getElementById('intakes-list');
+                list.classList.remove('hidden');
+                list.innerHTML = '';
+
+                if (intakes.length === 0) {
+                    list.innerHTML = '<div class="text-center text-gray-500 py-8">No pending intake requests.</div>';
+                    return;
+                }
+
+                intakes.forEach(intake => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card p-4 flex flex-col space-y-3 cursor-pointer shadow-sm';
+                    card.onclick = () => openProposalReview(intake);
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg">${intake.client_name} ${intake.client_company ? `(${intake.client_company})` : ''}</h3>
+                                <p class="text-sm text-gray-500">${intake.client_email}</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full ${intake.status === 'NEW' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                                ${intake.status.replace('_', ' ')}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-700 line-clamp-2">${intake.description}</p>
+                        ${intake.budget_cents ? `<p class="text-sm font-medium text-gray-900">Budget: $${(intake.budget_cents / 100).toFixed(2)}</p>` : ''}
+                    `;
+                    list.appendChild(card);
+                });
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerText = 'Failed to load intake requests.';
+            }
+        }
+
+        function openProposalReview(intake) {
+            currentIntakeId = intake.id;
+            document.getElementById('original-inquiry').innerText = `"${intake.description}"`;
+            document.getElementById('prop-client-name').value = intake.client_name;
+            document.getElementById('prop-price').value = intake.budget_cents ? (intake.budget_cents / 100) : 1500;
+            document.getElementById('prop-details').value = `Hi ${intake.client_name},\n\nBased on your request, here is our proposed scope of work...`;
+
+            document.getElementById('proposal-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('proposal-modal').classList.add('hidden');
+            currentIntakeId = null;
+        }
+
+        async function approveAndSend() {
+            // Create Quote
+            const priceCents = parseInt(document.getElementById('prop-price').value, 10) * 100;
+            const details = document.getElementById('prop-details').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/quotes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tenant_id: "default",
+                        customer_id: "00000000-0000-0000-0000-000000000000",
+                        total_amount: priceCents,
+                        required_deposit: priceCents / 2, // 50% deposit
+                        line_items: [
+                            {
+                                description: details.substring(0, 50) + "...",
+                                unit_price_cents: priceCents,
+                                quantity: 1,
+                                is_optional: false
+                            }
+                        ]
+                    })
+                });
+
+                if (res.ok) {
+                    alert("Proposal sent successfully!");
+                    closeModal();
+                    fetchIntakes();
+                } else {
+                    alert("Failed to send proposal");
+                }
+            } catch (err) {
+                alert("Error sending proposal");
+            }
+        }
+
+        // Init
+        fetchIntakes();
+    </script>
+</body>
+</html>
