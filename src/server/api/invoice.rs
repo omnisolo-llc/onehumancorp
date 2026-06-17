@@ -122,13 +122,17 @@ impl InvoiceService for InvoiceServiceImpl {
 
         use sqlx::Row;
 
-        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
-            .bind(&req.invoice_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
+        let rows = sqlx::query(
+            "SELECT i.*,
+                    li.id as li_id,
+                    li.description as li_description,
+                    li.quantity as li_quantity,
+                    li.unit_price as li_unit_price,
+                    li.amount as li_amount
+             FROM invoices i
+             LEFT JOIN invoice_line_items li ON i.id = li.invoice_id
+             WHERE i.id = $1"
+        )
             .bind(&req.invoice_id)
             .fetch_all(&mut *tx)
             .await
@@ -136,32 +140,52 @@ impl InvoiceService for InvoiceServiceImpl {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
+        if rows.is_empty() {
+            return Err(Status::not_found("Invoice not found"));
+        }
+
+        let first_row_id: String = rows[0].try_get("id").unwrap_or_default();
+        let first_row_client_id: String = rows[0].try_get("client_id").unwrap_or_default();
+        let first_row_client_name: String = rows[0].try_get("client_name").unwrap_or_default();
+        let first_row_status: String = rows[0].try_get("status").unwrap_or_default();
+        let first_row_due_date: i64 = rows[0].try_get("due_date").unwrap_or_default();
+        let first_row_currency: String = rows[0].try_get("currency").unwrap_or_default();
+        let first_row_total_amount: f64 = rows[0].try_get("total_amount").unwrap_or_default();
+        let first_row_total_amount_cents: i32 = rows[0].try_get("total_amount_cents").unwrap_or_default();
+        let first_row_payment_status: String = rows[0].try_get("payment_status").unwrap_or_default();
+        let first_row_view_count: i32 = rows[0].try_get("view_count").unwrap_or_default();
+        let first_row_amount_paid_cents: i32 = rows[0].try_get("amount_paid_cents").unwrap_or_default();
+        let first_row_stripe_invoice_id: String = rows[0].try_get("stripe_invoice_id").unwrap_or_default();
+        let first_row_stripe_payment_link: String = rows[0].try_get("stripe_payment_link").unwrap_or_default();
+
         let mut line_items = Vec::new();
-        for item_row in items_rows {
-            line_items.push(InvoiceLineItem {
-                id: item_row.try_get("id").unwrap_or_default(),
-                invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
-                description: item_row.try_get("description").unwrap_or_default(),
-                quantity: item_row.try_get("quantity").unwrap_or_default(),
-                unit_price: item_row.try_get("unit_price").unwrap_or_default(),
-                amount: item_row.try_get("amount").unwrap_or_default(),
-            });
+        for row in rows {
+            if row.try_get::<String, _>("li_id").is_ok() {
+                line_items.push(InvoiceLineItem {
+                    id: row.try_get("li_id").unwrap_or_default(),
+                    invoice_id: req.invoice_id.clone(),
+                    description: row.try_get("li_description").unwrap_or_default(),
+                    quantity: row.try_get("li_quantity").unwrap_or_default(),
+                    unit_price: row.try_get("li_unit_price").unwrap_or_default(),
+                    amount: row.try_get("li_amount").unwrap_or_default(),
+                });
+            }
         }
 
         let invoice = Invoice {
-            id: row.try_get("id").unwrap_or_default(),
-            client_id: row.try_get("client_id").unwrap_or_default(),
-            client_name: row.try_get("client_name").unwrap_or_default(),
-            status: row.try_get("status").unwrap_or_default(),
-            due_date: row.try_get("due_date").unwrap_or_default(),
-            currency: row.try_get("currency").unwrap_or_default(),
-            total_amount: row.try_get("total_amount").unwrap_or_default(),
-            total_amount_cents: row.try_get("total_amount_cents").unwrap_or_default(),
-            payment_status: row.try_get("payment_status").unwrap_or_default(),
-            view_count: row.try_get("view_count").unwrap_or_default(),
-            amount_paid_cents: row.try_get("amount_paid_cents").unwrap_or_default(),
-            stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
-            stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
+            id: first_row_id,
+            client_id: first_row_client_id,
+            client_name: first_row_client_name,
+            status: first_row_status,
+            due_date: first_row_due_date,
+            currency: first_row_currency,
+            total_amount: first_row_total_amount,
+            total_amount_cents: first_row_total_amount_cents,
+            payment_status: first_row_payment_status,
+            view_count: first_row_view_count,
+            amount_paid_cents: first_row_amount_paid_cents,
+            stripe_invoice_id: first_row_stripe_invoice_id,
+            stripe_payment_link: first_row_stripe_payment_link,
             line_items,
             created_at: 0,
             updated_at: 0,
@@ -169,6 +193,7 @@ impl InvoiceService for InvoiceServiceImpl {
 
         Ok(Response::new(invoice))
     }
+
 
     async fn list_invoices(
         &self,
