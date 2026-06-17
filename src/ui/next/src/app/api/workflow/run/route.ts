@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
             } else if (i === sortedIds.length - 1) {
                  nodeType = "Output";
             } else {
-                 nodeType = { "Llm": { "prompt_template": "Execute block: " + block.label } };
+                 nodeType = { "Llm": { "prompt_template": "Execute block: " + block.label + " {{input_var}}" } };
             }
 
             graphNodes.push({
