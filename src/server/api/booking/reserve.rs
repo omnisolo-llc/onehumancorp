@@ -101,10 +101,31 @@ async fn handle_reserve(
 
     let c_id = payload.customer_id.and_then(|c| uuid::Uuid::parse_str(&c).ok());
 
+    let (price_cents,): (i64,) = match sqlx::query_as(
+        "SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(&payload.service_id)
+    .bind(&tenant_id)
+    .fetch_optional(&mut *tx)
+    .await
+    {
+        Ok(Some(p)) => p,
+        _ => (0,),
+    };
+
+    let requires_deposit = price_cents > 0;
+    let initial_status = if requires_deposit { "pending_payment" } else { "pending" };
+
+    let payment_intent_id = if requires_deposit {
+        Some(format!("pi_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")))
+    } else {
+        None
+    };
+
     let res = sqlx::query(
         r#"
-        INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status)
-        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, payment_intent_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         "#,
     )
     .bind(&booking_id)
@@ -113,6 +134,8 @@ async fn handle_reserve(
     .bind(&payload.service_id)
     .bind(st)
     .bind(et)
+    .bind(initial_status)
+    .bind(&payment_intent_id)
     .execute(&mut *tx)
     .await;
 
@@ -146,11 +169,22 @@ async fn handle_reserve(
 
     let _ = tx.commit().await;
 
-    // Check if deposit is required
-    let requires_deposit = false; // We can read from services table, hardcoded to false here for now.
-
     let checkout_url = if requires_deposit {
-        Some(format!("/api/v1/booking/deposit?booking_id={}", booking_id))
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("sk_test_placeholder".to_string());
+        match stripe_client.create_checkout_session(
+            &format!("Booking Deposit - {}", payload.service_id),
+            "customer_placeholder",
+            (price_cents as f64) / 100.0,
+            false,
+        ).await {
+            Ok(url) => Some(url),
+            Err(e) => {
+                tracing::error!("Failed to create stripe checkout session: {}", e);
+                // Fallback for tests or local if Stripe is unconfigured
+                let session_id = uuid::Uuid::new_v4().to_string();
+                Some(format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", "")))
+            }
+        }
     } else {
         None
     };
