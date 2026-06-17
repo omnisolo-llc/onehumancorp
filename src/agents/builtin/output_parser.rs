@@ -222,9 +222,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         let detailed_error = if parse_error_msg.contains("Validation Error") {
                             parse_error_msg.clone()
                         } else {
-                            // Extract snippet of arguments to feed back
-                            let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
-                            crate::types::format_pydantic_error_string(&parse_error_msg, args_snippet.as_deref(), None)
+                            crate::types::format_pydantic_error_string(&parse_error_msg, None, None)
                         };
                         let tool_results = msg
                             .tool_calls
@@ -251,7 +249,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     } else {
                         current_req.messages.push(msg.clone());
                         let error_context = format!(
-                            "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
                             msg.content, parse_error_msg
                         );
                         let mut error_msg = Message::user(error_context);

@@ -131,7 +131,7 @@ impl Provider for LocalProvider {
                     compressed_size
                 }
                 Err(e) => {
-                    tracing::warn!("Image optimization failed for {}: {}. Saving original.", key, e); // pii-safe
+                    tracing::warn!("Image optimization failed for {}: {}. Saving original.", key, e);
                     original_size
                 }
             }

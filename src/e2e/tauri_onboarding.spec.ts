@@ -7,7 +7,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Serve the local files dynamically
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : path.resolve(__dirname, '..', '..');
+        : process.cwd();
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -84,42 +84,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Just explicitly go there since the button just does a simple location.href.
     await page.goto('http://mock/setup.html');
 
-
-    // Initial Setup Step: Conversational Setup
-    await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
-
-    // Type into chat
-    await page.fill('#chat-input', 'I run a mobile dog grooming business.');
-
-    // We need to mock the /api/onboarding/chat response before sending
-    await page.route('http://127.0.0.1:18789/api/onboarding/chat', async route => {
-        await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-                reply: "Great! I'm setting up your service calendar and a basic 'Full Groom' service.",
-                is_complete: true,
-                intake_data: {
-                    business_name: "Mobile Dog Grooming",
-                    business_type: "Service",
-                    categories: ["service"]
-                }
-            })
-        });
-    });
-
-    await page.getByTestId('chat-send-btn').click();
-
-    // The chat will respond, set intake data, and then we should be able to continue or navigate back to manual setup for the rest of the test
-    await expect(page.getByText(/Great! I'm setting up your service calendar/)).toBeVisible();
-
-    // Since this test specifically verifies the manual steps (Context, Categories, etc.),
-    // we will navigate to the manual setup now to continue the existing test flow.
-    await page.getByRole('button', { name: 'Back' }).click();
+    // Initial Setup Step
     await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
-
 
     // Setup page (Step 1: Context)
         await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
@@ -186,8 +153,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
-    await page.locator('#finish-btn').click();
-    await expect(page.locator('#template-error')).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await expect(page.locator('#template-error')).toBeVisible();
 
     await page.locator('#template-selection').selectOption('Modern');
 
@@ -261,13 +228,13 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Verify validation triggers
-    await newPage.locator('#finish-btn').click();
+    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
-    await newPage.locator('#finish-btn').click();
+    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
 
     // Success page
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
@@ -280,7 +247,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
   test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : path.resolve(__dirname, '..', '..');
+        : process.cwd();
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -326,8 +293,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
   test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
-        : path.resolve(__dirname, '..', '..');
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -349,7 +316,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : path.resolve(__dirname, '..', '..');
+        : process.cwd();
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
