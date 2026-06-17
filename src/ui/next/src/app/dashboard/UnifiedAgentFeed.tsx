@@ -493,7 +493,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 w-full w-full overflow-hidden" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full overflow-hidden" aria-label="Unified Agent Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -562,7 +562,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-[#00C24B] hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
                   Approve
                 </button>
@@ -680,6 +680,40 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </div>
                           </div>
                         </div>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'supply_order' ? (
+                        <>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Current Stock:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200" data-testid="supply-order-stock">
+                              {(approval.proposed_action || approval.context_payload).remaining_stock} units
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Est. Runout:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                              {(approval.proposed_action || approval.context_payload).est_runout_days} days
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="supply-order-quantity">
+                               {(approval.proposed_action || approval.context_payload).suggested_reorder_quantity} Units
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-3">
+                            <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                               {(approval.proposed_action || approval.context_payload).vendor_name} ({(approval.proposed_action || approval.context_payload).vendor_contact})
+                            </span>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Drafted Message:</div>
+                            <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
+                              "{(approval.proposed_action || approval.context_payload).draft_message}"
+                            </div>
+                          </div>
+                        </>
+
                       ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
@@ -866,6 +900,39 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'supply_order' ? (
+                    <>
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        aria-label="Approve & Send"
+                        data-testid="approve-supply-order"
+                      >
+                        Approve & Send
+                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3 w-full">
+                        <button
+                          onClick={() => {
+                            setEditingId(approval.id);
+                            setEditContent((approval.proposed_action || approval.context_payload).draft_message);
+                          }}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          aria-label="Edit message"
+                          data-testid="edit-supply-order"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDecision(approval.id, false)}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          aria-label="Deny supply order"
+                          data-testid="reject-supply-order"
+                        >
+                          Deny
+                        </button>
+                      </div>
+                    </>
+
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
@@ -885,6 +952,40 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'supply_order' ? (
+                        <>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Current Stock:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200" data-testid="supply-order-stock">
+                              {(approval.proposed_action || approval.context_payload).remaining_stock} units
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Est. Runout:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                              {(approval.proposed_action || approval.context_payload).est_runout_days} days
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="supply-order-quantity">
+                               {(approval.proposed_action || approval.context_payload).suggested_reorder_quantity} Units
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-3">
+                            <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                               {(approval.proposed_action || approval.context_payload).vendor_name} ({(approval.proposed_action || approval.context_payload).vendor_contact})
+                            </span>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Drafted Message:</div>
+                            <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
+                              "{(approval.proposed_action || approval.context_payload).draft_message}"
+                            </div>
+                          </div>
+                        </>
+
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
@@ -943,7 +1044,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           aria-label="Approve & Send Draft"
                           data-testid="approve-ambassador-reply"
                         >
-                          ✨ 1-Tap Approve
+                          Send Draft
                         </button>
                         <button
                           onClick={() => {
@@ -1159,7 +1260,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
+            <div className="flex flex-col gap-3 ">
             {activities.map((activity) => (
               <div
                 key={activity.id}

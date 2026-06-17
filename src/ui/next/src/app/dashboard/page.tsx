@@ -783,7 +783,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
+                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
                     <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
                   </div>
                 </div>

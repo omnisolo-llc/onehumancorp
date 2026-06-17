@@ -1,219 +1,191 @@
 backend:
-  image: onehumancorp/server:latest
-  replicas: 3
+  autoscaling:
+    enabled: true
+    maxReplicas: 100
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   headless: false
+  image: onehumancorp/server:latest
+  multiTenant: true
+  networkPolicy:
+    enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
   service:
     port: 8080
-  networkPolicy:
-    enabled: true
   vpa:
     enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-  # Set to "true" to enable the multi-tenant TenantRegistry.
-  # In multi-tenant mode a single server instance handles all organisations;
-  # each user can only see their own company's data after login.
-  multiTenant: true
-
-  networkPolicy:
-    enabled: true
-
-resourceQuota:
-  enabled: true
-  requests:
-    cpu: "10"
-    memory: "20Gi"
-    ephemeralStorage: "50Gi"
-  limits:
-    cpu: "50"
-    memory: "100Gi"
-    ephemeralStorage: "200Gi"
-    pods: "100"
-
-# OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
-# In cloud-native mode the core runs as a dedicated micro-service.
-ohcCore:
-  enabled: true
-  image: onehumancorp/mono-core:latest
-  replicas: 3
-  service:
-    port: 18789
-  networkPolicy:
-    enabled: true
-  vpa:
-    enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-
-# Valkey - Redis-compatible cache and pub/sub service
-valkey:
-  enabled: true
-  image:
-    registry: docker.io
-    repository: valkey/valkey
-    tag: ""
-    pullPolicy: IfNotPresent
-  service:
-    port: 6379
-  dataStorage:
-    enabled: false
-    requestedSize: 1Gi
-    className: ""
-    accessModes:
-      - ReadWriteOnce
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-    limits:
-      cpu: "1000m"
-      memory: "2Gi"
-  securityContext:
-    allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
-    capabilities:
-      drop:
-        - "ALL"
-  podSecurityContext:
-    fsGroup: 1000
-    runAsUser: 1000
-    runAsGroup: 1000
-    seccompProfile:
-      type: RuntimeDefault
-
-# CloudNative PostgreSQL operator cluster
-# Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
-cnpg:
-  enabled: false
-  clusterName: ohc-pg
-  instances: 3
-  storage:
-    size: 10Gi
-  database: ohc
-  owner: ohc
-
-# Chatwoot – open-source chat platform used for all chat room communication
-# (agent-to-agent, agent-to-human, agent-to-customer, human-to-customer).
 chatwoot:
+  adminEmail: admin@ohc.local
+  autoscaling:
+    enabled: true
+    maxReplicas: 100
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  databaseUrl: ''
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
+  networkPolicy:
+    enabled: true
+  redisUrl: ''
   replicas: 3
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 128Mi
   service:
     port: 3000
-  networkPolicy:
-    enabled: true
   vpa:
     enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "500m"
-      memory: "1Gi"
-  # Admin credentials used by OHC backend to auto-configure the inbox.
-  adminEmail: admin@ohc.local
-  # PostgreSQL connection for Chatwoot's own schema.
-  # When cnpg.enabled=true, override this to point to the CNPG cluster.
-  databaseUrl: ""   # defaults to in-cluster postgres service
-  # Redis-compatible URL - defaults to the in-cluster Valkey service.
-  redisUrl: ""
-
-# Multi-tenant configuration.
-# When multiTenant.enabled is true the backend uses the TenantRegistry so
-# that every logged-in user can only see their own company's data.
-multiTenant:
-  enabled: true
-  # Maximum number of tenant organisations supported per replica.
-  maxOrgs: 5000
-
-
-# PowerSync - synchronization engine
-powersync:
-  enabled: true
-  image: journeyapps/powersync-service:latest
-  replicas: 3
-  service:
-    type: ClusterIP
-    port: 8081
-    targetPort: 8080
-  networkPolicy:
-    enabled: true
-  vpa:
-    enabled: true
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 100
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-
-# Kube-Prometheus-Stack for Cloud Observability
-kube-prometheus-stack:
-  enabled: true
-  grafana:
-    enabled: true
-    env:
-      GF_LOG_CONSOLE_FORMAT: "json"
-    extraConfigmapMounts:
-      - name: grafana-custom-css
-        configMap: "ohc-grafana-custom-css"
-        mountPath: /usr/share/grafana/public/css/custom.css
-        subPath: custom.css
-        readOnly: true
-    sidecar:
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-        labelValue: "1"
-
-
-# Fluent Bit logging
+cnpg:
+  clusterName: ohc-pg
+  database: ohc
+  enabled: false
+  instances: 3
+  owner: ohc
+  storage:
+    size: 10Gi
 fluentBit:
   enabled: true
   image: fluent/fluent-bit:latest
   logLevel: info
   resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+kube-prometheus-stack:
+  enabled: true
+  grafana:
+    enabled: true
+    env:
+      GF_LOG_CONSOLE_FORMAT: json
+    extraConfigmapMounts:
+    - configMap: ohc-grafana-custom-css
+      mountPath: /usr/share/grafana/public/css/custom.css
+      name: grafana-custom-css
+      readOnly: true
+      subPath: custom.css
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: '1'
+multiTenant:
+  enabled: true
+  maxOrgs: 5000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+ohcCore:
+  autoscaling:
+    enabled: true
+    maxReplicas: 100
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  enabled: true
+  image: onehumancorp/mono-core:latest
+  networkPolicy:
+    enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  service:
+    port: 18789
+  vpa:
+    enabled: true
+powersync:
+  autoscaling:
+    enabled: true
+    maxReplicas: 100
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  enabled: true
+  image: journeyapps/powersync-service:latest
+  networkPolicy:
+    enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  service:
+    port: 8081
+    targetPort: 8080
+    type: ClusterIP
+  vpa:
+    enabled: true
+resourceQuota:
+  enabled: true
+  limits:
+    cpu: '50'
+    ephemeralStorage: 200Gi
+    memory: 100Gi
+    pods: '100'
+  requests:
+    cpu: '10'
+    ephemeralStorage: 50Gi
+    memory: 20Gi
+valkey:
+  dataStorage:
+    accessModes:
+    - ReadWriteOnce
+    className: ''
+    enabled: false
+    requestedSize: 1Gi
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    registry: docker.io
+    repository: valkey/valkey
+    tag: ''
+  podSecurityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+  service:
+    port: 6379
