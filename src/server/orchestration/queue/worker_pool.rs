@@ -41,7 +41,7 @@ impl WorkerPool {
                         // Wait a bit before polling again to avoid busy-waiting loop without jobs
                         _ = tokio::time::sleep(Duration::from_millis(500)) => {
                             let type_strs: Vec<&str> = types_clone.iter().map(AsRef::as_ref).collect();
-                            match queue_clone.dequeue(type_strs).await {
+                            match queue_clone.dequeue(type_strs, None).await {
                                 Ok(Some(job)) => {
                                     tracing::debug!("Worker {} processing job {}", i, job.id);
                                     let job_id = job.id.clone();

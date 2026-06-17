@@ -25,7 +25,7 @@ async fn test_ohc_job_queue_e2e() {
     let job_id = queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
 
     // 2. Dequeue job
-    let job = queue.dequeue(vec![job_type]).await.unwrap().expect("Job should be available");
+    let job = queue.dequeue(vec![job_type], None).await.unwrap().expect("Job should be available");
     assert_eq!(job.id, job_id);
     assert_eq!(job.status, "PROCESSING");
     assert_eq!(job.tenant_id, tenant_id);
@@ -63,7 +63,7 @@ async fn test_ohc_job_queue_fail_backoff() {
 
     let job_id = queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
 
-    queue.dequeue(vec![job_type]).await.unwrap().unwrap();
+    queue.dequeue(vec![job_type], None).await.unwrap().unwrap();
 
     // 1st fail
     queue.fail(&job_id, 3).await.unwrap();
@@ -76,9 +76,9 @@ async fn test_ohc_job_queue_fail_backoff() {
     assert_eq!(status_retry.1, 1);
 
     // 2nd fail
-    queue.dequeue(vec![job_type]).await.unwrap(); // might fail if next_retry_at is in future, but assuming time hasn't passed it will skip, let's update it for test
+    queue.dequeue(vec![job_type], None).await.unwrap(); // might fail if next_retry_at is in future, but assuming time hasn't passed it will skip, let's update it for test
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
-    queue.dequeue(vec![job_type]).await.unwrap();
+    queue.dequeue(vec![job_type], None).await.unwrap();
 
     queue.fail(&job_id, 3).await.unwrap();
     let status_retry2: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
@@ -91,7 +91,7 @@ async fn test_ohc_job_queue_fail_backoff() {
 
     // 3rd fail (should dead letter)
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
-    queue.dequeue(vec![job_type]).await.unwrap();
+    queue.dequeue(vec![job_type], None).await.unwrap();
     queue.fail(&job_id, 3).await.unwrap();
 
     let status_retry3: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
@@ -336,4 +336,36 @@ async fn test_chaos_redis_mailbox_corruption() {
 
     // Since it's corrupt data, it might return an error or skip. The critical condition is NO panic.
     assert!(result.is_err() || result.unwrap().is_none(), "Corrupt data should not panic, and should yield an error or None");
+}
+
+#[tokio::test]
+async fn test_ohc_job_queue_tenant_isolation_new() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/ohc"); }
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = match sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+
+    let queue = super::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(pool.clone()));
+
+    let tenant_a = "tenant_A_iso";
+    let tenant_b = "tenant_B_iso";
+    let job_type = "iso_job";
+
+    let payload_a = serde_json::json!({"data": "A"});
+    let payload_b = serde_json::json!({"data": "B"});
+
+    // Enqueue jobs for both tenants
+    let job_id_a = queue.enqueue(tenant_a, job_type, &payload_a).await.unwrap();
+    let _job_id_b = queue.enqueue(tenant_b, job_type, &payload_b).await.unwrap();
+
+    // Dequeue specifying tenant_A
+    let job = queue.dequeue(vec![job_type], Some(tenant_a)).await.unwrap().expect("Should dequeue tenant_A job");
+    assert_eq!(job.id, job_id_a);
+    assert_eq!(job.tenant_id, tenant_a);
+
+    // Dequeue again specifying tenant_A, shouldn't get tenant_B's job
+    let job2 = queue.dequeue(vec![job_type], Some(tenant_a)).await.unwrap();
+    assert!(job2.is_none(), "Should not dequeue tenant_B job when tenant_A is requested");
 }

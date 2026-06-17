@@ -6152,6 +6152,9 @@ async fn create_ui_bom_item_handler(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
+        .route_layer(axum::middleware::from_fn(
+            ::server_utils::tenant_middleware::tenant_middleware,
+        ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))

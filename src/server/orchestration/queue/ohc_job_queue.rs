@@ -47,7 +47,7 @@ impl OHCJobQueue {
         Ok(job_id)
     }
 
-    pub async fn dequeue(&self, job_types: Vec<&str>) -> Result<Option<OHCJob>, String> {
+    pub async fn dequeue(&self, job_types: Vec<&str>, expected_tenant_id: Option<&str>) -> Result<Option<OHCJob>, String> {
         if job_types.is_empty() {
             return Ok(None);
         }
@@ -57,21 +57,29 @@ impl OHCJobQueue {
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let type_placeholders = job_types.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
+        let mut tenant_filter = String::new();
+        if expected_tenant_id.is_some() {
+            tenant_filter = format!(" AND tenant_id = ${}", job_types.len() + 1);
+        }
+
         let query_str = format!(
             "UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
              WHERE id = (
                  SELECT id FROM ohc_job_queue
-                 WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
+                 WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({}){}
                  ORDER BY next_retry_at ASC, created_at ASC
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED
              ) RETURNING id, tenant_id, job_type, payload, status, retry_count, next_retry_at, created_at, updated_at",
-            type_placeholders
+            type_placeholders, tenant_filter
         );
 
         let mut query = sqlx::query(&query_str);
         for jt in &job_types {
             query = query.bind(jt);
+        }
+        if let Some(tid) = expected_tenant_id {
+            query = query.bind(tid);
         }
 
         let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
