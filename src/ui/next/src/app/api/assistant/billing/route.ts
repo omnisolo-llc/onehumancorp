@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBilling } from '../store';
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request?: Request) {
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
