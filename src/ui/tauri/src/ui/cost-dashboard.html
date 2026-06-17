@@ -499,22 +499,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    // Hover (desktop)
+
+
+
+
+
+
+
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
 
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
 
     document.addEventListener('touchmove', () => {
         clearTimeout(touchTimeout);
@@ -593,6 +588,12 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+
+
+
+
+
 
 
 
@@ -701,7 +702,6 @@ initWalkthrough();
 </script>
 
 <script src="help-widget.mjs"></script>
-
 <script src="assistant/ohc-assistant.mjs"></script>
 </body>
 </html>
