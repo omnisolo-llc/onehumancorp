@@ -17,7 +17,7 @@ export async function GET(
     }
 
     // Fallback logic
-    const article = fallbackArticles.find(a => a.id === articleId);
+    const article = fallbackArticles.find((a: any) => a.id === articleId || a.link === `/help/${articleId}`);
     if (article) {
        return NextResponse.json(article, { status: 200 });
     }
@@ -29,7 +29,7 @@ export async function GET(
     return NextResponse.json({ error: "Article not found" }, { status: 404 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch article from backend:", e);
-    const article = fallbackArticles.find(a => a.id === articleId);
+    const article = fallbackArticles.find((a: any) => a.id === articleId || a.link === `/help/${articleId}`);
     if (article) {
        return NextResponse.json(article, { status: 200 });
     }

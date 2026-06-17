@@ -27,9 +27,9 @@ export default function ChangelogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
+    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter  ">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight relative z-10">
           Release Notes & Changelog
         </h1>
         <div className="space-y-8">
@@ -38,14 +38,14 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl">
+            <p className="text-center text-gray-500 font-medium py-8 bg-white/60   border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl">
               No changelog available.
             </p>
           ) : (
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all"
+                className="bg-white/60   border border-white/40 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all"
               >
                 <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}
@@ -92,7 +92,7 @@ export default function ChangelogPage() {
               href="https://onehumancorp.com/changelog"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 font-bold hover:underline bg-blue-50/80 px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm backdrop-blur-md saturate-[210%]"
+              className="text-blue-600 font-bold hover:underline bg-blue-50/80 px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm backdrop-blur-md "
             >
               Read the full technical changelog on our website →
             </a>

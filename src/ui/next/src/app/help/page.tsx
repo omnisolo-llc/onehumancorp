@@ -40,9 +40,9 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter relative z-10">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">Help Center</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight relative z-10">Help Center</h1>
 
         <div className="mb-8 sm:mb-10 w-full sm:w-3/4 mx-auto">
           <input
@@ -50,7 +50,7 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles and videos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40 backdrop-blur-[30px] saturate-[210%] border border-white/80 dark:border-white/20 hover:bg-white/80 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-2xl"
+            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40   border border-white/80 dark:border-white/20 hover:bg-white/80 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-2xl"
           />
         </div>
 
@@ -90,7 +90,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-col">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="backdrop-blur-2xl saturate-[210%] bg-white/60 border border-white/50 p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
+                          <div className="  bg-white/60 border border-white/50 p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
                             <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>

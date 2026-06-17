@@ -62,6 +62,8 @@ const routesWithOwnShell = new Set([
 ]);
 
 const standaloneRoutes = new Set([
+  "/help",
+  "/changelog",
   "/",
   "/booking-widget",
   "/checkout",
