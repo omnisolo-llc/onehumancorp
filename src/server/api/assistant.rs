@@ -1,8 +1,7 @@
 use axum::{
-    extract::{Extension, Path, State},
-    response::IntoResponse,
+    extract::{Extension, Path},
     http::StatusCode,
-    routing::{get, post, put, delete},
+    routing::get,
     Router,
     Json,
 };
@@ -19,12 +18,12 @@ where
 {
     Router::new()
         .route("/workspaces", get(list_workspaces).post(create_workspace))
-        .route("/workspaces/:id", get(get_workspace))
+        .route("/workspaces/{id}", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
-        .route("/tasks/:id", get(get_task))
-        .route("/tasks/:id/messages", get(list_messages).post(create_message))
-        .route("/tasks/:id/artifacts", get(list_artifacts).post(create_artifact))
-        .route("/tasks/:id/file_changes", get(list_file_changes).post(create_file_change))
+        .route("/tasks/{id}", get(get_task))
+        .route("/tasks/{id}/messages", get(list_messages).post(create_message))
+        .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
+        .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
         .layer(Extension(db))
 }
 
@@ -89,16 +88,16 @@ pub struct FileChange {
 }
 
 async fn list_workspaces(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<Workspace>>, (StatusCode, String)> {
     // Placeholder implementation
     Ok(Json(vec![]))
 }
 
 async fn create_workspace(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Json(payload): Json<Workspace>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
     // Placeholder implementation
@@ -110,8 +109,8 @@ async fn create_workspace(
 }
 
 async fn get_workspace(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
     // Placeholder implementation
@@ -127,16 +126,16 @@ async fn get_workspace(
 
 
 async fn list_tasks(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
 ) -> Result<Json<Vec<Task>>, (StatusCode, String)> {
     // Placeholder implementation
     Ok(Json(vec![]))
 }
 
 async fn create_task(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Json(payload): Json<Task>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
     // Placeholder implementation
@@ -148,8 +147,8 @@ async fn create_task(
 }
 
 async fn get_task(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
     // Placeholder implementation
@@ -170,17 +169,17 @@ async fn get_task(
 }
 
 async fn list_messages(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
-    Path(id): Path<String>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
+    Path(_id): Path<String>,
 ) -> Result<Json<Vec<Message>>, (StatusCode, String)> {
     // Placeholder implementation
     Ok(Json(vec![]))
 }
 
 async fn create_message(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<Message>,
 ) -> Result<Json<Message>, (StatusCode, String)> {
@@ -194,17 +193,17 @@ async fn create_message(
 
 
 async fn list_artifacts(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
-    Path(id): Path<String>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
+    Path(_id): Path<String>,
 ) -> Result<Json<Vec<Artifact>>, (StatusCode, String)> {
     // Placeholder implementation
     Ok(Json(vec![]))
 }
 
 async fn create_artifact(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<Artifact>,
 ) -> Result<Json<Artifact>, (StatusCode, String)> {
@@ -218,17 +217,17 @@ async fn create_artifact(
 
 
 async fn list_file_changes(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
-    Path(id): Path<String>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
+    Path(_id): Path<String>,
 ) -> Result<Json<Vec<FileChange>>, (StatusCode, String)> {
     // Placeholder implementation
     Ok(Json(vec![]))
 }
 
 async fn create_file_change(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
+    Extension(_db): Extension<Arc<DB>>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<FileChange>,
 ) -> Result<Json<FileChange>, (StatusCode, String)> {
