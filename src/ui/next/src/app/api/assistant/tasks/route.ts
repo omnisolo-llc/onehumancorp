@@ -300,10 +300,5 @@ export async function POST(request: Request) {
     console.error('Failed to create task in backend:', error);
   }
 
-  try {
-    const task = createAssistantTask(payload || {});
-    return NextResponse.json({ task }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'task could not be created' }, { status: 400 });
-  }
+  return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
 }
