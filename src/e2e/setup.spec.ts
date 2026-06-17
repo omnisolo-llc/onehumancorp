@@ -53,7 +53,11 @@ test.describe('OHC Setup Wizard Flow', () => {
 
     // Offer step
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-template\"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-domain\"]').click();
+
+    // Domain step
+    await page.getByTestId('domain-name').fill('my-bakery-shop');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
 
     // Template step
     await page.getByTestId('template-selection').selectOption('Modern');
@@ -118,6 +122,7 @@ test.describe('OHC Setup Wizard Flow', () => {
 
 
   test('should auto-save progress and clear it on success', async ({ page }) => {
+
     const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
@@ -188,7 +193,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
         localStorage.setItem('onboardingState', JSON.stringify({
-            step: 7, // step-template
+            step: 8, // step-template
             businessName: 'Error Bakery',
             categories: 'Bakery',
             templateSelection: 'Modern'

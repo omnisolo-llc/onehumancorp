@@ -148,6 +148,7 @@ impl DepositFollowUpWorker {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
 
     #[tokio::test]
     async fn test_follow_up_message_generation() {

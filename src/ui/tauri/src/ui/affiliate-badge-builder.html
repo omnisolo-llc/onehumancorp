@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Affiliate Badge Builder | OHC</title>
@@ -184,8 +200,8 @@
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
   </header>
 
-  <div class="container">
-    <div class="panel">
+  <div class="container glassmorphism glassmorphism">
+    <div class="panel glassmorphism glassmorphism">
       <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px;">Design Your Badge</h2>
 
       <div class="form-group">
@@ -210,7 +226,7 @@
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel glassmorphism glassmorphism">
       <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px;">Preview & Embed</h2>
 
       <div class="preview-box">

@@ -572,6 +572,75 @@ mod chaos_tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_db_sync_lag_parity() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+        // Simulate SQL sync lag by setting the mesh lock delay past the db query timeout.
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(10));
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let standalone_db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .acquire_timeout(std::time::Duration::from_millis(50))
+                .connect_lazy(&std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://dummy".to_string()))
+                .unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
+        });
+
+        // Initialize schema
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS swarm_tasks (
+                id TEXT PRIMARY KEY,
+                mission_id TEXT,
+                title TEXT,
+                status TEXT,
+                dependencies TEXT,
+                payload TEXT,
+                tenant_id TEXT,
+                locked_until TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )",
+        )
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        // Use a 50ms timeout mock configuration where query blocks for 2000ms internally.
+        // We will just set the OHC_STATE_MANAGER_TIMEOUT_MS to force an early exit timeout.
+        let standalone_state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(standalone_db.clone(), latency_mesh.clone());
+        let cloud_state_manager = crate::orchestration::state::cloud::CloudStateManager::new(standalone_db.clone(), latency_mesh.clone());
+
+        temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            let start_s = std::time::Instant::now();
+            let standalone_tasks = standalone_state_manager.pull_available_tasks(10).await;
+            let _elapsed_s = start_s.elapsed();
+
+            let start_c = std::time::Instant::now();
+            let cloud_tasks = cloud_state_manager.pull_available_tasks(10).await;
+            let _elapsed_c = start_c.elapsed();
+
+            // Under severe sync lag / timeout restrictions, both should fail gracefully.
+            // Neither should panic. They should return Ok(vec![]) due to fail-safe logic in pull_available_tasks
+            assert_eq!(standalone_tasks.is_ok(), cloud_tasks.is_ok(), "Sync lag parity gap: Standalone and Cloud fallback diverged");
+
+            if let Ok(st) = standalone_tasks {
+                assert_eq!(st.len(), 0, "Standalone must safely return empty tasks under sync lag");
+            }
+
+            if let Ok(ct) = cloud_tasks {
+                assert_eq!(ct.len(), 0, "Cloud must safely return empty tasks under sync lag");
+            }
+        }).await;
+    }
+
+    #[tokio::test]
     async fn test_network_partition_parity() {
         // Test network partition via LatencyMockMesh (1000ms delay) on both Cloud and Standalone
 

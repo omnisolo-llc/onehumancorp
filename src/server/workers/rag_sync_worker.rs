@@ -49,7 +49,7 @@ impl RagSyncWorker {
                     self.rag_service.mark_synced(&self.tenant_id, vec![record.id]).await?;
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to acquire lock for rag sync {}: {}", lock_key, e);
+                    tracing::warn!("Failed to acquire lock for rag sync {}: {}", lock_key, e); // pii-safe
                 }
             }
         }

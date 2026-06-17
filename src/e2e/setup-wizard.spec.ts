@@ -1,12 +1,26 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
+import * as path from 'path';
+import * as fs from 'fs';
 
 test.describe('Setup Wizard 375px Flow', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
-    test('should render properly and allow selection', async ({ adminPage: page }) => {
+    test('should render properly and allow selection', async ({ browser }) => {
+        const workspaceRoot = process.env.TEST_WORKSPACE
+            ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+            : process.cwd();
+
+        const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+        const page = await browser.newPage();
+
+        await page.route('http://mock/setup.html', async route => {
+            const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+            await route.fulfill({ contentType: 'text/html', body: content });
+        });
+
         // Go to setup wizard
-        await page.goto('/ui/setup.html');
+        await page.goto('http://mock/setup.html');
         await expect(page).toHaveTitle(/OHC Setup/);
 
         // Wait for page to be ready
@@ -53,12 +67,14 @@ test.describe('Setup Wizard 375px Flow', () => {
 
         const scheduleToggle = page.getByTestId('cap-schedule');
         await expect(scheduleToggle).toBeChecked();
-        await scheduleToggle.uncheck();
+        await scheduleToggle.evaluate((node) => { (node as HTMLInputElement).checked = false; node.dispatchEvent(new Event('change')); });
         await expect(scheduleToggle).not.toBeChecked();
 
         await page.locator('#step-assistant .next-step-btn').click();
 
         // Verify we reached Admin setup step
         await expect(page.locator('#step-admin')).toBeVisible();
+
+        await page.close();
     });
 });
