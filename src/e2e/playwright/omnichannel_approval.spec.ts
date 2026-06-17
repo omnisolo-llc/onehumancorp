@@ -18,7 +18,7 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
         // We will just verify the UI flow assuming data is seeded or mocked in the E2E setup.
 
         // This is a placeholder test showing the flow requested.
-        await page.goto('/feed');
+        await page.goto('/dashboard');
 
         // Wait for Action Required card to appear
         const actionCard = page.locator('text=1 New Message from Sarah (Insta DM)');
@@ -32,7 +32,7 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
         await expect(page.locator('text=Hi Sarah! Yes, we still make')).toBeVisible();
 
         // 1-Tap Approve
-        const approveButton = page.locator('button:has-text("Approve & Send")');
+        const approveButton = page.locator('button:has-text("Send Draft")');
         await expect(approveButton).toBeVisible();
         await approveButton.click();
 

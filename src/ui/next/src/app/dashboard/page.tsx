@@ -328,9 +328,12 @@ export default function Dashboard() {
         }
         setLedgerLoading(false);
 
-        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData, pendingReviews: Array.isArray(approvalsData?.pending_approvals) ? approvalsData.pending_approvals : (Array.isArray(approvalsData) ? approvalsData : []) }));
 
-        if (approvalsData && Array.isArray(approvalsData)) {
+        if (approvalsData && Array.isArray(approvalsData.pending_approvals)) {
+            setPendingApprovals(approvalsData.pending_approvals.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
+            setActivities(approvalsData.pending_approvals.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
+        } else if (approvalsData && Array.isArray(approvalsData)) {
             setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
             setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
         } else if (agentFeedData && agentFeedData.items) {
