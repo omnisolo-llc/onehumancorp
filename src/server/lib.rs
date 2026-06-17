@@ -5020,15 +5020,23 @@ async fn list_ui_bookings_handler(
                     .fetch_all(&db.pool)
                     .await {
                         Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                                "status": row.get::<String, _>("status"),
-                            })
+                                                    if mobile_optimized {
+                                                        serde_json::json!({
+                                                            "id": row.get::<String, _>("id"),
+                                                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                                            "status": row.get::<String, _>("status"),
+                                                        })
+                                                    } else {
+                                                        serde_json::json!({
+                                                            "id": row.get::<String, _>("id"),
+                                                            "customer_name": row.get::<String, _>("customer_name"),
+                                                            "product_id": row.get::<String, _>("product_id"),
+                                                            "product_title": row.get::<String, _>("product_title"),
+                                                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                                            "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                                                            "status": row.get::<String, _>("status"),
+                                                        })
+                                                    }
                         }).collect::<Vec<_>>()),
                         Err(e) => Err(e),
                     }
@@ -5044,15 +5052,23 @@ async fn list_ui_bookings_handler(
                     .fetch_all(pool)
                     .await {
                         Ok(rows) => Ok(rows.into_iter().map(|row| {
-                                                    serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
-                                "product_title": row.get::<String, _>("product_title"),
-                                "start_time": row.get::<String, _>("start_time"),
-                                "end_time": row.get::<String, _>("end_time"),
-                                "status": row.get::<String, _>("status"),
-                            })
+                                                    if mobile_optimized {
+                                                        serde_json::json!({
+                                                            "id": row.get::<String, _>("id"),
+                                                            "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
+                                                            "status": row.get::<String, _>("status"),
+                                                        })
+                                                    } else {
+                                                        serde_json::json!({
+                                                            "id": row.get::<String, _>("id"),
+                                                            "customer_name": row.get::<String, _>("customer_name"),
+                                                            "product_id": row.get::<String, _>("product_id"),
+                                                            "product_title": row.get::<String, _>("product_title"),
+                                                            "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
+                                                            "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
+                                                            "status": row.get::<String, _>("status"),
+                                                        })
+                                                    }
                         }).collect::<Vec<_>>()),
                         Err(e) => Err(e),
                     }
