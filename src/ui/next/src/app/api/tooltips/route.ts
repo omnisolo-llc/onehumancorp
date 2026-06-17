@@ -3,11 +3,11 @@ import { NextResponse, NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const fallbackTooltips = {
     "changelog-nav-tooltip": "See what's new in the latest updates.",
-    "api-docs-tooltip": "Direct API access is only for custom integrations.",
+    "api-docs-tooltip": "Connect custom tools with your account. Only needed for advanced setups.",
     "inbox-activity-tooltip": "Keep track of recent customer messages. Reply or assign them to an AI agent.",
     "recent-orders-tooltip": "View the latest orders placed by your customers.",
     "total-sales-tooltip": "Total revenue generated from all your orders.",
-    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
+    "kairos-nav-link-tooltip": "See what your AI helpers are planning. Watch them work on your tasks.",
     "dashboard-tooltip": "View your daily sales and overall business health.",
     "inventory-tooltip": "Manage your inventory, prices, and stock levels.",
     "orders-tooltip": "See what customers bought and track order fulfillment.",
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     "ask-ai-tooltip": "Open AI Help Chat to get answers instantly. It can guide you to the right article.",
     "pricing-tier-tooltip": "Select the plan that best fits your business needs.",
     "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
-    "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
+    "generate-btn-tooltip": "Let AI read your description and build your store. It creates a ready-to-launch site automatically.",
     "change-vibe-tooltip": "Change the theme and colors of your website.",
     "remove-branding-tooltip": "Upgrade to Premium to remove OHC branding.",
     "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",

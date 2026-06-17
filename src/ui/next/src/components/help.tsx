@@ -277,7 +277,7 @@ export function HelpWidget() {
                   ))}
                 </div>
 
-                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
+                                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
                   <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
@@ -319,9 +319,9 @@ export function HelpWidget() {
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.linkUrl && msg.linkTitle && (
+                        {msg.linkUrl && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>
+                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
                           </div>
                         )}
                       </div>
