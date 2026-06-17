@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.API_URL || 'http://localhost:8081';
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authHeader = request.headers.get("Authorization");
     const headers: Record<string, string> = {
@@ -10,7 +10,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     };
     if (authHeader) headers["Authorization"] = authHeader;
 
-    const res = await fetch(`${BACKEND_URL}/api/memory/${params.id}`, {
+    const res = await fetch(`${BACKEND_URL}/api/memory/${(await params).id}`, {
       method: 'DELETE',
       headers,
     });

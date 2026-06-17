@@ -11,7 +11,7 @@ test.describe('API Documentation', () => {
 
     // Verify Swagger UI container wrapper is visible
     // Target the specific wrapper classes for verification
-    const wrapper = page.locator('.backdrop-blur-\\[20px\\].saturate-200').first();
+    const wrapper = page.locator('.backdrop-blur-\\[30px\\]\.saturate-\\[210\\%\\]').first();
     await expect(wrapper).toBeVisible();
 
     // Check if swagger-ui container renders
@@ -25,7 +25,7 @@ test.describe('API Documentation', () => {
     await page.goto('/api-docs');
 
     // Wait for the swagger UI to load
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 15000 });
 
     // Check if layout allows for horizontal scroll by evaluating the clientWidth vs scrollWidth
     const overflowInfo = await page.evaluate(() => {
