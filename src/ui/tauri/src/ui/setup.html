@@ -985,13 +985,14 @@
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
+            <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="8">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-domain"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
@@ -1201,13 +1202,30 @@
         <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
-      <!-- Step 6: Template -->
+      <!-- Step 7: Domain -->
+      <div class="step" id="step-domain">
+        <h1>Where will your business live?</h1>
+        <p>Choose a free subdomain for your store.</p>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" style="flex: 1; margin-bottom: 0;" />
+          <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
+        </div>
+        <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 8: Template -->
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
@@ -1223,7 +1241,7 @@
           <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-domain">Back</button>
         </div>
       </div>
 
@@ -1286,7 +1304,8 @@
           adminEmail: document.getElementById('admin-email'),
           adminPassword: document.getElementById('admin-password'),
           firstOffer: document.getElementById('first-offer'),
-          templateSelection: document.getElementById('template-selection')
+          templateSelection: document.getElementById('template-selection'),
+          domainName: document.getElementById('domain-name')
       };
 
 
@@ -1299,7 +1318,8 @@
           adminEmail: document.getElementById('email-error'),
           adminPassword: document.getElementById('password-error'),
           firstOffer: document.getElementById('offer-error'),
-          templateSelection: document.getElementById('template-error')
+          templateSelection: document.getElementById('template-error'),
+          domainName: document.getElementById('domain-error')
       };
 
 
@@ -1312,7 +1332,8 @@
           categories: '',
           tagline: '',
           first_offer: '',
-          templateSelection: ''
+          templateSelection: '',
+          domain: ''
       };
 
 
@@ -1390,7 +1411,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1448,7 +1469,8 @@
           if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
           if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
-          if (state.capabilities && document.getElementById('cap-draft')) {
+          if (state.domain) inputs.domainName.value = state.domain;
+if (state.capabilities && document.getElementById('cap-draft')) {
               document.getElementById('cap-draft').checked = state.capabilities.draft !== false;
               document.getElementById('cap-schedule').checked = state.capabilities.schedule !== false;
               document.getElementById('cap-inventory').checked = state.capabilities.inventory === true;
@@ -1466,7 +1488,7 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -1497,7 +1519,7 @@
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
               if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
@@ -1616,6 +1638,18 @@
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
+          else if (stepId === 'step-domain') {
+              const domainVal = inputs.domainName.value.trim();
+              if (domainVal === '' || !/^[a-zA-Z0-9-]+$/.test(domainVal)) {
+                  errors.domainName.style.display = 'block';
+                  if(inputs.domainName) inputs.domainName.style.borderColor = '#FF3B30';
+                  isValid = false;
+              } else {
+                  errors.domainName.style.display = 'none';
+                  if(inputs.domainName) inputs.domainName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  state.domain = domainVal;
+              }
+          }
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
@@ -1654,7 +1688,7 @@
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
           }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
           if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
@@ -1839,7 +1873,7 @@
                       website_template: "auto",
                       first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
                       first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
-                      domain_choice: "subdomain",
+                      domain_choice: state.domain || "subdomain",
                       price_type: "fixed",
                       location: intakeData.location || "Local",
                       target_audience: intakeData.target_audience || "General",
@@ -2181,7 +2215,7 @@
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
-                   domain_choice: "subdomain",
+                   domain_choice: state.domain || "subdomain",
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General",
