@@ -727,6 +727,9 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -741,6 +744,9 @@ impl DB {
                         source_type TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -750,6 +756,9 @@ impl DB {
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -767,6 +776,9 @@ impl DB {
                         dependencies TEXT NOT NULL DEFAULT '[]',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -788,6 +800,9 @@ impl DB {
                         depth INTEGER,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         action_risk TEXT,
                         approval_status TEXT,
                         proposed_content TEXT,
@@ -820,6 +835,9 @@ impl DB {
                         dependencies TEXT DEFAULT '[]',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -846,6 +864,9 @@ impl DB {
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -862,6 +883,9 @@ impl DB {
                         payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -880,6 +904,9 @@ impl DB {
                         payload TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         tenant_id TEXT NOT NULL DEFAULT 'default_tenant',
                         auto_dreamed BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
@@ -894,6 +921,9 @@ impl DB {
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -903,6 +933,9 @@ impl DB {
                         actions_used INTEGER NOT NULL DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         PRIMARY KEY (tenant_id, year_month)
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
@@ -912,6 +945,9 @@ impl DB {
                         state_json TEXT NOT NULL DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, user_id)
@@ -925,6 +961,9 @@ impl DB {
                         preferences TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -949,6 +988,9 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -961,6 +1003,9 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -973,6 +1018,9 @@ impl DB {
                         price REAL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -986,6 +1034,9 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1018,6 +1069,9 @@ impl DB {
                         supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1031,6 +1085,9 @@ impl DB {
                         created_at_unix BIGINT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1042,6 +1099,9 @@ impl DB {
                         probed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1054,6 +1114,9 @@ impl DB {
                         details TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1065,6 +1128,9 @@ impl DB {
                         status TEXT NOT NULL DEFAULT 'FILE_SYNC_PENDING',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1096,6 +1162,9 @@ impl DB {
                         raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         department TEXT,
@@ -1110,6 +1179,9 @@ impl DB {
                         embedding BLOB,
                         source_type TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         topic TEXT DEFAULT ''
@@ -1248,6 +1320,9 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1260,6 +1335,9 @@ impl DB {
                         payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1782,6 +1860,9 @@ mod autodream_db_tests {
                 source_type TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1
             )"

@@ -151,7 +151,7 @@ async fn handle_create_product(
 
     let price_cents = (payload.price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
     let insert_product = sqlx::query(
-        "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, 100)"
+        "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscription_enabled, subscription_interval, subscription_discount) VALUES ($1, $2, $3, $4, $5, $6, 100, $7, $8, $9)"
     )
     .bind(&product_id)
     .bind(&tenant_id)
@@ -159,6 +159,9 @@ async fn handle_create_product(
     .bind(&payload.description)
     .bind(&payload.item_type)
     .bind(price_cents)
+    .bind(payload.is_subscription.unwrap_or(false))
+    .bind(payload.subscription_interval.clone())
+    .bind(payload.subscription_discount)
     .execute(&mut *conn)
     .await;
 
@@ -191,6 +194,7 @@ async fn handle_create_product(
         let plan_id = uuid::Uuid::new_v4().to_string();
         let interval = payload
             .subscription_interval
+            .clone()
             .unwrap_or_else(|| "Monthly".to_string())
             .to_lowercase();
         let discount = payload.subscription_discount.unwrap_or(0);
