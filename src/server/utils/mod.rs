@@ -4,6 +4,7 @@ pub use ::server_config as config;
 
 pub mod fs;
 pub mod gzip_middleware;
+pub mod tenant_middleware;
 pub mod tier_middleware;
 pub mod json_minify;
 pub mod dialect;
