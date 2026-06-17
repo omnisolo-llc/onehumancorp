@@ -25,7 +25,7 @@ Every item in the Master Catalog has been systematically verified to be implemen
 3. **Visual/low-code orchestration**: `src/agents/builtin/visual_workflow.rs`
 4. **Scalable multi-agent**: `src/agents/builtin/scalable_multi_agent.rs`
 5. **Human-in-loop as spectrum**: `src/agents/builtin/types.rs`, `src/agents/builtin/agent.rs`, `src/agents/builtin/tools_gating.rs`
-6. **Pydantic-first tool schema**: `src/agents/builtin/tools/pydantic.rs`
+6. **Pydantic-first tool schema**: `src/agents/builtin/tools/pydantic.rs`, `src/ui/next/src/app/pydantic-validation/page.tsx`
 
 ### B. The 12 Components of a Production Harness
 1. **The Orchestration Loop**: `src/agents/builtin/agent.rs`
