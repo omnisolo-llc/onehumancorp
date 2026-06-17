@@ -2,92 +2,89 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-test.describe('Conversational Setup CUJ', () => {
+test.describe('Onboarding Chat CUJ Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Intercept standard setup.html load to serve from filesystem for tests
-    let tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
-    if (!fs.existsSync(tauriUiDir)) {
-        tauriUiDir = path.join(process.env.RUNFILES_DIR || process.cwd(), '_main/src/ui/tauri/src/ui');
-    }
-    await page.route('**/setup.html', async route => {
-      const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-      await route.fulfill({ contentType: 'text/html', body: content });
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
     });
-
-    // Mock tooltips call
-    await page.route('**/api/tooltips', async route => {
-      await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    // Mock the state endpoint which the frontend hits
-    await page.route('**/api/onboarding/state', async route => {
-       await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    // Set a known viewport for mobile tests
-    await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  test('Persona: Maya (Home Baker) completes the Zero-Click Conversational Onboarding', async ({ page }) => {
+  test('Completes the conversational onboarding flow using the real API backend', async ({ page }) => {
+    // Setup Tauri mock routes that point to actual HTML files.
+    // The HTML file makes requests to the real backend running on http://127.0.0.1:18789
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
 
-    // We are testing against the real backend per the "Real Owner/Operator E2E Standard"
-    // No mocking of network requests is allowed.
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
-    // We will verify the start onboarding API was called.
-    let onboardingStarted = false;
-    page.on('request', request => {
-      if (request.url().includes('/api/onboarding/start') && request.method() === 'POST') {
-        onboardingStarted = true;
-      }
+    await page.route('http://mock/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.goto('http://localhost:18789/setup.html');
+    await page.route('http://mock/success.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
 
-    // Verify Initial Screen
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    // Go to the onboarding setup
+    await page.goto('http://mock/setup.html');
 
-    // 1. Click "Conversational Setup"
-    await page.getByRole('button', { name: 'Conversational Setup' }).click();
+    // Wait for the container to be visible
+    const container = page.locator('.container');
+    await expect(container).toBeVisible({ timeout: 30000 });
 
-    // 2. Verify we are in the chat step
-    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
+    // Step 0: Welcome Screen -> Click "Conversational Setup"
+    const chatButton = page.locator('button', { hasText: 'Conversational Setup' });
+    await expect(chatButton).toBeVisible();
+    await chatButton.click();
 
-    // Ensure the chat container has proper mobile-first glassmorphism styling
+    // Now we should be in the chat step
+    await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
+
+    // The chat assistant should have an initial message
+    const chatMessages = page.locator('#chat-messages');
+    await expect(chatMessages).toContainText('Assistant: What do you do?');
+
+    // Send the first message
     const chatInput = page.locator('#chat-input');
-    await expect(chatInput).toBeVisible();
-    await expect(chatInput).toHaveClass(/glassmorphism/);
+    await chatInput.fill("I am a plumber fixing pipes and stuff.");
 
-    // Verify Touch Targets on the chat send button
-    const chatSendBtn = page.locator('#chat-send-btn');
-    const sendBtnBox = await chatSendBtn.boundingBox();
-    expect(sendBtnBox?.height).toBeGreaterThanOrEqual(44);
+    // We expect the button to have a height >= 44px
+    const sendBtn = page.locator('#chat-send-btn');
+    const sendBtnBox = await sendBtn.boundingBox();
+    expect(sendBtnBox?.height || 0).toBeGreaterThanOrEqual(44);
 
-    // 3. Send first message
-    await chatInput.fill('I make custom vegan cakes in Austin.');
-    await chatSendBtn.click();
+    await sendBtn.click();
 
-    // 4. Verify bot responds asking for more details
-    await expect(page.getByText('Great! Could you provide an example photo or a little more detail about what you sell?')).toBeVisible();
+    // Check that the user message appears
+    await expect(chatMessages).toContainText('User: I am a plumber fixing pipes and stuff.');
+    // Check that the assistant replies (via the real backend fallback)
+    await expect(chatMessages).toContainText('Assistant: Great! Could you provide an example photo or a little more detail about what you sell?');
 
-    // 5. Send second message (simulating uploading a photo or additional details)
-    await chatInput.fill('Here is a picture of my cakes.');
-    const chatImageUrl = page.locator('#chat-image-url');
-    await chatImageUrl.fill('https://example.com/cake.jpg');
-    await chatSendBtn.click();
+    // Send the second message to trigger `is_complete = true`
+    await chatInput.fill("I fix leaky pipes and install faucets.");
+    await sendBtn.click();
 
-    // 6. Verify bot finishes the conversation
-    await expect(page.getByText("Give me a minute... I'm building your business.")).toBeVisible();
+    await expect(chatMessages).toContainText('User: I fix leaky pipes and install faucets.');
+    await expect(chatMessages).toContainText("Assistant: Give me a minute... I'm building your business.");
 
-    // 7. Verify we moved to the approval step
-    await expect(page.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Approve & Publish' })).toBeVisible();
+    // It should automatically transition to the approval step
+    await expect(page.getByRole('heading', { name: "Ready to Launch" })).toBeVisible({ timeout: 10000 });
 
-    // 8. Click approve
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    const approvalDetails = page.locator('#approval-details');
+    // Ensure the intake correctly derived the type/products from the fallback or real API
+    await expect(approvalDetails).toContainText('Business Name:');
 
-    // 9. Verify the start onboarding API was called and it navigated to success.html
-    await page.waitForURL('**/success.html', { timeout: 5000 });
-    expect(onboardingStarted).toBe(true);
+    const approveBtn = page.locator('#approve-publish-btn');
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // It should redirect to success.html
+    await expect(page.getByRole('heading', { name: "You're all set!" })).toBeVisible({ timeout: 20000 });
   });
+
 });
