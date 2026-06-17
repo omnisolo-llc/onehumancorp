@@ -197,7 +197,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 match OpenOptions::new()
                     .read(true)
                     .write(true)
-                    .create(true).truncate(true)
+                    .create(true)
                     .mode(0o600)
                     .open(db_path)
                 {
