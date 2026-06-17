@@ -1939,7 +1939,8 @@
 
                       window.location.href = "success.html";
                   } else {
-                      throw new Error('Failed to start onboarding');
+                      const errData = await response.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to start onboarding');
                   }
               } catch (e) {
                   approvePublishBtn.disabled = false;
@@ -2224,16 +2225,19 @@
                          'Content-Type': 'application/json'
                      },
                      body: JSON.stringify(req)
-                 }).then(response => {
+                 }).then(async response => {
                      if (response.ok) {
-                         localStorage.setItem('onboardingState', JSON.stringify(state));
-
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
-
+                         const data = await response.json().catch(()=>({}));
+                         if (data && data.organization_id) {
+                             localStorage.setItem('tenant_id', data.organization_id);
+                             localStorage.setItem('tenant', data.organization_id);
+                         }
+                         localStorage.removeItem('onboardingState');
+                         localStorage.setItem('has_onboarded', 'true');
                          window.location.href = "success.html";
                      } else {
-                         throw new Error('Failed to start onboarding');
+                         const errData = await response.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to start onboarding');
                      }
                  }).catch((err) => {
                    console.error(err);
