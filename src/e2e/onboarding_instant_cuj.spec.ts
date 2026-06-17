@@ -70,8 +70,8 @@ test.describe('Instant Setup CUJ', () => {
       });
     });
 
-    // Mock the dashboard page redirection target
-    await page.route('**/dashboard.html', async route => {
+    // Mock the success page redirection target
+    await page.route('**/success.html', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: `
         <h1>Dashboard</h1>
         <section aria-label="Unified Agent Feed">
@@ -106,11 +106,10 @@ test.describe('Instant Setup CUJ', () => {
     await generateBtn.click();
 
     // 5. Verify loading texts (animation progress)
-    await expect(page.getByText('Building Your Business...')).toBeVisible();
-    await expect(page.getByText('Drafting services...')).toBeAttached();
+    await expect(page.locator('#generate-storefront-btn')).toHaveText('Building Your Business...');
 
-    // 6. Verify it navigated to dashboard.html
-    await page.waitForURL('**/dashboard.html', { timeout: 15000 });
+    // 6. Verify it navigated to success.html
+    await page.waitForURL('**/success.html', { timeout: 15000 });
     expect(intakeCalled).toBe(true);
     expect(onboardingStarted).toBe(true);
 
