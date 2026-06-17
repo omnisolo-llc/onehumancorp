@@ -1231,7 +1231,12 @@ mod tests {
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for DummyLlmClient {
             async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                unimplemented!()
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant("dummy"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
             }
         }
 
