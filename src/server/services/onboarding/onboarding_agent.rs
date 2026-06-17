@@ -327,6 +327,12 @@ Your response:",
         tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key);
         cache.invalidate(&cache_key).await;
 
+        // Invalidate the Dashboard cache as well
+        let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key);
+        dashboard_cache.invalidate(&dashboard_cache_key).await;
+
         Ok(())
     }
 
@@ -2868,6 +2874,54 @@ mod tests {
         }
         let db = Arc::new(DB::new().await.ok()?);
         Some(db)
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidation_on_save() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub.clone());
+
+        let tenant_id = "test_cache_invalidation_tenant";
+        let user_id = "test_cache_invalidation_user";
+
+        // Save initial state using agent
+        let state1 = serde_json::json!({"test_key": "val1"});
+        agent.save_onboarding_state(tenant_id, user_id, 1, &state1).await.unwrap();
+
+        // Prime the dashboard cache
+        let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client.clone()));
+        let dashboard_resp = ::server_ohc::app::GetOnboardingStateResponse {
+            state: Some(::server_ohc::app::OnboardingState {
+                organization_id: tenant_id.to_string(),
+                user_id: user_id.to_string(),
+                current_step: 1,
+                state_json: state1.to_string(),
+            }),
+        };
+        dashboard_cache.set(&dashboard_cache_key, dashboard_resp.clone(), std::time::Duration::from_secs(3600)).await;
+
+        // Prime the agent cache
+        let agent_cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
+        let agent_cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client.clone()));
+        agent_cache.set(&agent_cache_key, state1.clone(), std::time::Duration::from_secs(3600)).await;
+
+        // Verify caches are primed
+        assert!(dashboard_cache.get(&dashboard_cache_key).await.is_some(), "Dashboard cache should be primed");
+        assert!(agent_cache.get(&agent_cache_key).await.is_some(), "Agent cache should be primed");
+
+        // Save updated state using agent (this should invalidate both caches)
+        let state2 = serde_json::json!({"test_key": "val2"});
+        agent.save_onboarding_state(tenant_id, user_id, 2, &state2).await.unwrap();
+
+        // Verify caches are invalidated
+        assert!(dashboard_cache.get(&dashboard_cache_key).await.is_none(), "Dashboard cache should be invalidated");
+        assert!(agent_cache.get(&agent_cache_key).await.is_none(), "Agent cache should be invalidated");
     }
 
     #[tokio::test]
