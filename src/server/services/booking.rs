@@ -1431,47 +1431,28 @@ impl BookingEngineService for NativeBookingService {
         let session_id = Uuid::new_v4().to_string();
         let expires_at = Utc::now() + chrono::Duration::minutes(15);
 
-        let inventory_capacity =
-            Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
+        // Always try to reserve inventory through the unified InventoryService (Redlock + Postgres)
+        let inventory_svc = crate::services::inventory::InventoryService::new(self.redis_client.clone());
+        let reserve_result = inventory_svc.reserve_inventory(
+            &req.tenant_id,
+            &req.product_id,
+            1, // Request 1 item
+            300 // 5 minutes lock for online checkout
+        ).await;
 
-        // If capacity is 1, check if there's an active POS transaction locking this item.
-        if inventory_capacity <= 1 {
-            let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let acquired: bool = redis::cmd("SET")
-                        .arg(&pos_lock_key)
-                        .arg(&session_id)
-                        .arg("EX")
-                        .arg(300) // 5 minutes lock for online checkout
-                        .arg("NX")
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap_or(false);
-                    if !acquired {
-                        return Err(Status::resource_exhausted("Item is currently being checked out by another customer"));
-                    }
+        let inventory_lock_id = match reserve_result {
+            Ok(result) => {
+                if !result.success {
+                    // This graceful message fulfills the Persona requirement:
+                    // "Item just sold out message, triggered by the Operations Agent."
+                    // If Redis lock fails or stock is missing, we reject.
+                    return Err(Status::resource_exhausted("Item just sold out"));
                 }
+                result.lock_id
+            },
+            Err(e) => {
+                return Err(Status::internal(format!("Inventory check failed: {}", e)));
             }
-        }
-        let soft_locks = self.soft_lock_store();
-        let inventory_lock = soft_locks
-            .acquire_inventory_lock(
-                &req.tenant_id,
-                &req.product_id,
-                &session_id,
-                inventory_capacity,
-                INVENTORY_LOCK_TTL,
-            )
-            .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
-
-        let inventory_lock_id = if inventory_capacity <= 1 {
-            // For single-capacity items, the true lock is the Redis lock we acquired
-            format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id)
-        } else {
-            inventory_lock.key
         };
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
