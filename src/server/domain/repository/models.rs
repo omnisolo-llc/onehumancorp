@@ -412,3 +412,50 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct B2BIntakeRequest {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub company_name: Option<String>,
+    pub tax_id: Option<String>,
+    pub requirements: String,
+    pub budget: Option<i64>,
+    pub timeline: Option<String>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct B2BProposal {
+    pub id: String,
+    pub tenant_id: String,
+    pub intake_request_id: String,
+    pub customer_id: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct B2BProposalLineItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub proposal_id: String,
+    pub description: String,
+    pub price_cents: i64,
+    pub quantity: i32,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct B2BApprovalEvent {
+    pub id: String,
+    pub tenant_id: String,
+    pub proposal_id: String,
+    pub event_type: String,
+    pub created_at: Option<DateTime<Utc>>,
+}

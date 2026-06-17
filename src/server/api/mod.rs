@@ -7,6 +7,7 @@ pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;
 pub mod pos;
+pub mod b2b_proposals;
 pub mod staff_mesh;
 
 pub mod billing_webhook;
