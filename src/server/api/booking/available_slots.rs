@@ -40,7 +40,7 @@ async fn handle_get_available_slots(
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
-    let slots = match db.query_available_slots(&tenant_id, &service_id).await {
+    let slots = match db.query_available_slots_ohc(&tenant_id, &service_id).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to query available slots: {:?}", e);

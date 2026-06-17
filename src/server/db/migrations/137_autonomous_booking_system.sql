@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS availability_blocks (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     service_id TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    resource_id TEXT REFERENCES booking_resources(id) ON DELETE CASCADE,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ NOT NULL,
     is_available BOOLEAN NOT NULL DEFAULT true,
@@ -22,7 +21,6 @@ CREATE TABLE IF NOT EXISTS availability_blocks (
 
 CREATE INDEX IF NOT EXISTS idx_availability_blocks_tenant_id ON availability_blocks(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_availability_blocks_service_id ON availability_blocks(service_id);
-CREATE INDEX IF NOT EXISTS idx_availability_blocks_resource_id ON availability_blocks(resource_id);
 CREATE INDEX IF NOT EXISTS idx_availability_blocks_time ON availability_blocks(start_time, end_time);
 
 ALTER TABLE availability_blocks ENABLE ROW LEVEL SECURITY;

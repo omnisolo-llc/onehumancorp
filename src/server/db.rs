@@ -2248,8 +2248,9 @@ mod e2e_search_workspace_tests {
         }
     }
 }
+
 impl DB {
-    pub async fn query_available_slots(
+    pub async fn query_available_slots_ohc(
         &self,
         tenant_id: &str,
         service_id: &str,
