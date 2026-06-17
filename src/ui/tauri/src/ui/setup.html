@@ -23,8 +23,8 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
-        max-width: 480px;
-        width: 100%;
+        max-width: 100%;
+        width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
@@ -57,8 +57,8 @@
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
@@ -470,6 +470,7 @@
         flex-direction: column;
         gap: 8px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        min-height: 44px;
       }
       .context-card:hover {
         background: rgba(255, 255, 255, 0.8);
@@ -792,7 +793,7 @@
 
       /* OHC Premium Glassmorphism Overrides */
       .glassmorphism {
-        border-radius: 16px;
+        border-radius: 16px !important;
       }
       button.glassmorphism,
       input.glassmorphism,
@@ -1473,7 +1474,8 @@
           }
       }
 
-            function saveCurrentState() {
+      let saveStateTimer = null;
+      function saveCurrentState() {
           state.categories = inputs.categories.value;
           state.businessName = inputs.name.value;
           state.tagline = inputs.tagline.value;
@@ -1508,17 +1510,20 @@
           const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
           const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
 
-          if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
-          } else {
-              localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-              fetch(`${backendUrl}/api/onboarding/draft`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-                  body: JSON.stringify(state)
-              }).catch(console.error);
-          }
+          clearTimeout(saveStateTimer);
+          saveStateTimer = setTimeout(() => {
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
+              } else {
+                  localStorage.setItem('onboardingState', JSON.stringify(state));
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  fetch(`${backendUrl}/api/onboarding/draft`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+                      body: JSON.stringify(state)
+                  }).catch(console.error);
+              }
+          }, 1000);
       }
 
       function validateStep(stepId) {
@@ -1582,7 +1587,7 @@
 
               if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
                   errors.adminEmail.style.display = 'block';
-                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required' : 'Please enter a valid email address.';
+                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required.' : 'Please enter a valid email address.';
                   inputs.adminEmail.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
@@ -1590,9 +1595,9 @@
                   inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               }
 
-              if (passVal.length < 8 || !/\d/.test(passVal)) {
+              if (passVal === '' || passVal.length < 8 || !/\d/.test(passVal)) {
                   errors.adminPassword.style.display = 'block';
-                  errors.adminPassword.innerText = passVal === '' ? 'Password is required' : 'Password must be at least 8 characters and contain a number';
+                  errors.adminPassword.innerText = passVal === '' ? 'Password is required.' : 'Password must be at least 8 characters and contain a number.';
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
