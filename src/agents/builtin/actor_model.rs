@@ -80,6 +80,34 @@ impl ActorSystem {
         }
     }
 
+    pub async fn unregister(&self, name: &str) {
+        let mut mb = self.mailboxes.lock().await;
+        mb.remove(name);
+    }
+
+    pub async fn ask(&self, mut msg: ActorMessage, timeout: std::time::Duration) -> Result<ActorMessage, String> {
+        let reply_to = format!("ask-{}", uuid::Uuid::new_v4());
+        let (tx, mut rx) = mpsc::channel(1);
+
+        self.register(reply_to.clone(), tx).await;
+        msg.sender = reply_to.clone();
+
+        let send_res = self.send(msg).await;
+        if let Err(e) = send_res {
+            self.unregister(&reply_to).await;
+            return Err(e);
+        }
+
+        let result = match tokio::time::timeout(timeout, rx.recv()).await {
+            Ok(Some(reply)) => Ok(reply),
+            Ok(None) => Err("Channel closed before receiving reply".to_string()),
+            Err(_) => Err("Ask timed out".to_string()),
+        };
+
+        self.unregister(&reply_to).await;
+        result
+    }
+
     pub async fn send(&self, msg: ActorMessage) -> Result<(), String> {
         let sender = {
             let mb = self.mailboxes.lock().await;
@@ -765,6 +793,74 @@ mod tests {
         assert_eq!(dlq.len(), 1);
         assert_eq!(dlq[0].content, "Lost message");
         assert_eq!(dlq[0].recipient, "NonExistentActor");
+    }
+
+    #[tokio::test]
+    async fn test_actor_system_ask_success() {
+        let system = Arc::new(ActorSystem::new());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("EchoActor".to_string(), test_tx).await;
+
+        let system_clone = system.clone();
+        tokio::spawn(async move {
+            if let Some(msg) = test_rx.recv().await {
+                let reply = ActorMessage {
+                    sender: "EchoActor".to_string(),
+                    recipient: msg.sender.clone(),
+                    content: format!("Reply to: {}", msg.content),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    correlation_id: msg.correlation_id,
+                    original_sender: msg.original_sender,
+                };
+                system_clone.send(reply).await.unwrap();
+            }
+        });
+
+        let msg = ActorMessage {
+            sender: "Requester".to_string(),
+            recipient: "EchoActor".to_string(),
+            content: "Ping".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-ask".to_string(),
+            original_sender: "Requester".to_string(),
+        };
+
+        let result = system.ask(msg, std::time::Duration::from_secs(1)).await;
+        assert!(result.is_ok());
+        let reply = result.unwrap();
+        assert_eq!(reply.sender, "EchoActor");
+        assert_eq!(reply.content, "Reply to: Ping");
+    }
+
+    #[tokio::test]
+    async fn test_actor_system_ask_timeout() {
+        let system = Arc::new(ActorSystem::new());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("SlowActor".to_string(), test_tx).await;
+
+        tokio::spawn(async move {
+            if let Some(_msg) = test_rx.recv().await {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+        });
+
+        let msg = ActorMessage {
+            sender: "Requester".to_string(),
+            recipient: "SlowActor".to_string(),
+            content: "Ping".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-ask-timeout".to_string(),
+            original_sender: "Requester".to_string(),
+        };
+
+        let result = system.ask(msg, std::time::Duration::from_millis(10)).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Ask timed out");
     }
 
     #[tokio::test]
