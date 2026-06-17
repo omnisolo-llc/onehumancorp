@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Link-in-Bio Generator - OHC</title>
@@ -311,9 +327,9 @@
     <h1>Link-in-Bio Generator</h1>
 </header>
 
-<div class="container">
+<div class="container glassmorphism glassmorphism">
     <section class="editor-section">
-        <div class="panel">
+        <div class="panel glassmorphism glassmorphism">
             <h2>Profile Details</h2>
             <div class="form-group">
                 <label>Business Name</label>
@@ -334,7 +350,7 @@
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel glassmorphism glassmorphism">
             <h2>Publish & Share</h2>
             <button id="copy-btn" class="btn-primary">Copy Link-in-Bio URL</button>
             <p style="text-align: center; font-size: 12px; color: #6b7280; margin-top: 8px;">Add this link to your Instagram, TikTok, or Twitter profile.</p>

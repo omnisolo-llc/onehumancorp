@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Hyperlocal Lead Gen</title>
@@ -126,7 +142,7 @@
 <body>
   <a href="dashboard.html" class="back-nav">← Back</a>
 
-  <div class="container" id="form-container">
+  <div class="container glassmorphism glassmorphism" id="form-container">
     <div style="text-align: center; font-size: 48px; margin-bottom: 16px;">📍</div>
     <h1>Hyperlocal Lead Gen</h1>
     <p class="subtitle">Want more local jobs this week? Set a budget and let AI find customers.</p>
@@ -146,7 +162,7 @@
     <button id="submit-btn" data-testid="lead-gen-submit">Start Finding Jobs</button>
   </div>
 
-  <div class="container success-card" id="success-container">
+  <div class="container success-card glassmorphism" id="success-container">
     <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
     <h2>Campaign Active!</h2>
     <p id="success-desc">The AI is now finding leads for your zip code. Check your inbox soon.</p>
