@@ -4527,46 +4527,38 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
         }
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                let rows_res = sqlx::query("SELECT id, title, status, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at, tenant_id, organization_id FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+                sqlx::query("SELECT id, title, status, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at FROM shared_tasks WHERE (organization_id = ? OR tenant_id = ?) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+                    .bind(tenant_id)
+                    .bind(tenant_id)
                     .bind(limit)
                     .fetch_all(pool)
-                    .await;
-
-                rows_res.map(|rows| rows.into_iter().filter_map(|row| {
-                    let t_id = row.try_get::<String, _>("tenant_id").or_else(|_| row.try_get::<String, _>("organization_id")).unwrap_or_default();
-                    if t_id == tenant_id {
-                        Some(serde_json::json!({
+                    .await
+                    .map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "title": row.try_get::<String, _>("title").unwrap_or_default(),
                             "status": row.try_get::<String, _>("status").unwrap_or_default(),
                             "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                             "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
-                        }))
-                    } else {
-                        None
-                    }
-                }).collect::<Vec<_>>())
+                        })
+                    }).collect::<Vec<_>>())
             } else {
-                let rows_res = sqlx::query("SELECT id, title, description, status, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at, tenant_id, organization_id FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+                sqlx::query("SELECT id, title, description, status, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at FROM shared_tasks WHERE (organization_id = ? OR tenant_id = ?) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+                    .bind(tenant_id)
+                    .bind(tenant_id)
                     .bind(limit)
                     .fetch_all(pool)
-                    .await;
-
-                rows_res.map(|rows| rows.into_iter().filter_map(|row| {
-                    let t_id = row.try_get::<String, _>("tenant_id").or_else(|_| row.try_get::<String, _>("organization_id")).unwrap_or_default();
-                    if t_id == tenant_id {
-                        Some(serde_json::json!({
+                    .await
+                    .map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "title": row.try_get::<String, _>("title").unwrap_or_default(),
                             "description": row.try_get::<String, _>("description").unwrap_or_default(),
                             "status": row.try_get::<String, _>("status").unwrap_or_default(),
                             "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                             "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
-                        }))
-                    } else {
-                        None
-                    }
-                }).collect::<Vec<_>>())
+                        })
+                    }).collect::<Vec<_>>())
             }
         }
     }
