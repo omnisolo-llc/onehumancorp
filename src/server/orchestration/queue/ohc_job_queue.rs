@@ -27,18 +27,28 @@ impl OHCJobQueue {
     }
 
     pub async fn enqueue(&self, tenant_id: &str, job_type: &str, payload: &serde_json::Value) -> Result<String, String> {
+        self.enqueue_delayed(tenant_id, job_type, payload, 0).await
+    }
+
+    pub async fn enqueue_delayed(&self, tenant_id: &str, job_type: &str, payload: &serde_json::Value, delay_seconds: i64) -> Result<String, String> {
         let job_id = Uuid::new_v4().to_string();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        let mut next_retry_at = Utc::now();
+        if delay_seconds > 0 {
+            next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
+        }
+
         sqlx::query(
             "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-             VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+             VALUES ($1, $2, $3, $4, 'PENDING', $5)"
         )
         .bind(&job_id)
         .bind(tenant_id)
         .bind(job_type)
         .bind(payload)
+        .bind(next_retry_at)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;

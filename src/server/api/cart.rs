@@ -259,9 +259,9 @@ pub async fn add_cart_item_handler(
         req_data.unit_price_cents,
     ).await;
 
-    // Update cart total
+    // Update cart total and activity
     let _ = sqlx::query(
-        "UPDATE carts SET total_amount_cents = total_amount_cents + $1 WHERE id = $2 AND tenant_id = $3"
+        "UPDATE carts SET total_amount_cents = total_amount_cents + $1, last_activity_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
     )
     .bind(final_unit_price * (req_data.quantity as i64))
     .bind(&cart_id)
@@ -296,12 +296,25 @@ pub async fn update_cart_status_handler(
     };
 
     let pool = crate::db::get_pool();
-    let res = sqlx::query("UPDATE carts SET status = $1 WHERE id = $2 AND tenant_id = $3")
+    let res = sqlx::query("UPDATE carts SET status = $1, last_activity_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3")
         .bind(&req_data.status)
         .bind(&cart_id)
         .bind(&tenant_id)
         .execute(&pool)
         .await;
+
+    // Enqueue cart recovery job if it's abandoned
+    if req_data.status == "abandoned" {
+        let queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(pool.clone().into());
+        let _ = queue.enqueue_delayed(
+            &tenant_id,
+            crate::cart_recovery::CART_RECOVERY_JOB_TYPE,
+            &serde_json::json!({
+                "cart_id": cart_id,
+            }),
+            3600 // 1 hour delay
+        ).await;
+    }
 
     match res {
         Ok(result) => {
