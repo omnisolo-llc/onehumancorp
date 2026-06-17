@@ -12,7 +12,7 @@ test.describe('Help Center', () => {
     await expect(dashLink).toBeVisible();
   });
   test('should show agents link in nav', async ({ page }) => {
-    const agentsLink = page.getByRole('link', { name: 'AI Departments' });
+    const agentsLink = page.getByRole('link', { name: 'Agents' });
     await expect(agentsLink).toBeVisible();
   });
   test('should show setup link in nav', async ({ page }) => {

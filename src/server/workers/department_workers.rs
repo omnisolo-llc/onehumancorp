@@ -1062,7 +1062,7 @@ let db_for_products = self.db.clone();
 
                                 let task_id = Uuid::new_v4().to_string();
                                 let _title = format!("Draft Social Post: {}", product_name);
-                                let description = "New product detected! Schedule a post to drive sales?";
+                                let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let _proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
                                 match &db_for_products.store {

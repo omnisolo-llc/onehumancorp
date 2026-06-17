@@ -432,4 +432,3 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
     }
 }
-// Optimizations handled: Cost savings functionality verified and intact

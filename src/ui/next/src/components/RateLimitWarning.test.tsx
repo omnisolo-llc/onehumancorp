@@ -37,7 +37,7 @@ describe('RateLimitWarning', () => {
     expect(screen.queryByText('Limit Reached')).toBeNull();
   });
 
-  it('shows warning when context method is called', async () => {
+  it('shows warning when context method is called', () => {
     function TestComponent() {
       const { showWarning } = useRateLimitWarning();
       return (
@@ -47,14 +47,10 @@ describe('RateLimitWarning', () => {
       );
     }
 
-    const { TooltipProvider } = await import('./TooltipRegistry');
-
     render(
-      <TooltipProvider>
-        <RateLimitWarningProvider>
-          <TestComponent />
-        </RateLimitWarningProvider>
-      </TooltipProvider>
+      <RateLimitWarningProvider>
+        <TestComponent />
+      </RateLimitWarningProvider>
     );
 
     fireEvent.click(screen.getByText('Trigger Warning'));
@@ -63,7 +59,7 @@ describe('RateLimitWarning', () => {
     expect(screen.getByText("You've hit your Free tier limit")).toBeDefined();
   });
 
-  it('hides warning when close button is clicked', async () => {
+  it('hides warning when close button is clicked', () => {
     function TestComponent() {
       const { showWarning } = useRateLimitWarning();
       return (
@@ -73,14 +69,10 @@ describe('RateLimitWarning', () => {
       );
     }
 
-    const { TooltipProvider } = await import('./TooltipRegistry');
-
     render(
-      <TooltipProvider>
-        <RateLimitWarningProvider>
-          <TestComponent />
-        </RateLimitWarningProvider>
-      </TooltipProvider>
+      <RateLimitWarningProvider>
+        <TestComponent />
+      </RateLimitWarningProvider>
     );
 
     // Show warning

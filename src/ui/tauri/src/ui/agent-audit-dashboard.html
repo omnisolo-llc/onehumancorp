@@ -274,6 +274,18 @@
                 console.error("Failed to fetch ledger", e);
             }
 
+            // Real-time WebSocket connection (Mock/Placeholder for now)
+            setTimeout(() => {
+                const liveLog = document.getElementById('live-log');
+                liveLog.innerHTML += `<br>> Connected to agent telemetry stream.`;
+                liveLog.innerHTML += `<br>> [Operations] Checking booking conflicts... OK`;
+            }, 1000);
+
+            setTimeout(() => {
+                const liveLog = document.getElementById('live-log');
+                liveLog.innerHTML += `<br>> [Marketing] Processing draft promotion...`;
+                liveLog.scrollTop = liveLog.scrollHeight;
+            }, 2500);
         });
     </script>
   </body>

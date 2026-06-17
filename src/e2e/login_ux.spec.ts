@@ -35,7 +35,7 @@ test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
-    await page.getByRole('link', { name: 'AI Departments' }).click();
+    await page.getByRole('link', { name: 'Agents' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 

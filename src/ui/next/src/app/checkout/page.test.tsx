@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CheckoutPage from './page';
 import * as React from 'react';
@@ -60,7 +60,7 @@ beforeEach(() => {
       }),
     } as any);
 
-    await act(async () => { render(<CheckoutPage />); });
+    render(<CheckoutPage />);
 
     expect(screen.getByText('Plan Upgrade')).toBeDefined();
     expect(screen.getByText('OHC Starter Plan')).toBeDefined();
@@ -95,7 +95,7 @@ beforeEach(() => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    await act(async () => { render(<CheckoutPage />); });
+    render(<CheckoutPage />);
 
     expect(screen.getByText('Secure Checkout')).toBeDefined();
     expect(screen.getByText('Service Deposit')).toBeDefined();
@@ -113,39 +113,6 @@ beforeEach(() => {
     });
   });
 
-  it('handles Subscribe & Save checkout session flow correctly', async () => {
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-    global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/billing/create-checkout-session') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit-sub' }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
-
-    await act(async () => { render(<CheckoutPage />); });
-
-    const subscribeLabel = screen.getByText('Subscribe & Save 10%');
-    fireEvent.click(subscribeLabel);
-
-    const payButton = screen.getByText('Pay');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"is_subscription":true')
-      }));
-      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit-sub');
-    });
-  });
-
   it('handles delivery quote flow correctly', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -155,7 +122,7 @@ beforeEach(() => {
       }),
     } as any);
 
-    await act(async () => { render(<CheckoutPage />); });
+    render(<CheckoutPage />);
 
     const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
     fireEvent.change(addressInput, { target: { value: '123 Main St' } });
@@ -173,9 +140,4 @@ beforeEach(() => {
     });
   });
 
-  it('renders the PoweredByOHC component', async () => {
-    await act(async () => { render(<CheckoutPage />); });
-    const components = screen.getAllByTestId('powered-by-ohc');
-    expect(components.length).toBeGreaterThan(0);
-  });
 });

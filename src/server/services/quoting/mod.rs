@@ -25,9 +25,6 @@ pub struct Quote {
     pub customer_id: Uuid,
     pub status: String,
     pub valid_until: Option<DateTime<Utc>>,
-    pub total_amount_cents: i64,
-    pub required_deposit_cents: i64,
-    pub stripe_payment_link: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,18 +116,13 @@ async fn create_quote(
 
     let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let total_amount_cents = payload.line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-    let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
-
     let quote = sqlx::query_as::<_, Quote>(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status) VALUES ($1, $2, $3, $4) RETURNING *"
     )
     .bind(quote_id)
     .bind(&tenant_id)
     .bind(payload.customer_id)
     .bind(&payload.status)
-    .bind(total_amount_cents)
-    .bind(required_deposit_cents)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -189,57 +181,10 @@ async fn approve_quote(
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Integrate Stripe deposit logic
-    if let Some(mut q) = quote {
-        if q.status == "ACCEPTED" {
-            let amount_usd = (q.total_amount_cents as f64) / 100.0;
-            // Use Stripe client to create a checkout session
-            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+    // Integrate Stripe deposit logic here...
 
-            match stripe_client.create_checkout_session(
-                &format!("Quote #{}", q.id),
-                &q.customer_id.to_string(),
-                amount_usd,
-                false
-            ).await {
-                Ok(url) => {
-                    q.stripe_payment_link = Some(url.clone());
-                    let _ = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2")
-                        .bind(&url)
-                        .bind(q.id)
-                        .execute(&pool)
-                        .await;
-                },
-                Err(e) => {
-                    tracing::error!("Failed to create Stripe checkout session: {}", e);
-                }
-            }
-        }
-        Ok(Json(q))
-    } else {
-        Err(axum::http::StatusCode::NOT_FOUND)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use uuid::Uuid;
-
-    #[test]
-    fn test_quote_struct_serialization() {
-        let quote = Quote {
-            id: Uuid::new_v4(),
-            tenant_id: "test-tenant".to_string(),
-            customer_id: Uuid::new_v4(),
-            status: "DRAFT".to_string(),
-            valid_until: None,
-            total_amount_cents: 1000,
-            required_deposit_cents: 333,
-            stripe_payment_link: Some("http://stripe.com".to_string()),
-        };
-        let serialized = serde_json::to_string(&quote).unwrap();
-        assert!(serialized.contains("total_amount_cents"));
+    match quote {
+        Some(q) => Ok(Json(q)),
+        None => Err(axum::http::StatusCode::NOT_FOUND),
     }
 }

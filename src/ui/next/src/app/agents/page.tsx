@@ -239,23 +239,23 @@ export default function AgentsPage() {
     }
   }
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
-      <header className="border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
+    <div className="min-h-screen bg-stone-50 text-zinc-950">
+      <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <Link href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
-                ← Back to Dashboard
+              <Link href="/dashboard" className="text-sm font-semibold text-teal-700">
+                Back to Dashboard
               </Link>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1>
-              <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
-              <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
+              <h1 className="mt-2 text-3xl font-bold tracking-normal text-zinc-950">Expert Center</h1>
+              <h2 className="mt-1 text-base font-bold text-zinc-800">AI Departments</h2>
+              <p className="mt-1 max-w-3xl text-sm text-zinc-600">
                 Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
               </p>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-end gap-2">
-                <span className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Pro Mode</span>
+                <span className="text-xs font-semibold uppercase text-zinc-500">Pro Mode</span>
                 <button
                   type="button"
                   aria-label="Toggle Pro Mode"
@@ -267,28 +267,28 @@ export default function AgentsPage() {
                     }
                     setHasPro(false);
                   }}
-                  className={`h-6 w-10 rounded-full p-1 transition-colors outline-none ${hasPro ? 'bg-teal-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                  className={`h-6 w-10 rounded-full p-1 transition-colors ${hasPro ? 'bg-teal-700' : 'bg-zinc-300'}`}
                 >
                   <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${hasPro ? 'translate-x-4' : ''}`} />
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur px-3 py-2">
-                  <div className="text-lg font-bold text-zinc-900 dark:text-white">{allCatalog.length}</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Experts</div>
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                  <div className="text-lg font-bold">{allCatalog.length}</div>
+                  <div className="text-xs text-zinc-500">Experts</div>
                 </div>
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur px-3 py-2">
-                  <div className="text-lg font-bold text-zinc-900 dark:text-white">{skillMarket.length}</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Skills</div>
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                  <div className="text-lg font-bold">{skillMarket.length}</div>
+                  <div className="text-xs text-zinc-500">Skills</div>
                 </div>
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur px-3 py-2">
-                  <div className="text-lg font-bold text-zinc-900 dark:text-white">{connectors.length}</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Connectors</div>
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+                  <div className="text-lg font-bold">{connectors.length}</div>
+                  <div className="text-xs text-zinc-500">Connectors</div>
                 </div>
               </div>
             </div>
           </div>
-          <nav className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar" aria-label="Agent feature sections">
+          <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Agent feature sections">
             {[
               ['browse', 'Browse experts'],
               ['teams', 'Expert Teams'],
@@ -296,7 +296,7 @@ export default function AgentsPage() {
               ['connectors', 'Connectors'],
               ['automations', 'Automations'],
               ['memory', 'Memory'],
-              ['explore', 'Templates'],
+              ['explore', 'Explore'],
               ['results', 'Results'],
               ['feed', 'Activity Feed'],
               ['approvals', 'Needs Approval'],
@@ -307,31 +307,31 @@ export default function AgentsPage() {
                 type="button"
                 onClick={() => setPanel(id as Panel)}
                 aria-pressed={panel === id}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all border outline-none ${
+                className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-semibold ${
                   panel === id
-                    ? 'border-teal-600 bg-teal-600 text-white shadow-sm'
-                    : 'border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 hover:border-teal-300 dark:hover:border-teal-700'
+                    ? 'border-teal-700 bg-teal-700 text-white'
+                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-teal-300'
                 }`}
               >
                 {label}
-                {id === 'approvals' && approvals.length > 0 ? ` (${approvals.length})` : ''}
+                {id === 'approvals' && approvals.length > 0 ? ` ${approvals.length}` : ''}
               </button>
             ))}
           </nav>
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Manager</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Ambassador</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Promoter</span>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            <span className="font-bold text-zinc-950">Operational team:</span>
+            <span>The Manager</span>
+            <span>The Ambassador</span>
+            <span>The Promoter</span>
           </div>
         </div>
       </header>
       {showPaywall && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold text-zinc-950 dark:text-white">Upgrade to Pro</h2>
-            <p className="mt-2 text-sm text-zinc-650 dark:text-zinc-400">Unlock advanced model routing, connector automation, and higher agent budgets.</p>
-            <Link href="/pricing" className="mt-4 block rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white transition-colors">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-2xl">
+            <h2 className="text-2xl font-bold text-zinc-950">Upgrade to Pro</h2>
+            <p className="mt-2 text-sm text-zinc-600">Unlock advanced model routing, connector automation, and higher agent budgets.</p>
+            <Link href="/pricing" className="mt-4 block rounded-md bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white">
               Upgrade to Pro
             </Link>
             <button
@@ -343,18 +343,18 @@ export default function AgentsPage() {
                   window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OHC%20Expert%20Center', '_blank');
                 }
               }}
-              className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
+              className="mt-3 w-full rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900"
             >
               Share on X to get 7 Days Free
             </button>
-            <button type="button" onClick={() => setShowPaywall(false)} className="mt-3 w-full text-sm font-semibold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300">
+            <button type="button" onClick={() => setShowPaywall(false)} className="mt-3 w-full text-sm font-semibold text-zinc-500">
               Close
             </button>
           </div>
         </div>
       )}
-      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
-        <section className="space-y-6">
+      <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
+        <section className="space-y-5">
           {(panel === 'browse' || panel === 'teams') && (
             <CatalogPanel
               panel={panel}
@@ -448,110 +448,37 @@ function CatalogPanel({
   mostUsed: ExpertCatalogItem[];
   summon: (item: ExpertCatalogItem) => void;
 }) {
-  const featuredScenarios = [
-    {
-      title: "Content Creation",
-      desc: "Specialists in posts, copy matching, and social outreach.",
-      tag: "Marketing",
-      team: "Product Swarm",
-      members: ["Growth Strategist", "Customer Ambassador"]
-    },
-    {
-      title: "Investment Analysis",
-      desc: "Financial margins, Scenario audits, and growth margins.",
-      tag: "Finance",
-      team: "Revenue Swarm",
-      members: ["Finance Controller", "Revenue Strategist"]
-    },
-    {
-      title: "Legal & Compliance",
-      desc: "Legal review, safety checks, and regulatory policy gates.",
-      tag: "Legal",
-      team: "Corporate Counsel",
-      members: ["Operations Manager", "Policy Checker"]
-    },
-    {
-      title: "Operations & Supply",
-      desc: "Order dispatch, stock recovery, and team workspace handoffs.",
-      tag: "Ops",
-      team: "Operations Swarm",
-      members: ["Operations Manager", "Customer Ambassador"]
-    }
-  ];
-
   return (
     <>
-      {/* Featured Scenarios Carousel */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Featured Scenarios</h3>
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-350 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent snap-x">
-          {featuredScenarios.map((scenario) => (
-            <div
-              key={scenario.title}
-              className="min-w-[280px] md:min-w-[320px] snap-start p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-900/80 hover:shadow-md hover:border-teal-500/50 dark:hover:border-teal-500/50 transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400">
-                    {scenario.tag}
-                  </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">{scenario.team}</span>
-                </div>
-                <h4 className="text-base font-bold text-zinc-900 dark:text-white mb-1">{scenario.title}</h4>
-                <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed mb-4">{scenario.desc}</p>
-              </div>
-              <div className="flex items-center gap-1 mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <span className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-550 mr-1">Includes:</span>
-                {scenario.members.map((member) => (
-                  <span key={member} className="text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded-md truncate max-w-[90px]">
-                    {member}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Search Filter Panel */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+      <div className="rounded-lg border border-zinc-200 bg-white p-4">
         <SectionHeader
           title={panel === 'teams' ? 'Expert Teams' : 'Browse experts'}
           detail="Search by job, pick a single expert or a coordinated team, then summon it into the task composer."
         />
-        <div className="relative mt-3">
-          <input
-            aria-label="Search experts"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-11 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 pl-10 pr-4 text-sm outline-none focus:border-teal-550 focus:ring-2 focus:ring-teal-100 dark:focus:ring-teal-950/30 transition-all dark:text-white"
-            placeholder="Search experts, roles, skills, connectors..."
-          />
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-            🔍
-          </div>
-        </div>
+        <input
+          aria-label="Search experts"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="h-11 w-full rounded-md border border-zinc-300 px-3 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          placeholder="Search experts, roles, skills, connectors"
+        />
       </div>
-
-      {/* Most Used Scenarios */}
-      <div className="rounded-2xl border border-amber-205/65 dark:border-amber-900/35 bg-amber-50/40 dark:bg-amber-950/10 p-5">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">Most used</h3>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <h3 className="text-sm font-bold text-amber-950">Most used</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {mostUsed.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => summon(item)}
-              className="rounded-xl border border-amber-200 dark:border-amber-900/30 bg-white dark:bg-zinc-900 px-4 py-3 text-left hover:shadow-sm transition-all outline-none"
+              className="rounded-md border border-amber-200 bg-white px-3 py-2 text-left"
             >
-              <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{item.name}</div>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{item.usageCount} runs</div>
+              <div className="text-sm font-bold text-zinc-950">{item.name}</div>
+              <div className="text-xs text-zinc-500">{item.usageCount} runs</div>
             </button>
           ))}
         </div>
       </div>
-
-      {/* Grid List */}
       <div className="grid gap-4 md:grid-cols-2">
         {visibleExperts.map((item) => (
           <ExpertCard key={item.id} item={item} summon={summon} />
@@ -563,72 +490,67 @@ function CatalogPanel({
 function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: ExpertCatalogItem) => void }) {
   const [showDetail, setShowDetail] = useState(false);
   return (
-    <article data-testid={slugTestId(item.id)} className="rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5 shadow-sm hover:shadow-md transition-all duration-205 flex flex-col justify-between">
-      <div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950/40 text-sm font-extrabold text-teal-700 dark:text-teal-450">
-            {itemInitials(item.name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-normal">{item.name}</h3>
-              <StatusPill>{item.kind === 'team' ? 'Team' : 'Expert'}</StatusPill>
-            </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455">{item.category}</p>
-          </div>
+    <article data-testid={slugTestId(item.id)} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-teal-50 text-sm font-bold text-teal-800">
+          {itemInitials(item.name)}
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-zinc-650 dark:text-zinc-400">{item.summary}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {item.strengths.map((strength) => (
-            <span key={strength} className="rounded-lg bg-zinc-100 dark:bg-zinc-800/85 px-2.5 py-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              {strength}
-            </span>
-          ))}
-        </div>
-        {item.members && (
-          <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 p-3.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Team members</div>
-            <p className="mt-1 text-xs font-semibold text-zinc-700 dark:text-zinc-350">{item.members.join(', ')}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg font-bold text-zinc-950">{item.name}</h3>
+            <StatusPill>{item.kind === 'team' ? 'Team' : 'Expert'}</StatusPill>
           </div>
-        )}
-        <div className="mt-4">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-550">Use cases</div>
-          <ul className="mt-2 space-y-1.5 text-xs text-zinc-650 dark:text-zinc-400">
-            {item.examples.map((example) => (
-              <li key={example} className="flex items-start gap-1.5">
-                <span className="text-teal-650 dark:text-teal-500 select-none">•</span>
-                <span>{example}</span>
-              </li>
-            ))}
-          </ul>
+          <p className="text-xs font-semibold uppercase text-rose-700">{item.category}</p>
         </div>
-        {showDetail && (
-          <div className="mt-4 rounded-xl border border-teal-200/50 dark:border-teal-900/30 bg-teal-50/30 dark:bg-teal-950/20 p-4">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-400">Expert detail</div>
-            <p className="mt-1 text-xs text-teal-900 dark:text-teal-300">{item.name} uses {item.model} with {item.skills.join(', ')}.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => summon(item)} className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 text-xs font-bold transition-all">
-                Summon into chat
-              </button>
-              <button type="button" className="rounded-lg border border-teal-200 dark:border-teal-900/40 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-bold text-teal-800 dark:text-teal-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all">
-                Favorite
-              </button>
-            </div>
-          </div>
-        )}
       </div>
-      <div className="mt-5 grid grid-cols-2 gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
+      <p className="mt-3 text-sm leading-6 text-zinc-650">{item.summary}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {item.strengths.map((strength) => (
+          <span key={strength} className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700">
+            {strength}
+          </span>
+        ))}
+      </div>
+      {item.members && (
+        <div className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="text-xs font-bold uppercase text-zinc-500">Team members</div>
+          <p className="mt-1 text-sm text-zinc-700">{item.members.join(', ')}</p>
+        </div>
+      )}
+      <div className="mt-4">
+        <div className="text-xs font-bold uppercase text-zinc-500">Use cases</div>
+        <ul className="mt-2 space-y-1 text-sm text-zinc-700">
+          {item.examples.map((example) => (
+            <li key={example}>{example}</li>
+          ))}
+        </ul>
+      </div>
+      {showDetail && (
+        <div className="mt-4 rounded-md border border-teal-200 bg-teal-50 p-3">
+          <div className="text-xs font-bold uppercase text-teal-900">Expert detail</div>
+          <p className="mt-1 text-sm text-teal-900">{item.name} uses {item.model} with {item.skills.join(', ')}.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => summon(item)} className="rounded-md bg-teal-700 px-3 py-2 text-xs font-bold text-white">
+              Summon into chat
+            </button>
+            <button type="button" className="rounded-md border border-teal-200 bg-white px-3 py-2 text-xs font-bold text-teal-800">
+              Favorite
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setShowDetail((current) => !current)}
-          className="h-9 rounded-xl border border-zinc-350 dark:border-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors outline-none"
+          className="h-10 rounded-md border border-zinc-200 px-4 text-sm font-bold text-zinc-700"
         >
           Details
         </button>
         <button
           type="button"
           onClick={() => summon(item)}
-          className="h-9 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-xs font-bold text-white transition-colors outline-none shadow-sm"
+          className="h-10 rounded-md bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
         >
           Summon
         </button>
@@ -696,213 +618,161 @@ function ComposerPanel({
   startTask: () => void;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3 mb-4">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold text-zinc-900 dark:text-white">Task Composer</h2>
-          <p className="text-xs font-semibold text-teal-600 dark:text-teal-400">{summonMessage}</p>
+          <h2 className="text-lg font-bold text-zinc-950">Task Composer</h2>
+          <p className="text-sm font-semibold text-teal-700">{summonMessage}</p>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-md">
-          {selected.model}
-        </span>
+        <StatusPill>{selected.model}</StatusPill>
       </div>
-
-      {/* Unified Chat Input Frame (Screenshot 2 Style) */}
-      <div className="rounded-2xl border border-zinc-250 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 shadow-inner hover:border-zinc-350 dark:hover:border-zinc-650 transition-all flex flex-col gap-2">
-        <textarea
-          id="task-prompt"
-          aria-label="Task prompt"
-          value={taskPrompt}
-          onChange={(event) => setTaskPrompt(event.target.value)}
-          className="min-h-[100px] w-full resize-none bg-transparent text-sm leading-relaxed outline-none dark:text-white placeholder-zinc-400"
-          placeholder="What can I help you with today? Reference files with @, summon tools with /"
-        />
-
-        {/* Input Tool Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            {/* Mode Selector Option */}
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value as Mode)}
-              className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold cursor-pointer outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-            >
-              <option value="Ask">Ask</option>
-              <option value="Craft">Craft</option>
-              <option value="Plan">Plan</option>
-            </select>
-
-            {/* Model Selector Option */}
-            <label className="flex items-center">
-              <span className="sr-only">Model</span>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold cursor-pointer outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              >
-                {modelOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </label>
-
-            {/* Skills Status */}
-            <span className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 inline-flex items-center gap-1 font-medium select-none">
-              ⚙️ Skills ({enabledSkills.length})
-            </span>
-
-            {/* Permission Indicator */}
-            <span className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 inline-flex items-center gap-1 select-none">
-              🔒 Default Safe
-            </span>
-          </div>
-
-          {/* Action Icons right aligned */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              title="Add Attachments"
-              onClick={() => document.getElementById('attachments-ref')?.focus()}
-              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-            >
-              📎
-            </button>
-            <button
-              type="button"
-              title="Voice Input"
-              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-            >
-              🎙️
-            </button>
-            <button
-              type="button"
-              title="Refine Prompt"
-              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors animate-pulse"
-            >
-              ✨
-            </button>
-          </div>
-        </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {(['Ask', 'Craft', 'Plan'] as Mode[]).map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setMode(item)}
+            aria-pressed={mode === item}
+            className={`h-9 rounded-md border text-sm font-bold ${
+              mode === item ? 'border-rose-700 bg-rose-700 text-white' : 'border-zinc-200 text-zinc-700'
+            }`}
+          >
+            {item}
+          </button>
+        ))}
       </div>
-
       <div className="mt-4 grid gap-3">
+        <label className="text-sm font-bold text-zinc-700">
+          Model
+          <select
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+          >
+            {modelOptions.map((option) => (
+              <option key={option}>{option}</option>
+            ))}
+          </select>
+        </label>
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+          <label className="text-sm font-bold text-zinc-700">
             Custom provider
             <input
               aria-label="Custom provider"
               value={customProvider}
               onChange={(event) => setCustomProvider(event.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white"
-              placeholder="OpenAI-compatible URL"
+              className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+              placeholder="OpenAI-compatible endpoint"
             />
           </label>
-          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+          <label className="text-sm font-bold text-zinc-700">
             Work directory
             <input
               aria-label="Work directory"
               value={workDirectory}
               onChange={(event) => setWorkDirectory(event.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white"
+              className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
               placeholder="/workspace/current-task"
             />
           </label>
         </div>
-
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
-          Workspace Scoping
+        <div className="flex flex-wrap gap-2">
+          {['Local Ollama', 'Vision', 'Tool use', 'Long context', 'Parallel tasks'].map((capability) => (
+            <span key={capability} className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-700">
+              {capability}
+            </span>
+          ))}
+        </div>
+        <label className="text-sm font-bold text-zinc-700">
+          Workspace
           <select
             value={workspace}
             onChange={(event) => setWorkspace(event.target.value)}
-            className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white"
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
           >
             {workspaces.map((option) => (
-              <option key={option} className="dark:bg-zinc-900">{option}</option>
+              <option key={option}>{option}</option>
             ))}
           </select>
         </label>
-
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
-          Context references (@ tags)
+        <label htmlFor="task-prompt" className="text-sm font-bold text-zinc-700">
+          Task prompt
+        </label>
+        <textarea
+          id="task-prompt"
+          aria-label="Task prompt"
+          value={taskPrompt}
+          onChange={(event) => setTaskPrompt(event.target.value)}
+          className="min-h-[120px] resize-none rounded-md border border-zinc-300 p-3 text-sm leading-6 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+        />
+        <label className="text-sm font-bold text-zinc-700">
+          Context references
           <input
             aria-label="Context references"
             value={contextReferences}
             onChange={(event) => setContextReferences(event.target.value)}
-            className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white"
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
             placeholder="@orders @inventory @customer-notes"
           />
         </label>
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+        <label className="text-sm font-bold text-zinc-700">
           Attachments
           <input
-            id="attachments-ref"
             aria-label="Attachments"
             value={attachments}
             onChange={(event) => setAttachments(event.target.value)}
-            className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white"
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
             placeholder="Drop files, screenshots, PDFs, CSVs"
           />
         </label>
         <div className="grid grid-cols-3 gap-2">
-          <button type="button" className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
-            Screenshot
-          </button>
-          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+          <button type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-bold text-zinc-700">Screenshot</button>
+          <label className="text-sm font-bold text-zinc-700">
             Output format
             <select
               aria-label="Output format"
               value={outputFormat}
               onChange={(event) => setOutputFormat(event.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-2 text-xs outline-none dark:text-white"
+              className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm"
             >
-              <option className="dark:bg-zinc-900">Brief</option>
-              <option className="dark:bg-zinc-900">Table</option>
-              <option className="dark:bg-zinc-900">Document</option>
-              <option className="dark:bg-zinc-900">Spreadsheet</option>
+              <option>Brief</option>
+              <option>Table</option>
+              <option>Document</option>
+              <option>Spreadsheet</option>
             </select>
           </label>
-          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+          <label className="text-sm font-bold text-zinc-700">
             Task constraints
             <input
               aria-label="Task constraints"
               value={taskConstraints}
               onChange={(event) => setTaskConstraints(event.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-2 text-xs outline-none dark:text-white"
-              placeholder="budget, tone"
+              className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-2 text-sm"
+              placeholder="budget, tone, deadline"
             />
           </label>
         </div>
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {['Local Ollama', 'Vision', 'Tool use', 'Long context', 'Parallel tasks'].map((capability) => (
-            <span key={capability} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-850 px-2 py-0.5 text-[10px] font-bold text-zinc-650 dark:text-zinc-300">
-              {capability}
-            </span>
-          ))}
-        </div>
       </div>
-
-      <div className="mt-4 grid gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-4 text-xs">
+      <div className="mt-4 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
         <div>
-          <div className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[10px]">Active Skills</div>
-          <p className="mt-1 font-semibold text-zinc-800 dark:text-zinc-200">{enabledSkills.join(', ') || 'None selected'}</p>
+          <div className="text-xs font-bold uppercase text-zinc-500">Skills</div>
+          <p className="mt-1 text-sm text-zinc-700">{enabledSkills.join(', ') || 'None selected'}</p>
         </div>
         <div>
-          <div className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[10px]">Active Connectors</div>
-          <p className="mt-1 font-semibold text-zinc-800 dark:text-zinc-200">{enabledConnectors.join(', ') || 'None selected'}</p>
+          <div className="text-xs font-bold uppercase text-zinc-500">Connectors</div>
+          <p className="mt-1 text-sm text-zinc-700">{enabledConnectors.join(', ') || 'None selected'}</p>
         </div>
-        <p className="text-[10px] text-zinc-450 dark:text-zinc-500 leading-normal pt-2 border-t border-zinc-100 dark:border-zinc-850">
-          ⚠️ Cost warning: Craft and Plan modes can invoke automatic tools and consume more agent budget.
+        <p className="text-xs text-zinc-500">
+          Cost warning: Craft and Plan can call tools and may consume more agent actions. High-risk actions still route to approval.
         </p>
       </div>
-
-      {runError && <p className="mt-3 text-xs font-bold text-red-650 dark:text-red-400">{runError}</p>}
-      {runMessage && <p className="mt-3 text-xs font-bold text-emerald-600 dark:text-emerald-400">{runMessage}</p>}
-
+      {runError && <p className="mt-3 text-sm font-semibold text-red-700">{runError}</p>}
+      {runMessage && <p className="mt-3 text-sm font-semibold text-emerald-700">{runMessage}</p>}
       <button
         type="button"
         onClick={startTask}
         disabled={running || !taskPrompt.trim()}
-        className="mt-4 h-11 w-full rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500 shadow-sm"
+        className="mt-4 h-11 w-full rounded-md bg-zinc-950 px-4 text-sm font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
       >
         {running ? 'Starting...' : 'Start task'}
       </button>
@@ -993,16 +863,16 @@ function SkillsPanel({
   setEnabledSkills: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Skill Market" detail="Install, disable, search, upload, or create natural-language skills for experts." />
       <div className="mb-4 flex flex-wrap gap-2">
-        <button className="rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-bold transition-colors" type="button">Find skill</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Search installed skills</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Upload local skill</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Create skill from prompt</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Disable skill</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Uninstall skill</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors" type="button">Bulk uninstall</button>
+        <button className="rounded-md bg-teal-700 px-3 py-2 text-sm font-bold text-white" type="button">Find skill</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Search installed skills</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Upload local skill</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Create skill from prompt</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Disable skill</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Uninstall skill</button>
+        <button className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700" type="button">Bulk uninstall</button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {skillMarket.map((skill) => {
@@ -1017,19 +887,13 @@ function SkillsPanel({
                   enabled ? current.filter((name) => name !== skill.name) : [...current, skill.name],
                 )
               }
-              className={`rounded-2xl border p-5 text-left transition-all hover:shadow-sm ${
-                enabled
-                  ? 'border-teal-500/80 bg-teal-50/20 dark:bg-teal-950/20'
-                  : 'border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80'
-              }`}
+              className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-left"
             >
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{skill.name}</h3>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${enabled ? 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400'}`}>
-                  {enabled ? 'Enabled' : skill.status}
-                </span>
+                <h3 className="font-bold text-zinc-950">{skill.name}</h3>
+                <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-600">{enabled ? 'Enabled' : skill.status}</span>
               </div>
-              <p className="mt-2 text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{skill.description}</p>
+              <p className="mt-2 text-sm text-zinc-600">{skill.description}</p>
             </button>
           );
         })}
@@ -1045,13 +909,13 @@ function ConnectorsPanel({
   setEnabledConnectors: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Connector Center" detail="Connect external data and service actions for expert tasks." />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         {['Create custom connector', 'MCP endpoint', 'Notification channel'].map((label) => (
-          <label key={label} className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+          <label key={label} className="text-sm font-bold text-zinc-700">
             {label}
-            <input className="mt-1 h-9 w-full rounded-xl border border-zinc-350 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white" placeholder={label} />
+            <input className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" placeholder={label} />
           </label>
         ))}
       </div>
@@ -1068,19 +932,15 @@ function ConnectorsPanel({
                   enabled ? current.filter((name) => name !== connector.name) : [...current, connector.name],
                 )
               }
-              className={`rounded-2xl border p-5 text-left transition-all hover:shadow-sm ${
-                enabled
-                  ? 'border-teal-500/80 bg-teal-50/20 dark:bg-teal-950/20'
-                  : 'border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80'
-              }`}
+              className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-left"
             >
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{connector.name}</h3>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${enabled ? 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400'}`}>
+                <h3 className="font-bold text-zinc-950">{connector.name}</h3>
+                <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-600">
                   {enabled ? 'Selected' : connector.status}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{connector.description}</p>
+              <p className="mt-2 text-sm text-zinc-600">{connector.description}</p>
             </button>
           );
         })}
@@ -1089,72 +949,31 @@ function ConnectorsPanel({
   );
 }
 function AutomationsPanel() {
-  const scheduledTasks = [
-    { name: "Weekly business review", rule: "Every Monday 9:00", nextRun: "Starts in 18 hours", status: "Active" },
-    { name: "Daily inbox risk scan", rule: "Every 1 Hour", nextRun: "Paused", status: "Paused" },
-    { name: "Low inventory recovery", rule: "Every Day 20:00", nextRun: "Paused", status: "Paused" }
-  ];
-
-  const completedHistory = [
-    { name: "Weekly stats execution", status: "Success", time: "5 hours ago" },
-    { name: "Weekly archive extraction", status: "Success", time: "1 day ago" },
-    { name: "Daily inbox risk scan", status: "Success", time: "1 day ago" }
-  ];
-
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Scheduled Tasks" detail="Configure recurring expert runs with prompt, workspace, model, skills, connectors, and notifications." />
-
       <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
+        <label className="text-sm font-bold text-zinc-700">
           Schedule rule
-          <input className="mt-1 h-9 w-full rounded-xl border border-zinc-350 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white" placeholder="Every Monday 9:00" />
+          <input className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" placeholder="Every Monday 9:00" />
         </label>
-        <div className="rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-3 text-xs font-bold text-zinc-700 dark:text-zinc-300">Execution history</div>
-        <div className="rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-3 text-xs font-bold text-zinc-700 dark:text-zinc-300">Push notification</div>
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm font-bold text-zinc-700">Execution history</div>
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm font-bold text-zinc-700">Push notification</div>
       </div>
-
-      <div className="flex items-center gap-2 mb-6">
-        <button className="rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-bold transition-colors">+ Add New</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">From Template</button>
+      <div className="grid gap-3 md:grid-cols-2">
+        {automations.map((automation, index) => (
+          <div key={automation} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-zinc-950">{automation}</h3>
+              <StatusPill>{index === 0 ? 'Active' : 'Template'}</StatusPill>
+            </div>
+            <p className="mt-2 text-sm text-zinc-600">Runs in the selected workspace with push notifications and execution history.</p>
+          </div>
+        ))}
       </div>
-
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3">Scheduled Runs</h3>
-          <div className="space-y-3">
-            {scheduledTasks.map((task) => (
-              <div key={task.name} className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80">
-                <div className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${task.status === 'Active' ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-650'}`} />
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white leading-normal">{task.name}</h4>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{task.rule}</p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">{task.nextRun}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-550 mb-3">Completed Executions</h3>
-          <div className="space-y-2">
-            {completedHistory.map((history, idx) => (
-              <div key={idx} className="flex items-center justify-between py-2.5 border-b border-zinc-100 dark:border-zinc-850 last:border-b-0 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{history.name}</span>
-                </div>
-                <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400">
-                  <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md text-[10px] font-bold">Success</span>
-                  <span>{history.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="mt-4 rounded-md border border-teal-200 bg-teal-50 p-3">
+        <div className="font-bold text-teal-950">Approve & Post</div>
+        <p className="mt-1 text-sm text-teal-800">Social drafts generated by automations still wait for one-tap approval before publishing.</p>
       </div>
     </section>
   );
@@ -1193,29 +1012,29 @@ function MemoryPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
-      <SectionHeader title="Consolidated Memory" detail="Review and override what AI agents remember about your business." />
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+      <SectionHeader title="Consolidated Memory" detail="Review and explicitly override what AI agents remember about your business." />
 
       {loading ? (
-        <p className="text-xs text-zinc-550 dark:text-zinc-400">Loading memories...</p>
+        <p className="text-sm text-zinc-500">Loading memories...</p>
       ) : items.length === 0 ? (
-        <p className="text-xs text-zinc-555 dark:text-zinc-400">No consolidated memories found.</p>
+        <p className="text-sm text-zinc-500">No consolidated memories found.</p>
       ) : (
         <div className="space-y-3">
           {items.map((memory: any) => (
-            <div key={memory.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4 text-xs flex flex-col gap-2">
+            <div key={memory.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 flex flex-col gap-2">
               <div className="flex justify-between items-start">
-                <div className="font-bold text-zinc-900 dark:text-white">{memory.source_type}</div>
+                <div className="font-semibold text-zinc-900">{memory.source_type}</div>
                 <button
                   type="button"
                   onClick={() => toggleOverride(memory.id, memory.owner_override)}
-                  className={`text-[10px] px-2 py-1 rounded-lg font-bold transition-colors ${memory.owner_override ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-350 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                  className={`text-xs px-2 py-1 rounded-md font-bold ${memory.owner_override ? 'bg-teal-700 text-white' : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'}`}
                 >
                   {memory.owner_override ? 'Owner Override: ON' : 'Owner Override: OFF'}
                 </button>
               </div>
-              <p className="whitespace-pre-wrap text-zinc-650 dark:text-zinc-405 leading-relaxed">{memory.content}</p>
-              <div className="text-[10px] text-zinc-450 dark:text-zinc-500 flex gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-850">
+              <p className="whitespace-pre-wrap">{memory.content}</p>
+              <div className="text-xs text-zinc-500 flex gap-4">
                 <span>References: {memory.reference_count}</span>
                 <span>Reliability: {memory.reliability_score}</span>
               </div>
@@ -1228,18 +1047,18 @@ function MemoryPanel() {
 }
 function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
-      <SectionHeader title="Explore Templates" detail="Curated templates prefill prompt, expert, skills, and connector choices." />
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+      <SectionHeader title="Explore Templates" detail="Curated examples prefill prompt, expert, skills, and connector choices." />
       <div className="grid gap-3 md:grid-cols-2">
         {exploreTemplates.map((template, index) => (
           <button
             key={template}
             type="button"
             onClick={() => summon(index % 2 === 0 ? expertTeams[0] : experts[0])}
-            className="rounded-2xl border border-zinc-200/85 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 hover:shadow-md hover:border-teal-500/50 p-5 text-left transition-all outline-none"
+            className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-left"
           >
-            <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{template}</h3>
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Make my version with one click.</p>
+            <h3 className="font-bold text-zinc-950">{template}</h3>
+            <p className="mt-2 text-sm text-zinc-600">Make my version with one click.</p>
           </button>
         ))}
       </div>
@@ -1248,16 +1067,16 @@ function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void })
 }
 function RemotePanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Remote Assistant Control" detail="Summon experts and receive notifications from business chat tools." />
-      <div className="mb-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 p-3 text-xs font-bold text-teal-700 dark:text-teal-400 font-mono">
+      <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm font-bold text-zinc-800">
         /summon Growth Strategist
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         {remoteAssistants.map((name) => (
-          <div key={name} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4 text-center">
-            <div className="font-bold text-zinc-900 dark:text-white text-xs">{name}</div>
-            <div className="mt-1 text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">Available</div>
+          <div key={name} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div className="font-bold text-zinc-950">{name}</div>
+            <div className="mt-1 text-sm text-zinc-600">Available</div>
           </div>
         ))}
       </div>
@@ -1266,11 +1085,11 @@ function RemotePanel() {
 }
 function DataPanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Data Management" detail="Manage shared files, task archives, generated outputs, and workspace history." />
       <div className="grid gap-3 md:grid-cols-3">
         {['Shared files', 'Archived tasks', 'Generated outputs', 'Workspace history', 'Download center', 'Unshare queue'].map((item) => (
-          <div key={item} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4 font-bold text-zinc-900 dark:text-white text-xs text-center cursor-pointer hover:border-teal-500/50 transition-all">
+          <div key={item} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 font-bold text-zinc-950">
             {item}
           </div>
         ))}
@@ -1280,17 +1099,17 @@ function DataPanel() {
 }
 function OperationsPanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
       <div className="grid gap-3 md:grid-cols-2">
         {departments.map((department) => (
-          <div key={department.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</h3>
+          <div key={department.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-bold text-zinc-950">{department.name}</h3>
               <StatusPill>{department.status}</StatusPill>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455 mb-2">{department.role}</p>
-            <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{department.description}</p>
+            <p className="mt-1 text-xs font-bold uppercase text-rose-700">{department.role}</p>
+            <p className="mt-2 text-sm text-zinc-600">{department.description}</p>
           </div>
         ))}
       </div>
@@ -1350,7 +1169,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
       </div>
       {workflows.length === 0 ? (
-        <p className="rounded-[16px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
+        <p className="rounded-[8px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
           {workflows.map((workflow) => (
@@ -1371,16 +1190,16 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
 }
 function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Activity Feed" detail="Realtime expert and department activity." />
       {feed.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-4 text-xs text-zinc-500 dark:text-zinc-400">No activity yet.</p>
+        <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No activity yet.</p>
       ) : (
         <div className="space-y-3">
           {feed.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-4">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">{item.department}</div>
-              <p className="mt-2 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{item.description}</p>
+            <div key={item.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase text-teal-700">{item.department}</div>
+              <p className="mt-2 text-sm text-zinc-700">{item.description}</p>
             </div>
           ))}
         </div>
@@ -1396,31 +1215,31 @@ function ApprovalsPanel({
   decideApproval: (id: string, approved: boolean) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Needs Approval" detail="Review high-risk drafts before experts execute or send." />
       {approvals.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-5 text-center">
-          <h3 className="font-bold text-zinc-900 dark:text-white text-sm">All Caught Up!</h3>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Your AI team has no pending approvals.</p>
+        <div className="rounded-md border border-dashed border-zinc-300 p-4">
+          <h3 className="font-bold text-zinc-950">All Caught Up!</h3>
+          <p className="mt-1 text-sm text-zinc-600">Your AI team has no pending approvals.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {approvals.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455">{item.department}</div>
-              <p className="mt-2 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{item.description}</p>
+            <div key={item.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase text-rose-700">{item.department}</div>
+              <p className="mt-2 text-sm text-zinc-700">{item.description}</p>
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
                   onClick={() => decideApproval(item.id, false)}
-                  className="h-9 flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="h-10 flex-1 rounded-md border border-zinc-300 bg-white text-sm font-bold text-zinc-700"
                 >
                   Edit Draft
                 </button>
                 <button
                   type="button"
                   onClick={() => decideApproval(item.id, true)}
-                  className="h-9 flex-1 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-xs font-bold text-white transition-colors"
+                  className="h-10 flex-1 rounded-md bg-teal-700 text-sm font-bold text-white"
                 >
                   Approve & Send
                 </button>

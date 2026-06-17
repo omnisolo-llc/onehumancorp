@@ -96,7 +96,7 @@ pub struct MailboxRequest {
     pub message: MeshMessage,
 }
 
-pub fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
+fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
     let spiffe_id = headers.get("x-spiffe-id")
         .and_then(|val| val.to_str().ok())
         .unwrap_or("");

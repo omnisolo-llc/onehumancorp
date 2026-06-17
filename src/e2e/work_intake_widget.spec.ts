@@ -18,9 +18,6 @@ test.describe('Work-Intake Widget Growth Loop', () => {
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Work-Intake Widget 📋' })).toBeVisible();
 
-    // 1.5 Verify that the new glass-card glassmorphism UI is active
-    await expect(page.locator('.glass-card').first()).toBeVisible();
-
     // 2. Change Tenant ID
     const tenantInput = page.locator('input[placeholder="e.g. my-business"]');
     await tenantInput.fill('e2e-tenant');

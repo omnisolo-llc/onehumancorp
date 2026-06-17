@@ -47,8 +47,8 @@ use crate::proto::agent_service::{
     RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
 };
 use crate::tools::{
-    sendmessage::Mailbox, task::TaskStore, SharedMailbox, SharedTaskStore,
-    Tool,
+    sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
+    SharedTodos, Tool,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -739,6 +739,7 @@ impl AgentServiceImpl {
             return Vec::new();
         }
 
+        let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
@@ -746,6 +747,7 @@ impl AgentServiceImpl {
             self.llm_override.clone(),
             None, // Pass None for LLM in tools to avoid circular dependencies for now
             None,
+            todos,
             task_store,
             mailbox,
             working_dir,

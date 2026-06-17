@@ -388,7 +388,7 @@
 
         // Try load from API
         try {
-            const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
+            const response = await fetch(`/api/v1/link-in-bio/${tenant}`);
             if (response.ok) {
                 currentState = await response.json();
 
@@ -423,7 +423,7 @@
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
                 try {
-                    await fetch('/api/v1/growth/link-in-bio', {
+                    await fetch('/api/v1/link-in-bio', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

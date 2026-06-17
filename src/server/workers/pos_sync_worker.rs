@@ -197,7 +197,7 @@ impl PosSyncWorker {
                         let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
                             .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(qty).bind(total_amount).execute(&mut *tx).await;
 
-                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
+                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
                             Box::new(crate::orchestration::locks::StandaloneLock::new())
                         } else {
                             let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());

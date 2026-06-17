@@ -95,7 +95,7 @@ export default function KDSPage() {
 
   return (
     <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] mx-auto h-[812px] bg-gradient-to-br from-white/40 to-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] h-[812px] bg-gradient-to-br from-white/40 to-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] shadow-sm border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
@@ -113,9 +113,8 @@ export default function KDSPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 flex flex-col md:flex-row gap-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-20">
 
-          <div className="flex-1">
           <h2 className="text-lg font-bold text-gray-800 mb-3">{texts.orders}</h2>
           <div className="flex flex-col gap-4 mb-6">
             {orders.map(order => (
@@ -133,11 +132,6 @@ export default function KDSPage() {
                 <ul className="mb-4 text-gray-700 font-medium">
                   {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
                 </ul>
-                {order.translated_notes && (
-                  <div className="mb-4 p-2 bg-blue-50 text-blue-800 text-sm rounded-lg border border-blue-100">
-                    <strong>{language === 'ar' ? 'ملاحظات:' : 'Notes:'}</strong> {order.translated_notes}
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-2">
                    {order.status === 'Received' && (
                       <button
@@ -169,25 +163,21 @@ export default function KDSPage() {
               </div>
             ))}
           </div>
-          </div>
 
-          <div className="flex-1 md:border-l md:pl-6 border-gray-200">
           <h2 className="text-lg font-bold text-gray-800 mb-3">{texts.inventory}</h2>
           <div className="flex flex-col gap-3">
              {inventory.map(item => (
                 <div key={item.id} className="app-card backdrop-blur-[30px] rounded-xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
-                   <span className="font-bold text-gray-800 text-lg">{language === 'en' ? item.name_en : item.name_ar}</span>
+                   <span className="font-bold text-gray-800">{language === 'en' ? item.name_en : item.name_ar}</span>
                    <button
-                     id={`sold-out-toggle-${item.id}`}
                      onClick={() => handleToggleSoldOut(item.id, !item.is_sold_out)}
-                     className={`px-6 py-4 rounded-xl font-bold text-lg shadow active:scale-95 transition min-w-[120px] ${item.is_sold_out ? 'bg-red-500 text-white' : 'bg-green-100 text-green-700'}`}
+                     className={`px-6 py-3 rounded-lg font-bold shadow active:scale-95 transition ${item.is_sold_out ? 'bg-red-500 text-white' : 'bg-green-100 text-green-700'}`}
                      data-testid={`toggle-soldout-${item.id}`}
                    >
                      {item.is_sold_out ? texts.soldOut : texts.available}
                    </button>
                 </div>
              ))}
-          </div>
           </div>
 
         </div>

@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Extended Documentation & Help Features', () => {
 
   test('should display empty state when Help Center search yields no results', async ({ page }) => {
-    await page.goto('/help.html');
+    await page.goto('/help');
 
     const searchInput = page.getByPlaceholder('Search for help articles and videos...');
     await searchInput.fill('XYZNonExistent123');
@@ -30,7 +30,7 @@ test.describe('Extended Documentation & Help Features', () => {
   });
 
   test('should display duration badges on video tutorials', async ({ page }) => {
-    await page.goto('/help.html');
+    await page.goto('/help/videos');
 
     // Wait for the video list to load
     await expect(page.getByRole('heading', { name: 'Video Guides', exact: true })).toBeVisible();
@@ -40,7 +40,7 @@ test.describe('Extended Documentation & Help Features', () => {
   });
 
   test('should display external link to full technical changelog in release notes', async ({ page }) => {
-    await page.goto('/changelog.html');
+    await page.goto('/changelog');
 
     await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
 
@@ -50,7 +50,7 @@ test.describe('Extended Documentation & Help Features', () => {
   });
 
   test('should load Swagger UI in API Documentation page', async ({ page }) => {
-    await page.goto('/api-docs.html');
+    await page.goto('/api-docs');
 
     // Check for advanced badge
     await expect(page.getByText('Advanced:')).toBeVisible();

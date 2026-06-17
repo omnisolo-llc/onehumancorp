@@ -12,6 +12,7 @@ rust_library(
         "dynamic.rs",
         "engine.rs",
         "mod.rs",
+        "payment_routing.rs",
         "prompt_caching.rs",
         "deduplication.rs",
         "rate_limit.rs",

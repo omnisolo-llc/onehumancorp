@@ -345,7 +345,6 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
-        .route("/seasonal-promo/generate", post(handle_promo_generate))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
@@ -353,8 +352,6 @@ where
 .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
-        .route("/link-in-bio", post(handle_post_link_in_bio))
-        .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -1156,11 +1153,10 @@ pub struct CustomerReferralEmbedQuery {
     pub give: Option<String>,
     pub get: Option<String>,
     pub theme: Option<String>,
-    pub hide_branding: Option<String>,
 }
 
 async fn handle_customer_referral_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<CustomerReferralEmbedQuery>,
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
@@ -1177,24 +1173,6 @@ async fn handle_customer_referral_embed(
     let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
     let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
     let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
-    let mut has_pro = false;
-    if query.hide_branding.as_deref() == Some("true") {
-        // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
-            .bind(&tenant)
-            .fetch_optional(&state.pool)
-            .await;
-
-        if let Ok(Some(true)) = is_pro_res {
-            has_pro = true;
-        }
-    }
-
-    let branding = if has_pro {
-        "".to_string()
-    } else {
-        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
-    };
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -1261,7 +1239,7 @@ async fn handle_customer_referral_embed(
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
         <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
-        {branding}
+        <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>
     </div>
 </body>
 </html>"#
@@ -1665,25 +1643,22 @@ async fn handle_get_milestone_card(
             .into_response();
     }
 
-    let svg = format!(r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.1"/>
-    </filter>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
       <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#grad1)" rx="24" ry="24" filter="url(#drop-shadow)" />
+  <rect width="1200" height="630" fill="url(#grad1)" />
 
-  <text x="600" y="200" font-family="Outfit, sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="Outfit, sans-serif" font-size="80" font-weight="700" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="Outfit, sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+  <text x="600" y="200" font-family="sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
+  <text x="600" y="350" font-family="sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#ffffff">{title}</text>
+  <text x="600" y="450" font-family="sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
 
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
-  <text x="600" y="560" font-family="Outfit, sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
+  <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
 </svg>"##,
     grad_start = grad_start,
@@ -2631,7 +2606,7 @@ mod cloud_bridge_tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
-        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None, hide_branding: None };
+        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None };
         let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
 
         let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
@@ -2803,10 +2778,6 @@ pub async fn handle_embed_widget(
   <p>Workspace: {}</p>
   <button id="start-btn" data-type="{}">Start {}</button>
 
-  <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
-  </div>
-
   <script>
     document.getElementById('start-btn').addEventListener('click', function() {{
       alert('Demand captured for ' + this.getAttribute('data-type'));
@@ -2814,7 +2785,7 @@ pub async fn handle_embed_widget(
   </script>
 </body>
 </html>"#,
-        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type, escaped_tenant
+        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
 }
@@ -2989,131 +2960,4 @@ async fn handle_simulate_referral_checkout(
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
     }))
-}
-
-
-#[derive(Debug, serde::Deserialize)]
-pub struct GeneratePromoRequest {
-    pub occasion: Option<String>,
-    pub discount: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct GeneratePromoResponse {
-    pub content: String,
-}
-
-pub async fn handle_promo_generate(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
-    axum::Json(req): axum::Json<GeneratePromoRequest>,
-) -> impl axum::response::IntoResponse {
-    let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
-    let occasion = if occasion_raw.trim().is_empty() { "Winter Wonderland".to_string() } else { occasion_raw };
-
-    let discount_raw = req.discount.unwrap_or_else(|| "25".to_string());
-    let discount = if discount_raw.trim().is_empty() { "25".to_string() } else { discount_raw };
-
-    let mut generated = format!(
-        "{} Special!\n\n{}% OFF\n\nUse code: WINTERW25",
-        occasion, discount
-    );
-
-    if !generated.contains("Powered by OHC") {
-        generated.push_str("\n\n⚡ Powered by OHC");
-    }
-
-    axum::Json(GeneratePromoResponse {
-        content: generated,
-    })
-}
-
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct LinkItem {
-    pub id: String,
-    pub title: String,
-    pub url: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct LinkInBioConfig {
-    pub store_name: String,
-    pub bio: String,
-    pub theme: String,
-    pub links: Vec<LinkItem>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct SetLinkInBioConfigReq {
-    pub store_name: String,
-    pub bio: String,
-    pub theme: String,
-    pub links: Vec<LinkItem>,
-}
-
-pub async fn handle_get_link_in_bio(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Path(tenant): axum::extract::Path<String>
-) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant).execute(&mut *tx).await;
-
-    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
-        .bind(&tenant)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let config = if let Some(val) = value {
-        serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
-                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
-            ]
-        })
-    } else {
-        LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
-                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
-            ]
-        }
-    };
-
-    Ok(axum::Json(config))
-}
-
-pub async fn handle_post_link_in_bio(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-    axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
-) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
-
-    let config = LinkInBioConfig {
-        store_name: req.store_name,
-        bio: req.bio,
-        theme: req.theme,
-        links: req.links,
-    };
-
-    let val = serde_json::to_string(&config).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(&tenant_id)
-        .bind(&val)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(axum::http::StatusCode::OK)
 }

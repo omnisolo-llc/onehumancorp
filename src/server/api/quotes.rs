@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State, Query},
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post, put},
@@ -27,11 +27,6 @@ where
 pub struct QuoteResponse {
     pub quote: Quote,
     pub line_items: Vec<QuoteLineItem>,
-}
-
-#[derive(Deserialize)]
-pub struct QuoteQuery {
-    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -196,23 +191,17 @@ async fn update_quote(
 
 async fn get_quote(
     State(pool): State<PgPool>,
-    Query(query): Query<QuoteQuery>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let quote_id = match Uuid::parse_str(&id) {
         Ok(uid) => uid,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let (quote_res, items_res) = tokio::join!(
-        sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
-            .bind(quote_id)
-            .fetch_optional(&pool),
-        sqlx::query_as::<_, QuoteLineItem>("SELECT * FROM quote_line_items WHERE quote_id = $1")
-            .bind(quote_id)
-            .fetch_all(&pool)
-    );
+    let quote_res = sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&pool)
+        .await;
 
     let quote = match quote_res {
         Ok(Some(q)) => q,
@@ -223,7 +212,12 @@ async fn get_quote(
         }
     };
 
-    let mut line_items = match items_res {
+    let items_res = sqlx::query_as::<_, QuoteLineItem>("SELECT * FROM quote_line_items WHERE quote_id = $1")
+        .bind(quote_id)
+        .fetch_all(&pool)
+        .await;
+
+    let line_items = match items_res {
         Ok(items) => items,
         Err(e) => {
             tracing::error!("Failed to fetch quote line items: {}", e);
@@ -231,68 +225,7 @@ async fn get_quote(
         }
     };
 
-    if mobile_optimized {
-        let mut q = quote;
-        q.created_at = None;
-        q.updated_at = None;
-        q.valid_until = None;
-
-        for item in &mut line_items {
-            item.created_at = None;
-            item.updated_at = None;
-        }
-
-        (StatusCode::OK, Json(QuoteResponse { quote: q, line_items })).into_response()
-    } else {
-        (StatusCode::OK, Json(QuoteResponse { quote, line_items })).into_response()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domain::repository::models::{Quote, QuoteLineItem};
-
-    #[test]
-    fn test_quote_mobile_optimization() {
-        let quote = Quote {
-            id: "q1".to_string(),
-            tenant_id: "t1".to_string(),
-            customer_id: "c1".to_string(),
-            status: "DRAFT".to_string(),
-            valid_until: Some(chrono::Utc::now()),
-            created_at: Some(chrono::Utc::now()),
-            updated_at: Some(chrono::Utc::now()),
-        };
-
-        let mut line_items = vec![QuoteLineItem {
-            id: "li1".to_string(),
-            quote_id: "q1".to_string(),
-            description: "item".to_string(),
-            unit_price_cents: 100,
-            quantity: 1,
-            is_optional: false,
-            created_at: Some(chrono::Utc::now()),
-            updated_at: Some(chrono::Utc::now()),
-        }];
-
-        // Simulate mobile_optimized = true logic
-        let mut q = quote;
-        q.created_at = None;
-        q.updated_at = None;
-        q.valid_until = None;
-
-        for item in &mut line_items {
-            item.created_at = None;
-            item.updated_at = None;
-        }
-
-        assert!(q.created_at.is_none());
-        assert!(q.updated_at.is_none());
-        assert!(q.valid_until.is_none());
-        assert!(line_items[0].created_at.is_none());
-        assert!(line_items[0].updated_at.is_none());
-    }
+    (StatusCode::OK, Json(QuoteResponse { quote, line_items })).into_response()
 }
 
 async fn accept_quote(

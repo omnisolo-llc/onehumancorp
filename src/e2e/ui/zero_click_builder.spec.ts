@@ -1,45 +1,26 @@
 import { test, expect } from '@playwright/test';
-import * as crypto from 'crypto';
 
 test.describe('Zero-Click Business Generator CUJ', () => {
-
-  test.beforeEach(async ({ page }) => {
-    // Navigate using the real server routing instead of mocks
-    const tenantId = `tenant-${crypto.randomBytes(4).toString('hex')}`;
-    await page.addInitScript((id) => {
-      localStorage.setItem('tenant_id', id);
-      localStorage.setItem('user_id', id);
-    }, tenantId);
-
-    await page.setViewportSize({ width: 375, height: 812 });
-  });
-
   test('User can generate a business with a single prompt', async ({ page }) => {
+    // Navigate to the Zero-Click Builder page
+    await page.goto('/zero-click-builder');
 
-    // Navigate to the real setup page
-    await page.goto('/api/ui/setup.html');
+    // Expect the title to be present
+    await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
-    // Verify Initial Screen
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    // Fill the prompt
+    await page.fill('textarea#prompt', "I am a home baker in Austin selling custom vegan cakes and cupcakes.");
 
-    // 1. Click "Instant Build"
-    await page.getByRole('button', { name: 'Instant Build' }).click();
+    // Submit the form
+    await page.click('button[type="submit"]:has-text("Generate My Business")');
 
-    // 2. Verify we are in the instant step
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    // Wait for generation to complete and the success message to appear
+    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 15000 });
 
-    // 3. Fill in the description
-    const instantInput = page.locator('#instant-bio');
-    await expect(instantInput).toBeVisible();
-    await instantInput.fill('I am a home baker in Austin selling custom vegan cakes and cupcakes.');
-
-    const generateBtn = page.getByTestId('generate-storefront-btn');
-    await expect(generateBtn).toBeEnabled();
-
-    // 4. Click generate
-    await generateBtn.click();
-
-    // 5. Wait for generation to complete and the success message to appear
-    await page.waitForURL('**/success.html', { timeout: 30000 });
+    // Verify the generated data is shown
+    await expect(page.getByText('Mock Business')).toBeVisible();
+    await expect(page.getByText('Products Generated')).toBeVisible();
+    // The generated product count may vary between 3, 4, or 5 since process_intake is LLM-driven.
+    await expect(page.locator('dt:has-text("Products Generated") + dd')).not.toBeEmpty();
   });
 });

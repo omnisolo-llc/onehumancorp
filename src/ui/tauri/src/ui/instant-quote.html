@@ -342,6 +342,8 @@
                     poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
                 }
 
+                // For demonstration, we'll mock the fetch if it fails (offline mode)
+                // or if we're running without backend.
                 let rules = [];
                 try {
                     const res = await fetch(`/api/v1/quoting/pricing-rules`, {
@@ -480,7 +482,7 @@
                         'x-user-id': 'customer'
                     },
                     body: JSON.stringify({
-                        customer_id: '00000000-0000-0000-0000-000000000000',
+                        customer_id: '00000000-0000-0000-0000-000000000000', // Mock UUID
                         status: 'Draft',
                         line_items: lineItems,
                         notes: notes

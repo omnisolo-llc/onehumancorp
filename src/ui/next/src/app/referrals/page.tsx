@@ -272,7 +272,7 @@ export default function ReferralsPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .ohc-growth-card {
-            backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(200%);
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             font-family: 'Outfit', 'Inter', sans-serif;

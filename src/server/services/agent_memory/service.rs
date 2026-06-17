@@ -1,5 +1,5 @@
-use dashmap::DashMap;
-
+use std::sync::RwLock;
+use std::collections::HashMap;
 use tokio::sync::OnceCell;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub struct EpisodicMemory {
 pub struct AgentMemoryService {
     redis_client: Option<redis::Client>,
     redis_conn: OnceCell<redis::aio::MultiplexedConnection>,
-    fallback_cache: DashMap<String, EpisodicMemory>,
+    fallback_cache: RwLock<HashMap<String, EpisodicMemory>>,
 
 }
 
@@ -25,7 +25,7 @@ impl AgentMemoryService {
         Self {
             redis_client,
             redis_conn: OnceCell::new(),
-            fallback_cache: DashMap::new(),
+            fallback_cache: RwLock::new(HashMap::new()),
 
         }
     }
@@ -65,8 +65,12 @@ impl AgentMemoryService {
         }
 
         // Fallback to in-memory store
-        self.fallback_cache.insert(key, memory);
-        Ok(())
+        if let Ok(mut cache) = self.fallback_cache.write() {
+            cache.insert(key, memory);
+            Ok(())
+        } else {
+            Err("Failed to acquire write lock for fallback cache".to_string())
+        }
     }
 
     pub async fn retrieve_recent_memory(&self, tenant_id: &str, session_id: &str) -> Result<Option<EpisodicMemory>, String> {
@@ -87,14 +91,18 @@ impl AgentMemoryService {
         }
 
         // Fallback to in-memory store
-        if let Some(memory) = self.fallback_cache.get(&key) {
-            // Verify tenant_id to ensure strict isolation
-            if memory.tenant_id != tenant_id {
-                return Err(format!("Tenant isolation violation: expected tenant_id {}, found {}", tenant_id, memory.tenant_id));
+        if let Ok(cache) = self.fallback_cache.read() {
+            if let Some(memory) = cache.get(&key) {
+                // Verify tenant_id to ensure strict isolation
+                if memory.tenant_id != tenant_id {
+                    return Err(format!("Tenant isolation violation: expected tenant_id {}, found {}", tenant_id, memory.tenant_id));
+                }
+                return Ok(Some(memory.clone()));
             }
-            return Ok(Some(memory.clone()));
+            Ok(None)
+        } else {
+            Err("Failed to acquire read lock for fallback cache".to_string())
         }
-        Ok(None)
     }
 }
 
@@ -155,7 +163,9 @@ mod tests {
             updated_at: Utc::now(),
         };
 
-        service.fallback_cache.insert(malicious_key, malicious_memory);
+        if let Ok(mut cache) = service.fallback_cache.write() {
+            cache.insert(malicious_key, malicious_memory);
+        }
 
         // When Tenant B tries to retrieve it, it should fail because the tenant_id inside the memory (tenant_a)
         // does not match the requested tenant_id (tenant_b).

@@ -122,12 +122,11 @@ impl MinimaxClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            let reduced = ::server_pricing::compression::reduce_tokens(prompt);
-            PromptCache::truncate_context(&reduced, 2000)
+            PromptCache::truncate_context(prompt, 2000)
         };
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -244,7 +243,7 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -441,11 +440,10 @@ impl LocalLLMClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            let reduced = ::server_pricing::compression::reduce_tokens(prompt);
-            PromptCache::truncate_context(&reduced, 2000)
+            PromptCache::truncate_context(prompt, 2000)
         };
 
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &self.model) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }

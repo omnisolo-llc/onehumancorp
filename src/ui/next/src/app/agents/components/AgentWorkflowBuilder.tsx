@@ -80,7 +80,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
 
   return (
     <div className="rounded-[16px] border border-white/20 bg-white/60 backdrop-blur-3xl saturate-200 shadow-glass p-4 shadow-sm" data-testid="visual-workflow-builder">
-      <h3 className="mb-4 text-lg font-bold text-zinc-900">Visual Workflow Builder (Visual/low-code orchestration --&gt; democratizing agent construction)</h3>
+      <h3 className="mb-4 text-lg font-bold text-zinc-900">Visual Workflow Builder</h3>
 
       {error && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600" data-testid="builder-error">

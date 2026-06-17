@@ -51,8 +51,6 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
     status TEXT DEFAULT 'pending', -- "pending | paid | fulfilled"
     total_amount DECIMAL DEFAULT 0,
-    notes TEXT,
-    translated_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

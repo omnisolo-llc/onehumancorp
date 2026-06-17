@@ -122,8 +122,7 @@
         }
       ],
       "title": "OHC CPU Usage",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "type": "text",

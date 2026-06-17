@@ -32,7 +32,7 @@ test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    const link = page.getByRole('link', { name: 'AI Departments', exact: true });
+    const link = page.getByRole('link', { name: 'Agents', exact: true });
     await expect(link).toBeVisible();
     await link.click();
     await page.waitForURL('**/agents**');

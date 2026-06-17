@@ -138,7 +138,7 @@ test.describe('Help Center & Documentation Features', () => {
 
     // Click and navigate
     await releaseNotesLink.evaluate((b) => (b as HTMLElement).click());
-    await expect(page).toHaveURL(/\/changelog.html/);
+    await expect(page).toHaveURL(/\/changelog/);
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
   });
 });

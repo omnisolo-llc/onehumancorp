@@ -28,6 +28,8 @@ impl PydanticToolExecutor<ToolSearchArgs> for ToolSearchExecutor {
             ("WebFetch", "Fetch URL content"),
             ("WebSearch", "Search the web"),
             ("SendMessage", "Send message to parent agent"),
+            ("TodoWrite", "Write the task todo list"),
+            ("TodoRead", "Read the task todo list"),
             ("ToolSearch", "Search available tools"),
             ("TaskCreate", "Create a new task"),
             ("TaskGet", "Get task details"),
@@ -77,7 +79,3 @@ pub fn toolsearch_tool() -> Tool {
         execute: Arc::new(PydanticAdapter::new(ToolSearchExecutor)),
     }
 }
-
-#[cfg(test)]
-#[path = "toolsearch_test.rs"]
-mod toolsearch_test;

@@ -62,15 +62,6 @@ impl HybridSyncDaemon {
                 )
                 .await;
             }
-
-            if let Err(e) = self.prune_stuck_agent_missions().await {
-                error!("Hybrid sync prune agent missions error: {}", e);
-            }
-
-            if let Err(e) = self.prune_stuck_sub_agent_queue().await {
-                error!("Hybrid sync prune sub_agent_queue error: {}", e);
-            }
-
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -437,34 +428,6 @@ impl HybridSyncDaemon {
                 warn!("Failed to record sync escalation telemetry: {}", e);
             }
         }
-
-        Ok(())
-    }
-
-    pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Find and fail stuck missions in sqlite pool
-        let _ = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = 'Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
-            .execute(&self.sqlite_pool)
-            .await;
-
-        // Find and fail stuck missions in pg pool
-        let _ = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = 'Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
-            .execute(&self.pg_pool)
-            .await;
-
-        Ok(())
-    }
-
-    pub async fn prune_stuck_sub_agent_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // SQLite queue
-        let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hour')")
-            .execute(&self.sqlite_pool)
-            .await;
-
-        // PG queue
-        let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'")
-            .execute(&self.pg_pool)
-            .await;
 
         Ok(())
     }

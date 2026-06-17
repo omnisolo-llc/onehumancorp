@@ -57,7 +57,7 @@ export default function IncidentIntakePage() {
         <p className="text-sm text-gray-500 mb-6">Describe what went wrong. The AI assistant will triage and propose a resolution.</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <textarea
-            className="w-full min-h-[120px] p-4 rounded-[16px] border border-gray-300 dark:border-gray-700 bg-transparent text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+            className="w-full min-h-[120px] p-4 rounded-[8px] border border-gray-300 dark:border-gray-700 bg-transparent text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
             placeholder="e.g. Espresso machine down"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -67,7 +67,7 @@ export default function IncidentIntakePage() {
           <button
             type="submit"
             disabled={isSubmitting || !description.trim()}
-            className="w-full min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-[16px] transition-colors disabled:opacity-50"
+            className="w-full min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium rounded-[8px] transition-colors disabled:opacity-50"
             data-testid="submit-incident"
           >
             {isSubmitting ? "Reporting..." : "Submit Incident"}

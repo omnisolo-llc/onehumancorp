@@ -46,11 +46,18 @@ impl PromptCache {
         None
     }
 
-    pub fn get_with_cost_cents(&self, prompt: &str, model: &str) -> (Option<CachedResponse>, i64) {
+    pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
         tracing::info!("💰 Miser telemetry: Prompt cache lookup");
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
+
+            // Fast-path: Avoid taking OS environment locks on every cache hit
+            static MODEL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+            let model = MODEL.get_or_init(|| {
+                std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string())
+            });
 
             let pricing = super::calculator::get_pricing(model);
             let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.cached_cost;
@@ -197,7 +204,7 @@ mod tests {
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 1_000_000);
 
-        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response.is_some());
         assert_eq!(response.unwrap().text, "Paris");
         // 1,000,000 tokens * 2.50 / 1M = 2.5 dollars = 250 cents
@@ -209,7 +216,7 @@ mod tests {
         let cache = PromptCache::new(Duration::from_secs(10));
         let response = cache.get("What is the capital of France?");
         assert!(response.is_none());
-        let (response_with_cost, cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        let (response_with_cost, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response_with_cost.is_none());
         assert_eq!(cost, 0);
     }

@@ -2,7 +2,6 @@
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
-import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 
@@ -141,7 +140,7 @@ function InviteAndEarnWidget() {
   };
 
   return (
-    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10" data-testid="dashboard-viral-invite-widget">
+    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10">
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
@@ -171,14 +170,14 @@ function InviteAndEarnWidget() {
               <button
                 id="dashboard-copy-btn"
                 onClick={handleCopy}
-                className="min-h-[44px] flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
               <button
                 id="dashboard-share-x-btn"
                 onClick={handleShareX}
-                className="min-h-[44px] flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 Share to X
               </button>
@@ -440,7 +439,6 @@ export default function Dashboard() {
       <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
-      <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -497,7 +495,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-col">
         <div className="order-first md:order-last mb-6 w-full overflow-hidden">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
         </div>
 
         <div className="order-last md:order-first">
@@ -515,7 +513,7 @@ export default function Dashboard() {
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
           <button
             onClick={() => router.push("/incidents")}
-            className="h-[44px] px-6 rounded-[16px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
             data-testid="report-incident-btn"
           >
             Report Incident
@@ -552,7 +550,7 @@ export default function Dashboard() {
                   name="migration_url"
                   value={migrationUrl}
                   onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[16px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
+                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
@@ -602,9 +600,9 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
+          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[8px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
+              <div className="w-11 h-11 rounded-[8px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
                 <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
@@ -1042,7 +1040,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
             </Link>
 
-            <Link href="/share-to-unlock-generator" id="share-to-unlock-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-to-unlock-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>

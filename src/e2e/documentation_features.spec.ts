@@ -38,7 +38,7 @@ test.describe('Help Chat Flow', () => {
 test.describe('Help Center Complete UI Flow', () => {
   test('should load Help Center, find videos, and click video to play', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/help.html');
+    await page.goto('/help');
 
     // Search for the video string
     const searchBox = page.getByPlaceholder('Search for help articles and videos...');
@@ -71,7 +71,7 @@ test.describe('Tooltip functionality', () => {
   test('should display tooltip on hover', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     // Wait until tooltips load dynamically or are preloaded on Help page
-    await page.goto('/api-docs.html');
+    await page.goto('/api-docs');
 
     // The component wrapper has class inline-block relative cursor-help
     const tooltipTrigger = page.locator('.cursor-help').first();
@@ -100,7 +100,7 @@ test.describe('Tooltip functionality', () => {
 test.describe('Changelog UX', () => {
   test('should ensure changelog renders beautiful design without placeholder text', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/changelog.html');
+    await page.goto('/changelog');
 
     await expect(page.getByRole('heading', { name: 'Version 1.1 (Latest)' })).toBeVisible();
     // Check that we removed the test line
@@ -110,7 +110,7 @@ test.describe('Changelog UX', () => {
 
 test.describe('API Documentation', () => {
   test('should navigate to API Documentation and load Swagger UI', async ({ page }) => {
-    await page.goto('/api-docs.html');
+    await page.goto('/api-docs');
 
     // Check for advanced warning badge
     await expect(page.getByText('Advanced:')).toBeVisible();
@@ -130,7 +130,7 @@ test.describe('AppShell Help Button', () => {
     await expect(helpButton).toBeVisible();
 
     await Promise.all([
-      page.waitForURL(/\/help.html/),
+      page.waitForURL(/\/help/),
       helpButton.click(),
     ]);
 

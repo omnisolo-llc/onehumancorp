@@ -266,11 +266,6 @@ impl CostAuditor {
         agent_tokens.values().sum()
     }
 
-    pub fn get_total_cached_tokens(&self) -> i64 {
-        let tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
-        tenant_cached_tokens.values().sum()
-    }
-
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
         let tenant_tokens = self.tenant_tokens.lock().unwrap();
         *tenant_tokens.get(tenant_id).unwrap_or(&0)

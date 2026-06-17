@@ -20,15 +20,15 @@ pub enum ClaudeSubagentMode {
 }
 
 pub struct ClaudeSubagentSpawner {
-    pub parent_llm: Arc<dyn crate::llm::LlmClient>,
+    pub parent_agent: Arc<Agent>,
     pub subagent: Arc<Agent>,
     pub mode: ClaudeSubagentMode,
 }
 
 impl ClaudeSubagentSpawner {
-    pub fn new(parent_llm: Arc<dyn crate::llm::LlmClient>, subagent: Arc<Agent>, mode: ClaudeSubagentMode) -> Self {
+    pub fn new(parent_agent: Arc<Agent>, subagent: Arc<Agent>, mode: ClaudeSubagentMode) -> Self {
         Self {
-            parent_llm,
+            parent_agent,
             subagent,
             mode,
         }
@@ -161,12 +161,12 @@ impl ClaudeSubagentSpawner {
 
         let start_time = std::time::Instant::now();
         let raw_output = loop {
-            match Box::pin(self.subagent.run(config, task, &mut on_event)).await {
+            match self.subagent.run(config, task, &mut on_event).await {
                 Ok(res) => break res,
                 Err(e) => {
                     retry_count += 1;
                     if retry_count >= max_retries {
-
+                        ::server_telemetry::record_ohc_sub_agent_failures_total();
                         return Err(e);
                     }
                     tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
@@ -174,8 +174,8 @@ impl ClaudeSubagentSpawner {
                 }
             }
         };
-        let _duration = start_time.elapsed().as_secs_f64();
-
+        let duration = start_time.elapsed().as_secs_f64();
+        ::server_telemetry::record_ohc_sub_agent_execution_duration_seconds(duration);
 
         self.summarize_output(&raw_output, config).await
     }
@@ -212,7 +212,7 @@ impl ClaudeSubagentSpawner {
                     max_tokens: 2000,
                     temperature: 0.0,
                 };
-                let resp = self.parent_llm.chat(req).await?;
+                let resp = self.parent_agent.llm.chat(req).await?;
                 next_text_parts.push(resp.message.content);
 
                 i += CHUNK_SIZE_CHARS;
@@ -244,7 +244,7 @@ impl ClaudeSubagentSpawner {
                 max_tokens: 2000,
                 temperature: 0.0,
             };
-            let resp = self.parent_llm.chat(req).await?;
+            let resp = self.parent_agent.llm.chat(req).await?;
             current_text = resp.message.content;
         }
 
@@ -264,42 +264,6 @@ impl ClaudeSubagentSpawner {
 
 #[cfg(test)]
 mod tests {
-
-    struct MockLlmClient {
-        responses: std::sync::Mutex<Vec<String>>,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::llm::LlmClient for MockLlmClient {
-        async fn chat(
-            &self,
-            _req: ohc_builtin_agent_core::types::ChatRequest,
-        ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let mut resps = self.responses.lock().unwrap();
-            let content = if !resps.is_empty() {
-                resps.remove(0)
-            } else {
-                "default".to_string()
-            };
-
-            let message = ohc_builtin_agent_core::types::Message {
-                role: ohc_builtin_agent_core::types::Role::Assistant,
-                content,
-                tool_calls: vec![],
-                tool_results: vec![],
-                response_id: None,
-                previous_response_id: None,
-            };
-
-            Ok(ohc_builtin_agent_core::types::ChatResponse {
-                message,
-                usage: Default::default(),
-                response_id: None,
-                stop_reason: "stop".to_string(),
-            })
-        }
-    }
-
 
         #[tokio::test]
         async fn test_claude_subagent_summarize_condensation_fails() {
@@ -333,7 +297,7 @@ mod tests {
             let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Fork,
             );
@@ -348,7 +312,7 @@ mod tests {
         }
 
     use super::*;
-
+    use crate::llm::mock::MockLlmClient;
 
     #[tokio::test]
         async fn test_claude_subagent_fork() {
@@ -357,7 +321,7 @@ mod tests {
                     "Condensed summary of fork".to_string()
                 ]),
             });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
             let sub_client = Arc::new(MockLlmClient {
                 responses: std::sync::Mutex::new(vec![
@@ -367,7 +331,7 @@ mod tests {
             let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Fork,
             );
@@ -386,7 +350,7 @@ mod tests {
                     "Condensed summary of teammate".to_string()
                 ]),
             });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
             let sub_client = Arc::new(MockLlmClient {
                 responses: std::sync::Mutex::new(vec![
@@ -399,7 +363,7 @@ mod tests {
             let mailbox_dir = dir.path().join("mailboxes");
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Teammate { mailbox_dir: mailbox_dir.clone() },
             );
@@ -422,7 +386,7 @@ mod tests {
                     "Condensed summary of worktree".to_string()
                 ]),
             });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
             let sub_client = Arc::new(MockLlmClient {
                 responses: std::sync::Mutex::new(vec![
@@ -444,7 +408,7 @@ mod tests {
             Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Worktree {
                     base_repo_path: repo_dir.clone(),
@@ -471,7 +435,7 @@ mod tests {
                     "Condensed summary of worktree".to_string()
                 ]),
             });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
             let sub_client = Arc::new(MockLlmClient {
                 responses: std::sync::Mutex::new(vec![
@@ -493,7 +457,7 @@ mod tests {
             Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Worktree {
                     base_repo_path: repo_dir.clone(),
@@ -560,14 +524,14 @@ mod tests {
             }
 
             let parent_client = Arc::new(CondensingLlmClient { call_count: std::sync::Mutex::new(0) });
-            let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
             // Subagent won't actually be run, we just need it for the struct.
             let sub_client = Arc::new(MockLlmClient { responses: std::sync::Mutex::new(vec![]) });
             let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
             let spawner = ClaudeSubagentSpawner::new(
-                parent_client.clone(),
+                parent_agent,
                 subagent,
                 ClaudeSubagentMode::Fork,
             );
@@ -584,5 +548,4 @@ mod tests {
             assert!(result.starts_with("Chunk summary"));
             assert!(result.len() > 5000 && result.len() < 6000);
             assert_eq!(*parent_client.call_count.lock().unwrap(), 2);
-}
 }

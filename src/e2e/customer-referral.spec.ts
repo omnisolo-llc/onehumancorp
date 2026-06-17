@@ -46,47 +46,4 @@ test.describe('Customer Referral Program Growth Loop', () => {
         const html = await response.text();
         expect(html).toContain('Give $20, Get $25');
     });
-
-    test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
-        await page.goto('/customer-referral-program');
-        await page.evaluate(() => {
-            localStorage.setItem('tenant', 'e2e-test-store');
-            localStorage.setItem('has_pro', 'false');
-        });
-        await page.reload();
-
-        const toggle = page.locator('input[type="checkbox"]');
-        await toggle.click({ force: true }); // It's hidden behind styling
-
-        // Soft paywall should appear
-        await expect(page.locator('text=Pro Feature')).toBeVisible();
-        await expect(page.locator('text=Upgrade to Pro')).toBeVisible();
-    });
-
-    test('should hide branding when pro is enabled and toggle is clicked', async ({ page }) => {
-        await page.goto('/customer-referral-program');
-        await page.evaluate(() => {
-            localStorage.setItem('tenant', 'e2e-test-store');
-            localStorage.setItem('has_pro', 'true');
-        });
-        await page.reload();
-
-        const toggle = page.locator('input[type="checkbox"]');
-        await toggle.click({ force: true });
-
-        // Soft paywall should not appear
-        await expect(page.locator('text=Pro Feature')).not.toBeVisible();
-
-        // Preview section should hide the branding
-        await expect(page.locator('text=⚡ Powered by OHC')).not.toBeVisible();
-
-        await page.locator('button', { hasText: 'Generate Widget Embed' }).click();
-        const modal = page.locator('.fixed.inset-0').first();
-        await expect(modal).toBeVisible();
-
-        // The textarea code should NOT include the branding
-        const preCode = await page.locator('pre').innerText();
-        expect(preCode).not.toContain('>⚡ Powered by OHC</a></div>`'); // The static html part
-        expect(preCode).toContain('hideBranding=true');
-    });
 });

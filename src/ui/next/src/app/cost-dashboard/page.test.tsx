@@ -128,7 +128,7 @@ describe('CostDashboardPage', () => {
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
-    expect(screen.getAllByText('Cost Transparency Dashboard')[0]).toBeDefined();
+    expect(screen.getAllByText('Cost Transparency')[0]).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
 
     // total revenue
@@ -211,7 +211,6 @@ describe('CostDashboardPage', () => {
       period_end: "2023-10-31",
       trend: [],
       agent_costs: [],
-      budget_health_alert: "true" as any,
       department_tier_usage: {
         departments: [
           {
@@ -257,7 +256,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Soft Limit Approaching')).toBeDefined();
+    expect(screen.getByText('Budget Health Warning')).toBeDefined();
   });
 
   test('renders 0 limits properly', async () => {

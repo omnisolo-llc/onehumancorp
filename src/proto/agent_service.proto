@@ -178,7 +178,7 @@ message SkillConfig {
 // lists and is the single source of truth for agent capability.
 message ToolsetConfig {
   // Built-in tool names to expose (Bash, Read, Write, Glob, Grep, WebFetch,
-  // WebSearch, SendMessage, ToolSearch, TaskCreate, TaskGet,
+  // WebSearch, SendMessage, TodoWrite, ToolSearch, TaskCreate, TaskGet,
   // TaskList, TaskUpdate, Head, Tail).
   // An empty list enables ALL built-in tools (default behaviour).
   repeated string builtin_tools = 1;

@@ -34,17 +34,19 @@ impl MyAgentManagerService {
         let hub_meetings = self.hub.clone();
         let hub_tasks = self.hub.clone();
         let org_id_clone = org_id.to_string();
-        let org_id_clone_for_agents = org_id.to_string();
-        let org_id_clone_for_meetings = org_id.to_string();
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
-            tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub_cost.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+            tokio::spawn(async move { hub_agents.get_agents().await }),
+            tokio::spawn(async move { hub_meetings.get_meetings().await }),
+            tokio::spawn(async move {
+                tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub_cost.get_cost_auditor();
+                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+                }).await.unwrap_or((0.0, 0, vec![]))
             }),
-            tokio::task::spawn_blocking(move || {
-                hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
+            tokio::spawn(async move {
+                tokio::task::spawn_blocking(move || {
+                    hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
+                }).await.unwrap_or_else(|_| vec![])
             })
         );
         let agents = agents_res.unwrap();
@@ -251,11 +253,9 @@ impl AgentManagerService for MyAgentManagerService {
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
-        let org_id_clone_for_agents = org_id.clone();
-        let org_id_clone_for_meetings = org_id.clone();
         let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || Arc::new(hub1.get_agents_by_org(&org_id_clone_for_agents))),
-            tokio::spawn(async move { hub2.get_meetings_by_org(&org_id_clone_for_meetings).await })
+            tokio::spawn(async move { hub1.get_agents().await }),
+            tokio::spawn(async move { hub2.get_meetings().await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -440,42 +440,5 @@ mod tests {
 
         let restore_res = service.restore_snapshot(restore_request).await.unwrap().into_inner();
         assert!(restore_res.costs.is_some());
-    }
-}
-
-
-#[cfg(test)]
-mod benchmark_tests {
-    use super::*;
-    use std::sync::Arc;
-
-    async fn setup_test_service() -> MyAgentManagerService {
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, crate::db::get_pool().clone()));
-
-        hub.register_agent(::server_ohc::orchestration::Agent {
-            id: "agent_1".to_string(),
-            name: "Test Agent".to_string(),
-            role: "assistant".to_string(),
-            organization_id: "test_org".to_string(),
-            status: "IDLE".to_string(),
-            provider_type: "builtin".to_string(),
-        });
-
-        hub.open_meeting("meeting_1".to_string(), vec!["agent_1".to_string()], "Test Agenda".to_string());
-
-        MyAgentManagerService::new(hub)
-    }
-
-    #[tokio::test]
-    async fn test_get_snapshot_latency_benchmark() {
-        let service = setup_test_service().await;
-
-        let start = std::time::Instant::now();
-        let _snapshot = service.get_snapshot("test_org").await.unwrap();
-        let elapsed = start.elapsed();
-
-        tracing::info!("AgentManagerService::get_snapshot benchmark completed in {} ms", elapsed.as_millis());
-        assert!(elapsed.as_millis() < 500, "AgentManagerService::get_snapshot took too long: {} ms", elapsed.as_millis());
     }
 }

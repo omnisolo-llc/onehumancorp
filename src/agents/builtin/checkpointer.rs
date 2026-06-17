@@ -37,6 +37,7 @@ impl Default for ProgressFile {
 
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
+    #[allow(dead_code)]
     async fn get_checkpoint(
         &self,
         thread_id: &str,

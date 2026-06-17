@@ -42,12 +42,30 @@ pub async fn resolve_identity(
                 "SELECT id FROM customers WHERE tenant_id = ? AND (json_extract(preferences, '$.social_handle') = ? OR json_extract(preferences, '$.instagram_handle') = ?) LIMIT 1"
             };
 
-            let mut db_query = sqlx::query(query).bind(tenant_id).bind(sender_id);
-            if source == "whatsapp" || source == "sms" || source == "twilio" || source != "email" {
-                 db_query = db_query.bind(sender_id);
-            }
-
-            let row = db_query.fetch_optional(sqlite_pool).await.ok()??;
+            let row = if source == "whatsapp" || source == "sms" || source == "twilio" {
+                sqlx::query(query)
+                    .bind(tenant_id)
+                    .bind(sender_id)
+                    .bind(sender_id)
+                    .fetch_optional(sqlite_pool)
+                    .await
+                    .ok()??
+            } else if source == "email" {
+                sqlx::query(query)
+                    .bind(tenant_id)
+                    .bind(sender_id)
+                    .fetch_optional(sqlite_pool)
+                    .await
+                    .ok()??
+            } else {
+                sqlx::query(query)
+                    .bind(tenant_id)
+                    .bind(sender_id)
+                    .bind(sender_id)
+                    .fetch_optional(sqlite_pool)
+                    .await
+                    .ok()??
+            };
 
             Some(row.get("id"))
         }

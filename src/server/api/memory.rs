@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    routing::{get, post, delete},
+    routing::{get, post},
     Json, Router,
 };
 use axum::http::HeaderMap;
@@ -38,9 +38,7 @@ pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<(dyn crate::mesh_handler::Me
     };
     Router::new()
         .route("/", get(list_memories))
-        .route("/upload", post(upload_memory))
         .route("/:id/override", post(override_memory))
-        .route("/:id", delete(delete_memory))
         .with_state(repo)
 }
 
@@ -67,49 +65,6 @@ async fn list_memories(
     Ok(Json(out))
 }
 
-#[derive(Deserialize)]
-pub struct UploadRequest {
-    pub content: String,
-    pub source_type: String,
-}
-
-async fn upload_memory(
-    State(repo): State<Arc<VectorRepository>>,
-    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-    Json(payload): Json<UploadRequest>,
-) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
-    let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
-
-    // We parse PDF content if base64 pdf is sent. For now, since "Do NOT prescribe specific vector databases or text extraction libraries here; design the interfaces and integration points."
-    // we use a dummy parser interface that extracts text directly if it is provided.
-    // In production we would process this using a background queue with PDF/text extractors.
-    let parsed_content = if payload.content.starts_with("JVBERi") {
-        "Extracted text from PDF dummy.".to_string()
-    } else {
-        payload.content.clone()
-    };
-
-    let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
-        id: uuid::Uuid::new_v4().to_string(),
-        tenant_id,
-        agent_id: "knowledge_agent".to_string(),
-        content: parsed_content,
-        embedding: vec![0.0; 1536],
-        source_type: payload.source_type,
-        created_at: chrono::Utc::now(),
-        last_referenced_at: chrono::Utc::now(),
-        reference_count: 0,
-        reliability_score: 50,
-        owner_override: false,
-        metadata: None,
-    };
-
-    repo.upsert(&record).await
-        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    Ok(Json(serde_json::json!({"success": true, "id": record.id})))
-}
-
 async fn override_memory(
     State(repo): State<Arc<VectorRepository>>,
     Path(id): Path<String>,
@@ -132,27 +87,6 @@ async fn override_memory(
     }
 
     repo.upsert(&record).await
-        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
-
-    Ok(Json(serde_json::json!({"success": true})))
-}
-
-async fn delete_memory(
-    State(repo): State<Arc<VectorRepository>>,
-    Path(id): Path<String>,
-    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
-    let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
-
-    let record = repo.get_by_id(&id).await
-        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?
-        .ok_or((axum::http::StatusCode::NOT_FOUND, "Memory not found".to_string()))?;
-
-    if record.tenant_id != tenant_id {
-        return Err((axum::http::StatusCode::FORBIDDEN, "Access denied".to_string()));
-    }
-
-    repo.delete(&id).await
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     Ok(Json(serde_json::json!({"success": true})))

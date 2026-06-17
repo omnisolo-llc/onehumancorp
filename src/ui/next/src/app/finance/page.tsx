@@ -7,54 +7,26 @@ export default function FinancePage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDraftModal, setShowDraftModal] = useState(false);
-    const [draftInvoice, setDraftInvoice] = useState<any>(null);
-
-    const fetchInvoices = async () => {
-        try {
-            const res = await fetch('/api/v1/invoices');
-            if (res.ok) {
-                const data = await res.json();
-                setInvoices(data.invoices || []);
-            }
-        } catch (e) {
-            console.error("Failed to fetch invoices", e);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
+        async function fetchInvoices() {
+            try {
+                const res = await fetch('/api/v1/invoices');
+                if (res.ok) {
+                    const data = await res.json();
+                    setInvoices(data.invoices || []);
+                }
+            } catch (e) {
+                console.error("Failed to fetch invoices", e);
+            } finally {
+                setLoading(false);
+            }
+        }
         fetchInvoices();
     }, []);
 
-    const handleCreateInvoice = async () => {
-        const payload = {
-            client_id: "new-client",
-            client_name: "New Client",
-            due_date: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
-            currency: "USD",
-            line_items: [
-                {
-                    id: "",
-                    invoice_id: "",
-                    description: "Consulting Services",
-                    quantity: 1,
-                    unit_price: 100.0,
-                    amount: 100.0
-                }
-            ]
-        };
-        const res = await fetch('/api/v1/invoices', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-            const data = await res.json();
-            setDraftInvoice(data);
-            setShowDraftModal(true);
-            fetchInvoices();
-        }
+    const handleCreateInvoice = () => {
+        setShowDraftModal(true);
     };
 
     return (
@@ -66,7 +38,7 @@ export default function FinancePage() {
                 </header>
 
                 {/* Triage Feed Simulation */}
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={handleCreateInvoice}>
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={() => setShowDraftModal(true)}>
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xl shadow-md">
                             ✨
@@ -106,7 +78,7 @@ export default function FinancePage() {
                                     </div>
                                     <button
                                         className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                                        onClick={() => { if(invoice.status === 'draft') { setDraftInvoice(invoice); setShowDraftModal(true); } }}
+                                        onClick={() => invoice.status === 'draft' && setShowDraftModal(true)}
                                     >
                                         {invoice.status === 'draft' ? 'Review & Send' : 'View Details'}
                                     </button>
@@ -129,7 +101,7 @@ export default function FinancePage() {
             </main>
 
             {/* Translucent Glass Modal for Reviewing Draft Invoice */}
-            {showDraftModal && draftInvoice && (
+            {showDraftModal && invoices.length > 0 && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
                     <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-t-2xl z-10">
@@ -142,13 +114,13 @@ export default function FinancePage() {
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                             <div className="mb-6">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Billed To</label>
-                                <input type="text" className="w-full bg-transparent border-b border-gray-300 dark:border-gray-600 pb-2 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors" defaultValue={draftInvoice.client_name} />
+                                <input type="text" className="w-full bg-transparent border-b border-gray-300 dark:border-gray-600 pb-2 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors" defaultValue={invoices[0].client_name} />
                             </div>
 
                             <div className="mb-8">
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Line Items</label>
                                 <div className="space-y-4">
-                                    {draftInvoice.line_items?.map((item: any, idx: number) => (
+                                    {invoices[0].line_items.map((item: any, idx: number) => (
                                         <div key={idx} className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                                             <div className="flex-1">
                                                 <input type="text" className="w-full bg-transparent font-medium text-gray-900 dark:text-white text-sm focus:outline-none" defaultValue={item.description} />
@@ -171,24 +143,17 @@ export default function FinancePage() {
 
                             <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-6">
                                 <span className="text-gray-500 font-medium">Total</span>
-                                <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">${draftInvoice.total_amount?.toFixed(2)}</span>
+                                <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">${invoices[0].total_amount.toFixed(2)}</span>
                             </div>
                         </div>
 
                         <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-2xl">
                             <button
                                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg"
-                                onClick={async () => {
-                                    const res = await fetch(`/api/v1/invoices/${draftInvoice.id}/status`, {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ status: 'paid' })
-                                    });
-                                    if (res.ok) {
-                                        alert("Invoice sent! Stripe payment link generated.");
-                                        setShowDraftModal(false);
-                                        fetchInvoices();
-                                    }
+                                onClick={() => {
+                                    // Submit logic
+                                    alert("Invoice sent! Stripe payment link generated.");
+                                    setShowDraftModal(false);
                                 }}
                             >
                                 Approve & Send

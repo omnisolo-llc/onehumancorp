@@ -12,9 +12,3 @@ scrape_configs:
   - job_name: 'pushgateway-standalone'
     static_configs:
       - targets: ['localhost:9091']
-  - job_name: 'powersync-standalone'
-    static_configs:
-      - targets: ['localhost:8081']
-  - job_name: 'chatwoot-standalone'
-    static_configs:
-      - targets: ['localhost:3002']

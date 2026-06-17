@@ -8,7 +8,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
-    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
     await expect(page.locator('h2', { hasText: 'Total Costs' })).toBeVisible();

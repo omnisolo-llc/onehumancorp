@@ -566,16 +566,6 @@
       }
 
     </style>
-    <style>
-      @media (min-width: 600px) {
-        .paywall-actions {
-          flex-direction: row !important;
-        }
-        .paywall-actions a, .paywall-actions button {
-          width: auto !important;
-        }
-      }
-    </style>
   </head>
   <body>
     <!-- Omnibox Modal -->
@@ -614,31 +604,21 @@
       </div>
 
 
-      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
-        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
-          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
-          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
-        </div>
-      </div>
+      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
 
       <div id="sold-out-toggle-falafel-container" style="display: none;">
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
-      <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
-        <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
-        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
-      </div>
-      <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back</div>
+      <h1 id="dashboard-title">Dashboard</h1>
 
-      <div class="subtitle" style="margin-top: 5px;">Your private agentic workspace.</div>
+      <div class="subtitle">Your private agentic workspace.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
         <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a>
-        <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -713,7 +693,7 @@
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
-          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
@@ -728,30 +708,6 @@
         </div>
       </div>
 
-
-      <!-- AI Feature Paywall Widget -->
-      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
-        <div id="ai-feature-paywall-locked">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px;">
-            <span>✨</span> Pro Feature
-          </div>
-          <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #1d1d1f;">Unlock Advanced AI Analytics</h2>
-          <p style="margin: 0 0 16px 0; font-size: 14px; color: #86868b; line-height: 1.5;">See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.</p>
-          <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
-            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;">Upgrade to Pro</a>
-            <span style="color: #86868b; font-size: 14px; text-align: center;">or</span>
-            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;">Refer a Friend to Unlock</button>
-          </div>
-        </div>
-        <div id="ai-feature-paywall-unlocked" style="display: none; align-items: center; gap: 16px;">
-          <div style="font-size: 32px; background: rgba(52, 199, 89, 0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">✨</div>
-          <div style="flex: 1;">
-            <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #1d1d1f;">Advanced AI Analytics Unlocked!</h3>
-            <p style="margin: 0; font-size: 14px; color: #86868b;">You have 7 days of free access to Smart Cross-Selling and Deep Insights.</p>
-          </div>
-          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;">View Insights</a>
-        </div>
-      </div>
 
       <!-- Viral Loop Performance Widget -->
       <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
@@ -811,13 +767,20 @@
 
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
-        <p><a href="email-signature-generator.html" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 14px; margin-bottom: 10px; display: inline-block;">Email Signature Generator</a></p>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <a href="/referrals" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Click here to go to the Referral Dashboard.">Referral Dashboard</a>
+        <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
-        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button></div>
-        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
+
+        <div class="link-container" id="link-container">
+          <input type="text" class="link-input" id="referral-link" readonly value="" />
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
+        <div class="action-buttons">
+            <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
+            <button class="btn-secondary" id="share-whatsapp-btn" data-tooltip="Share your link via WhatsApp">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
+          </div>
+        </div>
       </div>
 
 
@@ -825,21 +788,16 @@
       <div class="ohc-growth-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
         <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
-        <a href="/referrals" id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
-          Go to Referral Dashboard
-        </a>
-      </div>
-
-      <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
-        <h2>Cloud Bridge Invite</h2>
-        <p>Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
-        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; min-width: 200px;" />
-            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.1s;">
-              Generate Cloud Invite
-            </button>
+        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
+          Get My Invite Link
+        </button>
+        <div id="dashboard-invite-container" style="display: none; margin-top: 15px;">
+          <input type="text" class="link-input" id="dashboard-invite-link" readonly value="" style="width: 100%;" />
+          <div class="action-buttons" style="margin-top: 10px;">
+            <button class="btn-secondary" id="dashboard-copy-btn" style="flex: 1;">Copy</button>
+            <button class="btn-secondary" id="dashboard-share-x-btn" style="flex: 1; background-color: #1DA1F2; color: white;">Share to X</button>
+          </div>
         </div>
-        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; word-break: break-all;"></div>
       </div>
 
       <div class="ohc-growth-card">
@@ -849,7 +807,6 @@
         <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
         <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
-        <a href="link-in-bio-generator.html" id="link-in-bio-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Link-in-Bio Generator 🔗</a>
         <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
@@ -873,6 +830,11 @@
           </div>
         </div>
       </section>
+
+        <div id="triage-queue">
+          <div class="triage-card empty">Loading agent feed...</div>
+        </div>
+      </div>
 
       </div>
     </div>
@@ -1150,43 +1112,6 @@
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
         let currentHoursSaved = 0;
-
-        // AI Feature Paywall Logic
-        const aiReferBtn = document.getElementById("ai-paywall-refer-btn");
-        const aiPaywallLocked = document.getElementById("ai-feature-paywall-locked");
-        const aiPaywallUnlocked = document.getElementById("ai-feature-paywall-unlocked");
-        const aiPaywallContainer = document.getElementById("ai-feature-paywall");
-
-        if (aiReferBtn) {
-          aiReferBtn.addEventListener("click", () => {
-            aiReferBtn.innerText = "Generating...";
-            aiReferBtn.disabled = true;
-            aiReferBtn.style.opacity = "0.7";
-
-            setTimeout(() => {
-              aiReferBtn.innerText = "Copy Link";
-              aiReferBtn.disabled = false;
-              aiReferBtn.style.opacity = "1";
-
-              // Once it is "Copy Link", next click will copy and unlock
-              aiReferBtn.onclick = () => {
-                const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
-                const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
-                navigator.clipboard.writeText(link).then(() => {
-                  aiReferBtn.innerText = "Copied Link!";
-                  aiReferBtn.style.background = "#34C759";
-
-                  setTimeout(() => {
-                    aiPaywallLocked.style.display = "none";
-                    aiPaywallUnlocked.style.display = "flex";
-                    aiPaywallContainer.style.background = "rgba(52, 199, 89, 0.05)";
-                    aiPaywallContainer.style.borderColor = "rgba(52, 199, 89, 0.3)";
-                  }, 1500);
-                });
-              };
-            }, 800);
-          });
-        }
 
         // Soft Paywall Logic
         const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
@@ -1521,7 +1446,7 @@
         } else {
           try {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-            const res = await fetch('/api/v1/growth/team-invites', {
+            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
@@ -1649,18 +1574,18 @@
               const price = payload.suggested_price || 0;
               const scope = payload.scope || '';
               return `
-                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
-                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">Draft Quote</div>
-                    <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
+                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}">
+                  <div class="triage-header">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">Draft Quote</div>
+                    <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
-                  <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
-                  <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
-                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${clientName}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
+                  <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" data-testid="approve-quote-draft" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,102,255,0.3); flex: 1;">Approve & Send Proposal</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; flex: 1;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1668,8 +1593,8 @@
 
 
 
-          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
-            let parsedPayload = item.proposed_action || item.context_payload || {};
+          if (actionType === 'SocialPostDraft') {
+            let parsedPayload = item.proposed_action || {};
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
@@ -1713,53 +1638,8 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
-                </div>
-              </div>
-            `;
-          }
-
-          if (actionType === 'ambassador_reply') {
-            let parsedPayload = {};
-            try {
-              if (typeof item.action_payload === 'string') {
-                parsedPayload = JSON.parse(item.action_payload);
-              } else if (item.action_payload) {
-                parsedPayload = item.action_payload;
-              } else if (item.context_payload) {
-                parsedPayload = item.context_payload;
-              }
-            } catch(e) {}
-
-            const originalMessage = parsedPayload.original_message || item.context || 'Customer message';
-            const draftReply = parsedPayload.generated_response || 'Ready to send.';
-            const source = parsedPayload.source || item.source || 'instagram';
-
-            return `
-              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
-                <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">💬</span> <strong>${source.replace('_', ' ')}</strong>
-                  </div>
-                  <div class="triage-priority ${priorityClass}">Action Required</div>
-                </div>
-                <div class="triage-context" style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">
-                  Action Required: Approve Reply
-                </div>
-                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 14px; color: #333;">
-                  1 New Message from ${source}
-                </div>
-                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
-                  "${originalMessage}"
-                </div>
-                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #0044BB;">
-                  <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">AI Draft</span>
-                  ${draftReply}
-                </div>
-                <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1786,7 +1666,7 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">✨ 1-Tap Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -1821,56 +1701,35 @@
 
           if (description.includes("reschedule") || description.includes("tentatively booked")) {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
-                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
-                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                 </div>
-                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
-                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Deny</button>
-                </div>
-              </div>
-            `;
-          }
-
-          if (item.source === 'Proactive Context Agent') {
-            return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden;">
-                <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #FF9500;"></div>
-                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
-                  <div>
-                    <h2 style="font-size: 20px; font-weight: 700; color: #995500; display: flex; align-items: center; gap: 8px; margin: 0;">
-                      <span style="font-size: 24px;">✨</span> Needs Attention Today
-                    </h2>
-                  </div>
-                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'High'}</div>
-                </div>
-                <div class="triage-context" style="font-weight: 500; margin-top: 4px; margin-bottom: 12px; font-size: 14px; color: #804000;">
-                  ${description}
-                </div>
-                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve & Execute</button>
-                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Deny</button>
                 </div>
               </div>
             `;
           }
 
           return `
-            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
-              <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
-                <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
+            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+              <div class="triage-header">
+                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
               </div>
-              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
-              <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+              <div class="triage-controls" style="margin-top: 12px;">
+                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
-            </div>
+
+                </div>
+              </div>
             `;
           }).join('');
         } else {
@@ -1883,13 +1742,13 @@
           triageQueue.innerHTML = activities.map(activity => {
             const description = activity.proposed_action?.message || activity.proposed_action?.action_type || activity.context_payload?.description || 'Action completed';
             return `
-              <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 12px;">
-                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-weight: 700;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
-                  <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px; font-weight: 600;">${activity.lifecycle_state}</div>
+              <div class="triage-item">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 4px;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px;">${activity.lifecycle_state}</div>
                 </div>
-                <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px; margin-bottom: 8px; color: #1D1D1F;">${description}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px; font-weight: 500;">${new Date(activity.updated_at || activity.created_at || Date.now()).toLocaleString()}</div>
+                <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${new Date(activity.updated_at || activity.created_at || Date.now()).toLocaleString()}</div>
               </div>
             `;
           }).join('');
@@ -2132,29 +1991,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
@@ -2180,54 +2016,276 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(2.1);
+            -webkit-backdrop-filter: blur(30px) saturate(2.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+
+        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+        </div>
+
+<div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
 
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
-      const cloudBridgeBtn = document.getElementById('generate-cloud-bridge-btn');
-      const cloudBridgeEmail = document.getElementById('cloud-bridge-email');
-      const cloudBridgeStatus = document.getElementById('cloud-bridge-status');
-
-      if (cloudBridgeBtn) {
-          cloudBridgeBtn.addEventListener('click', async () => {
-              const email = cloudBridgeEmail.value || "test@example.com";
-              cloudBridgeBtn.innerText = "Generating...";
-              cloudBridgeBtn.disabled = true;
-
-              try {
-                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/team-invites', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
-                  });
-                  const data = await res.json();
-
-                  cloudBridgeStatus.style.display = 'block';
-                  if (res.ok && data.invite_link) {
-                      cloudBridgeStatus.innerText = `Cloud Invite generated: ${data.invite_link}`;
-                      cloudBridgeStatus.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
-                      cloudBridgeStatus.style.color = '#4ade80';
-                  } else {
-                      cloudBridgeStatus.innerText = `Failed to generate cloud invite: ${data.error || 'Unknown error'}`;
-                      cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
-                      cloudBridgeStatus.style.color = '#f87171';
-                  }
-              } catch (e) {
-                  console.error("Cloud bridge error:", e);
-                  cloudBridgeStatus.style.display = 'block';
-                  cloudBridgeStatus.innerText = "Error generating cloud invite.";
-                  cloudBridgeStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
-                  cloudBridgeStatus.style.color = '#f87171';
-              } finally {
-                  cloudBridgeBtn.innerText = "Generate Cloud Invite";
-                  cloudBridgeBtn.disabled = false;
-              }
-          });
-      }
-
     const btn = document.getElementById('dashboard-invite-btn');
     const container = document.getElementById('dashboard-invite-container');
     const linkInput = document.getElementById('dashboard-invite-link');
@@ -2251,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               try {
                   const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/team-invites', {
+                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
@@ -2373,29 +2431,6 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTooltip();
         }
     });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
 });
 </script>
 
@@ -2409,14 +2444,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+        overlay.id = 'walkthrough-overlay';
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+        bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2430,7 +2465,6 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
-                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -2464,7 +2498,6 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
-                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -2488,7 +2521,6 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
-                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -2760,7 +2792,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
             </div>
         </div>
 
@@ -2928,29 +2960,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
     // Walkthroughs
     if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
@@ -2959,12 +2968,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+            overlay.id = 'walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+            bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -2977,7 +2986,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
-                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -3010,7 +3018,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
-                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -3032,7 +3039,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
-                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -3045,98 +3051,44 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script>
-    // Offline Sync Logic (IndexedDB CRDT)
+    // Offline Sync Logic
 
-    const DB_NAME = "OHC_Offline_Queue";
-    const STORE_NAME = "actions";
-    const DB_VERSION = 1;
-
-    function getDB() {
-        return new Promise((resolve, reject) => {
-            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-            request.onerror = event => reject(request.error);
-            request.onsuccess = event => resolve(event.target.result);
-            request.onupgradeneeded = event => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
-                }
-            };
-        });
-    }
-
-    async function getQueue() {
-        if (!window.indexedDB) return [];
+    function enqueueOfflineMutation(mutation) {
+        let queue = [];
         try {
-            const db = await getDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], "readonly");
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(request.error);
-            });
-        } catch(e) {
-            return [];
-        }
-    }
-
-    async function enqueueOfflineMutation(mutation) {
-        if (!mutation.id) {
-            mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
-        }
-        if (!mutation.timestamp) {
-            mutation.timestamp = Date.now();
-        }
-
-        try {
-            const db = await getDB();
-            await new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], "readwrite");
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.put(mutation);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
-            window.dispatchEvent(new Event("ohc_queue_updated"));
-        } catch (e) {
-            console.error("Failed to enqueue offline mutation", e);
-        }
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+        queue.push(mutation);
+        localStorage.setItem("ohc_offline_queue", JSON.stringify(queue));
+        window.dispatchEvent(new Event("ohc_queue_updated"));
 
         if (navigator.onLine) {
             syncOfflineQueue();
         }
     }
 
-    async function updateOfflineStatus() {
+    function updateOfflineStatus() {
         const networkIndicator = document.getElementById("network-status-indicator");
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
-        const queue = await getQueue();
-
-        const dot = document.getElementById("network-status-dot");
-        const text = document.getElementById("network-status-text");
-
         if (!navigator.onLine) {
-            networkIndicator.style.display = "flex";
+            networkIndicator.style.display = "block";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
-            if (text) text.innerText = "Working Offline";
-        } else if (queue.length > 0) {
-            networkIndicator.style.display = "flex";
-            networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
-            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
         }
 
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Items Pending Sync";
+            queueIndicator.innerText = queue.length + " Payments Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -3145,7 +3097,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function syncOfflineQueue() {
         if (!navigator.onLine) return;
-        const queue = await getQueue();
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
         if (queue.length === 0) return;
 
         const posTransactions = [];
@@ -3158,7 +3114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     amount_cents: Math.round(m.amount),
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-                    timestamp: new Date(m.timestamp || Date.now()).toISOString()
+                    timestamp: new Date().toISOString()
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
@@ -3177,14 +3133,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
         const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
-        let allOk = true;
 
+
+        let allOk = true;
         if (posTransactions.length > 0) {
+            const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
             try {
                 const res = await fetch("/api/v1/payments/terminal/sync_offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ transactions: posTransactions })
+                    body: JSON.stringify({ session_id: sessionId || undefined, transactions: posTransactions })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
@@ -3193,6 +3151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (generalMutations.length > 0) {
+
             try {
                 const res = await fetch("/api/v1/sync/offline", {
                     method: "POST",
@@ -3206,18 +3165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allOk) {
-            try {
-                const db = await getDB();
-                await new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORE_NAME], "readwrite");
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.clear();
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-            } catch(e) {
-                console.error("Failed to clear IndexedDB", e);
-            }
+            localStorage.setItem("ohc_offline_queue", "[]");
             updateOfflineStatus();
         }
     }

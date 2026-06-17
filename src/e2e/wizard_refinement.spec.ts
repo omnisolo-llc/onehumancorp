@@ -10,7 +10,7 @@ test.describe('Wizard Refinement E2E', () => {
 
   test('exposes AI helper and prompt tuning areas', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'AI Departments' }).click();
+    await page.getByRole('link', { name: 'Agents' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
     await expect(page.getByText('The Promoter')).toBeVisible();
   });

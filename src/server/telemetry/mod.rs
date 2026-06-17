@@ -1,5 +1,3 @@
-pub mod mcp_sync_worker;
-
 pub mod forecaster;
 
 pub use ::server_config as config;
@@ -1192,9 +1190,7 @@ pub fn redact_interface_pii(val: Value) -> Value {
                 Value::String(s)
             }
         }
-        Value::Number(n) => Value::Number(n),
-        Value::Bool(b) => Value::Bool(b),
-        Value::Null => Value::Null,
+        _ => val,
     }
 }
 
@@ -1263,9 +1259,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
 }
 
 pub fn is_email(s: &str) -> bool {
-    static EMAIL_RE: OnceLock<Regex> = OnceLock::new();
-    let email_re = EMAIL_RE.get_or_init(|| Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$").unwrap());
-    email_re.is_match(s)
+    s.contains('@') && s.contains('.')
 }
 
 #[cfg(test)]

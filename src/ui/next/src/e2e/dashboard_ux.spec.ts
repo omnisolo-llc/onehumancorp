@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { currentAppSmoke } from '../../../../e2e/current_app_smoke';
-import { test as base } from '../../../../e2e/fixtures';
 
 test.describe('Dashboard UX', () => {
   test('should display Growth & Virality section with Share Cards link', async ({ page }) => {

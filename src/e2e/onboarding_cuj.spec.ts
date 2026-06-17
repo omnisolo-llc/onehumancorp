@@ -9,7 +9,7 @@ test.describe('Onboarding Wizard CUJ', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           business_type: 'Bakery',
-          business_name: 'Maya',
+          business_name: 'Maya Bakery',
           categories: ['food'],
           initial_products: [{ name: 'Cake', price: '20' }]
         }),
@@ -56,22 +56,22 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     // 2. Owner enters business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya');
+    await nameInput.fill('Maya Bakery');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // 3. Owner enters what they sell
-    const sellInput = page.getByPlaceholder(/e.g. Custom Birthday Cake/i);
+    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
     await sellInput.fill('Cakes');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // 4. Owner enters location
-    const locInput = page.getByPlaceholder(/e.g. Portland/i);
+    const locInput = page.getByPlaceholder(/Portland, OR/i);
     await locInput.fill('NY');
 
     const generateBtn = page.getByRole('button', { name: 'Next', exact: true });
     await generateBtn.click();
 
-    const audienceInput = page.getByPlaceholder(/e.g. Local families/i);
+    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
     await audienceInput.fill('Tech enthusiasts and developers');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
@@ -88,7 +88,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
-    await page.getByRole('button', { name: /Approve & Go Live/i }).click({ force: true });
+    await page.getByRole('button', { name: /Launch Store/i }).click({ force: true });
 
     // 8. Verify it transitions to Live Screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
@@ -113,10 +113,10 @@ test.describe('Onboarding Wizard CUJ', () => {
     await startOnboarding(page);
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya');
+    await nameInput.fill('Maya Bakery');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-    const sellInput = page.getByPlaceholder(/e.g. Custom Birthday Cake/i);
+    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
     await sellInput.fill('Cakes');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
@@ -130,7 +130,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await startOnboarding(page);
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('Maya');
+    await nameInput.fill('Maya Bakery');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByText('What do you sell?')).toBeVisible();
 
@@ -143,13 +143,13 @@ test.describe('Onboarding Wizard CUJ', () => {
   test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
     await startOnboarding(page);
 
-    await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya');
+    await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya Bakery');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByPlaceholder(/e.g. Custom Birthday Cake/i).fill('Cakes');
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByPlaceholder(/e.g. Portland/i).fill('NY');
+    await page.getByPlaceholder(/Portland, OR/i).fill('NY');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    const audienceInput = page.getByPlaceholder(/e.g. Local families/i);
+    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
     await audienceInput.fill('Tech enthusiasts and developers');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 

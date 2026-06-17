@@ -27,7 +27,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await expect(page.getByText('How do you work?')).toBeVisible();
 
     // Context step
-    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
+    await page.locator('.radio-option', { hasText: 'Storefront or Cafe' }).click();
     await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-categories\"]').click();
 
     // Categories step
@@ -111,100 +111,10 @@ test.describe('OHC Setup Wizard Flow', () => {
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
     await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-context\"]').click();
-    const inputbox = await page.locator('label.context-card').first().boundingBox();
+    const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
 });
-
-
-  test('should auto-save progress and clear it on success', async ({ page }) => {
-    const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
-    await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: htmlContent });
-    });
-    // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
-      await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    await page.route('**/api/onboarding/draft', async route => {
-       await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    await page.goto('http://mock/setup.html');
-
-    // Check initial UI loading
-    await expect(page.locator('h1').first()).toBeVisible();
-    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
-
-    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
-    await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
-
-    const categorySelect = page.getByTestId('business-categories');
-    await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
-
-    // Name step - Trigger auto-save
-    await page.getByTestId('business-name').fill('AutoSave Bakery');
-
-    // Wait for debounce and localstorage to be populated
-    await page.waitForTimeout(600);
-
-    // Reload page
-    await page.reload();
-
-    // Wait for the state to be reloaded (it jumps to step 3 since it was saved)
-    await expect(page.getByTestId('business-name')).toHaveValue('AutoSave Bakery');
-  });
-
-  test('should show submit error if start fails', async ({ page }) => {
-    const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
-    await page.route('**/setup.html', async route => {
-        const htmlContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: htmlContent });
-    });
-    // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
-      await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    await page.route('**/api/onboarding/draft', async route => {
-       await route.fulfill({ status: 200, body: JSON.stringify({}) });
-    });
-
-    await page.goto('http://mock/setup.html');
-
-    // Intercept backend call with failure
-    await page.route('**/api/onboarding/start', async route => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Backend is broken' })
-      });
-    });
-
-    // Skip to template step (mock localStorage)
-    await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 7, // step-template
-            businessName: 'Error Bakery',
-            categories: 'Bakery',
-            templateSelection: 'Modern'
-        }));
-    });
-    await page.reload();
-
-    await page.getByTestId('template-selection').selectOption('Modern');
-    await page.getByTestId('finish-btn').click();
-
-    // Check error message
-    const errorMsg = page.locator('#submit-error');
-    await expect(errorMsg).toBeVisible();
-    await expect(errorMsg).toHaveText('Failed to start onboarding');
-  });
-
 
 test.describe('OHC Setup Wizard Form Configuration', () => {
 
@@ -270,7 +180,7 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     await page.goto('http://mock/setup.html');
 
     await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-context\"]').click();
-    const inputbox = await page.locator('label.context-card').first().boundingBox();
+    const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
 });

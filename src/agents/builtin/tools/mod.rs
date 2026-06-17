@@ -15,7 +15,7 @@ pub mod grep;
 pub mod webfetch;
 pub mod websearch;
 pub mod sendmessage;
-
+pub mod todowrite;
 pub mod toolsearch;
 pub mod task;
 pub mod booking;
@@ -95,6 +95,7 @@ pub trait ToolExecutor: Send + Sync {
 }
 
 /// Shared todo list state.
+pub type SharedTodos = Arc<RwLock<Vec<todowrite::TodoItem>>>;
 
 /// Shared task store state.
 pub type SharedTaskStore = Arc<RwLock<task::TaskStore>>;
@@ -107,7 +108,7 @@ pub fn all_tools(
     agent_llm: Option<std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
-
+    todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
@@ -136,6 +137,8 @@ pub fn all_tools(
         booking::booking_negotiate_time_tool(booking_store.clone()),
         booking::booking_reschedule_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
+        todowrite::todowrite_tool(todos.clone()),
+        todowrite::todoread_tool(todos.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
         task::task_get_tool(task_store.clone()),

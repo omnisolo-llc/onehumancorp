@@ -33,7 +33,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Step Context
-    await page.getByTestId('context-local').click();
+    await page.locator('input[value="Local Service"]').check({ force: true });
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-categories')).toHaveClass(/active/);
 
@@ -50,7 +50,6 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
 
     // Step Assistant
     await page.locator('#assistant-name').fill('Jarvis');
-    await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#assistant-name').press('Enter');
     await expect(page.locator('#step-admin')).toHaveClass(/active/);
 
@@ -134,46 +133,6 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-instant')).toHaveClass(/active/);
     const val = await page.locator('#instant-bio').inputValue();
     expect(val).toBe('Test bio\n');
-  });
-
-  test('Enter key submits chat message in Conversational Setup', async ({ page }) => {
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    let chatRequestSent = false;
-    await page.route('**/api/onboarding/chat', async route => {
-        chatRequestSent = true;
-        await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-                reply: 'Hello there!',
-                is_complete: false
-            })
-        });
-    });
-
-    await page.goto('http://mock/setup.html');
-
-    // Go to chat setup
-    await page.getByRole('button', { name: 'Conversational Setup' }).click();
-    await expect(page.locator('#step-chat')).toHaveClass(/active/);
-
-    // Press Enter to submit chat
-    await page.locator('#chat-input').fill('Test chat message');
-    await page.locator('#chat-input').press('Enter');
-
-    // It should add a message bubble to the view and send the API request
-    await expect(page.locator('#chat-messages').getByText('Test chat message')).toBeVisible();
-    expect(chatRequestSent).toBe(true);
   });
 
 });

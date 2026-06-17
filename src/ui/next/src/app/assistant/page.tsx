@@ -19,8 +19,7 @@ type Section =
   | 'billing'
   | 'permissions'
   | 'models'
-  | 'system'
-  | 'parity';
+  | 'system';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 type AssistantArtifact = {
@@ -82,7 +81,6 @@ const sections: [Section, string][] = [
   ['permissions', 'Permissions'],
   ['models', 'Models'],
   ['system', 'System'],
-  ['parity', 'Parity Audit'],
 ];
 
 const resourceConfig: Partial<Record<Section, { title: string; endpoint: string; rootKeys: string[] }>> = {
@@ -96,7 +94,6 @@ const resourceConfig: Partial<Record<Section, { title: string; endpoint: string;
   permissions: { title: 'Permissions', endpoint: '/api/assistant/permissions', rootKeys: ['authorizedFolders', 'rules'] },
   models: { title: 'Models', endpoint: '/api/assistant/models', rootKeys: ['models', 'runtime'] },
   system: { title: 'System', endpoint: '/api/assistant/settings', rootKeys: ['settings'] },
-  parity: { title: 'Parity Audit', endpoint: '/api/assistant/parity', rootKeys: ['summary', 'categories'] },
 };
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -821,45 +818,21 @@ function resourceBlocks(data: any, rootKeys: string[]) {
     return [{ title: 'Details', items: [data] }];
   }
   return rootKeys.map((key) => {
-    let value = data[key];
-
-
-
-    // If the component is not seeing 'summary', it means `data` doesn't have it.
-
-    if (value === undefined && data.total !== undefined && key === 'summary') {
-      value = data;
-    }
-
-    let items = [];
-    if (Array.isArray(value)) {
-       items = value.map(v => typeof v === 'object' && v !== null ? { ...v, id: v.id || v.name || key } : v);
-    } else if (value && typeof value === 'object') {
-       // if it's an object, flatten it safely to include its fields explicitly
-       const flatItem = { id: key, name: key };
-       for (const [k, v] of Object.entries(value)) {
-          flatItem[k] = typeof v === 'number' || typeof v === 'boolean' ? String(v) : v;
-       }
-       items = [flatItem];
-    } else if (value !== undefined) {
-       items = [{ id: key, name: key, value: String(value) }];
-    }
-
+    const value = data[key];
     return {
       title: labelFor(key),
-      items,
+      items: Array.isArray(value) ? value : value ? [value] : [],
     };
   });
 }
 
 function recordTitle(item: any) {
-  return String(item?.name || item?.title || item?.filename || item?.provider || item?.id || 'Record');
+  return String(item.name || item.title || item.filename || item.provider || item.id || 'Record');
 }
 
 function recordEntries(item: any) {
-  if (!item) return [];
   return Object.entries(item)
-    .filter(([key, value]) => !['id', 'name', 'title'].includes(key) && value !== undefined && value !== null && (typeof value !== 'object' || Array.isArray(value)))
+    .filter(([key, value]) => !['id', 'name', 'title'].includes(key) && value !== undefined && value !== null && typeof value !== 'object')
     .slice(0, 8);
 }
 

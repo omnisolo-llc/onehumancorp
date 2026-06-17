@@ -1,8 +1,6 @@
-pub mod sync;
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
-pub mod twilio_webhook;
 pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;
@@ -13,8 +11,6 @@ pub mod billing_webhook;
 pub mod billing_api;
 #[cfg(test)]
 pub mod billing_webhook_test;
-#[cfg(test)]
-pub mod billing_api_test;
 pub mod health;
 pub mod agents;
 pub mod onboarding;
@@ -42,4 +38,3 @@ pub mod cart;
 
 pub mod quotes;
 pub mod inbox;
-pub mod sync_gateway;

@@ -5,32 +5,24 @@
 /// - Up to 16 concurrent agents.
 /// - Up to 1,000 agents total per run.
 use std::sync::Arc;
-use tokio::sync::{Semaphore, RwLock, mpsc, watch};
-use std::collections::HashMap;
+use tokio::sync::{Semaphore, mpsc};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
-    pub script: String,
+    #[allow(dead_code)]
+    script: String,
 
     max_concurrent: usize,
     max_total_agents: usize,
-
-    // State management for pause/resume mechanic
-    pub cached_results: Arc<RwLock<HashMap<String, String>>>,
-    pub pause_tx: watch::Sender<bool>,
-    pub pause_rx: watch::Receiver<bool>,
-
-    pub args: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Task {
     pub id: String,
     pub instructions: String,
-    pub args: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TaskResult {
     pub task_id: String,
     pub output: String,
@@ -42,32 +34,17 @@ pub trait WorkflowAgent: Send + Sync {
 }
 
 impl DynamicWorkflow {
-    pub fn new(script: &str, args: Option<serde_json::Value>) -> Self {
-        let (pause_tx, pause_rx) = watch::channel(false);
+    pub fn new(script: &str) -> Self {
         Self {
             script: script.to_string(),
             max_concurrent: 16,
             max_total_agents: 1000,
-            cached_results: Arc::new(RwLock::new(HashMap::new())),
-            pause_tx,
-            pause_rx,
-            args,
         }
-    }
-
-    /// Pause the running workflow
-    pub fn pause(&self) {
-        let _ = self.pause_tx.send(true);
-    }
-
-    /// Resume the paused workflow
-    pub fn resume(&self) {
-        let _ = self.pause_tx.send(false);
     }
 
     pub async fn run_workflow(
         &self,
-        mut tasks: Vec<Task>,
+        tasks: Vec<Task>,
         agent_factory: Arc<dyn WorkflowAgent>,
     ) -> Result<Vec<TaskResult>, String> {
         if tasks.len() > self.max_total_agents {
@@ -78,57 +55,19 @@ impl DynamicWorkflow {
             ));
         }
 
-        // Inject workflow args into each task
-        for task in tasks.iter_mut() {
-            if task.args.is_none() {
-                task.args = self.args.clone();
-            }
-        }
-
         let semaphore = Arc::new(Semaphore::new(self.max_concurrent));
         let (tx, mut rx) = mpsc::channel(tasks.len().max(1));
 
         let mut handles = Vec::new();
-        let cached_ref = self.cached_results.clone();
 
         for task in tasks {
             let sem = semaphore.clone();
             let agent = agent_factory.clone();
             let tx_clone = tx.clone();
-            let mut pause_rx = self.pause_rx.clone();
-            let cached = cached_ref.clone();
 
             handles.push(tokio::spawn(async move {
-                // Wait while paused via watch channel
-                loop {
-                    let is_paused = *pause_rx.borrow_and_update();
-                    if !is_paused {
-                        break;
-                    }
-                    if pause_rx.changed().await.is_err() {
-                        break; // Channel closed
-                    }
-                }
-
-                // Check cache first (for resume mechanics)
-                let cached_result = {
-                    let c = cached.read().await;
-                    c.get(&task.id).cloned()
-                };
-
-                if let Some(res) = cached_result {
-                    let _ = tx_clone.send(Ok(TaskResult { task_id: task.id, output: res })).await;
-                    return;
-                }
-
                 let _permit = sem.acquire().await.unwrap();
-                let res = agent.execute(task.clone()).await;
-
-                if let Ok(ref tr) = res {
-                    let mut c = cached.write().await;
-                    c.insert(task.id.clone(), tr.output.clone());
-                }
-
+                let res = agent.execute(task).await;
                 let _ = tx_clone.send(res).await;
             }));
         }
@@ -201,7 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_success() {
-        let wf = DynamicWorkflow::new("let x = 1;", None);
+        let wf = DynamicWorkflow::new("let x = 1;");
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -211,12 +150,10 @@ mod tests {
             Task {
                 id: "1".to_string(),
                 instructions: "task 1".to_string(),
-                args: None,
             },
             Task {
                 id: "2".to_string(),
                 instructions: "task 2".to_string(),
-                args: None,
             },
         ];
 
@@ -226,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_concurrency_limit() {
-        let wf = DynamicWorkflow::new("orchestrate();", None);
+        let wf = DynamicWorkflow::new("orchestrate();");
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -237,7 +174,6 @@ mod tests {
             tasks.push(Task {
                 id: i.to_string(),
                 instructions: format!("task {}", i),
-                args: None,
             });
         }
 
@@ -254,7 +190,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dynamic_workflow_total_limit() {
-        let wf = DynamicWorkflow::new("orchestrate();", None);
+        let wf = DynamicWorkflow::new("orchestrate();");
         let agent = Arc::new(MockAgent {
             active_agents: Arc::new(AtomicUsize::new(0)),
             max_active_observed: Arc::new(AtomicUsize::new(0)),
@@ -265,69 +201,11 @@ mod tests {
             tasks.push(Task {
                 id: i.to_string(),
                 instructions: format!("task {}", i),
-                args: None,
             });
         }
 
         let res = wf.run_workflow(tasks, agent).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("exceeds the max limit of 1000"));
-    }
-
-    #[tokio::test]
-    async fn test_dynamic_workflow_pause_resume_caching() {
-        let wf = DynamicWorkflow::new("orchestrate();", None);
-        let agent = Arc::new(MockAgent {
-            active_agents: Arc::new(AtomicUsize::new(0)),
-            max_active_observed: Arc::new(AtomicUsize::new(0)),
-        });
-
-        let tasks = vec![
-            Task {
-                id: "1".to_string(),
-                instructions: "task 1".to_string(),
-                args: None,
-            },
-        ];
-
-        // Pre-populate the cache to simulate "already completed"
-        {
-            let mut c = wf.cached_results.write().await;
-            c.insert("1".to_string(), "Cached Output".to_string());
-        }
-
-        let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].output, "Cached Output");
-        // Ensure the agent was NOT actively run because it was cached
-        assert_eq!(agent.max_active_observed.load(Ordering::SeqCst), 0);
-    }
-
-    #[tokio::test]
-    async fn test_dynamic_workflow_with_args() {
-        let args = serde_json::json!({
-            "target_issues": [1024, 1025, 1030],
-            "config": {
-                "verbose": true
-            }
-        });
-        let wf = DynamicWorkflow::new("orchestrate();", Some(args.clone()));
-        assert_eq!(wf.args, Some(args));
-
-        let agent = Arc::new(MockAgent {
-            active_agents: Arc::new(AtomicUsize::new(0)),
-            max_active_observed: Arc::new(AtomicUsize::new(0)),
-        });
-
-        let tasks = vec![
-            Task {
-                id: "1".to_string(),
-                instructions: "task 1".to_string(),
-                args: None,
-            },
-        ];
-
-        let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
-        assert_eq!(results.len(), 1);
     }
 }

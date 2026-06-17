@@ -18,7 +18,6 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
-    whatsapp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
@@ -61,7 +60,6 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            whatsapp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -147,27 +145,18 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
-                 "meta" | "whatsapp" => {
+                 "meta" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                          let text = content.to_string();
 
-                         let client = {
-                             if integration_id == "whatsapp" {
-                                 let clients = self.whatsapp_clients.read().unwrap();
-                                 clients.get(integration_id).cloned()
-                             } else {
-                                 let clients = self.meta_clients.read().unwrap();
-                                 clients.get(integration_id).cloned()
-                             }
-                         };
-                         if let Some(client) = client {
+                         let clients = self.meta_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
-                             let is_whatsapp = integration_id == "whatsapp";
                              tokio::spawn(async move {
                                  // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
                                  // Otherwise we default to whatsapp
-                                 let platform = if is_whatsapp || to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
+                                 let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
                                  if let Err(e) = client.send_message(platform, &to, &text).await {
                                      ::server_telemetry::record_error_signal("Failed to send Meta message");
                                      tracing::warn!("Failed to send Meta message: {}", e);
@@ -230,12 +219,6 @@ impl IntegrationsRegistry {
         }
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
-            )));
-        }
-        if integration_id == "whatsapp" {
-            let mut clients = self.whatsapp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
                 creds.api_token.clone()
             )));
@@ -459,32 +442,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_whatsapp(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
-        if integration_id == "twilio" {
-            let client = {
-                let clients = self.twilio_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            };
-            if let Some(c) = client {
-                return c.send_whatsapp(to, from, body).await;
-            }
-        } else if integration_id == "meta" || integration_id == "whatsapp" {
-            let client = {
-                if integration_id == "whatsapp" {
-                    let clients = self.whatsapp_clients.read().unwrap();
-                    clients.get(integration_id).cloned()
-                } else {
-                    let clients = self.meta_clients.read().unwrap();
-                    clients.get(integration_id).cloned()
-                }
-            };
-            if let Some(c) = client {
-                return c.send_message("whatsapp", to, body).await;
-            }
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn get_delivery_quote(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str) -> Result<crate::integrations::doordash::client::DeliveryQuote, String> {
         let client = {
             if integration_id == "doordash" {
@@ -581,9 +538,6 @@ impl IntegrationsRegistry {
             if integration_id == "meta" {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
-            } else if integration_id == "whatsapp" {
-                let clients = self.whatsapp_clients.read().unwrap();
-                clients.get(integration_id).cloned()
             } else {
                 None
             }
@@ -604,20 +558,11 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            let res = if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
-                let r = c.send_whatsapp(to, from, body).await;
-                if r.is_ok() {
-                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_whatsapp", 0.015).await;
-                }
-                r
+            if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
+                return c.send_whatsapp(to, from, body).await;
             } else {
-                let r = c.send_sms(to, from, body).await;
-                if r.is_ok() {
-                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_sms", 0.01).await;
-                }
-                r
-            };
-            return res;
+                return c.send_sms(to, from, body).await;
+            }
         }
         Err("integration not found or not supported".to_string())
     }
@@ -879,11 +824,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            let res = c.send_email(to, subject, body).await;
-            if res.is_ok() {
-                let _ = ::server_telemetry::record_email_send_cost(&crate::db::get_pool(), "unknown", 1).await;
-            }
-            return res;
+            return c.send_email(to, subject, body).await;
         }
         Err("integration not found or not supported".to_string())
     }

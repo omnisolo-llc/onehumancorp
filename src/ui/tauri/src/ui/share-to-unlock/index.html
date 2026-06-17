@@ -141,12 +141,6 @@
       color: #1d1d1f;
     }
 
-
-    @media (max-width: 375px) {
-      .container { padding: 20px 15px; }
-      h1 { font-size: 24px; }
-    }
-
   </style>
 <style>
 @media (prefers-color-scheme: dark) {
@@ -222,17 +216,13 @@
       const shareUrl = encodeURIComponent(window.location.href);
       const encodedMsg = encodeURIComponent(shareMsg);
 
-      async function unlock() {
+      function unlock() {
           // Track the unlock event if possible
-          try {
-              await fetch('/api/v1/growth/storefront/track', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ event_type: "share_to_unlock_reveal", metadata: { campaign: title, tenant: tenant } })
-              });
-          } catch(e) {
-              console.error('Failed to track unlock, proceeding anyway', e);
-          }
+          fetch('/api/v1/growth/storefront/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type: "share_to_unlock_reveal", metadata: { campaign: title, tenant: tenant } })
+          }).catch(e => console.error(e));
 
           document.getElementById('discount-code').classList.add('unlocked');
           document.getElementById('locked-badge').style.opacity = '0';

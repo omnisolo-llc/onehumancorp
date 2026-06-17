@@ -9,21 +9,6 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -58,8 +43,7 @@
         }
       ],
       "title": "LLM Call Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -100,8 +84,7 @@
         }
       ],
       "title": "Outbound API Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -138,8 +121,7 @@
         }
       ],
       "title": "Storage R/W Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -176,8 +158,7 @@
         }
       ],
       "title": "Email Send Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     }
   ],
   "refresh": "",

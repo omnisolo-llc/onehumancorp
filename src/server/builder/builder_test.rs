@@ -27,7 +27,7 @@ async fn setup_db() -> Option<(PgPool, Uuid)> {
             let t_id = tenant_id_clone.clone();
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute(format!("SET app.current_tenant = '{}'", t_id).as_str()).await?;
+                conn.execute(format!("SET app.current_tenant_id = '{}'", t_id).as_str()).await?;
                 Ok(true)
             })
         })

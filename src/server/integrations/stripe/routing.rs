@@ -15,13 +15,6 @@ impl PaymentRouter {
     pub const ACH_FEE_PERCENTAGE: f64 = 0.008;
     pub const ACH_FEE_CAP: f64 = 5.0;
     pub const ACH_MIN_AMOUNT: f64 = 50.0;
-    pub const BATCH_PAYOUT_THRESHOLD_CENTS: i64 = 10000;
-
-    pub fn should_batch_payout(amount_cents: i64) -> bool {
-        // Transaction Fee Optimization
-        // To minimize Stripe transfer fees, small payouts under $100 are batched.
-        amount_cents < Self::BATCH_PAYOUT_THRESHOLD_CENTS
-    }
 
     /// Returns the optimal payment method based on the transaction amount.
     /// Stripe Credit Card fee: 2.9% + $0.30

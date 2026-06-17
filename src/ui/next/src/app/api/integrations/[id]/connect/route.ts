@@ -20,18 +20,10 @@ export async function POST(req: Request, context: ConnectContext) {
   }
 
   try {
-    let body = { integration_id: id };
-    try {
-      const parsed = await req.clone().json();
-      body = { ...body, ...parsed };
-    } catch {}
-
-    const targetId = id === 'whatsapp' ? 'twilio' : encodeURIComponent(id);
-
-    const res = await fetch(`${backendUrl}/api/integrations/${targetId}/connect`, {
+    const res = await fetch(`${backendUrl}/api/integrations/${encodeURIComponent(id)}/connect`, {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify({ integration_id: id }),
     });
 
     if (res.ok) {

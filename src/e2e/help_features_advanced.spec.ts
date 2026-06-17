@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('In-App Help & Documentation Features', () => {
   test('navigates to Help Center and searches for an article', async ({ page }) => {
-    await page.goto('/help.html');
+    await page.goto('/help');
 
     // Help Center title is visible
     await expect(page.getByRole('heading', { name: /Help Center/i })).toBeVisible();
@@ -19,7 +19,7 @@ test.describe('In-App Help & Documentation Features', () => {
   });
 
   test('views individual help article', async ({ page }) => {
-    await page.goto('/help_article.html?id=getting-started-1');
+    await page.goto('/help/getting-started-1');
 
     await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible();
     await expect(page.getByText('Tell us about your business')).toBeVisible();
@@ -51,12 +51,12 @@ test.describe('In-App Help & Documentation Features', () => {
   });
 
   test('api docs page', async ({ page }) => {
-    await page.goto('/api-docs.html');
+    await page.goto('/api-docs');
     await expect(page.getByText('API Reference for advanced users')).toBeVisible();
   });
 
   test('changelog page', async ({ page }) => {
-    await page.goto('/changelog.html');
+    await page.goto('/changelog');
     await expect(page.getByText('Release Notes & Changelog')).toBeVisible();
     await expect(page.getByText('New Features')).toBeVisible();
   });

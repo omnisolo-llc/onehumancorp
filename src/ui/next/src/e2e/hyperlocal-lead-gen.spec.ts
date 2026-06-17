@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from '../../../../e2e/fixtures';
+import { adminPage } from './fixtures';
+
 
 test.describe('Hyperlocal Lead Gen CUJ', () => {
   test('Carlos the Handyman sets up a weekly lead gen campaign', async ({ page }) => {
