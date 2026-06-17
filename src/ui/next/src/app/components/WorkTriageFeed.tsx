@@ -127,13 +127,20 @@ export function WorkTriageFeed({
               </div>
             )}
 
-            <div className="flex flex-col gap-3 mt-2 w-full">
+            <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
               <button
                 onClick={() => onDecision(item.id, true)}
                 className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
                 Approve & Execute
+              </button>
+              <button
+                onClick={() => {}}
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center cursor-pointer"
+                data-testid={`triage-edit-${item.id}`}
+              >
+                Edit
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
@@ -188,6 +195,13 @@ export function WorkTriageFeed({
                 data-testid={`triage-approve-${item.id}`}
               >
                 ✨ Approve & Execute
+              </button>
+              <button
+                onClick={() => {}}
+                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[8px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                data-testid={`triage-edit-${item.id}`}
+              >
+                Edit
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
