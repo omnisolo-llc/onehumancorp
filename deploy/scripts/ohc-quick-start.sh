@@ -29,6 +29,11 @@ if [ ! -f .env ]; then
   chmod 0600 .env
 fi
 
+if [ ! -d ".ohc/runtime" ]; then
+    mkdir -p .ohc/runtime/memory .ohc/runtime/status
+    touch .ohc/runtime/swarm.db
+fi
+
 echo -e "${DIM}[3/4] Launching local backend...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_SOURCE_MODE=standalone

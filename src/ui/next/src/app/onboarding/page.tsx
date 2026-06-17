@@ -548,7 +548,7 @@ export default function OnboardingWizard() {
             target_audience: intakeDataOverride.target_audience || 'General',
             ai_agents: [],
             ai_auto_respond: true,
-            initial_products: intakeDataOverride.initial_products || []
+            initial_products: intakeDataOverride.initial_products || JSON.parse(localStorage.getItem('onboarding_initial_products') || '[]')
           })
         });
 

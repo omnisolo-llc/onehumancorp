@@ -185,3 +185,10 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
+// Add window.open mock
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'open', {
+    writable: true,
+    value: vi.fn(),
+  })
+}
