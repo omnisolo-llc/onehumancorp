@@ -57,8 +57,8 @@ export default function ApprovalInbox({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50/50 backdrop-blur-md font-inter py-10">
-      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] bg-white/60 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
+      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
