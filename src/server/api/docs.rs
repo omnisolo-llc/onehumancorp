@@ -828,4 +828,22 @@ mod tests {
             Some("This is a test tooltip")
         );
     }
+
+    #[tokio::test]
+    async fn test_get_walkthrough() {
+        let res_store_setup = get_walkthrough(axum::extract::Path("store-setup".to_string())).await;
+        assert_eq!(res_store_setup.0.len(), 1);
+
+        let res_dashboard = get_walkthrough(axum::extract::Path("dashboard".to_string())).await;
+        assert_eq!(res_dashboard.0.len(), 2);
+
+        let res_pos = get_walkthrough(axum::extract::Path("pos".to_string())).await;
+        assert_eq!(res_pos.0.len(), 1);
+
+        let res_assistant = get_walkthrough(axum::extract::Path("assistant".to_string())).await;
+        assert_eq!(res_assistant.0.len(), 1);
+
+        let res_unknown = get_walkthrough(axum::extract::Path("unknown".to_string())).await;
+        assert_eq!(res_unknown.0.len(), 0);
+    }
 }
