@@ -271,7 +271,7 @@ impl Tracker {
     }
 
     pub fn track_email_send(&self, tenant_id: &str) {
-        tracing::info!("💰 Miser telemetry: Recording email send for tenant: {}", tenant_id);
+        tracing::info!("💰 Miser telemetry: Recording communication metric for tenant: {}", tenant_id);
         if let Some(ref auditor) = self.auditor {
             // Future: auditor.record_email_send(tenant_id);
         }
