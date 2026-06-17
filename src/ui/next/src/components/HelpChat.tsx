@@ -236,7 +236,7 @@ export function HelpChat() {
                     href={msg.link.url}
                     className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[30px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90"
                   >
-                    {msg.link.title}
+                    Read the full article →
                   </a>
                 )}
               </div>
