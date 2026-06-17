@@ -16,6 +16,7 @@ pub mod billing_webhook_test;
 #[cfg(test)]
 pub mod billing_api_test;
 pub mod health;
+pub mod proposals;
 pub mod agents;
 pub mod onboarding;
 pub mod growth;

@@ -441,3 +441,50 @@ message CreateUnifiedBookingResponse {
     UnifiedBooking booking = 2;
     string error = 3;
 }
+
+message ProposalLineItem {
+  string id = 1;
+  string proposal_id = 2;
+  string description = 3;
+  int32 quantity = 4;
+  int64 unit_price_cents = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message ContractTemplate {
+  string id = 1;
+  string tenant_id = 2;
+  string proposal_id = 3;
+  string legal_text = 4;
+  int64 created_at_unix = 5;
+  int64 updated_at_unix = 6;
+}
+
+message Proposal {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string status = 4;
+  int64 total_amount_cents = 5;
+  int64 expires_at_unix = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+  repeated ProposalLineItem line_items = 9;
+  ContractTemplate contract_template = 10;
+}
+
+message CreateProposalRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  repeated ProposalLineItem line_items = 3;
+  int64 total_amount_cents = 4;
+}
+
+message ProposalResponse {
+  Proposal proposal = 1;
+}
+
+message FetchProposalRequest {
+  string proposal_id = 1;
+}

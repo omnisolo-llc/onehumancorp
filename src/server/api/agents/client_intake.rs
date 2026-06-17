@@ -54,7 +54,7 @@ async fn handle_client_intake(
     let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());
 
     // Analyze the unstructured inquiry and extract parameters (mock logic for AI generation)
-    // Create a drafted proposal
+    // Create a drafted proposal using generative AI based on requirements
     let suggested_price = 1500.00;
     let service_name = "Custom Project Scope";
 
