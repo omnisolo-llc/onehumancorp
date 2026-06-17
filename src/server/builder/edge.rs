@@ -60,59 +60,6 @@ impl StorefrontRouter {
     }
 }
 
-
-pub async fn inject_dynamic_inventory(
-    mut html: String,
-    tenant_id: Uuid,
-    pool: &PgPool,
-    cache: Arc<HybridCache<String>>,
-) -> String {
-    let mut offset = 0;
-    while let Some(start) = html[offset..].find("<!-- INVENTORY_STATUS_") {
-        let actual_start = offset + start;
-        let prefix_len = "<!-- INVENTORY_STATUS_".len();
-        if let Some(end) = html[actual_start + prefix_len..].find(" -->") {
-            let actual_end = actual_start + prefix_len + end;
-            let pid = &html[actual_start + prefix_len..actual_end];
-            let pid_str = pid.to_string();
-
-            let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
-
-            let mut inventory_count: i32 = 0;
-            if let Some(cached_val) = cache.get(&kv_key).await {
-                if let Ok(val) = cached_val.parse::<i32>() {
-                    inventory_count = val;
-                }
-            } else {
-                let db_res: Result<Option<i32>, _> = sqlx::query_scalar(
-                    "SELECT inventory_count FROM products WHERE tenant_id = $1 AND id = $2"
-                )
-                .bind(tenant_id.to_string())
-                .bind(&pid_str)
-                .fetch_optional(pool)
-                .await;
-
-                if let Ok(Some(count)) = db_res {
-                    inventory_count = count;
-                    cache.set(&kv_key, count.to_string(), std::time::Duration::from_secs(60)).await;
-                }
-            }
-
-            let replacement = if inventory_count <= 0 {
-                "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
-            } else {
-                ""
-            };
-
-            html.replace_range(actual_start..(actual_end + 4), replacement);
-
-            offset = actual_start + replacement.len();
-        } else {
-            break;
-        }
-    }
-    html
-}
 pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
@@ -125,8 +72,7 @@ pub async fn handle_edge_request_impl(
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
-    if let Some((mut cached_html, stale)) = cache.get_with_swr(&cache_key).await {
-        cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+    if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         let mut response = Html(cached_html).into_response();
         let cache_tag = format!("tenant-id:{}", tenant_id);
         if let Ok(val) = cache_tag.parse() {
@@ -184,15 +130,14 @@ pub async fn handle_edge_request_impl(
         }
     }
 
-    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await;
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
 
     {
         let ongoing = get_ongoing_generation();
         ongoing.lock().await.remove(&cache_key);
     }
 
-    let (mut html, tags) = result?;
-    html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+    let (html, tags) = result?;
 
     let mut response = Html(html).into_response();
     if !tags.is_empty() {
@@ -244,10 +189,7 @@ pub async fn regenerate_cache(
 
     html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
     if let Some(seo_name) = page.seo_metadata.get("name").and_then(|v| v.as_str()) {
-        html.push_str(&format!("<meta name=\"title\" content=\"{}\">\n", escape_html(seo_name)));
-    }
-    if let Some(seo_description) = page.seo_metadata.get("description").and_then(|v| v.as_str()) {
-        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_description)));
+        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_name)));
     }
 
     let mut seo_ld = page.seo_metadata.clone();
@@ -306,22 +248,11 @@ pub async fn regenerate_cache(
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
-                            html.push_str(&format!(
-                                "<div class=\"product-card\">
-<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div><div class=\"product-price font-outfit\">{}</div><div class=\"inventory-status\"><!-- INVENTORY_STATUS_{} --></div></div>
-</div>
-",
-                                escape_html(name), escape_html(desc), escape_html(price), pid
-                            ));
-                        } else {
-                            html.push_str(&format!(
-                                "<div class=\"product-card\">
-<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>
-</div>
-",
-                                escape_html(name), escape_html(desc), escape_html(price)
-                            ));
                         }
+                        html.push_str(&format!(
+                            "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
+                            escape_html(name), escape_html(desc), escape_html(price)
+                        ));
                     }
                 }
                 html.push_str("</div>\n");

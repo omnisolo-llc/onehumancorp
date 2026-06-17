@@ -1,9 +1,7 @@
-import { test, expect } from '../../../e2e/fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Offline Field Operations', () => {
-  test('Carlos can view jobs, go offline, add notes, and complete a job which generates a quote request', async ({ page, context, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
-
+  test('Carlos can view jobs, go offline, add notes, and complete a job which generates a quote request', async ({ page, context }) => {
     // Navigate to the field ops page
     await page.goto('/field-ops/jobs');
 
@@ -22,34 +20,12 @@ test.describe('Offline Field Operations', () => {
     const notesArea = page.locator('textarea').first();
     await notesArea.fill('Found a leak under the sink, requires immediate pipe replacement quote.');
 
-    // Look for heading to job first
-    const headingToJobBtn = page.locator('button', { hasText: 'Heading to Job' }).first();
-
-    // Playwright robust checking for visibility before clicking to avoid flakiness
-    try {
-      await headingToJobBtn.waitFor({ state: 'visible', timeout: 5000 });
-      await headingToJobBtn.click();
-    } catch (e) {
-      // It might not be visible if it's already in the next state
-    }
-
-    // Now it should say Start Work
-    const startWorkBtn = page.locator('button', { hasText: 'Start Work' }).first();
-    try {
-      await startWorkBtn.waitFor({ state: 'visible', timeout: 5000 });
-      await startWorkBtn.click();
-    } catch (e) {
-      // It might not be visible if it's already in the next state
-    }
-
-    // Now it should say Job Done
-    const jobDoneBtn = page.locator('button', { hasText: 'Job Done' }).first();
-    await jobDoneBtn.waitFor({ state: 'visible' });
-    await jobDoneBtn.click();
+    const completeBtn = page.locator('button:has-text("Complete Job")').first();
+    await completeBtn.click();
 
     // Verify UI updates locally
     await expect(page.locator('text=Saved Notes:')).toBeVisible();
-    await expect(page.locator('text="Found a leak under the sink, requires immediate pipe replacement quote."')).toBeVisible();
+    await expect(page.locator('text=\"Found a leak under the sink, requires immediate pipe replacement quote.\"')).toBeVisible();
     await expect(page.locator('text=Sales Agent will draft an estimate based on these notes once online.')).toBeVisible();
 
     // Simulate going back online

@@ -21,10 +21,7 @@ export default function MyPlanPage() {
   useEffect(() => {
     const fetchPlanData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/billing/my-plan', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+        const response = await fetch('/api/billing/my-plan');
         if (response.ok) {
           const json = await response.json();
           setData(json);
@@ -49,7 +46,7 @@ export default function MyPlanPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount / 100);
+    }).format(amount);
   };
 
   if (loading) {
@@ -77,7 +74,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg p-6 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -95,7 +92,7 @@ export default function MyPlanPage() {
                 <button
                     onClick={() => router.push('/pricing')}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
-                    Upgrade
+                    View Upgrade Plans
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
@@ -106,7 +103,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg mt-4 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-panel bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-sm mt-4">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>

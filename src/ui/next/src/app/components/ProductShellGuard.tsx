@@ -36,10 +36,6 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
     title: "AI Usage",
     subtitle: "Review AI limits, usage, and upgrade options.",
   },
-  "/langgraph": {
-    title: "LangGraph",
-    subtitle: "Explicit state graph workflows.",
-  },
 };
 
 const routesWithOwnShell = new Set([

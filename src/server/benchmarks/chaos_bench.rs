@@ -8,7 +8,7 @@ mod tests {
     // They don't test actual network unreliability, but rather
     // the system's behavior when such lag or failure is synthetically injected.
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_simulate_sql_sync_lag() {
         // Here we simulate lock contention that would arise from SQL sync lag.
         use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
@@ -28,12 +28,16 @@ mod tests {
         let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
         assert!(!acquired2);
 
-        // Simulate lag / timeout -> wait for TTL to pass.
-        // We use tokio::time::advance to instantly bypass the 2s lock duration
-        // without sleeping in real-time, removing flakiness in CI.
-        tokio::time::advance(Duration::from_secs(3)).await;
-
-        let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false);
+        // Simulate lag / timeout -> wait for TTL to pass. Poll to avoid
+        // scheduler jitter making a loaded test run land on the expiry boundary.
+        let acquired2_retry = tokio::time::timeout(tokio::time::Duration::from_secs(6), async {
+            loop {
+                if transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false) {
+                    return true;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+        }).await.unwrap_or(false);
         assert!(acquired2_retry, "Agent 2 failed to acquire lock after wait");
 
         transport.release_lock(&resource, "agent_2").await.unwrap();
@@ -115,7 +119,7 @@ mod tests {
         assert_eq!(retries, 2);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_graceful_degradation() {
         // Since we want to ensure full integration coverage of graceful degradation
         // across the real orchestration state manager logic, we rely on the
@@ -124,12 +128,14 @@ mod tests {
         // pull_available_tasks fallback via SleepingMockMesh.
         // This benchmark asserts that the fundamental timeout utility function
         // guarantees the underlying bounded logic without network drift.
+        let start = std::time::Instant::now();
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
         let result = timeout(Duration::from_millis(500), async {
-            std::future::pending::<()>().await;
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
             "ok"
         }).await;
         assert!(result.is_err()); // Timeout triggers
+        assert!(start.elapsed() < Duration::from_millis(2500));
     }
 
     #[tokio::test]

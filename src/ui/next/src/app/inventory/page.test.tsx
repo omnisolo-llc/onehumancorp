@@ -1,4 +1,4 @@
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import InventoryDashboard from "./page";
@@ -15,19 +15,17 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-test("does not expose backend API route names in the inventory UI", async () => {
+test("does not expose backend API route names in the inventory UI", () => {
   global.fetch = vi.fn(() => Promise.resolve({
     ok: true,
     json: () => Promise.resolve({ vendors: [], raw_materials: [], bom_items: [] }),
   })) as any;
 
-  await act(async () => {
-    render(
-      <TooltipProvider>
-        <InventoryDashboard />
-      </TooltipProvider>
-    );
-  });
+  render(
+    <TooltipProvider>
+      <InventoryDashboard />
+    </TooltipProvider>,
+  );
 
   expect(screen.getByText("Raw Materials")).toBeDefined();
   expect(screen.queryByText(/\/api\/ui\/supply/)).toBeNull();

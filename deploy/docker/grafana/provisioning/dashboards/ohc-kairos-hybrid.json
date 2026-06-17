@@ -485,15 +485,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_llm_cost_total_cents[5m])) by (tenant_id)",
+          "expr": "sum(rate(ohc_mission_cost_cents[5m])) by (tenant_id)",
           "legendFormat": "{{tenant_id}}",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -587,8 +586,7 @@
         }
       ],
       "title": "RAG Escalation Rate",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -682,8 +680,7 @@
         }
       ],
       "title": "Token Budget Alerts (last 1h)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,

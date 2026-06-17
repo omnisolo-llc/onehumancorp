@@ -311,7 +311,6 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
-        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -345,7 +344,6 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
-        .route("/seasonal-promo/generate", post(handle_promo_generate))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
@@ -353,8 +351,6 @@ where
 .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
-        .route("/link-in-bio", post(handle_post_link_in_bio))
-        .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -1043,18 +1039,6 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateResponse {
-    pub name: String,
-    pub url: String,
-    pub products_count: usize,
 }
 
 async fn handle_track_visitor(
@@ -1925,10 +1909,10 @@ async fn handle_team_invite_accept(
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
                 let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
-
-                let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-                metrics_cache.invalidate(&format!("aggregated_metrics_{}", team_id)).await;
             }
+
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
@@ -1953,7 +1937,7 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -1983,28 +1967,6 @@ mod tests {
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB");
         pool
-    }
-
-    #[tokio::test]
-    async fn test_handle_zero_click_generate() {
-        let pool = setup_db().await;
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = ZeroClickGenerateRequest {
-            prompt: "I sell coffee".to_string(),
-        };
-
-        // Note: the actual OnboardingAgent requires external API calls, but we can verify
-        // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
-        // We just ensure we can invoke the handler without panic.
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
-            org_id: "test-tenant-zero".to_string(),
-            agent_id: "owner@test.com".to_string(),
-        };
-        let _ = handle_zero_click_generate(Extension(state), axum::extract::Extension(auth_info.clone()), Json(req)).await;
     }
 
     #[tokio::test]
@@ -2208,37 +2170,6 @@ mod tests {
 
         assert!(res_json2.response.contains("noticed you have"), "Response should contain 'noticed you have', but was: {}", res_json2.response);
         assert_eq!(res_json2.draft_action.unwrap().action_type, "recover_abandoned_carts");
-    }
-
-    #[tokio::test]
-    async fn test_zero_click_generate() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
-
-        let req = ZeroClickGenerateRequest {
-            prompt: "I am a home baker selling cakes.".to_string(),
-        };
-
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
-            org_id: "test-tenant-zero".to_string(),
-            agent_id: "owner@test.com".to_string(),
-        };
-
-        // When testing without an LLM mock configured, process_intake returns a mocked success
-        // which has business_name = "Mock Business" and 1 initial product.
-        let res = handle_zero_click_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
-
-        assert!(res.is_ok());
-        let response = res.unwrap().0;
-        assert_eq!(response.name, "Mock Business");
-        assert_eq!(response.url, "mock-business.ohc.app");
-        assert_eq!(response.products_count, 1);
     }
 
     #[tokio::test]
@@ -2584,7 +2515,7 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -2675,78 +2606,6 @@ fn escape_html(s: &str) -> String {
         }
     }
     escaped
-}
-
-pub async fn handle_zero_click_generate(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-    axum::Json(req): axum::Json<ZeroClickGenerateRequest>,
-) -> Result<axum::Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
-    let db = std::sync::Arc::new(crate::db::DB {
-        pool: state.pool.clone(),
-        store: crate::db::DbStore::Postgres,
-    });
-    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(
-        db,
-        state.hub.clone()
-    );
-
-    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
-        tracing::error!("Intake error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let first_product = intake_data.initial_products.first();
-    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
-    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
-
-    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
-        business_type: intake_data.business_type,
-        company_name: intake_data.business_name.clone(),
-        company_description: req.prompt.clone(),
-        selling_categories: intake_data.categories,
-        payment_pref: "online".to_string(),
-        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
-        admin_name: "Owner".to_string(),
-        admin_password: uuid::Uuid::new_v4().to_string(),
-        website_template: "Modern".to_string(),
-        first_product_name,
-        first_product_price,
-        domain_choice: "subdomain".to_string(),
-        price_type: "fixed".to_string(),
-        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
-        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
-        initial_products: vec![],
-        ai_agents: vec![],
-        ai_auto_respond: false,
-    };
-
-    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
-        tracing::error!("Start onboarding error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let mut clean_name = String::new();
-    for c in intake_data.business_name.to_lowercase().chars() {
-        if c.is_ascii_alphanumeric() {
-            clean_name.push(c);
-        } else {
-            clean_name.push('-');
-        }
-    }
-    let clean_name = clean_name.trim_matches('-').to_string();
-
-    let url = if clean_name.is_empty() {
-        "my-business.ohc.app".to_string()
-    } else {
-        format!("{}.ohc.app", clean_name)
-    };
-
-    Ok(axum::Json(ZeroClickGenerateResponse {
-        name: intake_data.business_name,
-        url,
-        products_count: intake_data.initial_products.len(),
-    }))
 }
 
 pub async fn handle_embed_widget(
@@ -2963,131 +2822,4 @@ async fn handle_simulate_referral_checkout(
         message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
     }))
-}
-
-
-#[derive(Debug, serde::Deserialize)]
-pub struct GeneratePromoRequest {
-    pub occasion: Option<String>,
-    pub discount: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct GeneratePromoResponse {
-    pub content: String,
-}
-
-pub async fn handle_promo_generate(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
-    axum::Json(req): axum::Json<GeneratePromoRequest>,
-) -> impl axum::response::IntoResponse {
-    let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
-    let occasion = if occasion_raw.trim().is_empty() { "Winter Wonderland".to_string() } else { occasion_raw };
-
-    let discount_raw = req.discount.unwrap_or_else(|| "25".to_string());
-    let discount = if discount_raw.trim().is_empty() { "25".to_string() } else { discount_raw };
-
-    let mut generated = format!(
-        "{} Special!\n\n{}% OFF\n\nUse code: WINTERW25",
-        occasion, discount
-    );
-
-    if !generated.contains("Powered by OHC") {
-        generated.push_str("\n\n⚡ Powered by OHC");
-    }
-
-    axum::Json(GeneratePromoResponse {
-        content: generated,
-    })
-}
-
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct LinkItem {
-    pub id: String,
-    pub title: String,
-    pub url: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct LinkInBioConfig {
-    pub store_name: String,
-    pub bio: String,
-    pub theme: String,
-    pub links: Vec<LinkItem>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct SetLinkInBioConfigReq {
-    pub store_name: String,
-    pub bio: String,
-    pub theme: String,
-    pub links: Vec<LinkItem>,
-}
-
-pub async fn handle_get_link_in_bio(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Path(tenant): axum::extract::Path<String>
-) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant).execute(&mut *tx).await;
-
-    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
-        .bind(&tenant)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let config = if let Some(val) = value {
-        serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
-                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
-            ]
-        })
-    } else {
-        LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
-                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
-            ]
-        }
-    };
-
-    Ok(axum::Json(config))
-}
-
-pub async fn handle_post_link_in_bio(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-    axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
-) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
-
-    let config = LinkInBioConfig {
-        store_name: req.store_name,
-        bio: req.bio,
-        theme: req.theme,
-        links: req.links,
-    };
-
-    let val = serde_json::to_string(&config).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(&tenant_id)
-        .bind(&val)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(axum::http::StatusCode::OK)
 }

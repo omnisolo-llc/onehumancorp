@@ -3,18 +3,7 @@ packages:
   - "src/proto"
   - "src/cli"
 allowBuilds:
-  '@journeyapps/wa-sqlite': true
-  '@scarf/scarf': true
-  '@tree-sitter-grammars/tree-sitter-yaml': true
-  core-js-pure: true
-  esbuild: true
-  sharp: true
-  tree-sitter: true
-  tree-sitter-json: true
-minimumReleaseAgeExclude:
-  - '@playwright/test@1.61.0'
-  - playwright-core@1.61.0
-  - playwright@1.61.0
+  esbuild: set this to true or false
 pnpm:
   onlyBuiltDependencies:
     - google-protobuf

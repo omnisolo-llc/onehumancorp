@@ -36,7 +36,7 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
         ],
         "dashboard" => vec![
             WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
-            WalkthroughStep { selector: "#wrapped-summary".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
         ],
         "pos" => vec![
             WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
@@ -79,13 +79,14 @@ pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<To
 
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
-        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started with Your Store".to_string(), desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/add-products".to_string() },
-        HelpArticle { category: "Payments".to_string(), title: "Accepting Payments".to_string(), desc: "Learn how to accept credit cards and manage your payouts.".to_string(), link: "/help/accept-payments".to_string() },
-        HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
-        HelpArticle { category: "Marketing".to_string(), title: "Grow Your Audience".to_string(), desc: "Use our built-in tools to run promotions and track performance.".to_string(), link: "/help/marketing-tools".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Manage Billing".to_string(), desc: "Update your subscription and payment methods.".to_string(), link: "/help/billing-settings".to_string() },
+        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
+        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
+        HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
+        HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
+        HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
+        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() },
         HelpArticle { category: "Advanced".to_string(), title: "API Reference".to_string(), desc: "Use our OpenAPI specs to integrate with OHC.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "Webhooks".to_string(), desc: "Listen to real-time events.".to_string(), link: "/help/webhooks".to_string() }
     ]
 }
 
@@ -97,9 +98,9 @@ pub fn get_videos() -> Vec<VideoTutorial> {
         VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string(), video_url: "/videos/4.mp4".to_string() },
         VideoTutorial { id: 5, title: "Review an order".to_string(), duration: "1:10".to_string(), video_url: "/videos/5.mp4".to_string() },
         VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string(), video_url: "/videos/6.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:20".to_string(), video_url: "/videos/7.mp4".to_string() },
+        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string(), video_url: "/videos/7.mp4".to_string() },
         VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
-        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "1:25".to_string(), video_url: "/videos/9.mp4".to_string() },
+        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "3:45".to_string(), video_url: "/videos/9.mp4".to_string() },
         VideoTutorial { id: 10, title: "View analytics and reports".to_string(), duration: "1:20".to_string(), video_url: "/videos/10.mp4".to_string() },
     ]
 }
@@ -277,37 +278,30 @@ pub struct ChangelogSection {
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    let mut sections = Vec::new();
-    let content = std::include_str!("../../../CHANGELOG.md");
-
-    let mut current_version = String::new();
-    let mut current_lines = Vec::new();
-
-    for line in content.lines() {
-        if line.starts_with("## ") {
-            if !current_version.is_empty() {
-                sections.push(ChangelogSection {
-                    version: current_version.clone(),
-                    screenshot_url: None,
-                    content_lines: current_lines.clone(),
-                });
-            }
-            current_version = line.trim_start_matches("## ").trim().to_string();
-            current_lines = Vec::new();
-        } else if !current_version.is_empty() && !line.trim().is_empty() {
-            current_lines.push(line.to_string());
-        }
-    }
-
-    if !current_version.is_empty() {
-        sections.push(ChangelogSection {
-            version: current_version,
+    vec![
+        ChangelogSection {
+            version: "Version 1.1 (Latest)".to_string(),
             screenshot_url: None,
-            content_lines: current_lines,
-        });
-    }
-
-    sections
+            content_lines: vec![
+                "### 🌟 New Features".to_string(),
+                "- **Help Center:** Fully searchable help center with video tutorials and articles.".to_string(),
+                "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you.".to_string(),
+            ]
+        },
+        ChangelogSection {
+            version: "Version 1.0".to_string(),
+            screenshot_url: Some("/dashboard_with_charts.png".to_string()),
+            content_lines: vec![
+                "### 🌟 New Features".to_string(),
+                "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.".to_string(),
+                "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.".to_string(),
+                "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.".to_string(),
+                "### 🛠️ Improvements".to_string(),
+                "- Faster loading times for product images.".to_string(),
+                "- Simplified checkout process for your customers.".to_string(),
+            ]
+        }
+    ]
 }
 
 pub async fn get_changelog() -> Json<Vec<ChangelogSection>> {
@@ -781,7 +775,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
 mod tests {
     use super::*;
     use axum::extract::Json as AxumJson;
-
+    use axum::Json;
 
     #[tokio::test]
     async fn test_list_articles() {

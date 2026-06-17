@@ -207,7 +207,8 @@ impl CheckpointSaver for GitCheckpointer {
             }
         } else {
              // Create a new ProgressFile but set objective
-             let pf = ProgressFile { current_objective: format!("Checkpoint {}", checkpoint.checkpoint_id), ..Default::default() };
+             let mut pf = ProgressFile::default();
+             pf.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
              scratchpad_json_val = serde_json::to_value(&pf).unwrap();
         }
 
@@ -670,7 +671,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
 
-        if tokio::time::timeout(timeout_duration, query_future).await.is_err() {
+        if let Err(_) = tokio::time::timeout(timeout_duration, query_future).await {
             return; // Skip if database is unavailable or hangs
         }
 

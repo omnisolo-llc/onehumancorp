@@ -93,16 +93,6 @@ impl BudgetManager {
         let usage_percent = (current / self.total_limit) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
-
-    pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
-        if total_limit_cents <= 0 {
-            return false;
-        }
-        let current = f64::from_bits(self.current.load(Ordering::SeqCst));
-        let current_cents = (current * 100.0).round() as i64;
-        let limit_threshold_cents = ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
-        current_cents >= limit_threshold_cents
-    }
 }
 
 #[cfg(test)]
@@ -197,31 +187,6 @@ mod tests {
     fn test_check_alert_threshold_zero_limit() {
         let manager = BudgetManager::new(0.0);
         assert!(!manager.check_alert_threshold());
-        assert!(!manager.check_alert_threshold_cents(0));
-    }
-
-    #[test]
-    fn test_check_alert_threshold_cents() {
-        let manager = BudgetManager::new(100.0);
-
-        // Not over threshold initially
-        assert!(!manager.check_alert_threshold_cents(10000));
-
-        // Spend 50%
-        manager.record_spend_cents(5000).unwrap();
-        assert!(!manager.check_alert_threshold_cents(10000));
-
-        // Spend up to 80% (8000 cents)
-        manager.record_spend_cents(3000).unwrap();
-        assert!(manager.check_alert_threshold_cents(10000)); // Default is 80.0
-
-        // Custom threshold using cents
-        let custom_manager = BudgetManager::new(100.0).with_alert_threshold(90.0);
-        custom_manager.record_spend_cents(8500).unwrap();
-        assert!(!custom_manager.check_alert_threshold_cents(10000));
-
-        custom_manager.record_spend_cents(1000).unwrap(); // 95%
-        assert!(custom_manager.check_alert_threshold_cents(10000));
     }
 
     #[test]

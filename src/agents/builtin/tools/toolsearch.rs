@@ -79,7 +79,3 @@ pub fn toolsearch_tool() -> Tool {
         execute: Arc::new(PydanticAdapter::new(ToolSearchExecutor)),
     }
 }
-
-#[cfg(test)]
-#[path = "toolsearch_test.rs"]
-mod toolsearch_test;

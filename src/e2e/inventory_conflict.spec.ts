@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 
-test('Prevents simultaneous online and offline purchases via Redis Redlock and generates restock AI task', async ({ page, memberPage, request }) => {
+test.describe('Centralized Inventory & Distributed POS Architecture', () => {
+  test('Prevents simultaneous online and offline purchases via Redis Redlock and generates restock AI task', async ({ page, memberPage, request }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await memberPage.goto('/api/staff');
     await memberPage.evaluate(() => {
@@ -70,4 +71,5 @@ test('Prevents simultaneous online and offline purchases via Redis Redlock and g
     // It should fail because Redlock prevents it
     expect(reserveData2.success).toBeFalsy();
     expect(reserveData2.error_message).toContain('Item is currently being checked out');
+  });
 });

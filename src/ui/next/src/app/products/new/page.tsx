@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { optimizeImage } from "../../../lib/utils/imageOptimization";
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -46,9 +45,7 @@ function AutoCatalogContent() {
       setError(null);
       try {
         const formData = new FormData();
-        const optimizedBlob = await optimizeImage(e.target.files[0]);
-        const ext = optimizedBlob.type === 'image/webp' ? '.webp' : e.target.files[0].name.substring(e.target.files[0].name.lastIndexOf('.'));
-        formData.append('image', optimizedBlob, e.target.files[0].name.replace(/\.[^\.]+$/, ext));
+        formData.append('image', e.target.files[0]);
 
         const response = await fetch('/api/auto-catalog', {
           method: 'POST',

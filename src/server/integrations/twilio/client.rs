@@ -35,38 +35,22 @@ impl TwilioClientWrapper for RealTwilioClient {
             ("Body", body),
         ];
 
-        let mut retries = 3;
-        while retries > 0 {
-            let res = self.http_client.post(&url)
-                .basic_auth(&self.account_sid, Some(&self.auth_token))
-                .form(&params)
-                .send()
-                .await;
+        let res = self.http_client.post(&url)
+            .basic_auth(&self.account_sid, Some(&self.auth_token))
+            .form(&params)
+            .send()
+            .await;
 
-            match res {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        return Ok(());
-                    } else if resp.status().is_server_error() {
-                        retries -= 1;
-                        if retries == 0 {
-                            return Err(format!("Twilio API error: {}", resp.status()));
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    } else {
-                        return Err(format!("Twilio API error: {}", resp.status()));
-                    }
-                }
-                Err(e) => {
-                    retries -= 1;
-                    if retries == 0 {
-                        return Err(format!("Network error: {}", e));
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(format!("Twilio API error: {}", resp.status()))
                 }
             }
+            Err(e) => Err(format!("Network error: {}", e)),
         }
-        Err("Failed to send SMS after retries".to_string())
     }
 
     async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
@@ -81,37 +65,21 @@ impl TwilioClientWrapper for RealTwilioClient {
             ("Body", body),
         ];
 
-        let mut retries = 3;
-        while retries > 0 {
-            let res = self.http_client.post(&url)
-                .basic_auth(&self.account_sid, Some(&self.auth_token))
-                .form(&params)
-                .send()
-                .await;
+        let res = self.http_client.post(&url)
+            .basic_auth(&self.account_sid, Some(&self.auth_token))
+            .form(&params)
+            .send()
+            .await;
 
-            match res {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        return Ok(());
-                    } else if resp.status().is_server_error() {
-                        retries -= 1;
-                        if retries == 0 {
-                            return Err(format!("Twilio API error: {}", resp.status()));
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    } else {
-                        return Err(format!("Twilio API error: {}", resp.status()));
-                    }
-                }
-                Err(e) => {
-                    retries -= 1;
-                    if retries == 0 {
-                        return Err(format!("Network error: {}", e));
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(format!("Twilio API error: {}", resp.status()))
                 }
             }
+            Err(e) => Err(format!("Network error: {}", e)),
         }
-        Err("Failed to send WhatsApp message after retries".to_string())
     }
 }

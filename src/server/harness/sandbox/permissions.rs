@@ -6,12 +6,6 @@ pub struct PermissionEvaluator {
     disabled_patterns: Vec<Regex>,
 }
 
-impl Default for PermissionEvaluator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl PermissionEvaluator {
     pub fn new() -> Self {
         let disabled_commands = vec![

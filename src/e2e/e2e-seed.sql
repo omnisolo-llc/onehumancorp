@@ -19,15 +19,14 @@ ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, plan_tier)
 VALUES
-  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter', false),
-  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro', false)
+  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
     plan_tier = EXCLUDED.plan_tier,
-    has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
 
 -- Ensure RLS allows us to insert ledger data

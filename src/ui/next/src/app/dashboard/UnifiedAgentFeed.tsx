@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import { WorkTriageFeed } from "../components/WorkTriageFeed";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
-import { AmbassadorReplyCard } from './AmbassadorReplyCard';
-import { InstagramDMCard } from './InstagramDMCard';
-
 
 type TriageItem = {
   id: string;
@@ -74,8 +70,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState<string>("");
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -186,58 +180,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         if (mounted) {
           if (unifiedData?.items) {
-            let combinedItems = [...unifiedData.items];
-
-            // Integrate Priority Tasks
-            if (unifiedData.priority_tasks && Array.isArray(unifiedData.priority_tasks)) {
-              combinedItems = [...combinedItems, ...unifiedData.priority_tasks.map((pt: any) => ({
-                id: pt.id,
-                tenant_id: pt.tenant_id || "default",
-                event_source: "task",
-                context_payload: { description: pt.description || pt.title },
-                proposed_action: { message: "Task Pending", action_type: "complete_task" },
-                lifecycle_state: pt.status === "PENDING" ? "PENDING_APPROVAL" : "DISMISSED",
-                created_at: pt.created_at || new Date().toISOString(),
-                updated_at: pt.updated_at || new Date().toISOString()
-              }))];
-            }
-
-            // Integrate Triage Items (Messages)
-            if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
-              combinedItems = [...combinedItems, ...unifiedData.triage.map((ti: any) => ({
-                id: ti.id,
-                tenant_id: ti.tenant_id || "default",
-                event_source: "triage",
-                context_payload: { description: ti.context || "Message requires attention" },
-                proposed_action: { message: ti.action_payload || "Triage item", action_type: ti.action_type || "resolve" },
-                lifecycle_state: ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
-                created_at: ti.created_at || new Date().toISOString(),
-                updated_at: ti.created_at || new Date().toISOString()
-              }))];
-            }
-
-            // Integrate Orders
-            if (unifiedData.orders && Array.isArray(unifiedData.orders)) {
-              combinedItems = [...combinedItems, ...unifiedData.orders.map((or: any) => ({
-                id: or.id,
-                tenant_id: or.tenant_id || "default",
-                event_source: "order",
-                context_payload: { description: `Order ${or.id} needs fulfillment` },
-                proposed_action: { message: "Fulfill Order", action_type: "fulfill_order" },
-                lifecycle_state: or.status === "pending" || or.status === "unfulfilled" ? "PENDING_APPROVAL" : "DISMISSED",
-                created_at: or.created_at || new Date().toISOString(),
-                updated_at: or.created_at || new Date().toISOString()
-              }))];
-            }
-
-            // Sort by created_at desc
-            combinedItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-            setItems(combinedItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
-            const mappedActivities = combinedItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+            const mappedActivities = unifiedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
               id: a.id,
               tenant_id: a.tenant_id,
               event_type: a.lifecycle_state,
@@ -319,8 +265,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
-        if (typeof process.env.VITEST !== 'undefined' || process.env.NODE_ENV === 'test') return;
-        ws = new WebSocket(wsUrl);
+      ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
         try {
@@ -427,7 +372,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return "warning";
   };
 
-  const submitDecision = async (id: string, approved: boolean, modified_content?: string) => {
+  const submitDecision = async (id: string, approved: boolean) => {
     const tenant = tenantId();
     const res = await fetch(`/api/agent-feed/${id}`, {
       method: "PUT",
@@ -436,7 +381,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         "x-tenant-id": tenant,
         "x-user-id": "default",
       },
-      body: JSON.stringify({ state: approved ? "APPROVED" : "DISMISSED", modified_content }),
+      body: JSON.stringify({ state: approved ? "APPROVED" : "DISMISSED" }),
     });
 
     if (!res.ok) {
@@ -444,13 +389,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
   };
 
-  const handleDecision = async (id: string, approved: boolean, modified_content?: string) => {
+  const handleDecision = async (id: string, approved: boolean) => {
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
         id: crypto.randomUUID(),
         type: 'approve_agent_feed',
-        payload: { id, approved, modified_content },
+        payload: { id, approved },
         timestamp: Date.now()
       });
       setOfflineActionsCount(prev => prev + 1);
@@ -462,7 +407,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     setItems(prev => prev.filter(app => app.id !== id));
 
     try {
-      await submitDecision(id, approved, modified_content);
+      await submitDecision(id, approved);
     } catch (err: any) {
       // Revert optimistic update gracefully by refetching
       const tenant = tenantId();
@@ -494,7 +439,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 w-full w-full overflow-hidden" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-full overflow-hidden sm:max-w-none" aria-label="Unified Agent Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -529,15 +474,91 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         </button>
       </div>
 
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <WorkTriageFeed
-              items={triageItems}
-              loading={triageLoading}
-              error={triageError}
-              onDecision={handleTriageDecision}
-            />
+            {triageError && (
+              <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
+                {triageError}
+              </div>
+            )}
+
+            {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                      <span className="text-2xl">✨</span> Needs Attention Today
+                    </h2>
+                    <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "High"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve & Execute
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {item.source || "Triage Action"}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
 
             <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
@@ -636,8 +657,44 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </p>
                         </div>
                       )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && <InstagramDMCard approval={approval} />}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && <AmbassadorReplyCard approval={approval} />}
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && (
+                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="instagram-dm-card">
+                          <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Instagram DM
+                          </div>
+                          <div className="text-xs text-gray-500 font-medium">
+                            Customer: {(approval.proposed_action || approval.context_payload).customer_message}
+                          </div>
+                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
+                            Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
+                          </div>
+                        </div>
+                      )}
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
+                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="ambassador-reply-card">
+                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                            Customer Inquiry
+                          </div>
+                          <div className="app-card p-3 rounded-lg  text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic">
+                            "{(approval.proposed_action || approval.context_payload).original_message}"
+                          </div>
+                          <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Draft Reply
+                          </div>
+                          <div className="bg-[#0066FF] p-3 rounded-lg text-xs text-white shadow-inner">
+                            {(approval.proposed_action || approval.context_payload).generated_response}
+                          </div>
+                        </div>
+                      )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -906,67 +963,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                     </div>
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
-                    editingId === approval.id ? (
-                      <div className="flex flex-col gap-3 w-full">
-                        <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
-                          rows={4}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          data-testid="edit-ambassador-reply-textarea"
-                          autoFocus
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => {
-                              handleDecision(approval.id, true, editContent);
-                              setEditingId(null);
-                            }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                            data-testid="save-send-ambassador-reply"
-                          >
-                            Save & Send
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                            data-testid="cancel-edit-ambassador-reply"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => handleDecision(approval.id, true)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                          aria-label="Approve & Send Draft"
-                          data-testid="approve-ambassador-reply"
-                        >
-                          ✨ 1-Tap Approve
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(approval.id);
-                            setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || "");
-                          }}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Edit Draft"
-                          data-testid="edit-ambassador-reply"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                          aria-label="Dismiss Draft"
-                          data-testid="dismiss-ambassador-reply"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    )
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Draft"
+                        data-testid="approve-ambassador-reply"
+                      >
+                        ✨ 1-Tap Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="dismiss-ambassador-reply"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
@@ -1072,37 +1086,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </div>
                     </>
                   ) : (
-                    editingId === approval.id ? (
-                      <div className="flex flex-col gap-3 w-full">
-                        <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
-                          rows={4}
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          data-testid="edit-proposal-textarea"
-                          autoFocus
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => {
-                              handleDecision(approval.id, true, editContent);
-                              setEditingId(null);
-                            }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                            data-testid="save-proposal"
-                          >
-                            Save & Approve
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                            data-testid="cancel-edit-proposal"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -1114,14 +1097,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
-                          onClick={() => {
-                            setEditingId(approval.id);
-                            const textToEdit =
-                              (approval.proposed_action || approval.context_payload)?.generated_response ||
-                              (approval.proposed_action || approval.context_payload)?.draft_reply ||
-                              (approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source);
-                            setEditContent(textToEdit || "");
-                          }}
+                          onClick={() => {}}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit proposal"
                           data-testid="edit-proposal"
@@ -1138,7 +1114,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </button>
                       </div>
                     </>
-                    )
                   )}
                 </div>
               </div>

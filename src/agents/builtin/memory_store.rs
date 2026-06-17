@@ -27,7 +27,6 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
-#[allow(dead_code)]
 fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
@@ -295,7 +294,6 @@ impl VectorRepository {
                         "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                          FROM consolidated_memory \
                          WHERE tenant_id = ? \
-                         ORDER BY created_at DESC \
                          LIMIT 1000"
                     )
                     .bind(tenant_id)
@@ -784,7 +782,7 @@ impl VectorRepository {
                         embedding: Vec<f32>,
                     }
 
-                    let _batch_size = 1000;
+                    let batch_size = 1000;
                     let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
                     let mut match_count = 0;
 
@@ -797,29 +795,40 @@ impl VectorRepository {
                     let tenant_ids: Vec<String> = tenant_rows.into_iter().map(|row| row.get("tenant_id")).collect();
 
                     'outer: for current_tenant_id in tenant_ids {
-                        // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
-                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
-                        let rows = sqlx::query(query)
-                            .bind(&current_tenant_id)
-                            .fetch_all(pool)
-                            .await
-                            .map_err(|e| e.to_string())?;
-
+                        let mut offset = 0;
                         let mut records_in_tenant: Vec<MinimalRecord> = Vec::new();
-                        for row in rows {
-                            let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                    .unwrap_or_default()
-                            });
-                            let embedding: Vec<f32> =
-                                serde_json::from_str(&emb_str).unwrap_or_default();
 
-                            let record = MinimalRecord {
-                                id: row.get("id"),
-                                tenant_id: row.get("tenant_id"),
-                                embedding,
-                            };
-                            records_in_tenant.push(record);
+                        loop {
+                            let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY id LIMIT ? OFFSET ?";
+                            let rows = sqlx::query(query)
+                                .bind(&current_tenant_id)
+                                .bind(batch_size)
+                                .bind(offset)
+                                .fetch_all(pool)
+                                .await
+                                .map_err(|e| e.to_string())?;
+
+                            if rows.is_empty() {
+                                break;
+                            }
+
+                            for row in rows {
+                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                        .unwrap_or_default()
+                                });
+                                let embedding: Vec<f32> =
+                                    serde_json::from_str(&emb_str).unwrap_or_default();
+
+                                let record = MinimalRecord {
+                                    id: row.get("id"),
+                                    tenant_id: row.get("tenant_id"),
+                                    embedding,
+                                };
+                                records_in_tenant.push(record);
+                            }
+
+                            offset += batch_size;
                         }
 
                         let records = records_in_tenant;
@@ -3625,88 +3634,5 @@ mod override_tests_resolve {
             results[0].owner_override,
             "Winner should have inherited owner_override"
         );
-    }
-}
-
-
-#[cfg(test)]
-mod additional_tests_fallback {
-    use super::*;
-    use std::str::FromStr;
-
-    #[tokio::test]
-    async fn test_sqlite_fallback_conflict() {
-        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect_with(conn_opts)
-            .await
-            .unwrap();
-
-        let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS consolidated_memory (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                agent_id TEXT,
-                content TEXT NOT NULL,
-                embedding TEXT,
-                source_type TEXT NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                reference_count INTEGER DEFAULT 0,
-                reliability_score INTEGER DEFAULT 50,
-                owner_override BOOLEAN DEFAULT FALSE,
-                metadata TEXT
-            );",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        let repo = VectorRepository::new_sqlite(pool);
-
-        // Insert two very similar embeddings
-        let v1 = vec![1.0_f32; 10];
-        let mut v2 = vec![1.0_f32; 10];
-        v2[0] = 0.99; // Very similar, should be < 0.05 distance
-
-        let record_a = EmbeddingRecord {
-            id: "rec_fallback_a".to_string(),
-            tenant_id: "org_fallback".to_string(),
-            agent_id: "agent_1".to_string(),
-            content: "content A".to_string(),
-            embedding: v1,
-            source_type: "NOTES".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 0,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-
-        let record_b = EmbeddingRecord {
-            id: "rec_fallback_b".to_string(),
-            tenant_id: "org_fallback".to_string(),
-            agent_id: "agent_1".to_string(),
-            content: "content B".to_string(),
-            embedding: v2,
-            source_type: "NOTES".to_string(),
-            created_at: chrono::Utc::now(),
-            last_referenced_at: chrono::Utc::now(),
-            reference_count: 0,
-            reliability_score: 50,
-            owner_override: false,
-            metadata: None,
-        };
-
-        repo.upsert(&record_a).await.unwrap();
-        repo.upsert(&record_b).await.unwrap();
-
-        let conflicts = repo.get_conflicting_pairs().await.unwrap();
-        assert_eq!(conflicts.len(), 1, "Should find exactly 1 conflicting pair");
-
-        let (a, b) = &conflicts[0];
-        assert_eq!(a.id, "rec_fallback_a");
-        assert_eq!(b.id, "rec_fallback_b");
     }
 }

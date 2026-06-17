@@ -1,4 +1,3 @@
-#![allow(clippy::upper_case_acronyms, clippy::collapsible_if)]
 use serde::Deserialize;
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation, Algorithm};
 use std::collections::HashMap;

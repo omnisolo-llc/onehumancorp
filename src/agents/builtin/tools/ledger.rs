@@ -1,27 +1,19 @@
 use super::{Tool, ToolExecutor};
-use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
-use serde::Deserialize;
 use std::sync::Arc;
 use ledger_proto::ohc::ledger::{GetBalanceRequest, GetStatementRequest, ledger_service_client::LedgerServiceClient};
-
-#[derive(Deserialize)]
-struct LedgerArgs {
-    #[serde(default)]
-    account_id: Option<String>,
-}
 
 pub struct GetBalanceExecutor;
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<LedgerArgs> for GetBalanceExecutor {
-    async fn execute_typed(
+impl ToolExecutor for GetBalanceExecutor {
+    async fn execute(
         &self,
-        args: LedgerArgs,
+        args: Value,
     ) -> Result<String, ToolError> {
         let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
-        let account_id = args.account_id.as_deref().unwrap_or("main");
+        let account_id = args["account_id"].as_str().unwrap_or("main");
 
         let mut client = LedgerServiceClient::connect("http://[::1]:50051")
             .await
@@ -64,20 +56,20 @@ pub fn get_balance_tool() -> Tool {
             },
             "required": ["account_id"]
         }),
-        execute: Arc::new(PydanticAdapter::new(GetBalanceExecutor)),
+        execute: Arc::new(GetBalanceExecutor),
     }
 }
 
 pub struct GetStatementExecutor;
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<LedgerArgs> for GetStatementExecutor {
-    async fn execute_typed(
+impl ToolExecutor for GetStatementExecutor {
+    async fn execute(
         &self,
-        args: LedgerArgs,
+        args: Value,
     ) -> Result<String, ToolError> {
         let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
-        let account_id = args.account_id.as_deref().unwrap_or("main");
+        let account_id = args["account_id"].as_str().unwrap_or("main");
 
         let mut client = LedgerServiceClient::connect("http://[::1]:50051")
             .await
@@ -125,6 +117,6 @@ pub fn get_statement_tool() -> Tool {
             },
             "required": ["account_id"]
         }),
-        execute: Arc::new(PydanticAdapter::new(GetStatementExecutor)),
+        execute: Arc::new(GetStatementExecutor),
     }
 }

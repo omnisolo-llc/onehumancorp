@@ -1,4 +1,3 @@
-#![allow(clippy::all)]
 #[cfg(test)]
 mod exhaustive_tests {
     use crate::memory_store::{EmbeddingRecord, VectorRepository};
@@ -3900,7 +3899,7 @@ mod tests_added_for_coverage {
 
         // Check if pruned correctly
         let results = repo
-            .cross_department_search("tenant_prune", &[0.5; 10], 10)
+            .cross_department_search("tenant_prune", &vec![0.5; 10], 10)
             .await
             .unwrap();
         let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();

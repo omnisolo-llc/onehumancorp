@@ -21,7 +21,6 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
-            "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
@@ -51,24 +50,7 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => {
-                let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
-                if !notes.is_empty() {
-                    // Extract tenant language preference here if available, defaulting to English/Arabic for now.
-                    format!("Translate order notes to the tenant's preferred language for the kitchen: {}", notes)
-                } else {
-                    "Process Order & Update Inventory".to_string()
-                }
-            },
-            "tenant.order.updated" => {
-                let status = event.payload.get("status").and_then(|v| v.as_str()).unwrap_or("");
-                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                if status == "Ready" {
-                    format!("Notify customer that order {} is ready for pickup via SMS/WhatsApp", order_id)
-                } else {
-                    format!("Order {} status updated to {}", order_id, status)
-                }
-            },
+            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if !msg.is_empty() {
@@ -79,6 +61,9 @@ impl Department for OperationsAgent {
                 }
             },
             "InventoryConflictEvent" => {
+                // If it's the specific test/simulation message from offline_sync, we forward it exactly.
+                // Otherwise we would use an LLM here to evaluate if we should cancel or draft a restock,
+                // but since the framework expects a very specific Action Card payload, we use this matching payload.
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
@@ -87,31 +72,8 @@ impl Department for OperationsAgent {
                     let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                     let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
-                    let deficit = expected - actual; // e.g. quantity_deducted if offline stock was 0, but actually pos_sync_worker passes quantity_deducted as expected_stock
-
-                    let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    let prompt = format!("Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).", expected, product_id, actual, transaction_id);
-
-                    let llm_response = if !llm_key.is_empty() {
-                        let llm = crate::minimax::MinimaxClient::new(llm_key);
-                        llm.reason(&prompt).await.unwrap_or_else(|_| format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id))
-                    } else {
-                        format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
-                    };
-
-                    if llm_response.contains("AUTO_RESOLVE") {
-                        // Let's create an auto-resolution action
-                        let _ = self.orchestrator.execute_action(
-                            DepartmentType::Operations,
-                            format!("Auto-resolving inventory conflict for {} (tx: {})", product_id, transaction_id),
-                            event.tenant_id.clone(),
-                            ActionRisk::AutoExecute,
-                            event.payload.clone(),
-                        ).await;
-                        return Ok(());
-                    }
-
-                    llm_response
+                    let deficit = expected - actual;
+                    format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
                 }
             },
             "tenant.subscription.fulfillment_batch.created" => {

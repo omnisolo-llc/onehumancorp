@@ -78,7 +78,7 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
             metric_name,
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
-        WHERE tenant_id = $1
+        WHERE (labels_json::jsonb)->>'tenant_id' = $1
           AND metric_name IN ('ohc_llm_cost_total_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents', 'ohc_email_send_cost', 'ohc_outbound_api_cost', 'ohc_api_call_cost')
           AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
@@ -227,7 +227,7 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
             (labels_json::jsonb)->>'agent_id' as agent_id,
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
-        WHERE tenant_id = $1
+        WHERE (labels_json::jsonb)->>'tenant_id' = $1
           AND metric_name = 'ohc_llm_cost_total_cents'
           AND timestamp >= CURRENT_DATE - INTERVAL '30 days'
         GROUP BY (labels_json::jsonb)->>'agent_id'

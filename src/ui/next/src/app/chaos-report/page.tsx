@@ -49,24 +49,6 @@ export default function ChaosReportPage() {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="col-span-1 lg:col-span-2 mb-8 p-6 rounded-2xl shadow-lg transition-all duration-300 relative overflow-hidden" style={glassStyle}>
-            <h2 className="text-xl font-bold mb-4 tracking-tight">Chaos Resilience Metrics</h2>
-            <div className="space-y-3 font-mono text-sm opacity-90">
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <span>API Latency (P99) under 100 Cloud Users: <span className="font-bold">{data?.latencyP99Cloud || 'Loading...'}</span></span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    <span>API Latency (P99) under 10 Standalone Users: <span className="font-bold">{data?.latencyP99Standalone || 'Loading...'}</span></span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span>Error Rate during LLM Outage: <span className="font-bold">{data?.errorRateLlmOutage || 'Loading...'}</span></span>
-                </div>
-            </div>
-        </section>
-
         <section
           className="p-8 rounded-3xl shadow-lg transition-all duration-300 relative overflow-hidden"
           style={glassStyle}

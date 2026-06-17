@@ -90,9 +90,9 @@ export default function POSTerminal() {
        return;
     }
     try {
-      const res = await fetch('/api/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
+      const res = await fetch('/api/pos/inventory');
       const data = await res.json();
-      setInventory(data.inventory || []);
+      setInventory(data);
     } catch (e) {
       console.error("Failed to load inventory", e);
       setInventory([]);
@@ -183,8 +183,8 @@ export default function POSTerminal() {
 
   if (locked) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] md:p-10 font-inter px-4 w-full overflow-hidden">
-        <div className="w-full max-w-[375px] mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-8 border border-gray-100 relative">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter px-4 w-full">
+        <div className="w-[375px] bg-white rounded-3xl shadow-xl overflow-hidden p-8 border border-gray-100 relative">
            <div className="text-center mb-8">
              <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -239,8 +239,8 @@ export default function POSTerminal() {
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-x-hidden">
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-hidden">
+      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">

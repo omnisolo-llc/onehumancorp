@@ -95,7 +95,6 @@ pub async fn omni_inbox_post_handler(
     let job_id = Uuid::new_v4().to_string();
     let mut payload_json = serde_json::json!({
         "message_id": inbox_id,
-        "inbox_message_id": inbox_id,
         "source": source,
         "content": message,
         "sender_id": sender_id

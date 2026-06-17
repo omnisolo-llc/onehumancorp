@@ -271,10 +271,11 @@ impl LlmClient for AnthropicClient {
         }
 
         // Prompt caching: cache the last user message
-        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user")
-            && let Some(last_content) = last_user.content.last_mut() {
+        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
+            if let Some(last_content) = last_user.content.last_mut() {
                 last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
             }
+        }
 
         let system = if req.system.is_empty() {
             vec![]
@@ -330,9 +331,9 @@ impl LlmClient for AnthropicClient {
         }
 
         let result = resp.json::<AnthropicResponse>().await;
-        if let Err(e) = result {
+        if result.is_err() {
             cb.record_failure();
-            return Err(format!("api error: failed to parse response: {:?}", e).into());
+            return Err(format!("anthropic api error: failed to parse response: {:?}", result.unwrap_err()).into());
         }
         let result = result.unwrap();
         cb.record_success();

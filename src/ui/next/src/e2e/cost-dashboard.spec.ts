@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('a', { hasText: 'Back to My Plan' }).click();
-    await expect(page.url()).toContain('/plan.html');
+    await page.locator('a', { hasText: 'Back to Dashboard' }).click();
+    await expect(page.url()).toContain('/dashboard.html');
   });
 });

@@ -1,4 +1,3 @@
-#![allow(clippy::all)]
 use crate::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
 

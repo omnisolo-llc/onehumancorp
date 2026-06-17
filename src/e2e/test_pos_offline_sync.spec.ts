@@ -12,10 +12,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.getByRole('button', { name: '4' }).click();
 
     // Verify successful login
-    await memberPage.waitForTimeout(500);
-    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
-    await memberPage.waitForTimeout(500);
-    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Not Clocked In').or(memberPage.locator('text=Clocked In'))).toBeVisible();
 
     // Set network to offline
     await context.setOffline(true);
@@ -26,17 +23,17 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible();
 
     // Click "New Order" while offline
     await memberPage.getByRole('button', { name: 'New Order' }).click();
 
     // Verify it queues the order
-    await expect(memberPage.getByRole('status')).toContainText('Offline Quick Charge Saved.', { timeout: 1000 }).catch(() => {});
+    await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();
 
     // Assert the transaction was written to localStorage
     const queuedTxs = await memberPage.evaluate(() => {
-      return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
+      return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
     });
     expect(queuedTxs.length).toBeGreaterThan(0);
     expect(queuedTxs[0].amount_cents).toBe(5000);
@@ -50,16 +47,16 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Verify "Syncing..." or Online indicator
-    await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Online').first()).toBeVisible();
 
     // Wait for the sync to complete and the local storage to be cleared
     await memberPage.waitForFunction(() => {
-        return true;
+        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]').length === 0;
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
-        return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
+        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
     });
     expect(afterSyncTxs.length).toBe(0);
   });

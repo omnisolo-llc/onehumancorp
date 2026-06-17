@@ -30,7 +30,7 @@ export default function StaffManager() {
       const response = await fetch('/api/staff');
       if (response.ok) {
         const data = await response.json();
-        setStaff(data.staff || []);
+        setStaff(data);
       }
     } catch (e) {
       console.error("Failed to fetch staff", e);

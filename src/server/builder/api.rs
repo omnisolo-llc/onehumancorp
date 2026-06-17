@@ -457,11 +457,6 @@ async fn create_page(
     let page = db::create_page(&pool, tenant_id, site_id, payload.path, payload.title)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if let Err(err) = jobs::enqueue_publish_site_job(&pool, tenant_id, site_id).await {
-        tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
-    }
-
     Ok(Json(PageResponse {
         id: page.id,
         path: page.path,
@@ -557,10 +552,6 @@ async fn create_block(
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
             let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
-
-            if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
-                tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
-            }
         }
     });
 
@@ -609,10 +600,6 @@ async fn update_block(
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
             let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
-
-            if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
-                tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
-            }
         }
     });
 
@@ -1326,7 +1313,7 @@ Additional brand/product grounding:
 {}
 
 First, synthesize the context to select an appropriate template, generate copywriting, and select relevant concepts.
-Second, act as The Promoter (SEO) to automatically generate structured JSON-LD schemas based on the tenant\'s product catalog and chosen business type.
+Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
 You must also act as the Operations and Finance agents to generate 3 sample products (in 'sample_products'), default shipping settings, and default tax settings.
 

@@ -28,7 +28,7 @@ while true; do
     echo -e "  9) Check Swarm Status"
     echo -e "  10) Verify Setup"
     echo -e "  0) Exit"
-    if ! read -r -p "Choice: " choice; then break; fi
+    read -p "Choice: " choice
 
     case $choice in
         1) (set -e; bash "$SCRIPT_DIR/ohc-setup.sh") || echo -e "${PURPLE}Developer Setup returned non-zero exit status ($?).${RESET}" ;;

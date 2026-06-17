@@ -79,14 +79,7 @@ test.describe('Conversational Setup CUJ', () => {
     // 6. Verify bot finishes the conversation
     await expect(page.getByText("Give me a minute... I'm building your business.")).toBeVisible();
 
-    // 7. Verify we moved to the approval step
-    await expect(page.getByRole('heading', { name: 'Ready to Launch' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Approve & Publish' })).toBeVisible();
-
-    // 8. Click approve
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
-
-    // 9. Verify the start onboarding API was called and it navigated to success.html
+    // 7. Verify the start onboarding API was called and it navigated to success.html
     await page.waitForURL('**/success.html', { timeout: 5000 });
     expect(onboardingStarted).toBe(true);
   });

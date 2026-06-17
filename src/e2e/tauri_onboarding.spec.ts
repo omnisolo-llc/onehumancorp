@@ -40,7 +40,10 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
               sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
               return null;
             } else if (cmd === 'start_onboarding') {
-              return { success: true, message: "OK", organization_id: "test-org" };
+              return null;
+            }
+            if (cmd === "start_onboarding") {
+              return null;
             }
             if (cmd === 'process_intake') {
               return {
@@ -89,7 +92,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // Setup page (Step 1: Context)
-        await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
+    await page.locator('button:has-text("Start My Business")').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     // Verify validation triggers
     await page.locator('#step-context').getByRole('button', { name: 'Next' }).click();
@@ -140,7 +145,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Step 5: Admin Setup
     await expect(page.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
     await page.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
-    await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
+    await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword");
     await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Offer
@@ -153,7 +158,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
-    await page.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.locator('#template-error')).toBeVisible();
 
     await page.locator('#template-selection').selectOption('Modern');
@@ -215,7 +220,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Step 5: Admin Setup
     await expect(newPage.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
     await expect(newPage.getByPlaceholder("admin@mybusiness.com")).toHaveValue("test@mybusiness.com");
-    await expect(newPage.getByPlaceholder("Password (min 8 chars)")).toHaveValue("mypassword1");
+    await expect(newPage.getByPlaceholder("Password (min 8 chars)")).toHaveValue("mypassword");
     await newPage.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Offer
@@ -228,13 +233,13 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Verify validation triggers
-    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await newPage.getByRole('button', { name: 'Launch Store' }).click();
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
-    await newPage.getByRole('button', { name: 'Approve & Go Live' }).click();
+    await newPage.getByRole('button', { name: 'Launch Store' }).click();
 
     // Success page
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
@@ -266,7 +271,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(container).toBeVisible();
     await expect(container).toHaveClass(/glassmorphism/);
 
-    const option = page.locator('.context-card').first();
+    const option = page.locator('.radio-option').first();
     const optionBox = await option.boundingBox();
     const catInput = page.getByPlaceholder("e.g. Graphic Design");
 
@@ -333,7 +338,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
               return "https://cloud.ohc.network/invite/mock-test";
             }
             if (cmd === "start_onboarding") {
-              return { success: true, message: "OK", organization_id: "test-org" };
+              return null;
             }
             if (cmd === 'process_intake') {
               return {

@@ -70,17 +70,9 @@ test.describe('Instant Setup CUJ', () => {
       });
     });
 
-    // Mock the dashboard page redirection target
-    await page.route('**/dashboard.html', async route => {
-      await route.fulfill({ status: 200, contentType: 'text/html', body: `
-        <h1>Dashboard</h1>
-        <section aria-label="Unified Agent Feed">
-          <div id="triage-list">
-             <div class="triage-card">Your store is ready. Review and Publish.</div>
-             <button data-testid="approve-proposal">Approve & Go Live</button>
-          </div>
-        </section>
-      ` });
+    // Mock the success page redirection target
+    await page.route('**/success.html', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Success</h1>' });
     });
 
     await page.goto('http://mock/setup.html');
@@ -105,22 +97,9 @@ test.describe('Instant Setup CUJ', () => {
     // 4. Click generate
     await generateBtn.click();
 
-    // 5. Verify loading texts (animation progress)
-    await expect(page.getByText('Building Your Business...')).toBeVisible();
-    await expect(page.getByText('Drafting services...')).toBeAttached();
-
-    // 6. Verify it navigated to dashboard.html
-    await page.waitForURL('**/dashboard.html', { timeout: 15000 });
+    // 5. Verify it navigated to success.html
+    await page.waitForURL('**/success.html', { timeout: 10000 });
     expect(intakeCalled).toBe(true);
     expect(onboardingStarted).toBe(true);
-
-    // 7. Verify Agent Feed Presentation
-    await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();
-    await expect(page.getByText('Your store is ready. Review and Publish.')).toBeVisible();
-
-    // 8. Review & Action
-    const approveBtn = page.getByTestId('approve-proposal');
-    await expect(approveBtn).toBeVisible();
-    await approveBtn.click();
   });
 });

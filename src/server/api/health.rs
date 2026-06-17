@@ -14,7 +14,6 @@ pub async fn health_handler(
         "hybrid_mode_ready": false,
         "local_to_cloud_sync_queue": 0,
         "sync_error_count": 0,
-        "stuck_missions": 0,
     }));
 
     // Fetch lightweight in-memory cache status
@@ -26,7 +25,6 @@ pub async fn health_handler(
         "db_ping": health.get("db_ping_ms").unwrap_or(&serde_json::json!(0)),
         "sync_backlog": health.get("local_to_cloud_sync_queue").unwrap_or(&serde_json::json!(0)),
         "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),
-        "stuck_missions": health.get("stuck_missions").unwrap_or(&serde_json::json!(0)),
         "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
         "last_successful_prune_ts": last_prune,
         "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),

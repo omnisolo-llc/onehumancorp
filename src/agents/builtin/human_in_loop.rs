@@ -1,4 +1,3 @@
-#![allow(clippy::all)]
 use ohc_builtin_agent_core::types::{
     HumanInLoopSpectrum, PermissionArchitecture, ToolCall, ToolError,
 };

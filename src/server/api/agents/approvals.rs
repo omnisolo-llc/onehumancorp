@@ -51,7 +51,6 @@ where
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
-        .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -166,43 +165,6 @@ async fn simulate_smart_pricing(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate smart pricing: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
-        }
-    }
-}
-
-async fn simulate_ambassador_draft(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
-    };
-
-    let payload = serde_json::json!({
-        "feature_type": "ambassador_reply",
-        "original_message": "Do you have vegan chocolate cake available for Saturday?",
-        "generated_response": "Yes we do! We have 3 left for this Saturday. Would you like me to send a booking link?",
-        "context_used": "Found 3 vegan chocolate cakes in inventory for Saturday.",
-        "inbox_message_id": "msg_simulated_123",
-        "source": "instagram_dm",
-        "original_content": "Do you have vegan chocolate cake available for Saturday?",
-        "sender_id": "@customer",
-        "customer_id": "cust_simulated_123",
-        "past_orders": "Returning Customer (2 past orders).",
-    });
-
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-        "Draft email for review".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
-        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to simulate ambassador draft: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

@@ -444,7 +444,7 @@ mod tests {
             .unwrap();
 
         let db = DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         };
 

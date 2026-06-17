@@ -5,7 +5,9 @@ pub fn slugify(text: &str) -> String {
 
     for c in text.chars() {
         if c.is_alphanumeric() {
-            slug.extend(c.to_lowercase());
+            for lc in c.to_lowercase() {
+                slug.push(lc);
+            }
             last_was_dash = false;
         } else if !last_was_dash {
             slug.push('-');

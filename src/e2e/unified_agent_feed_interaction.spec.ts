@@ -1,12 +1,11 @@
-import { expect, test, E2E_ADMIN_USER } from './fixtures';
+import { expect, test } from '@playwright/test';
 
 test.describe('Unified Agent Feed Interactive Flow', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('should render properly, expand for details, and show approval transition', async ({ page, loginAs }) => {
+  test('should render properly, expand for details, and show approval transition', async ({ page }) => {
     test.setTimeout(180000);
 
-    await loginAs(page, E2E_ADMIN_USER);
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
@@ -43,11 +42,10 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
   });
 
-  test('should queue actions optimistically when offline', async ({ page, context, loginAs }) => {
+  test('should queue actions optimistically when offline', async ({ page, context }) => {
     test.setTimeout(180000);
 
     // 1. Seed some distinct approvals representing different departments
-    await loginAs(page, E2E_ADMIN_USER);
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
@@ -80,9 +78,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
   });
 
-  test('Feed Page should load items and approve', async ({ page, loginAs }) => {
+  test('Feed Page should load items and approve', async ({ page }) => {
     test.setTimeout(180000);
-    await loginAs(page, E2E_ADMIN_USER);
     await page.goto('/feed');
     await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
 
@@ -94,9 +91,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
   });
 
-  test('Feed Page should load items and dismiss', async ({ page, loginAs }) => {
+  test('Feed Page should load items and dismiss', async ({ page }) => {
     test.setTimeout(180000);
-    await loginAs(page, E2E_ADMIN_USER);
     await page.goto('/feed');
     await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
 
@@ -108,9 +104,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
   });
 
-  test('Dashboard should have functional UnifiedAgentFeed component', async ({ page, loginAs }) => {
+  test('Dashboard should have functional UnifiedAgentFeed component', async ({ page }) => {
     test.setTimeout(180000);
-    await loginAs(page, E2E_ADMIN_USER);
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 

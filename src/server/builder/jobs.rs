@@ -62,7 +62,7 @@ async fn execute_publish_site_job(
                 }
             }
 
-            let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata for Generative Engine Optimization (GEO). The JSON must include 'name' (title), 'keywords', and a rich 'description' acting as a natural language summary optimized for AI search engines like ChatGPT and Gemini. Only return the JSON object. Content: {}", block_texts.join(" "));
+            let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata (name, description, keywords). Only return the JSON object. Content: {}", block_texts.join(" "));
 
             let mut attempts = 0;
             let mut ai_call_succeeded = false;

@@ -3,38 +3,19 @@
 import { useEffect, useState } from "react";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
-
-type TriageItem = {
-  id: string;
-  tenant_id: string;
-  source?: string;
-  priority?: string;
-  context?: string;
-  action_type?: string;
-  action_payload?: string;
-  status?: string;
-  created_at: string;
-};
-
 export function MorningBriefingCard({ tenant }: { tenant: string }) {
   const [briefing, setBriefing] = useState<string>("Loading your Morning Briefing...");
   const [loading, setLoading] = useState(true);
-  const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
-  const [triageLoading, setTriageLoading] = useState(true);
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "agent"; text: string }[]>([]);
   const [isChatting, setIsChatting] = useState(false);
 
   useEffect(() => {
     async function loadBriefing() {
-try {
-        const [resBriefing, resTriage] = await Promise.all([
-          fetch(`/api/ui/dashboard/analytics/briefing?tenant_id=${encodeURIComponent(tenant)}`),
-          fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenant)}`)
-        ]);
-
-        if (resBriefing.ok) {
-          const data = await resBriefing.json();
+      try {
+        const res = await fetch(`/api/ui/dashboard/analytics/briefing?tenant_id=${encodeURIComponent(tenant)}`);
+        if (res.ok) {
+          const data = await res.json();
           if (data.briefing) {
             setBriefing(data.briefing);
           } else {
@@ -43,36 +24,14 @@ try {
         } else {
           setBriefing("Unable to load Morning Briefing.");
         }
-
-        if (resTriage.ok) {
-          const triageData = await resTriage.json();
-          const rows = Array.isArray(triageData) ? triageData : (Array.isArray(triageData?.items) ? triageData.items : []);
-          setTriageItems(rows);
-        }
       } catch {
         setBriefing("Unable to load Morning Briefing.");
       } finally {
         setLoading(false);
-        setTriageLoading(false);
       }
     }
     loadBriefing();
   }, [tenant]);
-
-  const handleTriageDecision = async (id: string, approved: boolean) => {
-    try {
-      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenant)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ triage_item_id: id, approved })
-      });
-      if (!res.ok) throw new Error("Failed to update action");
-
-      setTriageItems(prev => prev.filter(i => i.id !== id));
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handleChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,41 +81,6 @@ try {
             </p>
           )}
         </div>
-
-
-        {/* Action Cards Section */}
-        {!triageLoading && triageItems.filter(item => item.source === 'Decision Assistant').length > 0 && (
-          <div className="mt-4 pb-2 w-full overflow-x-auto flex gap-4 snap-x hide-scrollbar">
-            {triageItems.filter(item => item.source === 'Decision Assistant').map((item) => (
-              <div key={item.id} className="snap-start shrink-0 w-[280px] p-4 rounded-[12px] glassmorphism border border-orange-200 dark:border-orange-900/50 bg-orange-50/40 dark:bg-orange-900/10 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300">Suggested Action</span>
-                    <span className="text-[10px] font-bold uppercase text-white bg-orange-500 px-2 py-0.5 rounded-full">New</span>
-                  </div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">{item.context}</p>
-                </div>
-                <div className="flex gap-2 w-full">
-                  <button
-                    onClick={() => handleTriageDecision(item.id, true)}
-                    className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center"
-                    data-testid={`action-card-approve-${item.id}`}
-                  >
-                    {item.action_type || "Execute Action"}
-                  </button>
-                  <button
-                    onClick={() => handleTriageDecision(item.id, false)}
-                    className="min-h-[44px] min-w-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-center"
-                    data-testid={`action-card-dismiss-${item.id}`}
-                    aria-label="Dismiss Action"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="mt-4 pt-4 border-t border-indigo-200/50 dark:border-indigo-900/50">
           <h3 className="text-sm font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-3 flex items-center gap-2">

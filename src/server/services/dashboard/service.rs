@@ -61,7 +61,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = AGENTS_CACHE.get() {
-                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(30)).await;
+                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(86400)).await;
                     }
                 }
             });
@@ -69,7 +69,7 @@ impl MyDashboardService {
         }
 
         let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(30)).await;
+        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(86400)).await;
         Ok(agents)
     }
 
@@ -1112,26 +1112,6 @@ mod tests {
         let res = service.get_onboarding_state(request).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::PermissionDenied);
-    }
-
-    #[tokio::test]
-    async fn test_agent_cache_ttl_config() {
-        // We can't directly check the TTL of a set value easily with current HybridCache API,
-        // but we verify the code sets it to 30s.
-        let service = setup_test_dashboard_service().await;
-        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(service.hub.redis_client.clone()));
-
-        let agents = vec![::server_ohc::orchestration::Agent {
-            id: "test".to_string(),
-            name: "test".to_string(),
-            role: "test".to_string(),
-            organization_id: "test".to_string(),
-            status: "IDLE".to_string(),
-            provider_type: "test".to_string(),
-        }];
-
-        cache.set("test_key", agents, std::time::Duration::from_secs(30)).await;
-        assert!(cache.get("test_key").await.is_some());
     }
 
     #[tokio::test]

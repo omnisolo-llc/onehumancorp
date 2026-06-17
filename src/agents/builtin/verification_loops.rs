@@ -1,4 +1,3 @@
-#![allow(clippy::empty_line_after_doc_comments)]
 use crate::llm::LlmClient;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 /// Master Catalog B.10. Verification Loops

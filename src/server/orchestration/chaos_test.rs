@@ -328,7 +328,7 @@ mod chaos_tests {
 
         // Use a mock StateManager configuration
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
         });
 
@@ -434,7 +434,7 @@ mod chaos_tests {
         .unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
@@ -523,7 +523,7 @@ mod chaos_tests {
         .unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
         });
 
@@ -781,7 +781,7 @@ mod chaos_tests {
                 .unwrap();
 
             let db = Arc::new(DB {
-                pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+                pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
                 store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
             });
 
@@ -825,7 +825,7 @@ mod chaos_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 

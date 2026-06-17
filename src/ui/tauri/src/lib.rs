@@ -57,6 +57,24 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct OnboardingState {
+    business_name: Option<String>,
+    template_selection: Option<String>,
+    assistant_name: Option<String>,
+    assistant_tone: Option<String>,
+    work_context: Option<String>,
+    categories: Option<String>,
+    tagline: Option<String>,
+    #[serde(rename = "adminEmail")]
+    admin_email: Option<String>,
+    #[serde(rename = "adminPassword")]
+    admin_password: Option<String>,
+    first_offer: Option<String>,
+    step: Option<i32>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct StartOnboardingRequest {
     business_type: Option<String>,
     company_name: Option<String>,
@@ -73,8 +91,6 @@ struct StartOnboardingRequest {
     price_type: Option<String>,
     location: Option<String>,
     target_audience: Option<String>,
-    ai_agents: Option<Vec<String>>,
-    ai_auto_respond: Option<bool>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {
@@ -86,9 +102,9 @@ fn onboarding_state_path() -> std::path::PathBuf {
 }
 
 #[tauri::command]
-async fn get_onboarding_state(tenant_id: Option<String>, user_id: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    let t_id = tenant_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string()));
-    let u_id = user_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string()));
+async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<OnboardingState, String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
 
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/state", backend_url);
@@ -100,11 +116,11 @@ async fn get_onboarding_state(tenant_id: Option<String>, user_id: Option<String>
 
     // Priority: Backend API
     if let Ok(response) = client.get(&url)
-        .header("X-Tenant-ID", &t_id)
-        .header("X-User-ID", &u_id)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
         .send().await {
         if response.status().is_success() {
-            if let Ok(state) = response.json::<serde_json::Value>().await {
+            if let Ok(state) = response.json::<OnboardingState>().await {
                 return Ok(state);
             }
         }
@@ -116,13 +132,24 @@ async fn get_onboarding_state(tenant_id: Option<String>, user_id: Option<String>
         let path = onboarding_state_path();
         if path.exists() {
             let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
-            if let Ok(state) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Ok(state) = serde_json::from_str::<OnboardingState>(&content) {
                 return Ok(state);
             }
         }
     }
 
-    Ok(serde_json::json!({}))
+    Ok(OnboardingState {
+        business_name: None,
+        template_selection: None,
+        assistant_name: None,
+        assistant_tone: None,
+        work_context: None,
+        categories: None,
+        tagline: None,
+        admin_email: None,
+        admin_password: None,
+        first_offer: None,
+    })
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -141,7 +168,7 @@ struct IntakeData {
 }
 
 #[tauri::command]
-async fn process_intake(input: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+async fn process_intake(input: String, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/intake", backend_url);
 
@@ -152,7 +179,7 @@ async fn process_intake(input: String, image_url: Option<String>, _app_handle: t
 
     let response = client.post(&url)
         .header("Content-Type", "application/json")
-        .json(&serde_json::json!({ "description": input, "image_url": image_url }))
+        .json(&serde_json::json!({ "description": input }))
         .send().await
         .map_err(|err| err.to_string())?;
 
@@ -164,15 +191,8 @@ async fn process_intake(input: String, image_url: Option<String>, _app_handle: t
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct StartOnboardingResponse {
-    success: bool,
-    message: String,
-    organization_id: String,
-}
-
 #[tauri::command]
-async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<StartOnboardingResponse, String> {
+async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<(), String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/start", backend_url);
 
@@ -184,21 +204,15 @@ async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHa
         .header("Content-Type", "application/json")
         .json(&req);
 
-    let res = request.send().await.map_err(|err| err.to_string())?;
+    let _ = request.send().await;
 
-    if !res.status().is_success() {
-        return Err(format!("Failed to start onboarding: {}", res.status()));
-    }
-
-    let resp_data = res.json::<StartOnboardingResponse>().await.map_err(|err| err.to_string())?;
-
-    Ok(resp_data)
+    Ok(())
 }
 
 #[tauri::command]
-async fn save_onboarding_state(state: serde_json::Value, tenant_id: Option<String>, user_id: Option<String>, _app_handle: tauri::AppHandle) -> Result<(), String> {
-    let t_id = tenant_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string()));
-    let u_id = user_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string()));
+async fn save_onboarding_state(state: OnboardingState, _app_handle: tauri::AppHandle) -> Result<(), String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
 
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/state", backend_url);
@@ -210,8 +224,8 @@ async fn save_onboarding_state(state: serde_json::Value, tenant_id: Option<Strin
 
     // Primary: Backend save
     let _ = client.post(&url)
-        .header("X-Tenant-ID", &t_id)
-        .header("X-User-ID", &u_id)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
         .header("Content-Type", "application/json")
         .json(&state)
         .send().await;

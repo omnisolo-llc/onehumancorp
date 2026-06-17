@@ -51,7 +51,7 @@ pub async fn handle_omnichannel_webhook(
     let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
 
     let id = Uuid::new_v4().to_string();
-    let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
+    let target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
     let pool = &state.db.pool;
 
@@ -92,19 +92,18 @@ pub async fn handle_omnichannel_webhook(
         }
     };
 
-    let payload_json = serde_json::json!({
-        "message_id": id,
-        "inbox_message_id": id,
-        "source": payload.source,
-        "content": payload.message,
-        "sender_id": payload.sender_id
-    });
-    let job_id = Uuid::new_v4().to_string();
-
     if let Err(e) = insert_result {
         tracing::error!("Failed to insert into inbox_messages: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
+
+    let job_id = Uuid::new_v4().to_string();
+    let payload_json = serde_json::json!({
+        "message_id": id,
+        "source": payload.source,
+        "content": payload.message,
+        "sender_id": payload.sender_id
+    });
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {

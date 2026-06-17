@@ -129,7 +129,7 @@ mod tests {
 
         // Scenario 1: Happy Hour (18:00) and Normal Stock (10)
         let context1 = ContextSignals {
-            current_time: Utc.with_ymd_and_hms(2025, 1, 1, 18, 0, 0).single().unwrap(),
+            current_time: Utc.with_ymd_and_hms(2025, 1, 1, 18, 0, 0).unwrap(),
             inventory_level: 10,
             inventory_velocity_7d: 1.0,
             demand_score: 0.5,
@@ -140,7 +140,7 @@ mod tests {
 
         // Scenario 2: Happy Hour (18:00) and Low Stock (3)
         let context2 = ContextSignals {
-            current_time: Utc.with_ymd_and_hms(2025, 1, 1, 18, 0, 0).single().unwrap(),
+            current_time: Utc.with_ymd_and_hms(2025, 1, 1, 18, 0, 0).unwrap(),
             inventory_level: 3,
             inventory_velocity_7d: 1.0,
             demand_score: 0.5,

@@ -15,27 +15,11 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
-        .route("/setup-health", get(setup_health_check))
         .layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
-}
-
-#[derive(serde::Deserialize)]
-pub struct HealthCheckQuery {
-    pub mode: Option<String>,
-}
-
-async fn setup_health_check(
-    axum::extract::Query(query): axum::extract::Query<HealthCheckQuery>,
-) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let is_cloud = query.mode.as_deref() == Some("cloud");
-    match crate::services::onboarding::provisioner::check_environment(is_cloud) {
-        Ok(_) => Ok(Json(serde_json::json!({ "status": "ready" }))),
-        Err(e) => Ok(Json(serde_json::json!({ "status": "error", "message": e }))),
-    }
 }
 
 #[derive(serde::Deserialize)]
@@ -106,7 +90,9 @@ async fn save_draft(
     let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
-    let step = payload.get("step")
+    let step = payload.get("wizardState")
+        .and_then(|w| w.get("step"))
+        .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
@@ -183,7 +169,9 @@ async fn save_state(
     let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
     let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
-    let step = payload.get("step")
+    let step = payload.get("wizardState")
+        .and_then(|w| w.get("step"))
+        .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 

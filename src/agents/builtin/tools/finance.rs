@@ -1,35 +1,21 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
-use serde::Deserialize;
+use serde_json::{json, Value};
 use std::sync::Arc;
-use tracing::info;
-
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-
-// Pydantic-first tool schema validation: FinanceArgs
-#[derive(Deserialize)]
-struct FinanceArgs {
-    #[serde(default = "default_report_type")]
-    report_type: String,
-    #[serde(default = "default_start_date")]
-    start_date: String,
-}
-
-fn default_report_type() -> String {
-    "weekly_summary".to_string()
-}
-
-fn default_start_date() -> String {
-    "7 days ago".to_string()
-}
+use super::{Tool, ToolExecutor};
 
 pub struct FinanceReportExecutor;
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<FinanceArgs> for FinanceReportExecutor {
-    async fn execute_typed(&self, args: FinanceArgs) -> Result<String, ToolError> {
-        let report_type = args.report_type;
-        let start_date = args.start_date;
+impl ToolExecutor for FinanceReportExecutor {
+    async fn execute(
+        &self,
+        args: Value,
+    ) -> Result<String, ToolError> {
+        let report_type = args["report_type"]
+            .as_str()
+            .unwrap_or("weekly_summary");
+
+        let start_date = args["start_date"].as_str().unwrap_or("7 days ago");
 
         // Semi-functional financial report generation.
         // In a full implementation, this would query the database for orders and revenue.
@@ -74,6 +60,8 @@ pub fn finance_report_tool() -> Tool {
                 }
             }
         }),
-        execute: Arc::new(PydanticAdapter::new(FinanceReportExecutor)),
+        execute: Arc::new(FinanceReportExecutor),
     }
 }
+
+use tracing::info;

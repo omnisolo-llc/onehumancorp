@@ -52,11 +52,6 @@ impl MeshTransport for RedisMeshTransport {
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("pattern", pattern.to_string())]);
-        self.inner.subscribe_pattern(pattern, handler).await
-    }
-
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
@@ -120,11 +115,6 @@ impl MeshTransport for MemoryMeshTransport {
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
-    }
-
-    async fn subscribe_pattern(&self, pattern: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("pattern", pattern.to_string())]);
-        self.inner.subscribe_pattern(pattern, handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {

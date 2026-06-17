@@ -21,7 +21,6 @@ data:
   custom.css: |
     /* Apple / Ubiquiti UniFi Network Application design standards */
     /* Light Mode Translucent Glass */
-    body, .main-view, .page-container, .panel-container, .sidemenu,
     .grafana-app .navbar-page-btn,
     .grafana-app .dashboard-container,
     .grafana-app .panel-container,
@@ -35,11 +34,6 @@ data:
     }
 
     /* Dark Mode Translucent Glass */
-    body.theme-dark,
-    body.theme-dark .main-view,
-    body.theme-dark .page-container,
-    body.theme-dark .panel-container,
-    body.theme-dark .sidemenu,
     body.theme-dark .grafana-app .navbar-page-btn,
     body.theme-dark .grafana-app .dashboard-container,
     body.theme-dark .grafana-app .panel-container,
@@ -50,15 +44,4 @@ data:
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
       font-family: 'Outfit', 'Inter', sans-serif !important;
       border-radius: 12px !important;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body, .main-view, .page-container, .panel-container, .sidemenu {
-        background: rgba(22, 22, 26, 0.7) !important;
-        backdrop-filter: blur(30px) saturate(210%) !important;
-        -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        font-family: 'Outfit', 'Inter', sans-serif !important;
-        border-radius: 12px !important;
-      }
     }

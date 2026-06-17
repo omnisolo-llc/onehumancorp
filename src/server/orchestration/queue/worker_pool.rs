@@ -43,7 +43,7 @@ impl WorkerPool {
                             let type_strs: Vec<&str> = types_clone.iter().map(AsRef::as_ref).collect();
                             match queue_clone.dequeue(type_strs).await {
                                 Ok(Some(job)) => {
-                                    tracing::debug!("Worker {} processing job {}", i, job.id);
+                                    tracing::info!("Worker {} processing job {}", i, job.id);
                                     let job_id = job.id.clone();
 
                                     // Process

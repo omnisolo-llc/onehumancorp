@@ -223,51 +223,6 @@ pub async fn webhook_ingest(Json(_payload): Json<serde_json::Value>) -> Json<ser
     Json(serde_json::json!({ "status": "received" }))
 }
 
-#[derive(serde::Serialize)]
-pub struct DiscoveryReport {
-    pub id: uuid::Uuid,
-    pub month: String,
-    pub plain_language_summary: String,
-    pub metrics: serde_json::Value,
-}
-
-pub async fn get_discovery_report(
-    Extension(pool): Extension<sqlx::PgPool>,
-    Extension(claims): Extension<Claims>,
-) -> Json<Vec<DiscoveryReport>> {
-    let tenant_id = tenant_id(&claims);
-    let Ok(uuid) = uuid::Uuid::parse_str(&tenant_id) else {
-        return Json(vec![]);
-    };
-
-    let mut conn = match pool.acquire().await {
-        Ok(c) => c,
-        Err(_) => return Json(vec![]),
-    };
-
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *conn)
-        .await;
-
-    let rows = sqlx::query_as::<_, (uuid::Uuid, String, String, Option<serde_json::Value>)>(
-        "SELECT id, month, plain_language_summary, metrics FROM seo_discovery_reports WHERE tenant_id = $1 ORDER BY created_at DESC"
-    )
-    .bind(uuid)
-    .fetch_all(&mut *conn)
-    .await
-    .unwrap_or_default();
-
-    let reports = rows.into_iter().map(|(id, month, plain_language_summary, metrics)| DiscoveryReport {
-        id,
-        month,
-        plain_language_summary,
-        metrics: metrics.unwrap_or_else(|| serde_json::json!({})),
-    }).collect();
-
-    Json(reports)
-}
-
 pub fn router() -> Router {
     Router::new()
         .route("/connect", post(connect_google_business))
@@ -275,7 +230,6 @@ pub fn router() -> Router {
         .route("/reviews/pending", get(get_pending_reviews))
         .route("/reviews/{review_id}/approve", post(approve_and_reply))
         .route("/webhook", post(webhook_ingest))
-        .route("/discovery_report", get(get_discovery_report))
 }
 
 #[cfg(test)]

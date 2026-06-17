@@ -229,7 +229,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/50 backdrop-blur-3xl saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/80 backdrop-blur-2xl saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
@@ -313,8 +313,8 @@ export function HelpWidget() {
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "backdrop-blur-2xl bg-white/80 border border-white/60 shadow-sm text-blue-900 rounded-tl-none"
-                        : "backdrop-blur-2xl bg-white/40 border border-white/40 shadow-sm text-gray-800 rounded-tr-none ml-auto"
+                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
+                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>

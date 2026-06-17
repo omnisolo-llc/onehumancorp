@@ -96,7 +96,7 @@ pub struct MailboxRequest {
     pub message: MeshMessage,
 }
 
-pub fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
+fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
     let spiffe_id = headers.get("x-spiffe-id")
         .and_then(|val| val.to_str().ok())
         .unwrap_or("");
@@ -158,14 +158,7 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    let tenant_id = headers.get("x-tenant-id").and_then(|val| val.to_str().ok()).unwrap_or("default");
-    let scoped_topic = if payload.topic.starts_with(&format!("{}:", tenant_id)) {
-        payload.topic.clone()
-    } else {
-        format!("{}:{}", tenant_id, payload.topic)
-    };
-
-    publish_response(transport.publish(&scoped_topic, payload.message.into()).await)
+    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
 }
 
 /// Handler for direct agent-to-agent communication over HTTP

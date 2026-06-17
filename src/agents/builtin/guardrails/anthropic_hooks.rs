@@ -1,4 +1,3 @@
-#![allow(clippy::empty_line_after_doc_comments)]
 use crate::guardrails::ToolGuardrail;
 use ohc_builtin_agent_core::types::ToolCall;
 use std::collections::HashSet;

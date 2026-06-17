@@ -113,7 +113,7 @@ describe('HelpCenterPage', () => {
     });
     // The video card container has changed in VideoTutorialList
     const videoTitle = screen.getByText('How to set up your first store easily');
-    const videoCard = videoTitle.parentElement?.parentElement;
+    const videoCard = videoTitle.closest('.app-card');
     if (videoCard) {
       await user.click(videoCard);
     }

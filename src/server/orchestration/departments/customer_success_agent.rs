@@ -35,7 +35,6 @@ impl Department for CustomerSuccessAgent {
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
-            "tenant.subscription.check_predictive_restock".to_string(),
         ]
     }
 
@@ -137,52 +136,9 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.subscription.check_predictive_restock" {
-            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
-            if customer_id.is_empty() {
-                return Err("customer_id is required".to_string());
-            }
-
-            if let Ok(Some(predicted_date)) = self.orchestrator.predict_replenishment(&event.tenant_id, customer_id).await {
-                let prompt = format!(
-                    "Draft a concise, warm restock message for the customer based on their predicted replenishment date of {}. Mention they might be running low and ask if they want a refill processed.",
-                    predicted_date
-                );
-                let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-
-                let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
-                };
-
-                let action_payload = serde_json::json!({
-                    "feature_type": "predictive_restock_draft",
-                    "generated_response": generated_response,
-                    "customer_id": customer_id,
-                    "predicted_date": predicted_date,
-                });
-
-                let _ = self.orchestrator.execute_action(
-                    DepartmentType::CustomerSuccess,
-                    "Predictive Restock Draft".to_string(),
-                    event.tenant_id.clone(),
-                    ActionRisk::DraftForReview,
-                    action_payload,
-                ).await;
-            }
-
-            return Ok(());
-        }
-
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
-                .or_else(|| event.payload.get("content"))
                 .and_then(|v| v.as_str()).unwrap_or("");
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -271,9 +227,7 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
-            let inbox_id = event.payload.get("inbox_message_id")
-                .or_else(|| event.payload.get("message_id"))
-                .and_then(|v| v.as_str()).unwrap_or("");
+            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
                 if risk == ActionRisk::AutoExecute {

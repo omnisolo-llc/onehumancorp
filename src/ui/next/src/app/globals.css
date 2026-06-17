@@ -47,7 +47,7 @@ body {
 .app-brand-mark {
   width: 32px;
   height: 44px;
-  border-radius: 16px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: #2784ff;
@@ -194,30 +194,30 @@ body {
 }
 
 .app-card {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
   .app-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
 .app-panel {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
@@ -225,10 +225,10 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-panel {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -580,38 +580,38 @@ body {
 }
 
 .glassmorphism {
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
 }
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
-    border-radius: 16px;
+    border-radius: 8px;
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
-  backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(216, 222, 232, 0.82);
+  border-radius: 8px;
 }
 
 @media (prefers-color-scheme: dark) {
   .glass-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -624,7 +624,7 @@ body {
 .app-shell [class*="rounded-[24px]"],
 .app-shell [class*="rounded-xl"],
 .app-shell [class*="rounded-2xl"] {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
 }
 
 .app-shell [class*="bg-gradient"] {
@@ -713,7 +713,7 @@ button {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #d8e0ea;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
 }
@@ -821,7 +821,7 @@ button {
   align-self: flex-start;
   margin: 0 0 8px;
   border: 1px solid #cfe0ff;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #eef5ff;
   color: #1f6feb;
 }
@@ -862,7 +862,7 @@ button {
 
 .setup-page #setup-screen button {
   min-height: 44px;
-  border-radius: 16px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -915,7 +915,7 @@ button {
   min-height: 44px;
   padding: 12px 14px;
   border: 1px solid #cfd8e3;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #ffffff;
   color: #18212f;
   font: inherit;
@@ -952,7 +952,7 @@ button {
 .setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-[8px]"] {
   padding: 12px;
   border: 1px solid #d8e0ea;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #ffffff;
 }
 

@@ -1,4 +1,4 @@
-exports_files(["chaos.rs", "sync_gateway.rs"])
+exports_files(["chaos.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
@@ -16,14 +16,12 @@ exports_files(
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "meta_webhook.rs",
-        "twilio_webhook.rs",
         "docs.rs",
         "subscription.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
-        "sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
         "chaos.rs",
@@ -49,7 +47,6 @@ rust_library(
         "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
-        "twilio_webhook.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
@@ -67,7 +64,6 @@ rust_library(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
-        "sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
         "chaos.rs",
@@ -83,7 +79,6 @@ rust_library(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
-        "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
@@ -98,9 +93,6 @@ rust_library(
         "//src/server/api/onboarding:mod.rs",
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
-    ],
-    compile_data = [
-        "//:CHANGELOG.md",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

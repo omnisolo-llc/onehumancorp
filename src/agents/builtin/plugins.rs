@@ -1,4 +1,3 @@
-#![allow(clippy::empty_line_after_doc_comments)]
 use crate::agent::AgentRunConfig;
 use crate::tools::Tool;
 use std::sync::Arc;

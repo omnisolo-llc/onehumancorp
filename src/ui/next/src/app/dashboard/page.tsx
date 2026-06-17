@@ -2,7 +2,6 @@
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
-import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 
@@ -141,7 +140,7 @@ function InviteAndEarnWidget() {
   };
 
   return (
-    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10" data-testid="dashboard-viral-invite-widget">
+    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10">
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
@@ -440,7 +439,6 @@ export default function Dashboard() {
       <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
-      <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -495,9 +493,9 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6 w-full overflow-hidden">
+        <div className="order-first md:order-last mb-6">
           {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
         </div>
 
         <div className="order-last md:order-first">

@@ -56,9 +56,9 @@ impl AuthConfig {
         let app_key = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
-                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+                let secret_path = std::path::Path::new(".ohc_jwt_secret");
                 if secret_path.exists() {
-                    if let Ok(bytes) = std::fs::read(&secret_path) {
+                    if let Ok(bytes) = std::fs::read(secret_path) {
                         if bytes.len() >= 32 {
                             return bytes;
                         }
@@ -102,9 +102,9 @@ fn hmac_token(tok: &str) -> Vec<u8> {
     let app_key = std::env::var("JWT_SECRET")
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| {
-            let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+            let secret_path = std::path::Path::new(".ohc_jwt_secret");
             if secret_path.exists() {
-                if let Ok(bytes) = std::fs::read(&secret_path) {
+                if let Ok(bytes) = std::fs::read(secret_path) {
                     if bytes.len() >= 32 {
                         return bytes;
                     }

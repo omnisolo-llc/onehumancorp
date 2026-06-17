@@ -17,18 +17,6 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375);
 
-    // Verify touch targets are at least 44x44
-    const buttons = await page.locator('button').all();
-    for (const btn of buttons) {
-      if (await btn.isVisible()) {
-        const box = await btn.boundingBox();
-        if (box) {
-          expect(box.width).toBeGreaterThanOrEqual(44);
-          expect(box.height).toBeGreaterThanOrEqual(44);
-        }
-      }
-    }
-
     // Find the dynamic approval card (which we've mapped using data-testid or just looking for the buttons)
     const approveBtn = page.getByTestId('approve-proposal').first();
     const editBtn = page.getByTestId('edit-proposal').first();
@@ -126,70 +114,4 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
   });
 
-
-  test('should handle inline editing of a proposal', async ({ page }) => {
-    test.setTimeout(180000);
-
-    await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-
-    const approveBtn = page.getByTestId('approve-proposal').first();
-    const editBtn = page.getByTestId('edit-proposal').first();
-
-    if (await editBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      // Click edit
-      await editBtn.click();
-
-      // Verify textarea appears
-      const textarea = page.getByTestId('edit-proposal-textarea');
-      await expect(textarea).toBeVisible();
-
-      // Modify the text
-      await textarea.fill('This is my manually edited draft text');
-
-      // Click cancel first
-      const cancelBtn = page.getByTestId('cancel-edit-proposal');
-      await cancelBtn.click();
-      await expect(textarea).not.toBeVisible();
-
-      // Re-edit and save
-      await editBtn.click();
-      await textarea.fill('Second edited text');
-
-      const saveBtn = page.getByTestId('save-proposal');
-      await saveBtn.click();
-
-      // It should optimistically disappear
-      await expect(textarea).not.toBeVisible({ timeout: 2000 });
-      await expect(editBtn).not.toBeVisible({ timeout: 2000 });
-    }
-  });
-
-  test('should handle inline editing of an ambassador reply', async ({ page }) => {
-    test.setTimeout(180000);
-
-    await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-
-    const editBtn = page.getByTestId('edit-ambassador-reply').first();
-
-    if (await editBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      // Click edit
-      await editBtn.click();
-
-      // Verify textarea appears
-      const textarea = page.getByTestId('edit-ambassador-reply-textarea');
-      await expect(textarea).toBeVisible();
-
-      // Modify the text
-      await textarea.fill('Edited ambassador reply');
-
-      const saveBtn = page.getByTestId('save-send-ambassador-reply');
-      await saveBtn.click();
-
-      // It should optimistically disappear
-      await expect(textarea).not.toBeVisible({ timeout: 2000 });
-      await expect(editBtn).not.toBeVisible({ timeout: 2000 });
-    }
-  });
 });

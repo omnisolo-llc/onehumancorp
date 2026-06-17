@@ -128,7 +128,7 @@ describe('CostDashboardPage', () => {
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
-    expect(screen.getAllByText('Cost Transparency Dashboard')[0]).toBeDefined();
+    expect(screen.getAllByText('Cost Transparency')[0]).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
 
     // total revenue

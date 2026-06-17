@@ -1,8 +1,6 @@
 /// Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
 /// Implements a simple pattern matching system to record and retrieve successful trajectories.
 
-use std::path::Path;
-
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrajectoryPattern {
     pub id: String,
@@ -26,30 +24,6 @@ impl PatternMatcher {
         Self {
             patterns: Vec::new(),
         }
-    }
-
-    /// Loads patterns from a JSON file.
-    pub async fn load_from_disk<P: AsRef<Path>>(path: P) -> Result<Self, String> {
-        let path = path.as_ref();
-        if !path.exists() {
-            return Ok(Self::new());
-        }
-        let content = tokio::fs::read_to_string(path)
-            .await
-            .map_err(|e| format!("Failed to read patterns file: {}", e))?;
-        let patterns: Vec<TrajectoryPattern> = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse patterns file: {}", e))?;
-        Ok(Self { patterns })
-    }
-
-    /// Saves patterns to a JSON file.
-    pub async fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> Result<(), String> {
-        let content = serde_json::to_string_pretty(&self.patterns)
-            .map_err(|e| format!("Failed to serialize patterns: {}", e))?;
-        tokio::fs::write(path, content)
-            .await
-            .map_err(|e| format!("Failed to write patterns file: {}", e))?;
-        Ok(())
     }
 
     /// Records a successful trajectory pattern.
@@ -163,30 +137,5 @@ mod tests {
 
         // Let's test the threshold explicitly. "kubernetes deployment" has 0 overlap.
         assert!(matcher.find_best_match("kubernetes deployment").is_none());
-    }
-
-    #[tokio::test]
-    async fn test_load_save_disk() {
-        let mut matcher = PatternMatcher::new();
-        matcher.record_pattern(TrajectoryPattern {
-            id: "test1".to_string(),
-            initial_context: "fix null pointer exception in java".to_string(),
-            successful_tools: vec!["grep".to_string()],
-            outcome_score: 0.9,
-        });
-
-        let temp_dir = tempfile::tempdir().unwrap();
-        let file_path = temp_dir.path().join("patterns.json");
-
-        let save_res = matcher.save_to_disk(&file_path).await;
-        assert!(save_res.is_ok());
-
-        let load_res = PatternMatcher::load_from_disk(&file_path).await;
-        assert!(load_res.is_ok());
-
-        let loaded_matcher = load_res.unwrap();
-        assert_eq!(loaded_matcher.get_patterns().len(), 1);
-        assert_eq!(loaded_matcher.get_patterns()[0].id, "test1");
-        assert_eq!(loaded_matcher.get_patterns()[0].initial_context, "fix null pointer exception in java");
     }
 }

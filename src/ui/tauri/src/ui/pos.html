@@ -257,12 +257,7 @@
 
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
 
-      <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
-        <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
-          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
-          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
-        </div>
-      </div>
+      <div id="network-status-indicator" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">Offline - changes saved locally</div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
 
       <div class="header">
@@ -629,7 +624,7 @@
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  // Terminal SDK setup
+                  // Mock or real call for Terminal SDK would go here to set up the reader
               }
           } else {
               console.warn("Payment intent API returned error");
@@ -644,26 +639,15 @@
           simulateTapBtn.innerText = "Processing...";
           simulateTapBtn.style.backgroundColor = "#86868b";
 
-          // Tap Success
-          tapOverlay.style.display = 'none';
-          posView.style.display = 'none';
-          receiptScreen.style.display = 'flex';
+          // Simulate SDK processing time
+          setTimeout(() => {
+              // Tap Success
+              tapOverlay.style.display = 'none';
+              posView.style.display = 'none';
+              receiptScreen.style.display = 'flex';
 
-          // In real flow, we'd confirm the intent and sync offline txs.
-          // We simulate the offline sync for E2E validation:
-          if (!navigator.onLine) {
-              document.querySelector('.receipt-text').innerText = "Payment saved offline. Will sync when network is restored.";
-              enqueueOfflineMutation({
-                  type: 'tap_to_pay',
-                  id: 'tx_' + Date.now(),
-                  amount: currentAmountCents,
-                  currency: 'usd',
-                  product_id: 'quick_charge',
-                  quantity: 1,
-                  timestamp: new Date().toISOString()
-              });
-          } else {
-              document.querySelector('.receipt-text').innerText = "Payment Successful";
+              // In real flow, we'd confirm the intent and sync offline txs.
+              // We simulate the offline sync for E2E validation:
               const tenantId = localStorage.getItem('tenant_id') || 'default';
               fetch('/api/v1/payments/terminal/sync_offline', {
                   method: 'POST',
@@ -679,7 +663,8 @@
                       }]
                   })
               }).catch(console.error);
-          }
+
+          }, 800);
       });
 
       function cancelCharge() {
@@ -700,7 +685,272 @@
       updateDisplay();
     </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+
+        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+        </div>
+
+<div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
 
 
 <script>
@@ -801,29 +1051,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
     });
 
     // Mobile long press (contextmenu) or touchstart
@@ -937,29 +1164,6 @@ document.addEventListener('DOMContentLoaded', () => {
             hideTooltip();
         }
     });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
 });
 </script>
 
@@ -973,14 +1177,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+        overlay.id = 'walkthrough-overlay';
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+        bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -994,7 +1198,6 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
-                el.style.pointerEvents = '';
             });
 
             // Find target
@@ -1028,7 +1231,6 @@ function initWalkthrough() {
                 target.style.position = 'relative';
                 target.style.zIndex = '99999';
                 target.style.background = 'white'; // Make it pop
-                target.style.pointerEvents = 'none';
 
                 const rect = target.getBoundingClientRect();
                 // Position bubble below target if space permits, else above
@@ -1052,7 +1254,6 @@ function initWalkthrough() {
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
-                el.style.pointerEvents = '';
             });
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -1488,29 +1689,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
     // Walkthroughs
     if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
@@ -1519,12 +1697,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let currentStep = 0;
 
             const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+            overlay.id = 'walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+            bubble.id = 'walkthrough-bubble';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -1537,7 +1715,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
-                el.style.pointerEvents = '';
                 });
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
@@ -1570,7 +1747,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
                     target.style.background = 'white';
-                    target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
                     if (rect.bottom + 200 < window.innerHeight) {
@@ -1592,7 +1768,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
-                el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -1626,33 +1801,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const queueIndicator = document.getElementById("queue-dashboard");
         if (!networkIndicator || !queueIndicator) return;
 
-        let queue = [];
-        try {
-            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
-        } catch(e) {}
-
-        const dot = document.getElementById("network-status-dot");
-        const text = document.getElementById("network-status-text");
-
         if (!navigator.onLine) {
-            networkIndicator.style.display = "flex";
+            networkIndicator.style.display = "block";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
-            if (text) text.innerText = "Working Offline";
-        } else if (queue.length > 0) {
-            networkIndicator.style.display = "flex";
-            networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
-            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
         }
 
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        } catch(e) {}
+
         if (queue.length > 0) {
             queueIndicator.style.display = "block";
             queueIndicator.classList.remove("hidden");
-            queueIndicator.innerText = queue.length + " Items Pending Sync";
+            queueIndicator.innerText = queue.length + " Payments Pending Sync";
         } else {
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
@@ -1689,18 +1854,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     payment_method: null,
                     payment_intent_id: null,
                     currency: null
-                });
-            } else if (m.type === "agent_intent") {
-                generalMutations.push({
-                    transaction_id: m.id,
-                    product_id: "agent_intent",
-                    quantity_deducted: 0,
-                    amount: null,
-                    payment_method: null,
-                    payment_intent_id: null,
-                    currency: "usd",
-                    mutation_type: "agent_intent",
-                    payload: typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload)
                 });
             } else {
                 generalMutations.push(m);
@@ -1743,17 +1896,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (generalMutations.length > 0) {
             try {
-                const deltas = generalMutations.map(m => ({
-                    id: crypto.randomUUID(),
-                    entity_id: m.product_id || m.transaction_id || "general",
-                    data: JSON.stringify(m),
-                    updated_at: new Date().toISOString()
-                }));
-
-                const res = await fetch("/api/v1/sync/mcp-deltas", {
+                const res = await fetch("/api/v1/sync/offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ tenant_id: tenantId, deltas: deltas })
+                    body: JSON.stringify({ mutations: generalMutations })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {
