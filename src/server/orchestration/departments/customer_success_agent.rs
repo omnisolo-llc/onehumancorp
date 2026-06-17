@@ -308,6 +308,60 @@ impl Department for CustomerSuccessAgent {
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
 
+            // Insert into agent_feed_items for the unified feed UI
+            let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
+            let event_source = if event.event_type == "tenant.omnichannel.message.received" {
+                "omnichannel_message"
+            } else {
+                "inbox_message"
+            };
+
+            let pool = crate::db::get_pool();
+            match std::env::var("DATABASE_URL") {
+                Ok(url) if url.starts_with("sqlite:") || url.starts_with("sqlite://") => {
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL')"
+                    )
+                    .bind(&agent_feed_item_id)
+                    .bind(&event.tenant_id)
+                    .bind(event_source)
+                    .bind(serde_json::json!({
+                        "customer_message": message,
+                        "feature_type": "ambassador_reply",
+                        "context": context_summary,
+                        "inbox_message_id": inbox_id,
+                        "customer_id": customer_id
+                    }).to_string())
+                    .bind(serde_json::json!({
+                        "action_type": "Draft Reply",
+                        "draft_reply": generated_response,
+                        "inbox_message_id": inbox_id
+                    }).to_string())
+                    .execute(&pool).await.map_err(|e| tracing::error!("Failed to insert agent feed item (SQLite): {}", e));
+                },
+                _ => {
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL')"
+                    )
+                    .bind(&agent_feed_item_id)
+                    .bind(&event.tenant_id)
+                    .bind(event_source)
+                    .bind(serde_json::json!({
+                        "customer_message": message,
+                        "feature_type": "ambassador_reply",
+                        "context": context_summary,
+                        "inbox_message_id": inbox_id,
+                        "customer_id": customer_id
+                    }))
+                    .bind(serde_json::json!({
+                        "action_type": "Draft Reply",
+                        "draft_reply": generated_response,
+                        "inbox_message_id": inbox_id
+                    }))
+                    .execute(&pool).await.map_err(|e| tracing::error!("Failed to insert agent feed item (Postgres): {}", e));
+                }
+            }
+
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
                     id: uuid::Uuid::new_v4().to_string(),
