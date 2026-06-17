@@ -374,14 +374,14 @@ mod tests {
     async fn test_linear_graph() {
         let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer));
 
-        graph.add_node("node1", |state| async move {
+        graph.add_node("node1", |_state| async move {
             Ok(TypedAgentState {
                 messages: vec!["Node 1 executed".to_string()],
                 has_tool_calls: false,
             })
         });
 
-        graph.add_node("node2", |state| async move {
+        graph.add_node("node2", |_state| async move {
             Ok(TypedAgentState {
                 messages: vec!["Node 2 executed".to_string()],
                 has_tool_calls: false,
@@ -408,14 +408,14 @@ mod tests {
     async fn test_reducer_merge() {
         let mut graph = StateGraph::<Value>::new(Arc::new(DefaultReducer));
 
-        graph.add_node("init", |state| async move {
+        graph.add_node("init", |_state| async move {
             Ok(serde_json::json!({
                 "key1": "value1",
                 "arr": ["item1"]
             }))
         });
 
-        graph.add_node("merge", |state| async move {
+        graph.add_node("merge", |_state| async move {
             Ok(serde_json::json!({
                 "key2": "value2",
                 "arr": ["item2"]
@@ -446,14 +446,14 @@ mod tests {
             })
         });
 
-        graph.add_node("path_a", |state| async move {
+        graph.add_node("path_a", |_state| async move {
             Ok(TypedAgentState {
                 messages: vec!["Path A executed".to_string()],
                 has_tool_calls: false,
             })
         });
 
-        graph.add_node("path_b", |state| async move {
+        graph.add_node("path_b", |_state| async move {
             Ok(TypedAgentState {
                 messages: vec!["Path B executed".to_string()],
                 has_tool_calls: false,

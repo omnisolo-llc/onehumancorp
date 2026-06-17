@@ -327,7 +327,7 @@ mod tests {
             }
 
             let parent_client = std::sync::Arc::new(BadLlmClient);
-            let parent_agent = std::sync::Arc::new(Agent::new(parent_client.clone(), vec![]));
+            let _parent_agent = std::sync::Arc::new(Agent::new(parent_client.clone(), vec![]));
 
             let sub_client = std::sync::Arc::new(MockLlmClient { responses: std::sync::Mutex::new(vec![]) });
             let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
