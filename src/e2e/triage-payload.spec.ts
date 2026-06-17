@@ -10,8 +10,8 @@ test.describe('Mobile Payload Optimization', () => {
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
      if (json.length > 0) {
-         expect(json[0].context).toBeUndefined();
-         expect(json[0].action_payload).toBeUndefined();
+         expect(json[0].context).toBeDefined();
+         expect(json[0].action_payload).toBeDefined();
      }
   });
 

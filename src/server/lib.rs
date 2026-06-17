@@ -4255,81 +4255,47 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut legacy_rows_json = Vec::new();
             match &db1.store {
                 crate::db::DbStore::Postgres => {
-                    let query_str = if mobile_optimized {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    } else {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    };
+                    let query_str = "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50";
                     if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id1)
                     .fetch_all(&db1.pool)
                     .await {
                         for row in rows {
-                            let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
-                            } else {
-                                serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                                    })
-                            };
+                            let item = serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            });
                             legacy_rows_json.push(item);
                         }
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    let query_str = if mobile_optimized {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    } else {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
-                    };
+                    let query_str = "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50";
                     if let Ok(rows) = sqlx::query(query_str)
                     .bind(&t_id1)
                     .fetch_all(pool)
                     .await {
                         for row in rows {
-                            let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
-                            } else {
-                                serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                                    })
-                            };
+                            let item = serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            });
                             legacy_rows_json.push(item);
                         }
                     }
