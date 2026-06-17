@@ -78,6 +78,13 @@ pub struct GitCheckpointer {
 }
 
 impl GitCheckpointer {
+    fn safe_tag_name(id: &str) -> String {
+        format!(
+            "checkpoint-{}",
+            id.replace(|c: char| !c.is_alphanumeric() && c != '-' && c != '_', "_")
+        )
+    }
+
     fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
         self.repo_path
             .join(format!(".scratchpad_{}.json", thread_id))
@@ -139,21 +146,17 @@ impl CheckpointSaver for GitCheckpointer {
     ) -> Result<Option<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
-        // Try with checkpoint- prefix first (for actual checkpoint_ids),
-        // fallback to raw checkpoint_id (which could be a git hash from list_checkpoints)
-        let mut target_ref = format!("checkpoint-{}", checkpoint_id);
+        // Try safe tag name first, then fallback to legacy checkpoint-, then raw
+        let refs_to_try = vec![
+            Self::safe_tag_name(checkpoint_id),
+            format!("checkpoint-{}", checkpoint_id),
+            checkpoint_id.to_string(),
+        ];
 
-        let mut output = Command::new("git")
-            .arg("show")
-            .arg(format!("{}:{}", target_ref, file_name))
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut output = None;
 
-        if !output.status.success() {
-            target_ref = checkpoint_id.to_string();
-            output = Command::new("git")
+        for target_ref in refs_to_try {
+            let res = Command::new("git")
                 .arg("show")
                 .arg(format!("{}:{}", target_ref, file_name))
                 .current_dir(&self.repo_path)
@@ -161,10 +164,16 @@ impl CheckpointSaver for GitCheckpointer {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            if !output.status.success() {
-                return Ok(None);
+            if res.status.success() {
+                output = Some(res);
+                break;
             }
         }
+
+        let output = match output {
+            Some(o) => o,
+            None => return Ok(None),
+        };
 
         let content = String::from_utf8_lossy(&output.stdout);
         let cp: Checkpoint = serde_json::from_str(&content).map_err(|e| e.to_string())?;
@@ -278,7 +287,7 @@ impl CheckpointSaver for GitCheckpointer {
             ));
         }
 
-        let tag_name = format!("checkpoint-{}", checkpoint.checkpoint_id);
+        let tag_name = Self::safe_tag_name(&checkpoint.checkpoint_id);
         let tag_output = Command::new("git")
             .arg("tag")
             .arg("-f")
@@ -299,10 +308,13 @@ impl CheckpointSaver for GitCheckpointer {
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        let tag_name = format!("checkpoint-{}", checkpoint_id);
+        let refs_to_try = vec![
+            Self::safe_tag_name(checkpoint_id),
+            format!("checkpoint-{}", checkpoint_id),
+            checkpoint_id.to_string(),
+        ];
 
-        // Pre-clean to remove any untracked files that might block the reset
-        // Use -fdx to clean untracked and ignored files to ensure spotless working tree.
+        // Pre-clean to remove any untracked files that might block the checkout
         let _pre_clean = Command::new("git")
             .arg("clean")
             .arg("-fdx")
@@ -310,32 +322,42 @@ impl CheckpointSaver for GitCheckpointer {
             .output()
             .await;
 
-        let output = Command::new("git")
+        let _reset_head = Command::new("git")
             .arg("reset")
             .arg("--hard")
-            .arg(&tag_name)
+            .arg("HEAD")
             .current_dir(&self.repo_path)
             .output()
-            .await
-            .map_err(|e| e.to_string())?;
+            .await;
 
-        if !output.status.success() {
-            // Fallback to checking out by bare checkpoint_id if tag fails (legacy compat)
-            let fallback_output = Command::new("git")
-                .arg("reset")
-                .arg("--hard")
-                .arg(checkpoint_id)
+        let branch_name = format!("agent-restore-{}", Self::safe_tag_name(checkpoint_id).replace("checkpoint-", ""));
+        let mut success = false;
+        let mut last_err = String::new();
+
+        for target_ref in refs_to_try {
+            let output = Command::new("git")
+                .arg("checkout")
+                .arg("-B")
+                .arg(&branch_name)
+                .arg(&target_ref)
                 .current_dir(&self.repo_path)
                 .output()
                 .await
                 .map_err(|e| e.to_string())?;
 
-            if !fallback_output.status.success() {
-                return Err(format!(
-                    "Failed to restore workspace (reset): {}",
-                    String::from_utf8_lossy(&fallback_output.stderr)
-                ));
+            if output.status.success() {
+                success = true;
+                break;
+            } else {
+                last_err = String::from_utf8_lossy(&output.stderr).into_owned();
             }
+        }
+
+        if !success {
+            return Err(format!(
+                "Failed to restore workspace (checkout): {}",
+                last_err
+            ));
         }
 
         // Robust Restore Edge Cases: Clean remaining untracked and ignored files to ensure spotless working tree.
@@ -959,5 +981,60 @@ mod tests {
             .unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().checkpoint_id, "cp-tag-1");
+    }
+}
+
+#[cfg(test)]
+mod additional_git_tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_safe_tags() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-git-safe".to_string(),
+            checkpoint_id: "cp bad tag :?* ".to_string(), // Invalid git tag chars
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-git-safe".to_string(),
+            checkpoint_id: "cp-git-safe-2".to_string(),
+            parent_id: Some("cp bad tag :?* ".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        // put_checkpoint should sanitize the tag internally
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        // get_checkpoint should use safe_tag_name
+        let retrieved = saver.get_checkpoint("thread-git-safe", "cp bad tag :?* ").await.unwrap().unwrap();
+        assert_eq!(retrieved.checkpoint_id, "cp bad tag :?* ");
+
+        // list_checkpoints should still find both
+        let list = saver.list_checkpoints("thread-git-safe").await.unwrap();
+        assert!(list.len() >= 2);
+
+        // restore_checkpoint should branch and checkout safely
+        saver.restore_checkpoint("cp bad tag :?* ").await.unwrap();
+
+        let output = std::process::Command::new("git")
+            .arg("branch")
+            .arg("--show-current")
+            .current_dir(&temp_dir)
+            .output()
+            .unwrap();
+
+        let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        assert!(branch.starts_with("agent-restore-"));
     }
 }
