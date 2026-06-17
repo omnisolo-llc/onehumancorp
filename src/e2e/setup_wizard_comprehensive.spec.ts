@@ -74,6 +74,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
     await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await expect(page.getByRole('button', { name: /Online Store/ })).toBeVisible();

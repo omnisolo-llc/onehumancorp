@@ -39,7 +39,7 @@ test.describe('Business Setup Page', () => {
   });
   test('should show setup wizard text', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Setup Assistant')).toBeVisible();
   });
 });
 test.describe('Dashboard', () => {
