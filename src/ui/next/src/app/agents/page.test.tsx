@@ -274,6 +274,9 @@ test('supports interactive tab transitions and toggling grid extensions', async 
 });
 
 test('renders paywall dialog and handles simulated upgrade flow', async () => {
+  const originalOpen = window.open;
+  window.open = vi.fn();
+
   render(<AgentsPage />);
 
   // Click Toggle Pro Mode switch to trigger paywall
@@ -284,8 +287,14 @@ test('renders paywall dialog and handles simulated upgrade flow', async () => {
   
   // Click share on X
   fireEvent.click(screen.getByText('Share on X to get 7 Days Free'));
+
+  // Verify window.open was called
+  expect(window.open).toHaveBeenCalledWith('https://twitter.com/intent/tweet?text=I%20am%20trying%20OHC%20Expert%20Center', '_blank');
+
   // Dialog closes and gives Pro
   expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+
+  window.open = originalOpen;
 });
 
 
