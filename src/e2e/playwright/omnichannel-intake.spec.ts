@@ -62,7 +62,7 @@ test.describe('Omnichannel Intake Agent feed card', () => {
     await expect(approvalCard.getByText('AI Draft')).toBeVisible();
 
     // Approve the response
-    const approveButton = approvalCard.getByRole('button', { name: /1-Tap Approve/ }).first();
+    const approveButton = approvalCard.getByRole('button', { name: /Send Draft/ }).first();
     await expect(approveButton).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box
