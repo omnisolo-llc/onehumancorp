@@ -160,6 +160,8 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:locks_test.rs",
     "//src/server/orchestration:mesh.rs",
     "//src/server/orchestration:minimax_swarm.rs",
+    "//src/server/orchestration:identity_resolution.rs",
+    "//src/server/orchestration:identity_resolution_test.rs",
     "//src/server/orchestration:mod.rs",
     "//src/server/orchestration:orchestration_test.rs",
     "//src/server/orchestration:sandbox.rs",
