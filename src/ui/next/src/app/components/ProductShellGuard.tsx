@@ -8,10 +8,6 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
     title: "Setup",
     subtitle: "Launch or update the business setup from the dashboard workspace.",
   },
-  "/agents": {
-    title: "Agents",
-    subtitle: "Manage expert teams, workflows, and assistant capabilities.",
-  },
   "/business-analytics": {
     title: "Analytics",
     subtitle: "Review business performance and growth signals.",
@@ -44,6 +40,7 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
 
 const routesWithOwnShell = new Set([
   "/action-center",
+  "/agents",
   "/assistant",
   "/dashboard",
   "/embed-builder",
