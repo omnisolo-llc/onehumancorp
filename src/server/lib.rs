@@ -6175,6 +6175,12 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
+        .route("/api/ui/swagger-ui.css", axum::routing::get(|| async {
+            (axum::http::StatusCode::OK, [("content-type", "text/css")], include_str!("../ui/tauri/src/ui/swagger-ui.css"))
+        }))
+        .route("/api/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
+            (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.js"))
+        }))
         .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
