@@ -406,7 +406,7 @@ pub struct DepositRequirement {
     pub tenant_id: String,
     pub estimate_id: String,
     pub amount_cents: i64,
-    pub percentage: Option<rust_decimal::Decimal>,
+    pub percentage: Option<f64>,
     pub status: String,
     pub payment_intent_id: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
