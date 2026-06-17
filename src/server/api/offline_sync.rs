@@ -220,6 +220,14 @@ pub async fn offline_sync_handler(
                     let conflict_detected = stock < mutation.quantity_deducted;
                     let quantity = mutation.quantity_deducted;
 
+                    let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
+                        .bind(&mutation.product_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_optional(&mut *db_tx)
+                        .await
+                        .unwrap_or(Some(mutation.product_id.clone()))
+                        .unwrap_or_else(|| mutation.product_id.clone());
+
                     if conflict_detected {
                         tracing::info!("Inventory conflict detected. Product {} dropped below zero due to offline sync.", mutation.product_id);
 
