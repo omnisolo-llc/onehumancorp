@@ -431,12 +431,12 @@ pub trait HarnessBackend: Send + Sync {
 }
 
 pub struct LocalBackend {
-    __validator: Arc<ASTValidator>,
+    validator: Arc<ASTValidator>,
     config: Config,
 }
 
 impl LocalBackend {
-    pub fn new(__validator: Arc<ASTValidator>, config: Config) -> Self {
+    pub fn new(validator: Arc<ASTValidator>, config: Config) -> Self {
         LocalBackend { validator, config }
     }
 
@@ -765,7 +765,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    __validator: Arc<ASTValidator>,
+    validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
     ssh_backend: Arc<dyn HarnessBackend>,
