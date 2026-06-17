@@ -43,3 +43,4 @@ pub mod cart;
 pub mod quotes;
 pub mod inbox;
 pub mod sync_gateway;
+pub mod assistant;

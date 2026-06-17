@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "assistant.rs",
         "autodream.rs",
         "terminal_api.rs",
         "billing_api.rs",
@@ -48,6 +49,7 @@ exports_files(
 rust_library(
     name = "server_api",
     srcs = [
+        "assistant.rs",
         "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
