@@ -746,6 +746,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
                         context TEXT NOT NULL,
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1387,13 +1388,20 @@ impl DB {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?;
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+                    .bind(memory_id)
+                    .bind(tenant_id)
+                    .bind(context)
+                    .bind(embedding)
+                    .execute(sqlite_pool)
+                    .await?;
             }
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, embedding) VALUES ($1, $2, $3, $4) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
+                .bind(tenant_id)
                 .bind(context)
                 .bind(embedding)
                 .execute(&mut *tx)
