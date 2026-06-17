@@ -13,7 +13,8 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('/pricing');
+    await page.waitForURL('**/pricing', { timeout: 20000 });
+    await expect(page.locator('h1', { hasText: 'Pricing Plans' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('My Plan screen routes to Cost Dashboard correctly', async ({ page }) => {
@@ -23,7 +24,8 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const detailedCostsButton = page.locator('button', { hasText: 'View Detailed Costs' });
     await expect(detailedCostsButton).toBeVisible();
     await detailedCostsButton.click();
-    await expect(page.url()).toContain('/cost-dashboard');
+    await page.waitForURL('**/cost-dashboard', { timeout: 20000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Cost Dashboard screen metrics are visible', async ({ page }) => {
@@ -31,11 +33,11 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await page.goto('/cost-dashboard');
 
     // Check core metric elements visibility
-    await expect(page.locator('h1', { hasText: 'Cost Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 10000 });
 
     // Verify elements by id or text mapped to their metrics
-    await expect(page.locator('#cost-dashboard-total-revenue')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-projected-cost')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-total')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-projected')).toBeVisible();
   });
 });

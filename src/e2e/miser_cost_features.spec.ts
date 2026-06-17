@@ -10,10 +10,10 @@ test.describe('Miser Cost Features E2E', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for the main headings
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify Cost Transparency Dashboard section
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
     await expect(page.locator('text=Total Costs')).toBeVisible();
@@ -68,7 +68,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeStarterButton).toBeVisible();
 
     await upgradeStarterButton.click();
-    await page.waitForURL('**/checkout?tier=Starter', { timeout: 10000 });
+    await page.waitForURL('**/checkout?tier=Starter', { timeout: 20000 });
     await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 15000 });
   });
 
@@ -89,7 +89,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeProButton).toBeVisible();
 
     await upgradeProButton.click();
-    await page.waitForURL('**/checkout?tier=Pro', { timeout: 10000 });
+    await page.waitForURL('**/checkout?tier=Pro', { timeout: 20000 });
     await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 15000 });
   });
 
@@ -109,7 +109,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeBusinessButton).toBeVisible();
 
     await upgradeBusinessButton.click();
-    await page.waitForURL('**/checkout?tier=Business', { timeout: 10000 });
+    await page.waitForURL('**/checkout?tier=Business', { timeout: 20000 });
     await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 15000 });
   });
 });

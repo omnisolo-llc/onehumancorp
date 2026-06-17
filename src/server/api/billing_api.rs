@@ -402,7 +402,7 @@ pub async fn cost_dashboard_handler(
     let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
-    budget_manager.record_spend_cents(projected_cents).unwrap_or(false);
+    budget_manager.record_spend((projected_cents as f64) / 100.0).unwrap_or(false);
     let budget_health_alert = budget_manager.check_alert_threshold();
 
 
