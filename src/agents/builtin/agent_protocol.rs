@@ -86,11 +86,15 @@ pub struct TaskStepsListResponse {
 
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
+    pub artifacts: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, Vec<Artifact>>>>,
 }
 
 impl AgentProtocolServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        Self { runner }
+        Self {
+            runner,
+            artifacts: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+        }
     }
 
     /// POST /ap/v1/agent/tasks
@@ -165,6 +169,82 @@ impl AgentProtocolServer {
             },
         };
         serde_json::to_value(&resp).unwrap()
+    }
+
+    /// POST /ap/v1/agent/tasks/{task_id}/artifacts
+    pub async fn upload_artifact(&self, task_id: &str, file_name: &str, content: &[u8]) -> serde_json::Value {
+        let artifact_id = uuid::Uuid::new_v4().to_string();
+        let artifact_dir = std::path::Path::new("/tmp/agent_protocol_artifacts").join(task_id);
+        let _ = tokio::fs::create_dir_all(&artifact_dir).await;
+        let file_path = artifact_dir.join(file_name);
+
+        if let Err(e) = tokio::fs::write(&file_path, content).await {
+            return serde_json::to_value(&ErrorResponse {
+                error: format!("Failed to write artifact to disk: {}", e),
+            }).unwrap();
+        }
+
+        let artifact = Artifact {
+            artifact_id,
+            agent_created: false,
+            file_name: file_name.to_string(),
+            relative_path: Some(file_path.to_string_lossy().to_string()),
+        };
+
+        let mut map = self.artifacts.lock().await;
+        map.entry(task_id.to_string())
+            .or_insert_with(Vec::new)
+            .push(artifact.clone());
+
+        serde_json::to_value(&artifact).unwrap()
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/artifacts
+    pub async fn list_artifacts(&self, task_id: &str) -> serde_json::Value {
+        let map = self.artifacts.lock().await;
+        let list = map.get(task_id).cloned().unwrap_or_default();
+        let resp = serde_json::json!({
+            "artifacts": list,
+            "pagination": {
+                "total_items": list.len(),
+                "total_pages": 1,
+                "current_page": 1,
+                "page_size": 100
+            }
+        });
+        resp
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}
+    pub async fn get_artifact(&self, task_id: &str, artifact_id: &str) -> serde_json::Value {
+        let map = self.artifacts.lock().await;
+        if let Some(list) = map.get(task_id) {
+            if let Some(artifact) = list.iter().find(|a| a.artifact_id == artifact_id) {
+                return serde_json::to_value(artifact).unwrap();
+            }
+        }
+        serde_json::to_value(&ErrorResponse {
+            error: "Artifact not found".to_string(),
+        })
+        .unwrap()
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}/content
+    pub async fn download_artifact(&self, task_id: &str, artifact_id: &str) -> Result<Vec<u8>, String> {
+        let map = self.artifacts.lock().await;
+        let artifact = map.get(task_id)
+            .and_then(|list| list.iter().find(|a| a.artifact_id == artifact_id))
+            .cloned();
+
+        drop(map); // drop the lock before file IO
+
+        if let Some(a) = artifact {
+            if let Some(path) = &a.relative_path {
+                return tokio::fs::read(path).await.map_err(|e| format!("Failed to read file: {}", e));
+            }
+        }
+
+        Err("Artifact not found".to_string())
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
@@ -313,6 +393,82 @@ mod tests {
 
         let err_resp: ErrorResponse = serde_json::from_value(resp_json).unwrap();
         assert_eq!(err_resp.error, "Invalid request");
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_upload_artifact() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let task_id = "task-artifact-123";
+        let resp_json = server.upload_artifact(task_id, "test.txt", b"hello world").await;
+
+        let artifact: Artifact = serde_json::from_value(resp_json).unwrap();
+        assert_eq!(artifact.file_name, "test.txt");
+        assert_eq!(artifact.relative_path, Some("/tmp/agent_protocol_artifacts/task-artifact-123/test.txt".to_string()));
+        assert!(!artifact.agent_created);
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_list_artifacts() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let task_id = "task-artifact-123";
+        server.upload_artifact(task_id, "test1.txt", b"A").await;
+        server.upload_artifact(task_id, "test2.txt", b"B").await;
+
+        let resp_json = server.list_artifacts(task_id).await;
+
+        let artifacts: Vec<Artifact> = serde_json::from_value(resp_json["artifacts"].clone()).unwrap();
+        assert_eq!(artifacts.len(), 2);
+        assert!(artifacts.iter().any(|a| a.file_name == "test1.txt"));
+        assert!(artifacts.iter().any(|a| a.file_name == "test2.txt"));
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_get_artifact() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let task_id = "task-artifact-123";
+        let upload_resp = server.upload_artifact(task_id, "test.txt", b"hello world").await;
+        let created_artifact: Artifact = serde_json::from_value(upload_resp).unwrap();
+
+        let get_resp = server.get_artifact(task_id, &created_artifact.artifact_id).await;
+        let fetched_artifact: Artifact = serde_json::from_value(get_resp).unwrap();
+
+        assert_eq!(fetched_artifact.artifact_id, created_artifact.artifact_id);
+        assert_eq!(fetched_artifact.file_name, "test.txt");
+
+        // Test non-existent artifact
+        let not_found_resp = server.get_artifact(task_id, "does-not-exist").await;
+        let err_resp: ErrorResponse = serde_json::from_value(not_found_resp).unwrap();
+        assert_eq!(err_resp.error, "Artifact not found");
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_download_artifact() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let task_id = "task-artifact-1234";
+        let upload_resp = server.upload_artifact(task_id, "download.txt", b"hello download").await;
+        let created_artifact: Artifact = serde_json::from_value(upload_resp).unwrap();
+
+        let content = server.download_artifact(task_id, &created_artifact.artifact_id).await.unwrap();
+        assert_eq!(content, b"hello download");
+
+        let err = server.download_artifact(task_id, "fake_id").await;
+        assert!(err.is_err());
     }
 
     #[tokio::test]
