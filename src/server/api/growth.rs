@@ -254,6 +254,17 @@ pub async fn handle_conversational_chat(
                 payload: serde_json::json!({}),
             });
         }
+    } else if lower.contains("social") || lower.contains("post") || lower.contains("share") {
+        response_text = "I've drafted a social media post highlighting your recent success to help you grow your audience. You can publish it right away.".to_string();
+        draft_action = Some(ChatDraftAction {
+            id: "generate_social_post_action".to_string(),
+            title: "Post to Social Media".to_string(),
+            description: "Share your latest business milestone with your followers.".to_string(),
+            action_type: "generate_social_post".to_string(),
+            payload: serde_json::json!({
+                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://ohc.app/onboarding?ref=social-share \n\n⚡ Powered by OHC"
+            }),
+        });
     }
 
     if response_text.is_empty() {
@@ -295,6 +306,14 @@ pub async fn handle_conversational_execute(
         }));
         state.hub.append_recent_event(msg);
         message = "Review campaign is now active. We're reaching out to your recent customers.".to_string();
+    } else if req.action_id == "generate_social_post_action" {
+        let msg = state.hub.sanitize_hub_event(serde_json::json!({
+            "type": "growth.social_post_published",
+            "tenant_id": auth_info.org_id,
+            "source": "conversational_manager"
+        }));
+        state.hub.append_recent_event(msg);
+        message = "Successfully prepared social media post.".to_string();
     }
 
     (StatusCode::OK, Json(ExecuteRes {

@@ -19,20 +19,16 @@ test('Conversational Growth Loop CUJ', async ({ page, loginAs, adminUser }) => {
   // Verify generic positive response
   await expect(page.locator('.message.agent').last()).toContainText(/performing well|no abandoned carts/i);
 
-  // 3. (Optional/Simulated) Create an abandoned cart via API if possible,
-  // but since we want to be hermetic and avoid complex setup in this script,
-  // we focus on verifying that the keywords trigger the correct handler logic.
-
-  await input.fill('Check my abandoned carts');
-  await page.click('#send-btn');
-
-  // If no carts, it should still be a valid response from our new logic
-  const response = page.locator('.message.agent').last();
-  await expect(response).toBeVisible();
-
-  // 4. Verify Rating intent
+  // 3. Verify Rating intent
   await input.fill('What is my current rating?');
   await page.click('#send-btn');
   await expect(page.locator('.message.agent').last()).toContainText(/average rating is/i);
   await expect(page.locator('.message.agent').last()).toContainText(/Powered by OHC/i);
+
+  // 4. Verify Social Media Post Intent
+  await input.fill('Generate a social post');
+  await page.click('#send-btn');
+  await expect(page.locator('.message.agent').last()).toContainText(/highlighting your recent success/i);
+  await expect(page.locator('.action-card').last()).toContainText(/Post to X \(Twitter\)/i);
+  await expect(page.locator('.action-card').last()).toContainText(/Powered by OHC/i);
 });
