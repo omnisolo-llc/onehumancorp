@@ -95,6 +95,7 @@ async fn post_inventory_handler(
 #[derive(serde::Deserialize)]
 pub struct PosQuery {
     pub tenant_id: Option<String>,
+    pub mobile_optimized: Option<bool>,
 }
 
 async fn get_orders_handler(
@@ -102,7 +103,8 @@ async fn get_orders_handler(
     Query(query): Query<PosQuery>,
 ) -> Json<Value> {
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
-    let cache_key = format!("pos_orders:{}", tenant_id);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("pos_orders:{}:{}", tenant_id, mobile_optimized);
     let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -120,19 +122,29 @@ async fn get_orders_handler(
                 .unwrap_or_default();
 
             let orders: Vec<Value> = rows.into_iter().map(|row| {
-                let mut order_json = json!({
-                    "id": row.get::<String, _>("id"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-                    "items": [],
-                    "customer_name": "Walk-in",
-                });
-                if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
-                    order_json["notes"] = json!(notes);
-                }
-                if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
-                    order_json["translated_notes"] = json!(translated);
+                let mut order_json = if mobile_optimized {
+                    json!({
+                        "id": row.get::<String, _>("id"),
+                        "total_amount": row.get::<f64, _>("total_amount"),
+                        "status": row.get::<String, _>("status"),
+                    })
+                } else {
+                    json!({
+                        "id": row.get::<String, _>("id"),
+                        "total_amount": row.get::<f64, _>("total_amount"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+                        "items": [],
+                        "customer_name": "Walk-in",
+                    })
+                };
+                if !mobile_optimized {
+                    if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
+                        order_json["notes"] = json!(notes);
+                    }
+                    if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
+                        order_json["translated_notes"] = json!(translated);
+                    }
                 }
                 order_json
             }).collect();
@@ -153,26 +165,35 @@ async fn get_orders_handler(
         .unwrap_or_default();
 
     let orders: Vec<Value> = rows.into_iter().map(|row| {
-        let mut order_json = json!({
-            "id": row.get::<String, _>("id"),
-            "total_amount": row.get::<f64, _>("total_amount"),
-            "status": row.get::<String, _>("status"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-            "items": [],
-            "customer_name": "Walk-in",
-        });
-        if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
-            order_json["notes"] = json!(notes);
-        }
-        if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
-            order_json["translated_notes"] = json!(translated);
+        let mut order_json = if mobile_optimized {
+            json!({
+                "id": row.get::<String, _>("id"),
+                "total_amount": row.get::<f64, _>("total_amount"),
+                "status": row.get::<String, _>("status"),
+            })
+        } else {
+            json!({
+                "id": row.get::<String, _>("id"),
+                "total_amount": row.get::<f64, _>("total_amount"),
+                "status": row.get::<String, _>("status"),
+                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+                "items": [],
+                "customer_name": "Walk-in",
+            })
+        };
+        if !mobile_optimized {
+            if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
+                order_json["notes"] = json!(notes);
+            }
+            if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
+                order_json["translated_notes"] = json!(translated);
+            }
         }
         order_json
     }).collect();
 
     let result = json!({ "orders": orders });
     cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
-
     Json(result)
 }
 
@@ -181,6 +202,7 @@ async fn get_inventory_handler(
     Query(query): Query<PosQuery>,
 ) -> Json<Value> {
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let pool = crate::db::get_pool();
 
     let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
@@ -190,14 +212,23 @@ async fn get_inventory_handler(
         .unwrap_or_default();
 
     let inventory: Vec<Value> = rows.into_iter().map(|row| {
-        json!({
-            "id": row.get::<String, _>("id"),
-            "name": row.get::<String, _>("title"),
-            "description": row.get::<Option<String>, _>("description"),
-            "price_cents": row.get::<i64, _>("price_cents"),
-            "currency": row.get::<String, _>("currency"),
-            "stock": row.get::<i32, _>("inventory_count"),
-        })
+        if mobile_optimized {
+            json!({
+                "id": row.get::<String, _>("id"),
+                "name": row.get::<String, _>("title"),
+                "price_cents": row.get::<i64, _>("price_cents"),
+                "stock": row.get::<i32, _>("inventory_count"),
+            })
+        } else {
+            json!({
+                "id": row.get::<String, _>("id"),
+                "name": row.get::<String, _>("title"),
+                "description": row.get::<Option<String>, _>("description"),
+                "price_cents": row.get::<i64, _>("price_cents"),
+                "currency": row.get::<String, _>("currency"),
+                "stock": row.get::<i32, _>("inventory_count"),
+            })
+        }
     }).collect();
 
     Json(json!({ "inventory": inventory }))

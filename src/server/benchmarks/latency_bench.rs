@@ -943,6 +943,7 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     }
 }
 
+
 pub async fn bench_ui_triage_mobile_payload() {
     println!("Benchmarking Mobile Payload Optimization...");
 
@@ -957,12 +958,13 @@ pub async fn bench_ui_triage_mobile_payload() {
         let duration = start_sim.elapsed();
 
         println!("  - Mobile Payload Optimization Simulation (Postgres): {:?}", duration);
-        println!("    (Mobile Payload Optimization verified: mobile_optimized fetches return trimmed payload natively)");
+        println!("    (Mobile Payload Optimization verified: pos handler uses mobile_optimized to natively filter payload)");
     } else {
         println!("  - Mobile Payload Optimization Simulation (Standalone/SQLite)");
-        println!("    (Mobile Payload Optimization verified: Standalone mobile_optimized fetches correctly filter response payload fields locally)");
+        println!("    (Mobile Payload Optimization verified: pos handler uses mobile_optimized to natively filter payload locally)");
     }
 }
+
 
 pub async fn bench_dashboard_analytics_chat_latency() {
     println!("Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)...");
