@@ -17,7 +17,7 @@ test.describe('Scalable multi-agent deployment', () => {
 
     // Max scale
     await page.getByRole('button', { name: 'Max Scale (1000)' }).click();
-    await expect(page.locator('text=1000 agents')).toBeVisible();
+    await expect(page.getByText('1000 agents', { exact: true })).toBeVisible();
     await expect(page.locator('text=Cloud Distributed')).toBeVisible();
 
     // Decrease back down a bit for the test to run quickly
