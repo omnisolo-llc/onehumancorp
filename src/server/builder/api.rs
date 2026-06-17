@@ -370,7 +370,7 @@ async fn geo_score(
 ) -> Result<Json<GeoScoreResponse>, axum::http::StatusCode> {
     use ohc_builtin_agent::tools::ToolExecutor;
 
-    let executor = ohc_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor;
+    let executor = ohc_builtin_agent::tools::pydantic::PydanticAdapter::new(ohc_builtin_agent::tools::generative_visibility::GenerativeVisibilityExecutor);
 
     let args = serde_json::json!({
         "content": payload.content,

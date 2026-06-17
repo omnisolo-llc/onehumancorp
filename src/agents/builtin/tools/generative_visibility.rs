@@ -1,18 +1,25 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
+
+#[derive(Deserialize)]
+pub struct GenerativeVisibilityArgs {
+    pub content: Option<String>,
+    pub url: Option<String>,
+}
 
 pub struct GenerativeVisibilityExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for GenerativeVisibilityExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GenerativeVisibilityArgs> for GenerativeVisibilityExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GenerativeVisibilityArgs,
     ) -> Result<String, ToolError> {
-        let content = args["content"].as_str().unwrap_or("");
-        let url = args["url"].as_str().unwrap_or("");
+        let content = args.content.unwrap_or_default();
+        let url = args.url.unwrap_or_default();
 
         if content.is_empty() && url.is_empty() {
             return Err(ToolError::LlmRecoverable(
@@ -88,25 +95,31 @@ pub fn generative_visibility_tool() -> Tool {
                 }
             }
         }),
-        execute: Arc::new(GenerativeVisibilityExecutor),
+        execute: Arc::new(PydanticAdapter::new(GenerativeVisibilityExecutor)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::ToolExecutor;
 
     #[tokio::test]
     async fn test_generative_visibility_missing_args() {
-        let executor = GenerativeVisibilityExecutor;
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
         let args = json!({});
         let result = executor.execute(args).await;
+        // Since both fields are optional, it will parse fine but error on the internal logic validation
         assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("either 'content' or 'url' must be provided")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
     }
 
     #[tokio::test]
     async fn test_generative_visibility_with_content() {
-        let executor = GenerativeVisibilityExecutor;
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
         let args = json!({
             "content": "We are the best bakery in Austin. We have json-ld schema.org data. ".repeat(10)
         });
@@ -121,7 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generative_visibility_poor_content() {
-        let executor = GenerativeVisibilityExecutor;
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
         let args = json!({
             "content": "Bakery store."
         });
@@ -132,5 +145,19 @@ mod tests {
         assert_eq!(parsed["generative_score"], 50);
         let recs = parsed["recommendations"].as_array().unwrap();
         assert!(!recs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_generative_visibility_wrong_type() {
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
+        let args = json!({
+            "content": 123
+        });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
+            _ => panic!("Expected LlmRecoverable Pydantic error"),
+        }
     }
 }
