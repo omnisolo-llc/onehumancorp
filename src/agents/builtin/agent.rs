@@ -9562,6 +9562,7 @@ mod hierarchical_prompt_tests {
 
 #[derive(Clone)]
 #[allow(dead_code)]
+#[allow(dead_code)]
 struct NudgeMockLlmClient {
     call_count: std::sync::Arc<tokio::sync::Mutex<usize>>,
 }

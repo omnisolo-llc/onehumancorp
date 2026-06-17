@@ -237,6 +237,7 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
 #[derive(Serialize)]
 struct OpenAIMessage {
     #[allow(dead_code)]
+    #[allow(dead_code)]
     role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
@@ -299,6 +300,7 @@ struct OpenAIChoice {
 
 #[derive(Deserialize, Debug)]
 struct OpenAIResponseMessage {
+    #[allow(dead_code)]
     #[allow(dead_code)]
     role: String,
     content: Option<String>,

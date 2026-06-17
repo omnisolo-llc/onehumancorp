@@ -432,12 +432,14 @@ pub trait HarnessBackend: Send + Sync {
 
 pub struct LocalBackend {
     #[allow(dead_code)]
+    #[allow(dead_code)]
     validator: Arc<ASTValidator>,
     config: Config,
 }
 
 impl LocalBackend {
     pub fn new(#[allow(dead_code)]
+    #[allow(dead_code)]
     validator: Arc<ASTValidator>, config: Config) -> Self {
         LocalBackend { validator, config }
     }
@@ -767,6 +769,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
+    #[allow(dead_code)]
     #[allow(dead_code)]
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
