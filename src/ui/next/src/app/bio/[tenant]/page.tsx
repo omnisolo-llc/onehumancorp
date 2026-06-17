@@ -20,10 +20,18 @@ export default function LinkInBioPublicPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Attempt to load from localStorage to simulate persistence
+        // Fetch from API
         const fetchBioData = async () => {
             try {
-                if (typeof localStorage !== 'undefined') {
+                const res = await fetch(`/api/v1/growth/link-in-bio/${tenantId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setStoreName(data.store_name || 'My Store');
+                    setBio(data.bio || 'Welcome to my storefront!');
+                    setLinks(data.links || []);
+                    setTheme(data.theme || 'gradient');
+                } else if (typeof localStorage !== 'undefined') {
+                    // Fallback to localStorage if API fails (e.g. not found)
                     const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
                     if (savedData) {
                         const parsed = JSON.parse(savedData);
@@ -32,13 +40,23 @@ export default function LinkInBioPublicPage() {
                         setLinks(parsed.links || []);
                         setTheme(parsed.theme || 'gradient');
                     } else {
-                        // Fallback generic data
                         const storedName = localStorage.getItem('business_name');
                         if (storedName) setStoreName(storedName);
                     }
                 }
             } catch (e) {
                 console.error("Error loading bio data:", e);
+                // Fallback to localStorage on network error
+                if (typeof localStorage !== 'undefined') {
+                    const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
+                    if (savedData) {
+                        const parsed = JSON.parse(savedData);
+                        setStoreName(parsed.storeName || 'My Store');
+                        setBio(parsed.bio || 'Welcome to my storefront!');
+                        setLinks(parsed.links || []);
+                        setTheme(parsed.theme || 'gradient');
+                    }
+                }
             } finally {
                 setLoading(false);
             }
