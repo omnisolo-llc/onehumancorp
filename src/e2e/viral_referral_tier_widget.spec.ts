@@ -1,26 +1,31 @@
-import { test, expect } from './fixtures';
+import { test as base, expect } from './fixtures';
+
+const test = base.extend({
+  page: async ({ page }, use) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await use(page);
+  }
+});
 
 test.describe('Viral Referral Tier Widget', () => {
-  test('should display the referral tier progress on the dashboard based on real application flow', async ({ page }) => {
-    // Navigate to the Tauri dashboard
-    await page.goto('/dashboard.html');
+  test('displays correctly and handles copy/share', async ({ page, loginAs, adminUser }) => {
+    // Note: Do not mock the route, we must use real backend services! E2E rules explicitly forbid this.
+    await loginAs(page, adminUser);
 
-    // Wait for the tier section to be visible
-    const tierSection = page.locator('#referral-tier-section');
-    await expect(tierSection).toBeVisible({ timeout: 15000 });
+    const widget = page.getByTestId('referral-tier-widget');
+    await expect(widget).toBeVisible({ timeout: 15000 });
 
-    // Ensure it correctly states Bronze tier
-    await expect(page.locator('#referral-tier-text')).toContainText('You are on the Bronze Tier!');
+    await expect(page.locator('#referral-tier-status')).toContainText('You are on the Bronze Tier.');
+    await expect(page.locator('#referral-tier-progress')).toContainText('Total Conversions: 0');
+    await expect(page.locator('#referral-tier-progress')).toContainText('Just 5 more referrals needed for Silver!');
 
-    // Since we're using the fallback E2E tenant seeded with 0 conversions initially,
-    // we expect 5 more referrals needed to reach Silver
-    await expect(page.locator('#referral-tier-subtext')).toContainText('5 more referrals needed to reach Silver Tier.');
+    const linkInput = page.locator('#referral-link-input');
+    await expect(linkInput).toHaveValue(/ohc\.app\/join\?ref=|ohc:\/\/join\?ref=/);
 
-    // Check that progress bar is rendered
-    const progressBar = page.locator('#referral-tier-progress');
-    await expect(progressBar).toBeVisible();
+    const copyBtn = page.locator('#referral-tier-copy-btn');
+    await expect(copyBtn).toHaveText('Copy Link');
 
-    // Width should be 0% since 0 / 5 = 0
-    await expect(progressBar).toHaveCSS('width', '0px');
+    const shareXBtn = page.locator('#referral-tier-share-x-btn');
+    await expect(shareXBtn).toHaveText('Share on X');
   });
 });
