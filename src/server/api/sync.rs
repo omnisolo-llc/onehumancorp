@@ -93,6 +93,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_ws_sync_handler() {
+        if std::env::var("REDIS_URL").is_err() {
+            unsafe {
+                std::env::set_var("REDIS_URL", "redis://127.0.0.1:6379");
+                std::env::set_var("OHC_STANDALONE_MODE", "false");
+            }
+        }
         let app = Router::new().route("/ws", get(ws_sync_handler));
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -116,6 +122,8 @@ mod tests {
                 request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
                 let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
+                // Sleep briefly to ensure server has subscribed to the pubsub topic
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
                 // Publish mock message
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();

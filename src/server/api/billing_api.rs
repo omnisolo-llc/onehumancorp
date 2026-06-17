@@ -381,7 +381,7 @@ pub async fn cost_dashboard_handler(
     };
 
     let pool = crate::db::get_pool();
-    let tier_str: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1")
+    let tier_str: String = sqlx::query_scalar("SELECT tier FROM tenants WHERE id = $1")
         .bind(&tenant_id)
         .fetch_optional(&pool)
         .await
@@ -615,7 +615,7 @@ mod department_tier_usage_tests {
         // Start a transaction so we can rollback and not pollute the DB
         let mut tx = pool.begin().await.unwrap();
 
-        sqlx::query("INSERT INTO tenants (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
@@ -625,7 +625,7 @@ mod department_tier_usage_tests {
         // Using pool instead of tx since Hub needs pool, but since it's a test we just clean up after.
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
 
-        sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, settings) VALUES ($1, $2, 'marketing', '{}'), ($3, $4, 'operations', '{}')")
+        sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, config) VALUES ($1, $2, 'marketing', '{}'), ($3, $4, 'operations', '{}')")
             .bind(uuid::Uuid::new_v4().to_string())
             .bind(&tenant_id)
             .bind(uuid::Uuid::new_v4().to_string())
