@@ -1,8 +1,7 @@
 use axum::{
     extract::{Extension, Path},
-    response::IntoResponse,
     http::StatusCode,
-    routing::{get, post},
+    routing::get,
     Router,
     Json,
 };
@@ -19,6 +18,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .without_v07_checks()
         .route("/workspaces", get(list_workspaces).post(create_workspace))
         .route("/workspaces/:id", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
@@ -893,22 +893,6 @@ mod real_feature_state_tests {
             .unwrap()
     }
 
-    fn test_router<S>(db: Arc<DB>) -> Router<S>
-    where
-        S: Clone + Send + Sync + 'static,
-    {
-        Router::new()
-            .without_v07_checks()
-            .route("/workspaces", get(list_workspaces).post(create_workspace))
-            .route("/workspaces/:id", get(get_workspace))
-            .route("/tasks", get(list_tasks).post(create_task))
-            .route("/tasks/:id", get(get_task))
-            .route("/tasks/:id/messages", get(list_messages).post(create_message))
-            .route("/tasks/:id/artifacts", get(list_artifacts).post(create_artifact))
-            .route("/tasks/:id/file_changes", get(list_file_changes).post(create_file_change))
-            .layer(Extension(db))
-    }
-
     async fn test_db() -> Arc<DB> {
         let pool = create_sqlite_pool_for_test().await;
         for statement in [
@@ -931,7 +915,7 @@ mod real_feature_state_tests {
     }
 
     async fn request_json(db: Arc<DB>, method: &str, uri: &str, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
-        let app = test_router::<()>(db).layer(Extension(claims()));
+        let app = router::<()>(db).layer(Extension(claims()));
         let request = Request::builder()
             .method(method)
             .uri(uri)
@@ -977,11 +961,12 @@ mod real_feature_state_tests {
     #[tokio::test]
     async fn skill_enable_disable_uses_database() {
         let db = test_db().await;
-        let (_, installed) = request_json(db.clone(), "PATCH", "/skills", json!({
+        let (status, installed) = request_json(db.clone(), "PATCH", "/skills", json!({
             "action": "install",
             "name": "Real Skill",
             "category": "Testing"
         })).await;
+        assert_eq!(status, StatusCode::OK);
         assert_eq!(installed["skills"][0]["status"], "installed");
 
         let (_, disabled) = request_json(db.clone(), "PATCH", "/skills", json!({
@@ -998,11 +983,12 @@ mod real_feature_state_tests {
     #[tokio::test]
     async fn connector_connect_disconnect_uses_database() {
         let db = test_db().await;
-        let (_, connected) = request_json(db.clone(), "PATCH", "/connectors", json!({
+        let (status, connected) = request_json(db.clone(), "PATCH", "/connectors", json!({
             "action": "connect",
             "name": "Real Connector",
             "kind": "repository"
         })).await;
+        assert_eq!(status, StatusCode::OK);
         assert_eq!(connected["connectors"][0]["status"], "connected");
 
         let (_, disconnected) = request_json(db.clone(), "PATCH", "/connectors", json!({
