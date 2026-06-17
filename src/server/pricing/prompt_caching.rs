@@ -14,6 +14,7 @@ pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
     default_ttl: Duration,
     max_capacity: usize,
+    pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
 }
 
 impl PromptCache {
@@ -26,7 +27,13 @@ impl PromptCache {
             cache: Arc::new(DashMap::new()),
             default_ttl,
             max_capacity,
+            telemetry_store: None,
         }
+    }
+
+    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+        self.telemetry_store = Some(store);
+        self
     }
 
     pub fn get(&self, prompt: &str) -> Option<CachedResponse> {
@@ -51,6 +58,13 @@ impl PromptCache {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
+
+            if let Some(store) = &self.telemetry_store {
+                store.llm_cost_counter.add(0, &[
+                    opentelemetry::KeyValue::new("cache_hit", "true"),
+                    opentelemetry::KeyValue::new("model", model.to_string()),
+                ]);
+            }
 
             let pricing = super::calculator::get_pricing(model);
             let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.cached_cost;

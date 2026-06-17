@@ -263,6 +263,20 @@ impl Tracker {
         }
     }
 
+    pub fn track_outbound_api_call(&self, tenant_id: &str, endpoint: &str) {
+        tracing::info!("💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}", tenant_id, endpoint);
+        if let Some(ref auditor) = self.auditor {
+            // Future: auditor.record_api_call(tenant_id, endpoint);
+        }
+    }
+
+    pub fn track_email_send(&self, tenant_id: &str) {
+        tracing::info!("💰 Miser telemetry: Recording email send for tenant: {}", tenant_id);
+        if let Some(ref auditor) = self.auditor {
+            // Future: auditor.record_email_send(tenant_id);
+        }
+    }
+
     pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
         if let Some(ref auditor) = self.auditor {
             auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
