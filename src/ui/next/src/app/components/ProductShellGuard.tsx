@@ -129,6 +129,7 @@ const titleOverrides: Record<string, string> = {
   "/trial-extension": "Trial Extension",
   "/upgrade-roi": "Upgrade ROI",
   "/verification-loops": "Verification Loops",
+  "/pydantic-validation": "Pydantic Tool Schema Validation",
   "/website-builder": "Website Builder",
   "/whatsapp-link-generator": "WhatsApp Link Generator",
   "/win-back": "Win Back",
