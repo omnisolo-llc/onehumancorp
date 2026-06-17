@@ -836,7 +836,7 @@ async fn http_login_handler(
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("[SECURITY] failed to verify auth credential");
-            tracing::error!("failed to verify auth credential: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -868,7 +868,7 @@ async fn http_login_handler(
         Ok(t) => t,
         Err(e) => {
             ::server_telemetry::record_error_signal("[BUG] failed to issue login token");
-            tracing::error!("failed to issue login token: {}", e);
+            tracing::error!("failed to issue login token: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -6148,6 +6148,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
+        .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,

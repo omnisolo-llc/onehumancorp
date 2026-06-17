@@ -989,6 +989,16 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS quotes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        total_amount_cents INTEGER NOT NULL,
+                        status TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        last_follow_up_at TEXT,
+                        follow_up_count INTEGER NOT NULL DEFAULT 0
+                    );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

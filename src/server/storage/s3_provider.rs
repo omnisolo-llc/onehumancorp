@@ -77,7 +77,7 @@ impl Provider for S3Provider {
                     compressed_size
                 }
                 Err(e) => {
-                    tracing::warn!("S3Provider: Image optimization failed for {}: {}. Saving original.", key, e);
+                    tracing::warn!("S3Provider: Image optimization failed for {}: {}. Saving original.", key, e); // pii-safe
                     original_size
                 }
             }
