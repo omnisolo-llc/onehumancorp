@@ -229,7 +229,7 @@
 
             <div style="margin-bottom: 24px;">
               <div class="stat-title">Storage used</div>
-              <div class="stat-value" id="storage-text">0 GB / Unlimited</div>
+              <div class="stat-value" id="storage-text">0.00 B / Unlimited</div>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="storage-bar" style="width: 0%;"></div>
               </div>
@@ -259,7 +259,7 @@
                   <div class="stat-value" id="cost-dashboard-revenue" style="color: #34C759; font-size: 20px;">$0.00</div>
                </div>
                <div class="metric-box">
-                  <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</h2>
+                  <div class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</div>
                   <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">$0.00</div>
                </div>
                <div class="metric-box">
@@ -327,7 +327,7 @@
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
       }
 
       function formatCents(cents) {

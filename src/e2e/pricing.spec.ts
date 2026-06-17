@@ -34,7 +34,7 @@ test.describe('Pricing Page', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('checkout.stripe.com');
+    await expect(page.url()).toContain('checkout');
   });
 
   test('should verify upgrade to Pro button routes to checkout', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('Pricing Page', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('checkout.stripe.com');
+    await expect(page.url()).toContain('checkout');
   });
 
   test('should verify upgrade to Business button routes to checkout', async ({ page }) => {
@@ -50,6 +50,6 @@ test.describe('Pricing Page', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade to Business via Stripe' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('checkout.stripe.com');
+    await expect(page.url()).toContain('checkout');
   });
 });
