@@ -863,6 +863,8 @@ mod real_feature_state_tests {
         }
     }
 
+    // The shared db test helpers are cfg'd out when this module is compiled into
+    // the Bazel server_api test crate, so this fixture stays local.
     async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -925,7 +927,15 @@ mod real_feature_state_tests {
         let response = app.oneshot(request).await.unwrap();
         let status = response.status();
         let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let value = serde_json::from_slice(&bytes).unwrap_or_else(|_| json!({}));
+        let value = serde_json::from_slice(&bytes).unwrap_or_else(|error| {
+            panic!(
+                "expected JSON response for {} {} but got parse error {} with body: {}",
+                method,
+                uri,
+                error,
+                String::from_utf8_lossy(&bytes)
+            )
+        });
         (status, value)
     }
 
