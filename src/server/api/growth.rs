@@ -244,7 +244,7 @@ pub async fn handle_conversational_chat(
             .await
             .unwrap_or(0.0);
 
-        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.", rating);
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC", rating);
         if rating < 4.5 {
              draft_action = Some(ChatDraftAction {
                 id: "start_review_campaign_action".to_string(),
