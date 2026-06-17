@@ -943,7 +943,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           aria-label="Approve & Send Draft"
                           data-testid="approve-ambassador-reply"
                         >
-                          ✨ 1-Tap Approve
+                          Send Draft
                         </button>
                         <button
                           onClick={() => {
