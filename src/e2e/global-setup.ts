@@ -8,9 +8,14 @@ export default async function globalSetup(config: FullConfig) {
   }
 
   // The Bazel test runner starts a local postgres instance on a random port and exports it via DATABASE_URL
-  const databaseUrl = process.env.DATABASE_URL;
+  let databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
+    if (process.env.CI) {
+      throw new Error('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
+    }
+    // Fallback for local UI tests when full e2e db is not provided
+    databaseUrl = 'postgres://ohc:ohc@localhost:5432/ohc?sslmode=disable';
+    process.env.DATABASE_URL = databaseUrl;
   }
 
   // Ensure there are no hardcoded localhost:5432 ports in use

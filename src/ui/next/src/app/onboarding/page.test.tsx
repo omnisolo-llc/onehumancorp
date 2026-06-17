@@ -549,8 +549,8 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup({ delay: null });
 
     let fetchCalls = 0;
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/draft') {
+    (global.fetch as any).mockImplementation((url: string, options?: any) => {
+      if (url === '/api/onboarding/state' && options?.method === 'POST') {
         fetchCalls++;
         if (fetchCalls < 2) {
           return Promise.resolve({ ok: false, status: 500 });
@@ -668,7 +668,7 @@ describe('OnboardingWizard', () => {
     });
 
     // Verify API was called
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
       method: 'POST'
     }));
   });
@@ -750,7 +750,7 @@ describe('OnboardingWizard', () => {
     await user.click(saveDraftBtn);
 
     // Verify it saved
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({ method: 'POST' }));
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({ method: 'POST' }));
     await waitFor(() => {
       expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
     });

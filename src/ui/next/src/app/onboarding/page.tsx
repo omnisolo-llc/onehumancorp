@@ -131,13 +131,14 @@ export default function OnboardingWizard() {
     };
 
     try {
-      await fetch('/api/onboarding/state', {
+      await fetchWithRetry('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
       });
     } catch (err) {
       console.error('Failed to sync onboarding state', err);
+      throw err;
     }
   };
   const [validationError, setValidationError] = useState('');
@@ -165,41 +166,7 @@ export default function OnboardingWizard() {
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-      const wizardState = {
-        step,
-        chatStep,
-        businessDescription,
-        bio,
-        businessName,
-        whatYouSell,
-        location,
-        targetAudience,
-        businessType,
-        categories,
-        websiteTemplate,
-        domainChoice,
-        firstProductName,
-        firstProductPrice,
-        adminName,
-        adminEmail,
-        adminPassword,
-        aiAgents,
-        aiAutoRespond
-      };
-
-      const res = await fetchWithRetry('/api/onboarding/draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
-          'X-User-ID': userId,
-        },
-        body: JSON.stringify({ wizardState })
-      });
-
+      await syncStateToBackend();
       setSaveMessage('Draft Saved!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err: any) {
