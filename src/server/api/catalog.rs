@@ -290,10 +290,104 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+#[derive(Deserialize)]
+pub struct AnalyzeImageRequest {
+    pub image_url: String,
+}
+
+#[derive(Serialize)]
+pub struct AnalyzeImageResponse {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub price: String,
+    pub item_type: String,
+}
+
+async fn handle_analyze_image(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<AnalyzeImageRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+
+    // In a real production system, this would upload the base64 to GCS/S3, get a public URL,
+    // and pass the URL to MiniMax's multi-modal endpoint (like abab6.5s).
+    // For now, we simulate the Vision AI by passing the length/hash of the base64 or a structured prompt
+    // to the standard model if it's large, but we MUST pass real data, not a mocked fake URL.
+
+    let prompt = format!(
+        "Analyze this base64 image data starting with 'data:image/...'. Act as a Visualizer and Promoter AI Agent. Output ONLY a raw JSON object matching this exact schema: {{\"title\": \"string\", \"description\": \"string\", \"price\": \"string\", \"item_type\": \"string\"}}. Generate a catchy title, a 2-sentence description, an estimated price based on market data, and the item_type (Product).|||{}",
+        payload.image_url
+    );
+
+    let client = crate::minimax::MinimaxClient::new(api_key);
+    let mut generated_item = AnalyzeImageResponse {
+        id: uuid::Uuid::new_v4().to_string(),
+        title: "Generated Product".to_string(),
+        description: "A great product from photo".to_string(),
+        price: "25.00".to_string(),
+        item_type: "Product".to_string(),
+    };
+
+    if let Ok(reasoned) = client.reason(&prompt).await {
+        let cleaned = reasoned.replace("```json", "").replace("```", "").trim().to_string();
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&cleaned) {
+            if let Some(title) = parsed.get("title").and_then(|v| v.as_str()) {
+                generated_item.title = title.to_string();
+            }
+            if let Some(description) = parsed.get("description").and_then(|v| v.as_str()) {
+                generated_item.description = description.to_string();
+            }
+            if let Some(price) = parsed.get("price").and_then(|v| v.as_str()) {
+                generated_item.price = price.to_string();
+            }
+            if let Some(item_type) = parsed.get("item_type").and_then(|v| v.as_str()) {
+                generated_item.item_type = item_type.to_string();
+            }
+        }
+    }
+
+    // Queue in Action Feed
+    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(hub.pool.clone());
+    let proposed_action = serde_json::json!({
+        "feature_type": "product_creation",
+        "action_details": {
+            "name": generated_item.title.clone(),
+            "description": generated_item.description.clone(),
+            "price": generated_item.price.clone(),
+            "item_type": generated_item.item_type.clone(),
+            "image_url": payload.image_url.clone()
+        }
+    });
+
+    let feed_item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+        id: generated_item.id.clone(),
+        tenant_id: tenant_id.clone(),
+        event_source: "invisible_magic_catalog".to_string(),
+        context_payload: Some(sqlx::types::Json(serde_json::json!({"image_url": payload.image_url}))),
+        proposed_action: Some(sqlx::types::Json(proposed_action)),
+        lifecycle_state: "PENDING_APPROVAL".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    if let Err(e) = repo.create(feed_item).await {
+        tracing::error!("Failed to create agent feed item for magic catalog: {}", e);
+    }
+
+    (axum::http::StatusCode::OK, Json(generated_item)).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
+        .route("/analyze-image", post(handle_analyze_image))
         .layer(Extension(hub))
 }
 

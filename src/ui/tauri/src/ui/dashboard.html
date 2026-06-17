@@ -641,6 +641,18 @@
         <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
       </div>
 
+      <div class="ohc-growth-card" id="magic-catalog-card" style="margin-bottom: 20px;">
+        <h2>Magic Catalog</h2>
+        <p>Take a photo of your product to instantly generate a title, description, and price using AI.</p>
+        <button id="add-product-photo-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span>📸</span> Add Product via Photo
+        </button>
+        <input type="file" id="magic-catalog-upload" accept="image/*" style="display: none;" />
+        <div id="magic-catalog-status" style="margin-top: 10px; font-size: 14px; text-align: center; color: rgba(255, 255, 255, 0.7); display: none;">
+          Analyzing your photo...
+        </div>
+      </div>
+
       <div class="ohc-growth-card" id="ai-savings-widget">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
@@ -1597,7 +1609,7 @@
         renderTriageItems(agentFeedItems);
       };
 
-      async function loadTriage() {
+      window.loadTriage = async function() {
         if (window.innerWidth <= 768) {
           triageSection.style.display = 'block';
           // Ensure we scroll to it or prioritize it
@@ -1637,6 +1649,42 @@
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
+
+            if (item.proposed_action?.feature_type === 'product_creation' || item.context_payload?.feature_type === 'product_creation' || actionType === 'product_creation' || item.action_payload?.feature_type === 'product_creation') {
+              let payload = item.proposed_action || item.context_payload || {};
+              if (typeof item.action_payload === 'string') {
+                  try { payload = JSON.parse(item.action_payload); } catch(e){}
+              } else if (item.action_payload) {
+                  payload = item.action_payload;
+              }
+              const details = payload.action_details || {};
+              const title = details.name || 'New Product';
+              const descriptionText = details.description || '';
+              const price = details.price || '0.00';
+              const img_url = details.image_url || '';
+
+              let imgHtml = '';
+              if (img_url) {
+                  imgHtml = `<div style="margin-bottom: 12px; width: 100%; height: 160px; background-image: url('${img_url}'); background-size: cover; background-position: center; border-radius: 8px;"></div>`;
+              }
+
+              return `
+                <div class="triage-item glassmorphism" data-testid="product-creation-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-weight: 700;">Draft Product</div>
+                    <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
+                  </div>
+                  ${imgHtml}
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${title}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Price: $${price}</div>
+                  <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${descriptionText}</div>
+                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Publish to Store</button>
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit / Dismiss</button>
+                  </div>
+                </div>
+              `;
+            }
 
             if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
               let payload = item.proposed_action || item.context_payload || {};
@@ -1958,7 +2006,7 @@
 
           window.showStatus('Approving...', true);
           window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
-          loadTriage();
+          window.loadTriage();
         } catch (err) {
           console.error(err);
           if (itemEl) itemEl.style.opacity = '1';
@@ -1967,7 +2015,7 @@
       };
 // Load on start
       setTimeout(() => {
-        loadTriage();
+        window.loadTriage();
       }, 500);
 
       // Omnibox logic
@@ -2185,6 +2233,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+      const magicCatalogBtn = document.getElementById('add-product-photo-btn');
+      const magicCatalogInput = document.getElementById('magic-catalog-upload');
+      const magicCatalogStatus = document.getElementById('magic-catalog-status');
+
+      if (magicCatalogBtn && magicCatalogInput) {
+          magicCatalogBtn.addEventListener('click', () => {
+              magicCatalogInput.click();
+          });
+
+          magicCatalogInput.addEventListener('change', async (e) => {
+              if (e.target.files && e.target.files[0]) {
+                  const file = e.target.files[0];
+
+                  const reader = new FileReader();
+                  reader.onload = async (event) => {
+                      const base64String = event.target.result;
+
+                      magicCatalogStatus.style.display = 'block';
+                      magicCatalogBtn.style.display = 'none';
+
+                      try {
+                          const res = await fetch('/api/v1/analyze-image', {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/json',
+                                  'authorization': `Bearer ${localStorage.getItem('ohc_token')}`
+                              },
+                              body: JSON.stringify({ image_url: base64String })
+                          });
+
+                          if (res.ok) {
+                              magicCatalogStatus.innerText = "Product drafted! Check your Unified Agent Feed.";
+                          } else {
+                              magicCatalogStatus.innerText = "Error analyzing photo.";
+                          }
+                      } catch (err) {
+                          magicCatalogStatus.innerText = "Error connecting to AI Agent.";
+                      }
+
+                      setTimeout(() => {
+                          magicCatalogBtn.style.display = 'flex';
+                          magicCatalogStatus.style.display = 'none';
+                          magicCatalogStatus.innerText = "Analyzing your photo...";
+                          // Refresh the feed
+                          if (typeof window.loadTriage === 'function') window.loadTriage();
+                      }, 3000);
+                  };
+                  reader.readAsDataURL(file);
+              }
+          });
+      }
 
       const cloudBridgeBtn = document.getElementById('generate-cloud-bridge-btn');
       const cloudBridgeEmail = document.getElementById('cloud-bridge-email');

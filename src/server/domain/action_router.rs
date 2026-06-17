@@ -22,6 +22,29 @@ pub async fn dispatch_action(
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
         }
+        "product_creation" => {
+            if let Some(details) = payload.get("action_details") {
+                let name = details.get("name").and_then(|v| v.as_str()).unwrap_or("New Product").to_string();
+                let description = details.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let price_cents = (details.get("price").and_then(|v| v.as_str()).unwrap_or("0").parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+                let item_type = details.get("item_type").and_then(|v| v.as_str()).unwrap_or("Product").to_string();
+                let product_id = uuid::Uuid::new_v4().to_string();
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, 100)"
+                )
+                .bind(&product_id)
+                .bind(tenant_id)
+                .bind(&name)
+                .bind(&description)
+                .bind(&item_type)
+                .bind(price_cents)
+                .execute(pool)
+                .await {
+                    tracing::error!("Failed to insert magic catalog product: {}", e);
+                }
+            }
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }
