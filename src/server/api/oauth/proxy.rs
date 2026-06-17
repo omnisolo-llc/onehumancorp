@@ -1,6 +1,6 @@
 use axum::{
     extract::{Query},
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     routing::get,
     Router,
 };
@@ -52,7 +52,25 @@ pub async fn handle_oauth_callback(
             for (k, v) in query.extra {
                 redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
             }
-            return Redirect::temporary(&redirect_url).into_response();
+            let html_redirect = format!(
+                r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="refresh" content="0; url={}" />
+    <script>
+        window.location.replace("{}");
+    </script>
+</head>
+<body>Redirecting...</body>
+</html>"#,
+                redirect_url, redirect_url
+            );
+            return (
+                axum::http::StatusCode::OK,
+                [("Cache-Control", "no-store")],
+                axum::response::Html(html_redirect),
+            ).into_response();
         }
     }
 
@@ -83,7 +101,7 @@ mod tests {
         };
 
         let response = handle_oauth_callback(Query(query)).await.into_response();
-        assert_eq!(response.status(), axum::http::StatusCode::TEMPORARY_REDIRECT);
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 
     #[tokio::test]
