@@ -90,29 +90,35 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
   });
 
-  test('Feed Page should load items and approve', async ({ page }) => {
+  test('Triage Page should load items and approve', async ({ page }) => {
     test.setTimeout(180000);
-    await page.goto('/feed');
-    await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
+    await page.goto('/triage');
 
-    const card = page.getByTestId('agent-feed-card').first();
-    if (await card.isVisible()) {
-        const approveBtn = card.locator('button', { hasText: 'Approve' });
+    // Check if feed loads
+    const feedContainer = page.locator('h1', { hasText: 'Work Triage' }).first();
+    await expect(feedContainer).toBeVisible({ timeout: 25000 });
+
+    const approveBtn = page.getByTestId('approve-btn').first();
+    if (await approveBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+        const cardParent = approveBtn.locator('xpath=./../..');
         await approveBtn.click();
-        await expect(card).not.toBeVisible({ timeout: 5000 });
+        await expect(cardParent).not.toBeVisible({ timeout: 5000 });
     }
   });
 
-  test('Feed Page should load items and dismiss', async ({ page }) => {
+  test('Triage Page should load items and dismiss', async ({ page }) => {
     test.setTimeout(180000);
-    await page.goto('/feed');
-    await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
+    await page.goto('/triage');
 
-    const card = page.getByTestId('agent-feed-card').first();
-    if (await card.isVisible()) {
-        const dismissBtn = card.locator('button', { hasText: 'Dismiss' });
+    // Check if feed loads
+    const feedContainer = page.locator('h1', { hasText: 'Work Triage' }).first();
+    await expect(feedContainer).toBeVisible({ timeout: 25000 });
+
+    const dismissBtn = page.getByTestId('dismiss-btn').first();
+    if (await dismissBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+        const cardParent = dismissBtn.locator('xpath=./../..');
         await dismissBtn.click();
-        await expect(card).not.toBeVisible({ timeout: 5000 });
+        await expect(cardParent).not.toBeVisible({ timeout: 5000 });
     }
   });
 
