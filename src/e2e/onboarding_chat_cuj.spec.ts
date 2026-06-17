@@ -18,20 +18,22 @@ test.describe('Onboarding Chat CUJ Flow', () => {
         ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
         : process.cwd();
 
+
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
-    await page.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    await page.route('http://localhost:30000/setup.html', async route => {
+        let content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.route('http://mock/success.html', async route => {
+    await page.route('http://localhost:30000/success.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
     // Go to the onboarding setup
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://localhost:30000/setup.html');
+
 
     // Wait for the container to be visible
     const container = page.locator('.container');

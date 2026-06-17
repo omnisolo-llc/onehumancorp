@@ -924,7 +924,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
@@ -950,7 +950,7 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
@@ -961,17 +961,17 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 8px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 8px; border-radius: 8px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 8px; min-width: 44px; border-radius: 8px;">Send</button>
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
       </div>
 
 
       <div class="step" id="step-approval">
-        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+        <button onclick="goToStep('step-chat')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
           <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Ready to Launch</h1>
@@ -1364,7 +1364,7 @@
         }
 
         // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+        const backendUrl = '';
         const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
         const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
 
@@ -1512,7 +1512,7 @@
               window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = '';
               fetch(`${backendUrl}/api/onboarding/draft`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
@@ -1794,7 +1794,7 @@
           let displayMsg = text;
           if (imageUrl) displayMsg += `<br><span style="font-size: 12px; color: #666;">[Attached Image: ${imageUrl}]</span>`;
 
-          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${displayMsg}</div>`;
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>User:</strong> ${displayMsg}</div>`;
           chatInputEl.value = '';
           if (chatImageEl) chatImageEl.value = '';
 
@@ -1807,7 +1807,7 @@
           chatSendBtn.disabled = true;
 
           try {
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = '';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -1885,7 +1885,7 @@
               approvePublishBtn.innerHTML = '<div class="spinner"></div>Publishing...';
 
               try {
-                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = '';
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
@@ -1972,7 +1972,7 @@
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
               try {
-                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = '';
                   const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
                   const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
 
@@ -2099,7 +2099,7 @@
             e.target.innerText = "Saving...";
             e.target.disabled = true;
 
-            const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+            const backendUrl = '';
             const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
             const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
@@ -2218,7 +2218,7 @@
                } else {
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                 const backendUrl = '';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
                      headers: {
