@@ -1,3 +1,4 @@
+use uuid::Uuid;
 use sqlx::FromRow;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
@@ -409,6 +410,32 @@ pub struct DepositRequirement {
     pub percentage: Option<f64>,
     pub status: String,
     pub payment_intent_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Proposal {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub customer_id: Option<Uuid>,
+    pub status: String,
+    pub scope: String,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
+    pub stripe_payment_link: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProposalLineItem {
+    pub id: Uuid,
+    pub proposal_id: Uuid,
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+    pub is_optional: bool,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

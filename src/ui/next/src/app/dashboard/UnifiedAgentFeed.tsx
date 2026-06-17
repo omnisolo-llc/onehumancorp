@@ -443,7 +443,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
   };
 
-  const handleDecision = async (id: string, approved: boolean, modified_content?: string) => {
+  const handleDecision = async (id: string, approved: boolean, modified_content?: string, approvalObj?: any) => {
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -461,7 +461,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     setItems(prev => prev.filter(app => app.id !== id));
 
     try {
+
+      if (approved && approvalObj && (approvalObj.proposed_action || approvalObj.context_payload)?.feature_type === 'quote_draft' && (approvalObj.proposed_action || approvalObj.context_payload)?.proposal_id) {
+        const p_id = (approvalObj.proposed_action || approvalObj.context_payload).proposal_id;
+        const tenant = tenantId();
+        await fetch(`/api/v1/proposals/${p_id}/approve_and_send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-tenant-id': tenant,
+                'x-user-id': 'default'
+            },
+            body: JSON.stringify({
+                scope: (approvalObj.proposed_action || approvalObj.context_payload).scope || '',
+                total_amount_cents: ((approvalObj.proposed_action || approvalObj.context_payload).suggested_price || 0) * 100,
+                required_deposit_cents: ((approvalObj.proposed_action || approvalObj.context_payload).suggested_price || 0) * 50
+            })
+        });
+      }
       await submitDecision(id, approved, modified_content);
+
     } catch (err: any) {
       // Revert optimistic update gracefully by refetching
       const tenant = tenantId();
@@ -865,7 +884,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   {(approval.proposed_action || approval.context_payload)?.feature_type === 'incident_resolution' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Execute Plan"
                         data-testid="approve-incident-resolution"
@@ -884,7 +903,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Send"
                         data-testid="approve-instagram-dm"
@@ -903,7 +922,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'supply_order' ? (
                     <>
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
                         data-testid="approve-supply-order"
@@ -936,7 +955,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Schedule"
                         data-testid="approve-social-post"
@@ -989,7 +1008,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve"
                         data-testid="approve-stockout"
@@ -1039,7 +1058,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     ) : (
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
-                          onClick={() => handleDecision(approval.id, true)}
+                          onClick={() => handleDecision(approval.id, true, undefined, approval)}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                           aria-label="Approve & Send Draft"
                           data-testid="approve-ambassador-reply"
@@ -1070,7 +1089,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Send"
                         data-testid="approve-quote-draft"
@@ -1089,7 +1108,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Run Sale"
                         data-testid="approve-run-sale"
@@ -1108,7 +1127,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.context?.weekly_health_report === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Draft it"
                         data-testid="approve-draft"
@@ -1126,7 +1145,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     </div>                  ) : (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve Restock"
                         data-testid="approve-restock"
@@ -1145,7 +1164,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
                     <>
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
                         data-testid="approve-send-proposal"
@@ -1205,7 +1224,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     ) : (
                     <>
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={() => handleDecision(approval.id, true, undefined, approval)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
                         data-testid="approve-proposal"
