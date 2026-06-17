@@ -18,7 +18,7 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
-    whatsapp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    whatsapp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::whatsapp::provider::WhatsAppProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
@@ -152,27 +152,35 @@ impl IntegrationsRegistry {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                          let text = content.to_string();
 
-                         let client = {
-                             if integration_id == "whatsapp" {
+                         if integration_id == "whatsapp" {
+                             let client = {
                                  let clients = self.whatsapp_clients.read().unwrap();
                                  clients.get(integration_id).cloned()
-                             } else {
+                             };
+                             if let Some(client) = client {
+                                 let client = client.clone();
+                                 tokio::spawn(async move {
+                                     if let Err(e) = client.send_message(&to, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send WhatsApp message");
+                                         tracing::warn!("Failed to send WhatsApp message: {}", e);
+                                     }
+                                 });
+                             }
+                         } else {
+                             let client = {
                                  let clients = self.meta_clients.read().unwrap();
                                  clients.get(integration_id).cloned()
+                             };
+                             if let Some(client) = client {
+                                 let client = client.clone();
+                                 tokio::spawn(async move {
+                                     let platform = if to.contains("instagram") { "instagram" } else { "facebook" };
+                                     if let Err(e) = client.send_message(platform, &to, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send Meta message");
+                                         tracing::warn!("Failed to send Meta message: {}", e);
+                                     }
+                                 });
                              }
-                         };
-                         if let Some(client) = client {
-                             let client = client.clone();
-                             let is_whatsapp = integration_id == "whatsapp";
-                             tokio::spawn(async move {
-                                 // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
-                                 // Otherwise we default to whatsapp
-                                 let platform = if is_whatsapp || to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
-                                 if let Err(e) = client.send_message(platform, &to, &text).await {
-                                     ::server_telemetry::record_error_signal("Failed to send Meta message");
-                                     tracing::warn!("Failed to send Meta message: {}", e);
-                                 }
-                             });
                          }
                      }
                  }
@@ -236,8 +244,9 @@ impl IntegrationsRegistry {
         }
         if integration_id == "whatsapp" {
             let mut clients = self.whatsapp_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::whatsapp::provider::WhatsAppProvider::new(
+                creds.api_token.clone(),
+                creds.bot_token.clone()
             )));
         }
         if integration_id == "calendly" {
@@ -468,18 +477,22 @@ impl IntegrationsRegistry {
             if let Some(c) = client {
                 return c.send_whatsapp(to, from, body).await;
             }
-        } else if integration_id == "meta" || integration_id == "whatsapp" {
+        } else if integration_id == "meta" {
             let client = {
-                if integration_id == "whatsapp" {
-                    let clients = self.whatsapp_clients.read().unwrap();
-                    clients.get(integration_id).cloned()
-                } else {
-                    let clients = self.meta_clients.read().unwrap();
-                    clients.get(integration_id).cloned()
-                }
+                let clients = self.meta_clients.read().unwrap();
+                clients.get(integration_id).cloned()
             };
             if let Some(c) = client {
-                return c.send_message("whatsapp", to, body).await;
+                let platform = if to.starts_with("whatsapp:") { "whatsapp" } else { "facebook" };
+                return c.send_message(platform, to, body).await;
+            }
+        } else if integration_id == "whatsapp" {
+            let client = {
+                let clients = self.whatsapp_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = client {
+                return c.send_message(to, body).await;
             }
         }
         Err("integration not found or not supported".to_string())
@@ -577,19 +590,22 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "meta" {
-                let clients = self.meta_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else if integration_id == "whatsapp" {
+        if integration_id == "whatsapp" {
+            let client = {
                 let clients = self.whatsapp_clients.read().unwrap();
                 clients.get(integration_id).cloned()
-            } else {
-                None
+            };
+            if let Some(c) = client {
+                return c.send_message(to, body).await;
             }
-        };
-        if let Some(c) = client {
-            return c.send_message(platform, to, body).await;
+        } else if integration_id == "meta" {
+            let client = {
+                let clients = self.meta_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = client {
+                return c.send_message(platform, to, body).await;
+            }
         }
         Err("integration not found or not supported".to_string())
     }
