@@ -171,32 +171,59 @@ Your response:",
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
+                let mut name = "My Business".to_string();
+                let mut p1 = "Starter Package".to_string();
+                let mut p2 = "Standard Package".to_string();
+                let mut p3 = "Premium Package".to_string();
+                let mut p_price = "50.00".to_string();
+
+                let lower = input.to_lowercase();
+                if lower.contains("cake") || lower.contains("baker") {
+                    name = "Custom Cakes".to_string();
+                    p1 = "6-inch Celebration Cake".to_string();
+                    p2 = "8-inch Tiered Cake".to_string();
+                    p3 = "Custom Cupcakes (Dozen)".to_string();
+                    p_price = "45.00".to_string();
+                } else if lower.contains("coffee") || lower.contains("roast") {
+                    name = "Local Roasters".to_string();
+                    p1 = "Espresso Blend (12oz)".to_string();
+                    p2 = "Single Origin Pour Over".to_string();
+                    p3 = "Cold Brew Growler".to_string();
+                    p_price = "18.00".to_string();
+                } else if lower.contains("tutor") || lower.contains("lesson") {
+                    name = "Learning Studio".to_string();
+                    p1 = "1-Hour Introduction".to_string();
+                    p2 = "4-Lesson Package".to_string();
+                    p3 = "Group Session".to_string();
+                    p_price = "60.00".to_string();
+                }
+
                 return Ok(IntakeData {
-                    business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
+                    business_name: name.clone(),
+                    business_type: "Online Store".to_string(),
                     categories: vec!["physical".to_string()],
                     initial_products: vec![
                         IntakeProduct {
-                            name: "Mock Product 1".to_string(),
-                            price: "10.00".to_string(),
-                            description: Some("Description for Product 1".to_string()),
+                            name: p1,
+                            price: p_price.clone(),
+                            description: Some("Our most popular starting option.".to_string()),
                             variants: None,
                         },
                         IntakeProduct {
-                            name: "Mock Product 2".to_string(),
-                            price: "20.00".to_string(),
-                            description: Some("Description for Product 2".to_string()),
+                            name: p2,
+                            price: format!("{:.2}", p_price.parse::<f64>().unwrap_or(50.0) * 1.5),
+                            description: Some("Upgraded tier for more value.".to_string()),
                             variants: None,
                         },
                         IntakeProduct {
-                            name: "Mock Product 3".to_string(),
-                            price: "30.00".to_string(),
-                            description: Some("Description for Product 3".to_string()),
+                            name: p3,
+                            price: format!("{:.2}", p_price.parse::<f64>().unwrap_or(50.0) * 2.5),
+                            description: Some("The ultimate premium experience.".to_string()),
                             variants: None,
-                        },
+                        }
                     ],
-                    location: Some("Mock Location".to_string()),
-                    target_audience: Some("Mock Audience".to_string()),
+                    location: Some("Local".to_string()),
+                    target_audience: Some("General".to_string()),
                 });
             }
         };
@@ -384,6 +411,18 @@ Your response:",
 
         let start_time = std::time::Instant::now();
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
+
+        // Add stripe placeholder creation for Zero-Click Onboarding Agent
+        let _ = sqlx::query(
+            "INSERT INTO settings (tenant_id, key, value, created_at, updated_at)
+             VALUES ($1, $2, $3, NOW(), NOW())
+             ON CONFLICT (tenant_id, key) DO NOTHING"
+        )
+        .bind(&org_id)
+        .bind("stripe_account_placeholder")
+        .bind("true")
+        .execute(&self.db.pool)
+        .await;
 
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();

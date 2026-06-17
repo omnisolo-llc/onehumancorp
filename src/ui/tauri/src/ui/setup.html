@@ -804,7 +804,15 @@
       .glassmorphism button {
         border-radius: 8px !important;
       }
-</style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    </style>
 
 <style>
       .capability-toggles {
@@ -942,10 +950,18 @@
 
 
 
-      <div class="step" id="step-loading">
-        <h1>Building Your Business...</h1>
-        <p>Please wait while we set up your workspace.</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+            <div class="step" id="step-loading">
+        <div style="width: 80px; height: 80px; margin: 0 auto 20px; position: relative;">
+          <div style="position: absolute; inset: 0; border: 4px solid rgba(0, 102, 255, 0.2); border-radius: 50%;"></div>
+          <div style="position: absolute; inset: 0; border: 4px solid #0066FF; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite;"></div>
+        </div>
+        <h1 style="color: #1D1D1F;">Building Your Business...</h1>
+        <div style="margin-top: 20px; color: #666; font-size: 14px;">
+           <p style="animation: pulse 2s infinite;">Building your catalog...</p>
+           <p style="animation: pulse 2s infinite; animation-delay: 0.5s;">Configuring payments...</p>
+           <p style="animation: pulse 2s infinite; animation-delay: 1s;">Designing storefront...</p>
+        </div>
+      </div>
       </div>
 
       <!-- Step Chat: Conversational Build -->
@@ -977,7 +993,29 @@
         <h1>Ready to Launch</h1>
         <p>Your business is ready to be created.</p>
 
-        <div id="approval-details" class="glassmorphism" style="text-align: left; padding: 16px; margin-bottom: 24px; border-radius: 8px;">
+                <div id="approval-details" class="glassmorphism" style="text-align: left; padding: 16px; margin-bottom: 24px; border-radius: 8px; overflow: hidden;">
+            <div id="approval-carousel" style="display: flex; transition: transform 0.3s ease; width: 300%;">
+                <div class="carousel-slide" style="width: 33.333%; padding: 0 10px; box-sizing: border-box;">
+                    <h3 style="margin-top: 0;">Storefront Details</h3>
+                    <div id="approval-storefront-content"></div>
+                </div>
+                <div class="carousel-slide" style="width: 33.333%; padding: 0 10px; box-sizing: border-box;">
+                    <h3 style="margin-top: 0;">Generated Products</h3>
+                    <div id="approval-products-content"></div>
+                </div>
+                <div class="carousel-slide" style="width: 33.333%; padding: 0 10px; box-sizing: border-box;">
+                    <h3 style="margin-top: 0;">Payment Setup</h3>
+                                    <div id="approval-payments-content">
+                    <p id="approval-payments-text"></p>
+                    <button type="button" class="btn-secondary" style="margin-top: 10px; width: 100%;">Connect Bank (Stripe)</button>
+                </div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
+                <button type="button" onclick="document.getElementById('approval-carousel').style.transform = 'translateX(0)'" style="width: 10px; height: 10px; padding: 0; min-height: 0; border-radius: 50%; background: #ccc;"></button>
+                <button type="button" onclick="document.getElementById('approval-carousel').style.transform = 'translateX(-33.333%)'" style="width: 10px; height: 10px; padding: 0; min-height: 0; border-radius: 50%; background: #ccc;"></button>
+                <button type="button" onclick="document.getElementById('approval-carousel').style.transform = 'translateX(-66.666%)'" style="width: 10px; height: 10px; padding: 0; min-height: 0; border-radius: 50%; background: #ccc;"></button>
+            </div>
         </div>
 
         <div class="btn-group">
@@ -1859,11 +1897,23 @@
                           productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
                       }
 
-                      approvalDetails.innerHTML = `
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
-                      `;
+                                            const storefrontEl = document.getElementById('approval-storefront-content');
+                      const productsEl = document.getElementById('approval-products-content');
+                      if (storefrontEl) {
+                          storefrontEl.innerHTML = `
+                              <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
+                              <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
+                              <div style="margin-bottom: 8px;"><strong>Location:</strong> ${req.location}</div>
+                          `;
+                      }
+                      if (productsEl) {
+                          productsEl.innerHTML = `<ul>${productsHtml}</ul>`;
+                      }
+
+                      const paymentsEl = document.getElementById('approval-payments-text');
+                      if (paymentsEl) {
+                         paymentsEl.innerText = `We've prepared a Stripe Express Connected Account for ${req.company_name}.`;
+                      }
                   }
                   await goToStep('step-approval');
               }
