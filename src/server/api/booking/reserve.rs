@@ -11,10 +11,13 @@ use crate::db::DB;
 
 #[derive(Deserialize)]
 pub struct ReserveRequest {
-    pub customer_id: Option<String>,
-    pub service_id: String,
+    pub tenant_id: Option<String>,
+    pub product_id: String,
     pub start_time: String,
     pub end_time: String,
+    pub customer_id: Option<String>,
+    pub requires_deposit: Option<bool>,
+    pub timezone: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -22,7 +25,7 @@ pub struct ReserveResponse {
     pub success: bool,
     pub booking_id: Option<String>,
     pub error: Option<String>,
-    pub checkout_url: Option<String>,
+    pub deposit_stripe_link: Option<String>,
 }
 
 pub fn router<S>(db: Arc<DB>) -> Router<S>
@@ -56,7 +59,7 @@ async fn handle_reserve(
                     success: false,
                     booking_id: None,
                     error: Some("internal error".to_string()),
-                    checkout_url: None,
+                    deposit_stripe_link: None,
                 }),
             )
                 .into_response();
@@ -74,7 +77,7 @@ async fn handle_reserve(
                     success: false,
                     booking_id: None,
                     error: Some("invalid start_time format".to_string()),
-                    checkout_url: None,
+                    deposit_stripe_link: None,
                 }),
             )
                 .into_response();
@@ -90,7 +93,7 @@ async fn handle_reserve(
                     success: false,
                     booking_id: None,
                     error: Some("invalid end_time format".to_string()),
-                    checkout_url: None,
+                    deposit_stripe_link: None,
                 }),
             )
                 .into_response();
@@ -101,6 +104,8 @@ async fn handle_reserve(
 
     let c_id = payload.customer_id.and_then(|c| uuid::Uuid::parse_str(&c).ok());
 
+    let service_id = payload.product_id.clone();
+
     let res = sqlx::query(
         r#"
         INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status)
@@ -110,7 +115,7 @@ async fn handle_reserve(
     .bind(&booking_id)
     .bind(&tenant_id)
     .bind(&c_id)
-    .bind(&payload.service_id)
+    .bind(&service_id)
     .bind(st)
     .bind(et)
     .execute(&mut *tx)
@@ -124,7 +129,7 @@ async fn handle_reserve(
                 success: false,
                 booking_id: None,
                 error: Some("failed to create booking".to_string()),
-                checkout_url: None,
+                deposit_stripe_link: None,
             }),
         )
             .into_response();
@@ -138,7 +143,7 @@ async fn handle_reserve(
         "#,
     )
     .bind(&tenant_id)
-    .bind(&payload.service_id)
+    .bind(&service_id)
     .bind(st)
     .bind(et)
     .execute(&mut *tx)
@@ -146,10 +151,9 @@ async fn handle_reserve(
 
     let _ = tx.commit().await;
 
-    // Check if deposit is required
-    let requires_deposit = false; // We can read from services table, hardcoded to false here for now.
+    let requires_deposit = payload.requires_deposit.unwrap_or(false);
 
-    let checkout_url = if requires_deposit {
+    let deposit_stripe_link = if requires_deposit {
         Some(format!("/api/v1/booking/deposit?booking_id={}", booking_id))
     } else {
         None
@@ -161,7 +165,7 @@ async fn handle_reserve(
             success: true,
             booking_id: Some(booking_id),
             error: None,
-            checkout_url,
+            deposit_stripe_link,
         }),
     )
         .into_response()
