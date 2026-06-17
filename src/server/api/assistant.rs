@@ -1,8 +1,7 @@
 use axum::{
     extract::{Extension, Path, State},
-    response::IntoResponse,
     http::StatusCode,
-    routing::{get, post, put, delete},
+    routing::{get, put, delete, post},
     Router,
     Json,
 };
@@ -19,12 +18,12 @@ where
 {
     Router::new()
         .route("/workspaces", get(list_workspaces).post(create_workspace))
-        .route("/workspaces/:id", get(get_workspace))
+        .route("/workspaces/{id}", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
-        .route("/tasks/:id", get(get_task))
-        .route("/tasks/:id/messages", get(list_messages).post(create_message))
-        .route("/tasks/:id/artifacts", get(list_artifacts).post(create_artifact))
-        .route("/tasks/:id/file_changes", get(list_file_changes).post(create_file_change))
+        .route("/tasks/{id}", get(get_task))
+        .route("/tasks/{id}/messages", get(list_messages).post(create_message))
+        .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
+        .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
         .layer(Extension(db))
 }
 
