@@ -50,19 +50,11 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
             Ok(v) => v,
             Err(e) => {
                 // Add the original payload snippet for context
-<<<<<<< HEAD
-                let args_str = match serde_json::to_string(&args) {
-                    Ok(s) => {
-                        let char_count = s.chars().count();
-                        if char_count > 100 {
-                            let truncated: String = s.chars().take(100).collect();
-=======
                 let args_str = match serde_json::to_string_pretty(&args) {
                     Ok(s) => {
                         let char_count = s.chars().count();
                         if char_count > 250 {
                             let truncated: String = s.chars().take(250).collect();
->>>>>>> 42756e3c (refactor: rename database schema columns and stabilize WebSocket tests with connection delays and environment defaults)
                             format!("{}...", truncated)
                         } else {
                             s
@@ -150,7 +142,7 @@ mod tests {
     #[tokio::test]
     async fn test_pydantic_adapter_failure_long_snippet() {
         let adapter = PydanticAdapter::new(MyExecutor);
-        let long_string = "a".repeat(200);
+        let long_string = "a".repeat(300);
         let result = adapter
             .execute(serde_json::json!({ "foo": long_string, "bar": "not a number" }))
             .await;
@@ -160,7 +152,7 @@ mod tests {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             assert!(msg.contains("Semantic validation failed"));
             assert!(msg.contains("...")); // Verifies the snippet truncation logic
-            assert!(msg.len() < 500); // Ensures the error message didn't blow up
+            assert!(msg.len() < 600); // Ensures the error message didn't blow up
         } else {
             panic!("Expected LlmRecoverable error with truncated snippet");
         }
