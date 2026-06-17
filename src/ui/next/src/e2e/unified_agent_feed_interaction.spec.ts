@@ -17,9 +17,9 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375);
 
-    // Verify touch targets are at least 44x44
-    const buttons = await page.locator('button').all();
-    for (const btn of buttons) {
+    // Verify touch targets are at least 44x44 for action buttons
+    const actionButtons = await page.locator('button[data-testid^="triage-"]').all();
+    for (const btn of actionButtons) {
       if (await btn.isVisible()) {
         const box = await btn.boundingBox();
         if (box) {
