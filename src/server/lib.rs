@@ -2709,7 +2709,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
     if let Err(e) = handoff_manager.start_listener().await {
         ::server_telemetry::record_error_signal("[INFRA] Failed to start handoff listener");
-        tracing::error!("Failed to start handoff listener: {}", e);
+        tracing::trace!("Failed to start handoff listener: {}", e);
     }
 
 
@@ -6239,7 +6239,7 @@ async fn create_ui_bom_item_handler(
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
             ::server_telemetry::record_error_signal("[INFRA] Mesh server error");
-            tracing::error!("Mesh server error: {}", e);
+            tracing::trace!("Mesh server error: {}", e);
         }
     });
 
@@ -6278,11 +6278,11 @@ async fn create_ui_bom_item_handler(
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
                     ::server_telemetry::record_error_signal("[INFRA] failed to push pending missions");
-                    tracing::error!("failed to push pending missions: {}", e);
+                    tracing::trace!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
                     ::server_telemetry::record_error_signal("[INFRA] failed to pull mission updates");
-                    tracing::error!("failed to pull mission updates: {}", e);
+                    tracing::trace!("failed to pull mission updates: {}", e);
                 }
             }
         });
@@ -6309,15 +6309,15 @@ async fn create_ui_bom_item_handler(
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to prune stale missions");
-                        tracing::error!("failed to prune stale missions: {}", e);
+                        tracing::trace!("failed to prune stale missions: {}", e);
                     }
                     if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
-                        tracing::error!("failed to cleanup stagnant missions: {}", e);
+                        tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
-                        tracing::error!("failed to cleanup stale ohc jobs: {}", e);
+                        tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
                 }
                 _ = interval.tick() => {
@@ -6328,7 +6328,7 @@ async fn create_ui_bom_item_handler(
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
                             ::server_telemetry::record_error_signal("[BUG] failed to mark task as running");
-                            tracing::error!("failed to mark task as running: {}", e);
+                            tracing::trace!("failed to mark task as running: {}", e);
                             continue;
                         }
 
@@ -6349,7 +6349,7 @@ async fn create_ui_bom_item_handler(
                             }
                             Err(e) => {
                                 ::server_telemetry::record_error_signal("[INFRA] failed to publish scheduled task message");
-                                tracing::error!("failed to publish scheduled task message: {}", e);
+                                tracing::trace!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
                         }
