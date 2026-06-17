@@ -17,7 +17,7 @@ pub struct DeliveryState {
 
 pub fn router() -> Router<DeliveryState> {
     Router::new()
-        .route("/:tenant_id/:product_id", get(get_storefront_product))
+        .route("/{tenant_id}/{product_id}", get(get_storefront_product))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
 }
 

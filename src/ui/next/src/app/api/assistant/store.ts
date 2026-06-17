@@ -2222,7 +2222,7 @@ export function getBilling() {
 }
 
 export function getAssistantSettings() {
-  return { settings };
+  return { settings, supportTickets, paritySummary: listAgentParity().summary };
 }
 
 export function mutateAssistantSettings(payload: Partial<AssistantSettings>) {
@@ -2230,7 +2230,7 @@ export function mutateAssistantSettings(payload: Partial<AssistantSettings>) {
     ...settings,
     ...payload,
   };
-  return { settings };
+  return { settings, supportTickets, paritySummary: listAgentParity().summary };
 }
 
 export function createSupportTicket(payload: {

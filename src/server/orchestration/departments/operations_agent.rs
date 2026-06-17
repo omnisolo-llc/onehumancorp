@@ -70,8 +70,8 @@ impl Department for OperationsAgent {
                 }
             },
             "LowStockAlert" => {
-                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let _product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let _remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                 let _msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
                 let product_name = event.payload.get("product_title").and_then(|v| v.as_str()).unwrap_or("unknown item");
