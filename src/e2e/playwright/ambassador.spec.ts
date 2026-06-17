@@ -20,10 +20,10 @@ test.describe('Ambassador Agent Workflow', () => {
     await expect(feedCard).toBeVisible({ timeout: 10000 });
 
     // Verify specific Ambassador UI elements
-    await expect(feedCard).toContainText('CUSTOMER MESSAGE');
+    await expect(feedCard).toContainText('Customer Inquiry');
     await expect(feedCard).toContainText('New Message from @customer');
     await expect(feedCard).toContainText('Do you have vegan chocolate cake available for Saturday?');
-    await expect(feedCard).toContainText('Agent Draft');
+    await expect(feedCard).toContainText('Draft Reply');
     await expect(feedCard).toContainText('Yes we do! We have 3 left for this Saturday');
     await expect(feedCard).toContainText('Returning Customer (2 past orders).');
 
@@ -46,9 +46,9 @@ test.describe('Ambassador Agent Workflow', () => {
     await expect(textarea).not.toBeVisible();
     await expect(feedCard).toContainText('Yes we do! We have 3 left for this Saturday. I can set aside one for you.');
 
-    // 5. Click 'Approve & Send Draft'
+    // 5. Click 'Approve & Approve'
     const approveBtn = feedCard.getByTestId('feed-approve-btn');
-    await expect(approveBtn).toContainText('Send Draft');
+    await expect(approveBtn).toContainText('Approve');
     await approveBtn.click();
 
   });

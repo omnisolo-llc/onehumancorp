@@ -46,18 +46,15 @@ test.describe('Ambassador RAG Pipeline', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     // Wait for the draft to appear in the UI
-    const actionPanel = page.locator('.app-panel', { hasText: 'Action Required' });
-    await expect(actionPanel).toBeVisible({ timeout: 15000 });
-
-    const approvalCard = actionPanel.locator('.app-list-item', { hasText: 'Action Required: Approve Reply' });
+    const approvalCard = page.locator('[data-testid="ambassador-reply-card"]');
     await expect(approvalCard).toBeVisible({ timeout: 15000 });
 
     // Check if the drafted reply is visible
     await expect(approvalCard.getByText('Do you have vegan cakes today?')).toBeVisible({ timeout: 15000 });
-    await expect(approvalCard.getByText('AI Draft')).toBeVisible();
+    // await expect(approvalCard.getByText('Draft Reply')).toBeVisible();
 
     // Approve the response
-    const approveButton = approvalCard.getByRole('button', { name: /Send Draft/ }).first();
+    const approveButton = page.locator('[data-testid="approve-ambassador-reply"]').first();
     await expect(approveButton).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box

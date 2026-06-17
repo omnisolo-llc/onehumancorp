@@ -51,7 +51,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
 
     // Wait for either a pending item or the empty inbox state.
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
-    const approveButton = page.getByRole('button', { name: 'Send Draft' }).first();
+    const approveButton = page.getByRole('button', { name: 'Approve' }).first();
     await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
     // Since we are now using LLM generation, we wait for a draft to be generated in the UI
@@ -90,7 +90,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     await expect(feedCard).toBeVisible({ timeout: 15000 });
 
     // Verify specific Ambassador UI elements
-    await expect(feedCard).toContainText('CUSTOMER MESSAGE');
+    await expect(feedCard).toContainText('Customer Inquiry');
 
     // Click 'Edit'
     const editBtn = feedCard.getByTestId('feed-edit-btn');
