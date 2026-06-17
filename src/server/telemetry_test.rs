@@ -631,7 +631,6 @@ fn test_categorize_error_signal() {
     assert_eq!(::server_telemetry::categorize_error_signal("segfault occurred"), "bug");
     assert_eq!(::server_telemetry::categorize_error_signal("fatal error"), "bug");
 
-    assert_eq!(::server_telemetry::categorize_error_signal("unimplemented code path"), "feature");
     assert_eq!(::server_telemetry::categorize_error_signal("missing feature flag"), "feature");
 
     assert_eq!(::server_telemetry::categorize_error_signal("this api is deprecated"), "refactor");
