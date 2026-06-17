@@ -741,7 +741,7 @@ async fn handle_generate_review(
 async fn handle_promoter_generate(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GeneratePromoterRequest>,
-) -> impl IntoResponse {
+) -> Result<Json<GeneratePromoterResponse>, StatusCode> {
     let mut variants = Vec::new();
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
@@ -838,34 +838,18 @@ async fn handle_promoter_generate(
     }
 
     if variants.is_empty() {
-        // Fallback to static if LLM fails or is missing key
-        // Generate TikTok variant
-        variants.push(PromoterVariant {
-            platform: "TikTok".to_string(),
-            content: format!("Check out our amazing {}! {} Get yours today! 🚀 #{} #trending #musthave\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
-        });
+        // Return 500 error if generation fails, ensuring no mock data is used
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
 
-        // Generate Instagram variant
-        variants.push(PromoterVariant {
-            platform: "Instagram".to_string(),
-            content: format!("✨ So excited to share our new {}! ✨\n\n{}\n\nTap the link in bio to shop now. 🛍️\n\n#{} #shoplocal #newarrival\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
-        });
-
-        // Generate Twitter variant
-        variants.push(PromoterVariant {
-            platform: "Twitter".to_string(),
-            content: format!("Just dropped: {}! 🔥 {}\n\nGrab it here before it's gone: [link]\n\n⚡ Powered by OHC", req.name, desc),
-        });
-    } else {
-        // Append Powered by OHC
-        for v in variants.iter_mut() {
-            if !v.content.contains("Powered by OHC") {
-                v.content.push_str("\n\n⚡ Powered by OHC");
-            }
+    // Append Powered by OHC
+    for v in variants.iter_mut() {
+        if !v.content.contains("Powered by OHC") {
+            v.content.push_str("\n\n⚡ Powered by OHC");
         }
     }
 
-    Json(GeneratePromoterResponse { variants })
+    Ok(Json(GeneratePromoterResponse { variants }))
 }
 
 async fn handle_generate_customer_referral(
@@ -2400,19 +2384,13 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
+
         let res = handle_promoter_generate(Extension(state.clone()), Json(req)).await;
 
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GeneratePromoterResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert_eq!(res_json.variants.len(), 3);
-        assert!(res_json.variants.iter().any(|v| v.platform == "TikTok"));
-        assert!(res_json.variants.iter().any(|v| v.platform == "Instagram"));
-        assert!(res_json.variants.iter().any(|v| v.platform == "Twitter"));
-
-        for variant in res_json.variants {
-            assert!(variant.content.contains("Vegan Chocolate Cake"));
-        }
+        // Since we are running hermetic tests and removed the mock fallback, the LLM request will fail
+        // without API keys/mock adapters and thus variants will be empty causing the method to return Err.
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     #[tokio::test]
