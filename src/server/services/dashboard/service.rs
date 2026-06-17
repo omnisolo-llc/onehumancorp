@@ -12,7 +12,7 @@ static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organi
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
-static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
+pub static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct MyDashboardService {

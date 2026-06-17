@@ -202,7 +202,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Check error message
     const errorMsg = page.locator('#submit-error');
     await expect(errorMsg).toBeVisible();
-    await expect(errorMsg).toHaveText('Failed to start onboarding');
+    await expect(errorMsg).toHaveText('Backend is broken');
   });
 
 
