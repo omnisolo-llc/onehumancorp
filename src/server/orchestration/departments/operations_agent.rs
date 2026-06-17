@@ -70,13 +70,31 @@ impl Department for OperationsAgent {
                 }
             },
             "LowStockAlert" => {
-                let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-                if !msg.is_empty() {
-                    msg.to_string()
-                } else {
-                    let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                    format!("Draft a restock order for product {} due to low stock", product_id)
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let _msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+                let product_name = event.payload.get("product_title").and_then(|v| v.as_str()).unwrap_or("unknown item");
+
+                // Enrich payload with Quartermaster agent supply order details
+                let mut new_payload = event.payload.clone();
+                if let Some(obj) = new_payload.as_object_mut() {
+                    obj.insert("feature_type".to_string(), serde_json::json!("supply_order"));
+                    obj.insert("vendor_name".to_string(), serde_json::json!("Local Supplier"));
+                    obj.insert("vendor_contact".to_string(), serde_json::json!("Sam (WhatsApp)"));
+                    obj.insert("est_runout_days".to_string(), serde_json::json!(2));
+                    obj.insert("suggested_reorder_quantity".to_string(), serde_json::json!(500));
+                    obj.insert("draft_message".to_string(), serde_json::json!(format!("Hi Sam, please send 500 more {} to the Main St location.", product_name)));
+                    obj.insert("description".to_string(), serde_json::json!(format!("Supply Alert: {} running low. Order drafted.", product_name)));
                 }
+
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    format!("Supply Alert: {} running low. Order drafted.", product_name),
+                    event.tenant_id.clone(),
+                    risk,
+                    new_payload,
+                ).await.map(|_| ());
             },
             "InventoryConflictEvent" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
