@@ -14,6 +14,13 @@ test.describe('In-Person Payment (POS) Flow', () => {
       localStorage.setItem('ohc_offline_events', JSON.stringify([]));
     });
 
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill('omni_user@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+
     // Navigate to the POS terminal page
     await page.goto('/pos/terminal');
 
