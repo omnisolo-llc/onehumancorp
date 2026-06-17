@@ -3430,6 +3430,17 @@ pub async fn update_ui_triage_action_handler(
                                 Some(action.to_string())
                             });
                         }
+                    } else {
+                        // Try omni_inbox_messages
+                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            action_type_opt = Some("Draft Reply".to_string());
+                            action_payload_opt = Some(row.try_get::<String, _>("draft_reply").unwrap_or_default());
+                        }
                     }
                 }
 
@@ -3576,6 +3587,13 @@ pub async fn update_ui_triage_action_handler(
                 .execute(&mut *tx)
                 .await;
 
+            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -3634,6 +3652,17 @@ pub async fn update_ui_triage_action_handler(
                                 Some(action.to_string())
                             });
                         }
+                    } else {
+                        // Try omni_inbox_messages
+                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            action_type_opt = Some("Draft Reply".to_string());
+                            action_payload_opt = Some(row.try_get::<String, _>("draft_reply").unwrap_or_default());
+                        }
                     }
                 }
 
@@ -3658,6 +3687,13 @@ pub async fn update_ui_triage_action_handler(
             let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
             let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
                 .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)

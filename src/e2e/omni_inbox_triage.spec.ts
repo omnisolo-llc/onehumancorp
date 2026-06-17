@@ -20,7 +20,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         expect(response.ok()).toBeTruthy();
 
         // Step 3: Navigate to Work Triage UI
-        await page.goto('/ui/triage.html');
+        await page.goto('/triage');
 
         // Wait for feed to load
         await page.waitForSelector('.app-list-item');

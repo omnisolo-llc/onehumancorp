@@ -127,7 +127,7 @@ export default function TriagePage() {
       ]}
     >
       {actionStatus && (
-        <div className="mb-4 app-badge good" role="status">
+        <div id="action-status" className="mb-4 app-badge good" role="status">
           {actionStatus}
         </div>
       )}
@@ -238,11 +238,11 @@ export default function TriagePage() {
 
                 {/* Draft Proposal */}
                 {selected.action_type && (
-                  <div className="p-4 bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2">
+                  <div className="detail-group p-4 bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2">
                     <div className="text-xs uppercase tracking-wider font-semibold text-[#0066FF] dark:text-[#3388FF]">
                       Proposed Action: {selected.action_type}
                     </div>
-                    <div className="rounded-[12px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/80 dark:bg-black/40 p-4 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium whitespace-pre-wrap break-words">
+                    <div className="proposed-action rounded-[12px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/80 dark:bg-black/40 p-4 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium whitespace-pre-wrap break-words">
                       {selected.action_payload || "No specific payload"}
                     </div>
                   </div>
