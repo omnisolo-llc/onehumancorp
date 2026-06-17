@@ -595,7 +595,11 @@ mod tests {
     #[tokio::test]
     async fn test_bench_time_savings_latency() {
         bench_time_savings_latency().await;
-    bench_ui_omni_inbox_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_omni_inbox_latency() {
+        bench_ui_omni_inbox_latency().await;
     }
 
     #[tokio::test]
@@ -621,6 +625,11 @@ mod tests {
     #[tokio::test]
     async fn test_bench_dashboard_unified_feed_parallel_latency() {
         bench_dashboard_unified_feed_parallel_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_triage_mobile_payload() {
+        bench_ui_triage_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -672,6 +681,10 @@ mod tests {
         bench_get_analytics().await;
     }
 
+    #[tokio::test]
+    async fn test_run_bench_crm_opportunities_latency() {
+        bench_crm_opportunities_latency().await;
+    }
 
 }
 
