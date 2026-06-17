@@ -84,6 +84,27 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the standard wizard flow', async () => {
+    vi.useRealTimers();
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ organization_id: 'test-org-id' })
+        });
+      }
+      if (url === '/api/onboarding/state') {
+          return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({})
+          })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      });
+    });
+
     const user = userEvent.setup({ delay: null });
     await act(async () => { render(<WebsiteBuilderPage />); });
 
@@ -133,12 +154,10 @@ describe('WebsiteBuilderPage', () => {
     // Verify generating screen
     expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.any(Object));
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
-
-    // Verify live screen
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
   });
 
   it('can follow the instant-build flow', async () => {
