@@ -8,7 +8,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
     const tenantId = 'e2e-tenant';
     const message = 'Can I get a custom vegan cake for this weekend?';
 
-    const webhookResponse = await page.request.post('/api/inbox/webhook', {
+    const webhookResponse = await page.request.post('/api/v1/omnichannel/webhook', {
       data: {
         tenant_id: tenantId,
         source: 'Instagram DM',

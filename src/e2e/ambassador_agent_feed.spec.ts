@@ -21,7 +21,7 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
       target_language: 'English'
     };
 
-    const response = await page.request.post('/api/v1/inbox/webhook', {
+    const response = await page.request.post('/api/v1/omnichannel/webhook', {
       data: messagePayload
     });
     expect(response.status()).toBe(200);
