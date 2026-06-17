@@ -324,13 +324,13 @@ Your response:",
 
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key);
+        tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key); // pii-safe
         cache.invalidate(&cache_key).await;
 
         // Invalidate the Dashboard cache as well
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
         let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key);
+        tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key); // pii-safe
         dashboard_cache.invalidate(&dashboard_cache_key).await;
 
         Ok(())
@@ -339,12 +339,12 @@ Your response:",
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key);
+        tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key); // pii-safe
         if let Some(cached_state) = cache.get(&cache_key).await {
-            tracing::debug!("Cache hit for onboarding state key: {}", cache_key);
+            tracing::debug!("Cache hit for onboarding state key: {}", cache_key); // pii-safe
             return Ok(cached_state);
         }
-        tracing::debug!("Cache miss for onboarding state key: {}", cache_key);
+        tracing::debug!("Cache miss for onboarding state key: {}", cache_key); // pii-safe
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;

@@ -836,7 +836,7 @@ async fn http_login_handler(
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("[SECURITY] failed to verify auth credential");
-            tracing::error!("failed to verify auth credential: {}", e);
+            tracing::error!("failed to verify auth credential: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -868,7 +868,7 @@ async fn http_login_handler(
         Ok(t) => t,
         Err(e) => {
             ::server_telemetry::record_error_signal("[BUG] failed to issue login token");
-            tracing::error!("failed to issue login token: {}", e);
+            tracing::error!("failed to issue login token: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),

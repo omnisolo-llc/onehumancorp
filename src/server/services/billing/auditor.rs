@@ -121,7 +121,7 @@ impl CostAuditor {
 
         // Detect anomalies (simple threshold check)
         if cost > 10.0 {
-            tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
+            tracing::warn!("Anomaly detected: High token usage cost ({})", cost); // pii-safe
         }
         *total_cost += cost;
 
