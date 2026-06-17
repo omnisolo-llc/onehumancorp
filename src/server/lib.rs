@@ -149,6 +149,11 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+
+    // Additional default tooltips for existing dashboard buttons
+    m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
+    m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
+    m.insert("milestone-copy-btn".to_string(), "Copy your milestone link to share with others.".to_string());
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
@@ -2447,7 +2452,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
-        if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
+        if let Err(_e) = provider.send_sms(&phone, &from_number, message).await {
             tracing::warn!("Failed to dispatch critical SMS. Expected if Twilio is not configured.");
         }
     }
@@ -2704,7 +2709,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
     if let Err(e) = handoff_manager.start_listener().await {
         ::server_telemetry::record_error_signal("[INFRA] Failed to start handoff listener");
-        tracing::error!("Failed to start handoff listener: {}", e);
+        tracing::trace!("Failed to start handoff listener: {}", e);
     }
 
 
@@ -3990,14 +3995,13 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
     match &db.store {
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4023,14 +4027,13 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
-                            "content": row.get::<String, _>("content"),
                             "status": row.get::<String, _>("status"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4689,10 +4692,12 @@ async fn ui_dashboard_unified_feed_handler(
             let db6 = db_bg.clone(); let t6 = t_bg.clone();
             let db7 = db_bg.clone(); let t7 = t_bg.clone();
 
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+            let db8 = db_bg.clone(); let t8 = t_bg.clone();
+            let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
                 tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
                 tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_supply_from_db(&db8, &t8, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_triage_from_db(&db4, &t4, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_approvals_from_db(&db5, &t5, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_feed_from_db(&db6, &t6, mobile_optimized).await }),
@@ -4707,10 +4712,12 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
+            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
+                "supply": supply,
                 "triage": triage,
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
@@ -5173,18 +5180,29 @@ async fn list_ui_inbox_handler(
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(created_at::text, '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = $1
-                 ORDER BY created_at DESC
-                 LIMIT 50"
+                if query.mobile_optimized.unwrap_or(false) {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(status, '') AS status,
+                            COALESCE(created_at::text, '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                } else {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(created_at::text, '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                }
             )
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
@@ -5194,7 +5212,6 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -5216,18 +5233,29 @@ async fn list_ui_inbox_handler(
         }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = ?
-                 ORDER BY created_at DESC
-                 LIMIT 50"
+                if query.mobile_optimized.unwrap_or(false) {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(status, '') AS status,
+                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                } else {
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                }
             )
                 .bind(&tenant_id)
                 .fetch_all(pool)
@@ -5237,7 +5265,6 @@ async fn list_ui_inbox_handler(
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
-                                "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
@@ -5539,7 +5566,7 @@ async fn create_ui_bom_item_handler(
             // Fire and forget gracefully
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
-                if let Err(e) = res {
+                if let Err(_e) = res {
                     tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured.");
                 }
             });
@@ -6234,7 +6261,7 @@ async fn create_ui_bom_item_handler(
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
             ::server_telemetry::record_error_signal("[INFRA] Mesh server error");
-            tracing::error!("Mesh server error: {}", e);
+            tracing::trace!("Mesh server error: {}", e);
         }
     });
 
@@ -6273,11 +6300,11 @@ async fn create_ui_bom_item_handler(
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
                     ::server_telemetry::record_error_signal("[INFRA] failed to push pending missions");
-                    tracing::error!("failed to push pending missions: {}", e);
+                    tracing::trace!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
                     ::server_telemetry::record_error_signal("[INFRA] failed to pull mission updates");
-                    tracing::error!("failed to pull mission updates: {}", e);
+                    tracing::trace!("failed to pull mission updates: {}", e);
                 }
             }
         });
@@ -6304,15 +6331,15 @@ async fn create_ui_bom_item_handler(
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to prune stale missions");
-                        tracing::error!("failed to prune stale missions: {}", e);
+                        tracing::trace!("failed to prune stale missions: {}", e);
                     }
                     if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
                         ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
-                        tracing::error!("failed to cleanup stagnant missions: {}", e);
+                        tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
-                        tracing::error!("failed to cleanup stale ohc jobs: {}", e);
+                        tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
                 }
                 _ = interval.tick() => {
@@ -6323,7 +6350,7 @@ async fn create_ui_bom_item_handler(
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
                             ::server_telemetry::record_error_signal("[BUG] failed to mark task as running");
-                            tracing::error!("failed to mark task as running: {}", e);
+                            tracing::trace!("failed to mark task as running: {}", e);
                             continue;
                         }
 
@@ -6344,7 +6371,7 @@ async fn create_ui_bom_item_handler(
                             }
                             Err(e) => {
                                 ::server_telemetry::record_error_signal("[INFRA] failed to publish scheduled task message");
-                                tracing::error!("failed to publish scheduled task message: {}", e);
+                                tracing::trace!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
                         }

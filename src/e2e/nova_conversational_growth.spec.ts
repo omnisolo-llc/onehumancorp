@@ -34,4 +34,5 @@ test('Conversational Growth Loop CUJ', async ({ page, loginAs, adminUser }) => {
   await input.fill('What is my current rating?');
   await page.click('#send-btn');
   await expect(page.locator('.message.agent').last()).toContainText(/average rating is/i);
+  await expect(page.locator('.message.agent').last()).toContainText(/Powered by OHC/i);
 });

@@ -17,6 +17,7 @@ export default function AgentMarketplacePage() {
  const [loading, setLoading] = useState(false);
  const [error, setError] = useState<string | null>(null);
  const [installedAgents, setInstalledAgents] = useState<string[]>([]);
+ const [toastMessage, setToastMessage] = useState<string | null>(null);
 
  const fetchAgents = async (searchQuery: string) => {
  setLoading(true);
@@ -91,13 +92,10 @@ export default function AgentMarketplacePage() {
  onClick={() => {
    const isInstalled = installedAgents.includes(agent.id);
    if (!isInstalled) {
-     // Create a basic alert dialog manually to avoid window.alert
-     const event = new CustomEvent('dialog', { detail: { message: `Successfully installed ${agent.name}!` } });
-     window.dispatchEvent(event);
-     // The Playwright test intercepts window.alert(), so we just use window.alert instead.
-     window.alert(`Successfully installed ${agent.name}!`);
+     setToastMessage(`Successfully installed ${agent.name}!`);
+     setTimeout(() => setToastMessage(null), 3000);
    }
- setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
+   setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
  }}
  aria-pressed={installedAgents.includes(agent.id)}
  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
@@ -115,6 +113,14 @@ export default function AgentMarketplacePage() {
  )}
  </div>
  )}
+
+ {toastMessage && (
+ <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-md shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2">
+ <span className="text-green-500">✓</span>
+ <span className="font-medium">{toastMessage}</span>
+ </div>
+ )}
+
  </div>
  </div>
  );

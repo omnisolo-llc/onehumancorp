@@ -1,14 +1,15 @@
-issue_category: cleanup
+issue_category: refactor
 status: completed
 details:
   - Cleaned backlog without hallucinating features since no task was given.
-  - Phase 1: Signal Hygiene applied to QueueManager's polling mechanism, downgrading noise level from tracing::error to tracing::trace.
+  - Phase 1: Signal Hygiene applied to QueueManager's polling mechanism in `src/server/queue.rs`, downgrading noise level from tracing::error to tracing::trace.
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
   <h1>🧹 Maintainer: Triage & Debt Report</h1>
   <h2>Phase 1: Signal Hygiene</h2>
   <ul>
-    <li>Identified systematic noise vectors in <code>src/server/queue.rs</code> where failed queue polls spammed <code>tracing::error!</code> inside a <code>tick()</code> loop.</li>
+    <li>Identified systematic noise vectors in <code>src/server/queue.rs</code>. </li>
+    <li>Failed queue polls spammed <code>tracing::error!</code> inside loop execution, creating unnecessary noise.</li>
     <li>Downgraded the noise vector to <code>tracing::trace!</code> to un-obfuscate genuine reliability signals.</li>
   </ul>
   <h2>Phase 2 & 3: Backlog Management / Health Guardianship</h2>
@@ -19,6 +20,7 @@ debt_report: |
   <h2>Phase 4: Verification</h2>
   <ul>
     <li><code>bazelisk test //...</code> ran and passed perfectly locally.</li>
+    <li><code>bazelisk test //src/e2e:playwright</code> passed perfectly locally.</li>
   </ul>
   <p><strong>Status:</strong> Clean</p>
   <p><strong>Debt Level:</strong> Low</p>

@@ -244,7 +244,7 @@ pub async fn handle_conversational_chat(
             .await
             .unwrap_or(0.0);
 
-        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.", rating);
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC", rating);
         if rating < 4.5 {
              draft_action = Some(ChatDraftAction {
                 id: "start_review_campaign_action".to_string(),
@@ -336,7 +336,7 @@ where
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
-        .route("/referrals/click", post(handle_referral_click))
+        .route("/referrals/click", post(handle_referral_click_post).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -549,6 +549,13 @@ async fn handle_trial_extension_claim(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReferralClickQuery {
+    pub target: String,
+    pub r#ref: String,
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1665,22 +1672,25 @@ async fn handle_get_milestone_card(
             .into_response();
     }
 
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
       <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#grad1)" />
+  <rect width="1200" height="630" fill="url(#grad1)" rx="24" ry="24" filter="url(#drop-shadow)" />
 
-  <text x="600" y="200" font-family="sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+  <text x="600" y="200" font-family="Outfit, sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
+  <text x="600" y="350" font-family="Outfit, sans-serif" font-size="80" font-weight="700" text-anchor="middle" fill="#ffffff">{title}</text>
+  <text x="600" y="450" font-family="Outfit, sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
 
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
-  <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
+  <text x="600" y="560" font-family="Outfit, sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
 </svg>"##,
     grad_start = grad_start,
@@ -1819,10 +1829,10 @@ async fn handle_onboarding_metrics(
     }
 }
 
-async fn handle_referral_click(
+async fn handle_referral_click_post(
     Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
+    Json(req): axum::extract::Json<ReferralIdRequest>,
+) -> Result<axum::response::Response, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
         .bind(&req.id)
         .execute(&state.pool)
@@ -1837,10 +1847,42 @@ async fn handle_referral_click(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg);
 
-            Ok(Json(()))
+            Ok(Json(()).into_response())
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_referral_click_get(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(q): axum::extract::Query<ReferralClickQuery>,
+) -> Result<axum::response::Response, StatusCode> {
+    let tenant_ref = &q.r#ref;
+    let target_url = &q.target;
+
+    // Log the click for tracking
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.referral_link_clicked",
+        "ref": tenant_ref,
+        "target": target_url,
+        "source": q.source.clone().unwrap_or_else(|| "unknown".to_string())
+    }));
+    state.hub.append_recent_event(msg);
+
+    // Record click if it maps to an actual referral code
+    let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
+        .bind(tenant_ref)
+        .execute(&state.pool)
+        .await;
+
+    // Redirect user to the intended target (or dashboard if not specified)
+    let redirect_url = if target_url.starts_with('/') {
+        format!("https://ohc.app{}", target_url)
+    } else {
+        "https://ohc.app/dashboard".to_string()
+    };
+
+    Ok(axum::response::Redirect::to(&redirect_url).into_response())
 }
 
 async fn handle_referral_stats(
@@ -2118,7 +2160,7 @@ mod tests {
         let click_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
-        let res = handle_referral_click(Extension(state.clone()), Json(click_req)).await;
+        let res = handle_referral_click_post(Extension(state.clone()), Json(click_req)).await;
         assert!(res.is_ok());
 
         let convert_req = ReferralIdRequest {
@@ -2131,7 +2173,7 @@ mod tests {
         let click_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res_not_found = handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
+        let res_not_found = handle_referral_click_post(Extension(state.clone()), Json(click_req_not_found)).await;
         assert!(res_not_found.is_err());
         assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
@@ -2168,7 +2210,7 @@ mod tests {
         let req = ReferralIdRequest { id: ref_id.to_string() };
 
         // Test Click
-        let res = handle_referral_click(Extension(state.clone()), Json(req)).await;
+        let res = handle_referral_click_post(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let clicks: i32 = sqlx::query_scalar("SELECT clicks FROM referrals WHERE id = $1")

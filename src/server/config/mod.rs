@@ -303,4 +303,62 @@ mod tests {
             env::remove_var("OHC_TELEMETRY_ENABLED");
         }
     }
+
+    #[test]
+    fn test_standalone_mode_enforcer_default() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        unsafe {
+            env::set_var("OHC_STANDALONE_MODE", "true");
+            env::remove_var("OHC_DATABASE_URL");
+            env::remove_var("OHC_TELEMETRY_ENABLED");
+        }
+
+        let cfg = load().unwrap();
+        assert!(cfg.standalone);
+        assert!(!cfg.multitenant);
+        assert!(cfg.redis_url.is_none());
+        assert!(!cfg.telemetry_enabled); // Default to off in standalone
+        assert!(cfg.database_url.unwrap().starts_with("sqlite://"));
+
+        unsafe {
+            env::remove_var("OHC_STANDALONE_MODE");
+        }
+    }
+
+    #[test]
+    fn test_standalone_mode_enforcer_with_telemetry_opt_in() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        unsafe {
+            env::set_var("OHC_STANDALONE_MODE", "true");
+            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+        }
+
+        let cfg = load().unwrap();
+        assert!(cfg.standalone);
+        assert!(cfg.telemetry_enabled); // Opted-in!
+
+        unsafe {
+            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("OHC_TELEMETRY_ENABLED");
+        }
+    }
+
+    #[test]
+    fn test_standalone_mode_enforcer_with_redis_ignored() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        unsafe {
+            env::set_var("OHC_STANDALONE_MODE", "true");
+            env::set_var("REDIS_URL", "redis://localhost:6379");
+        }
+
+        let cfg = load().unwrap();
+        assert!(cfg.standalone);
+        // Redis should be forced to None in standalone mode
+        assert!(cfg.redis_url.is_none());
+
+        unsafe {
+            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("REDIS_URL");
+        }
+    }
 }
