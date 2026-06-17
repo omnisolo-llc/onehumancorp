@@ -161,7 +161,20 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
              timestamp: new Date().toISOString()
           };
 
+          const crdtTx = {
+            id: `crdt_${transactionId}`,
+            type: 'CRDT_MUTATION',
+            timestamp: new Date().toISOString(),
+            payload: {
+               entity_id: productId,
+               data: {
+                  pn_counter_n_increment: 1
+               }
+            }
+          };
+
           await SyncManager.getInstance().enqueue(tx);
+          await SyncManager.getInstance().enqueue(crdtTx);
 
           setStatus('Synced locally. Will push to cloud when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);
