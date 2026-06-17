@@ -216,6 +216,40 @@ pub async fn offline_sync_handler(
                         }
                     });
 
+
+                    let conflict_detected = stock < mutation.quantity_deducted;
+                    let quantity = mutation.quantity_deducted;
+
+                    if conflict_detected {
+                        tracing::info!("Inventory conflict detected. Product {} dropped below zero due to offline sync.", mutation.product_id);
+
+                        let action_request_id = uuid::Uuid::new_v4().to_string();
+
+                        let action_payload = serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "product_title": product_title,
+                            "shortage": quantity - stock,
+                            "transaction_id": mutation.transaction_id,
+                            "suggested_action": "Ops Agent: Issue refund/backorder for online customer & draft apology email for Priya to approve."
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Resolve Inventory Conflict', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                        )
+                        .bind(&action_request_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&mutation.product_id)
+                        .bind(&action_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'TriageTask', $3::jsonb, 'PENDING')")
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(&tenant_id_clone)
+                            .bind(serde_json::json!({"message": format!("We oversold the item {} due to an offline sync conflict.", product_title)}).to_string())
+                            .execute(&mut *db_tx)
+                            .await;
+                    }
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
