@@ -800,3 +800,142 @@ mod retry_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod output_parser_tests_extended {
+    use super::*;
+    use std::sync::Arc;
+    use crate::types::{ChatResponse, Usage, ToolCall, ToolResult, Role};
+    use tokio::sync::Mutex;
+
+    struct TestMockLlmClient {
+        responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for TestMockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("default"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    fn create_test_req() -> ChatRequest {
+        ChatRequest {
+            model: "gpt-4o".to_string(),
+            system: "system".to_string(),
+            messages: vec![Message::user("Hello")],
+            tools: vec![],
+            max_tokens: 1000,
+            temperature: 0.0,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_serde_error_classification_fallback() {
+        let client = Arc::new(TestMockLlmClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"result": 123}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_2".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"result": "recovered_value"}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id2".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                },
+            ]),
+        });
+
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct MyOutput {
+            result: String,
+        }
+
+        let req = create_test_req();
+        let result: Result<MyOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered_value");
+    }
+}
+
+#[cfg(test)]
+mod exponential_backoff_tests {
+    use super::*;
+
+    #[test]
+    fn test_exponential_backoff_with_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 50);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let base_backoff = 10 * (1 << attempt);
+            let min_expected = base_backoff;
+            let max_expected = base_backoff + 50 - 1;
+
+            assert!(
+                backoff.as_millis() as u64 >= min_expected,
+                "Backoff {} ms is less than min expected {}",
+                backoff.as_millis(),
+                min_expected
+            );
+            assert!(
+                backoff.as_millis() as u64 <= max_expected,
+                "Backoff {} ms is greater than max expected {}",
+                backoff.as_millis(),
+                max_expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_exponential_backoff_no_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 0);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let expected = 10 * (1 << attempt);
+
+            assert_eq!(
+                backoff.as_millis() as u64,
+                expected,
+                "Backoff with 0 jitter should be exactly the base backoff"
+            );
+        }
+    }
+}
