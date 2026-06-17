@@ -4,39 +4,77 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
     test.use({ viewport: { width: 375, height: 667 } }); // Mobile viewport
 
     test('should allow owner to 1-tap approve an omnichannel draft', async ({ page, request }) => {
-        // 1. Simulate an incoming webhook
-        const tenantId = 'tenant_omni_test';
-        const webhookPayload = {
+        const tenantId = 'omni_test_tenant_' + Date.now();
+        const customerPhone = '+15555551234';
+
+        // 1. Seed the database
+        await request.post('/api/v1/builder/seeder/exec', {
+          data: {
+            sql: `
+              INSERT INTO users (id, email, full_name, is_superadmin)
+              VALUES ('omni_user_id', 'omni_user@example.com', 'Omni User', false)
+              ON CONFLICT DO NOTHING;
+
+              INSERT INTO tenants (id, name, owner_email)
+              VALUES ('${tenantId}', 'Omni Store', 'omni_user@example.com')
+              ON CONFLICT DO NOTHING;
+
+              INSERT INTO customers (id, tenant_id, name, email, phone)
+              VALUES ('test_cust_1', '${tenantId}', 'Test Omnichannel Customer', 'omni@example.com', '${customerPhone}')
+              ON CONFLICT DO NOTHING;
+            `
+          }
+        });
+
+        // 2. Post the webhook payload directly to the API
+        const response = await page.request.post('/api/v1/omnichannel/webhook', {
+          data: {
             tenant_id: tenantId,
-            source: 'instagram',
-            identifier: 'sarah_bakes',
+            channel: 'instagram',
+            sender_id: customerPhone,
             message: 'Do you have vegan chocolate cake available for Saturday?'
-        };
+          }
+        });
 
-        // Assume API is running on localhost:8080 or test environment endpoint
-        // For the sake of E2E, we might need a test-specific endpoint setup.
-        // We will just verify the UI flow assuming data is seeded or mocked in the E2E setup.
+        expect(response.status()).toBe(200);
 
-        // This is a placeholder test showing the flow requested.
+        // Wait a brief moment for the background worker to process triage
+        await page.waitForTimeout(3000);
+
+        // Navigate to dashboard where feed is shown
+        await page.goto(`/login?test_email=omni_user@example.com`);
+        await page.evaluate((t) => localStorage.setItem('tenant', t), tenantId);
         await page.goto('/dashboard');
 
-        // Wait for Action Required card to appear
-        const actionCard = page.locator('text=1 New Message from Sarah (Insta DM)');
-        await expect(actionCard).toBeVisible({ timeout: 10000 });
+        // Wait for Action Required section to be visible
+        const actionPanel = page.locator('.glassmorphism', { hasText: 'Approval' }).first();
+        await expect(actionPanel).toBeVisible({ timeout: 15000 });
 
-        // Tap to open unified view
-        await actionCard.click();
+        // Verify mobile constraints
+        const bodyBox = await page.locator('body').boundingBox();
+        expect(bodyBox?.width).toBeLessThanOrEqual(375);
 
-        // Verify context and drafted reply
-        await expect(page.locator('text=Sarah bought a vegan cake')).toBeVisible();
-        await expect(page.locator('text=Hi Sarah! Yes, we still make')).toBeVisible();
+        // Check if the drafted reply is visible
+        const dmCard = page.getByTestId('instagram-dm-card');
+        await expect(dmCard).toBeVisible({ timeout: 15000 });
+        await expect(dmCard.getByText('Do you have vegan chocolate cake available for Saturday?')).toBeVisible();
+        await expect(dmCard.getByText('Draft:')).toBeVisible();
 
-        // 1-Tap Approve
-        const approveButton = page.locator('button:has-text("Send Draft")');
+        // Approve the response
+        const approveButton = page.getByTestId('approve-instagram-dm');
         await expect(approveButton).toBeVisible();
+
+        // Ensure the button has a min 44x44 bounding box
+        const box = await approveButton.boundingBox();
+        expect(box).not.toBeNull();
+        if (box) {
+          expect(box.width).toBeGreaterThanOrEqual(44);
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        }
+
         await approveButton.click();
 
-        // Verify success
-        await expect(page.locator('text=Message Sent')).toBeVisible();
+        // Verify it disappears
+        await expect(dmCard).not.toBeVisible({ timeout: 10000 });
     });
 });
