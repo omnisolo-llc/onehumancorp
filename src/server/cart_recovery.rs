@@ -538,7 +538,7 @@ impl CartRecoveryStore for PostgresCartRecoveryStore {
                 customers.email,
                 customers.phone,
                 customers.name as customer_name,
-                tenants.business_name as business_name,
+                tenants.name as business_name,
                 COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
             FROM conversational_checkout_sessions ccs
             INNER JOIN customers
