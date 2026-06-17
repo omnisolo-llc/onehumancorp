@@ -84,9 +84,42 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Just explicitly go there since the button just does a simple location.href.
     await page.goto('http://mock/setup.html');
 
-    // Initial Setup Step
+
+    // Initial Setup Step: Conversational Setup
+    await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
+
+    // Type into chat
+    await page.fill('#chat-input', 'I run a mobile dog grooming business.');
+
+    // We need to mock the /api/onboarding/chat response before sending
+    await page.route('http://127.0.0.1:18789/api/onboarding/chat', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                reply: "Great! I'm setting up your service calendar and a basic 'Full Groom' service.",
+                is_complete: true,
+                intake_data: {
+                    business_name: "Mobile Dog Grooming",
+                    business_type: "Service",
+                    categories: ["service"]
+                }
+            })
+        });
+    });
+
+    await page.getByTestId('chat-send-btn').click();
+
+    // The chat will respond, set intake data, and then we should be able to continue or navigate back to manual setup for the rest of the test
+    await expect(page.getByText(/Great! I'm setting up your service calendar/)).toBeVisible();
+
+    // Since this test specifically verifies the manual steps (Context, Categories, etc.),
+    // we will navigate to the manual setup now to continue the existing test flow.
+    await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
+
 
     // Setup page (Step 1: Context)
         await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();

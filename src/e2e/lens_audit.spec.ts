@@ -20,7 +20,7 @@ test.describe('Lens Audit Visual Checks', () => {
 
   test('should navigate to website builder', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Setup Assistant')).toBeVisible({ timeout: 15000 });
   });
 
   test('should display login fields', async ({ page }) => {

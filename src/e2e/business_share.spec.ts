@@ -24,7 +24,7 @@ test.describe('Business Share & Embed', () => {
 
   test('should display setup page', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Setup Assistant')).toBeVisible();
   });
 });
 
