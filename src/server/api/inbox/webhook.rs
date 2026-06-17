@@ -57,44 +57,94 @@ pub async fn handle_omnichannel_webhook(
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, 'open', NOW(), NOW())
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&payload.tenant_id)
+            .bind(&customer_id)
+            .bind(&payload.source)
+            .bind(&payload.sender_id)
+            .execute(pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = $1 AND channel_identifier = $2 AND channel_provider = $3 LIMIT 1")
+                .bind(&payload.tenant_id)
+                .bind(&payload.sender_id)
+                .bind(&payload.source)
+                .fetch_one(pool)
+                .await.unwrap_or(conversation_id);
+
             sqlx::query(
                 r#"
-                INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'unread', $6, $7, NOW())
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES ($1, $2, $3, 'customer', $4, $5, NOW())
                 "#
             )
             .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
+            .bind(&conv_id)
             .bind(&payload.sender_id)
-            .bind(&customer_id)
+            .bind(&payload.message)
             .execute(pool)
             .await.map(|_| ())
+
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&payload.tenant_id)
+            .bind(&customer_id)
+            .bind(&payload.source)
+            .bind(&payload.sender_id)
+            .execute(sqlite_pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = ? AND channel_identifier = ? AND channel_provider = ? LIMIT 1")
+                .bind(&payload.tenant_id)
+                .bind(&payload.sender_id)
+                .bind(&payload.source)
+                .fetch_one(sqlite_pool)
+                .await.unwrap_or(conversation_id);
+
             sqlx::query(
                 r#"
-                INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'unread', ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES (?, ?, ?, 'customer', ?, ?, CURRENT_TIMESTAMP)
                 "#
             )
             .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
+            .bind(&conv_id)
             .bind(&payload.sender_id)
-            .bind(&customer_id)
+            .bind(&payload.message)
             .execute(sqlite_pool)
             .await.map(|_| ())
+
         }
     };
 
     let payload_json = serde_json::json!({
         "message_id": id,
-        "inbox_message_id": id,
+        "unified_message_id": id,
         "source": payload.source,
         "content": payload.message,
         "sender_id": payload.sender_id
@@ -102,7 +152,7 @@ pub async fn handle_omnichannel_webhook(
     let job_id = Uuid::new_v4().to_string();
 
     if let Err(e) = insert_result {
-        tracing::error!("Failed to insert into inbox_messages: {}", e);
+        tracing::error!("Failed to insert into unified_messages: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 

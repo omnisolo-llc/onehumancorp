@@ -55,7 +55,7 @@ function InboxWorkspace({
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
-  async function handleApproveAndSend(inboxMessageId: string) {
+  async function handleApproveAndSend(unifiedMessageId: string) {
     try {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(`/api/agents/approvals?limit=50`, {
@@ -68,7 +68,7 @@ function InboxWorkspace({
       const approval = pendingApprovals.find((a: any) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
-          return payload && payload.inbox_message_id === inboxMessageId;
+          return payload && payload.unified_message_id === unifiedMessageId;
         } catch (e) {
           return false;
         }
@@ -217,7 +217,7 @@ function InboxWorkspace({
 }
 
 function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
+  const { data } = useQuery<Message>("SELECT um.id, um.content, um.created_at, uc.channel_provider as source, uc.channel_identifier as sender_id, uac.proposed_content as draft_reply, uac.status, uac.id as action_card_id FROM unified_messages um JOIN unified_conversations uc ON um.conversation_id = uc.id LEFT JOIN unified_action_cards uac ON um.id = uac.message_id ORDER BY um.created_at DESC");
   return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
 }
 

@@ -892,7 +892,7 @@ impl DepartmentOrchestrator {
                         if !stripe_link.is_empty() {
                             generated_reply.push_str(&format!("\n\nTo secure your booking, please pay the deposit here: {}", stripe_link));
                         }
-                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let inbox_message_id = payload.get("unified_message_id").or_else(|| payload.get("inbox_message_id")).and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
@@ -957,6 +957,15 @@ impl DepartmentOrchestrator {
                             }
 
                             if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET proposed_content = $1, status = 'edited' WHERE message_id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards for draft: {}", e);
+                                }
                                 if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
                                     .bind(&generated_reply)
                                     .bind(inbox_message_id)
@@ -964,9 +973,24 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await
                                 {
-                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                    tracing::error!("Failed to update inbox_messages for draft: {}", e);
                                 }
-                            }
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET status = 'approved', resolved_at = NOW() WHERE message_id = $1 AND tenant_id = $2")
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards status: {}", e);
+                                }
+                                if let Err(e) = sqlx::query("UPDATE unified_conversations SET status = 'resolved', updated_at = NOW() WHERE id = (SELECT conversation_id FROM unified_messages WHERE id = $1 LIMIT 1)")
+                                    .bind(inbox_message_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_conversations status: {}", e);
+                                }
+}
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
@@ -1030,6 +1054,15 @@ impl DepartmentOrchestrator {
                             }
 
                             if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET proposed_content = ?, status = 'edited' WHERE message_id = ? AND tenant_id = ?")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards for draft: {}", e);
+                                }
                                 if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
                                     .bind(&generated_reply)
                                     .bind(inbox_message_id)
@@ -1037,9 +1070,24 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await
                                 {
-                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                    tracing::error!("Failed to update inbox_messages for draft: {}", e);
                                 }
-                            }
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET status = 'approved', resolved_at = CURRENT_TIMESTAMP WHERE message_id = ? AND tenant_id = ?")
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards status: {}", e);
+                                }
+                                if let Err(e) = sqlx::query("UPDATE unified_conversations SET status = 'resolved', updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT conversation_id FROM unified_messages WHERE id = ? LIMIT 1)")
+                                    .bind(inbox_message_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_conversations status: {}", e);
+                                }
+}
                         }
                     }
                 }
@@ -1150,17 +1198,44 @@ impl DepartmentOrchestrator {
                 // If this is an Ambassador Reply approval, update the message and dispatch event
                 if let Some(payload) = payload_to_use {
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let inbox_message_id = payload.get("unified_message_id").or_else(|| payload.get("inbox_message_id")).and_then(|v| v.as_str()).unwrap_or("");
                         let generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
 
                         if !inbox_message_id.is_empty() {
-                            if let Err(e) = self.update_inbox_message_draft(inbox_message_id, tenant_id, generated_reply).await {
-                                tracing::error!("Failed to update inbox message draft: {}", e);
-                            }
-                            if let Err(e) = self.update_inbox_message_status(inbox_message_id, tenant_id, "auto_replied").await {
-                                tracing::error!("Failed to update inbox message status: {}", e);
-                            }
-                        }
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET proposed_content = $1, status = 'edited' WHERE message_id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards for draft: {}", e);
+                                }
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for draft: {}", e);
+                                }
+                                if let Err(e) = sqlx::query("UPDATE unified_action_cards SET status = 'approved', resolved_at = NOW() WHERE message_id = $1 AND tenant_id = $2")
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_action_cards status: {}", e);
+                                }
+                                if let Err(e) = sqlx::query("UPDATE unified_conversations SET status = 'resolved', updated_at = NOW() WHERE id = (SELECT conversation_id FROM unified_messages WHERE id = $1 LIMIT 1)")
+                                    .bind(inbox_message_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update unified_conversations status: {}", e);
+                                }
+}
 
                         let approved_event = crate::orchestration::departments::types::DepartmentEvent {
                             id: uuid::Uuid::new_v4().to_string(),

@@ -57,32 +57,88 @@ pub async fn omni_inbox_post_handler(
     let inbox_id = Uuid::new_v4().to_string();
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, 'open', NOW(), NOW())
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .bind(&customer_id)
+            .bind(&source)
+            .bind(&sender_id)
+            .execute(&state.db.pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = $1 AND channel_identifier = $2 AND channel_provider = $3 LIMIT 1")
+                .bind(&tenant_id)
+                .bind(&sender_id)
+                .bind(&source)
+                .fetch_one(&state.db.pool)
+                .await.unwrap_or(conversation_id);
+
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, $7, NOW())"
+                r#"
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES ($1, $2, $3, 'customer', $4, $5, NOW())
+                "#
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
-            .bind(&source)
-            .bind(&message)
-            .bind(&message) // translated content is same initially
+            .bind(&conv_id)
             .bind(&sender_id)
-            .bind(customer_id)
+            .bind(&message)
             .execute(&state.db.pool)
             .await.map(|_| ())
+
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .bind(&customer_id)
+            .bind(&source)
+            .bind(&sender_id)
+            .execute(sqlite_pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = ? AND channel_identifier = ? AND channel_provider = ? LIMIT 1")
+                .bind(&tenant_id)
+                .bind(&sender_id)
+                .bind(&source)
+                .fetch_one(sqlite_pool)
+                .await.unwrap_or(conversation_id);
+
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                r#"
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES (?, ?, ?, 'customer', ?, ?, CURRENT_TIMESTAMP)
+                "#
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
-            .bind(&source)
-            .bind(&message)
-            .bind(&message)
+            .bind(&conv_id)
             .bind(&sender_id)
-            .bind(customer_id)
+            .bind(&message)
             .execute(sqlite_pool)
             .await.map(|_| ())
+
         }
     };
 
@@ -95,7 +151,7 @@ pub async fn omni_inbox_post_handler(
     let job_id = Uuid::new_v4().to_string();
     let mut payload_json = serde_json::json!({
         "message_id": inbox_id,
-        "inbox_message_id": inbox_id,
+        "unified_message_id": inbox_id,
         "source": source,
         "content": message,
         "sender_id": sender_id

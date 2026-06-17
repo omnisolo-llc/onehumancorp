@@ -87,26 +87,86 @@ pub async fn twilio_webhook_post_handler(
 
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
-                sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                )
-                .bind(&inbox_id)
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES ($1, $2, NULL, $3, $4, 'open', NOW(), NOW())
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .bind(&source)
+            .bind(&sender_id)
+            .execute(pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = $1 AND channel_identifier = $2 AND channel_provider = $3 LIMIT 1")
                 .bind(&tenant_id)
+                .bind(&sender_id)
                 .bind(&source)
-                .bind(&text)
-                .execute(pool)
-                .await.map(|_| ())
+                .fetch_one(pool)
+                .await.unwrap_or(conversation_id);
+
+            sqlx::query(
+                r#"
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES ($1, $2, $3, 'customer', $4, $5, NOW())
+                "#
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(&conv_id)
+            .bind(&sender_id)
+            .bind(&text)
+            .execute(pool)
+            .await.map(|_| ())
+
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                )
-                .bind(&inbox_id)
+
+            // First ensure a conversation exists
+            let conversation_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO unified_conversations (id, tenant_id, customer_id, channel_provider, channel_identifier, status, created_at, updated_at)
+                VALUES (?, ?, NULL, ?, ?, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING
+                "#
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .bind(&source)
+            .bind(&sender_id)
+            .execute(sqlite_pool)
+            .await;
+
+            // Get existing or new conversation ID
+            let conv_id = sqlx::query_scalar::<_, String>("SELECT id FROM unified_conversations WHERE tenant_id = ? AND channel_identifier = ? AND channel_provider = ? LIMIT 1")
                 .bind(&tenant_id)
+                .bind(&sender_id)
                 .bind(&source)
-                .bind(&text)
-                .execute(sqlite_pool)
-                .await.map(|_| ())
+                .fetch_one(sqlite_pool)
+                .await.unwrap_or(conversation_id);
+
+            sqlx::query(
+                r#"
+                INSERT INTO unified_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, created_at)
+                VALUES (?, ?, ?, 'customer', ?, ?, CURRENT_TIMESTAMP)
+                "#
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(&conv_id)
+            .bind(&sender_id)
+            .bind(&text)
+            .execute(sqlite_pool)
+            .await.map(|_| ())
+
             }
         };
 
@@ -122,7 +182,7 @@ pub async fn twilio_webhook_post_handler(
                 "source": source,
                 "message": text,
                 "sender_id": sender_id.replace("whatsapp:", ""),
-                "inbox_message_id": inbox_id,
+                "unified_message_id": inbox_id,
             }),
         };
 

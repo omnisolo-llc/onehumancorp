@@ -288,11 +288,20 @@ Output JSON format:
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(&action_payload)
-                        .bind(&message_id)
+
+                    let action_card_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO unified_action_cards (id, tenant_id, conversation_id, message_id, action_type, proposed_content, context_used, status, created_at) VALUES ($1, $2, (SELECT conversation_id FROM unified_messages WHERE id = $3 LIMIT 1), $3, $4, $5, $6, 'pending', NOW())")
+                        .bind(&action_card_id)
                         .bind(&tenant_id)
+                        .bind(&message_id)
+                        .bind(&action_type)
+                        .bind(&action_payload)
+                        .bind(serde_json::json!({
+                            "context_summary": context_summary,
+                            "priority": priority
+                        }))
                         .execute(&self.db.pool).await;
+
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
@@ -305,13 +314,13 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
-                        "inbox_message_id": message_id,
+                        "unified_message_id": message_id,
                         "customer_id": customer_id_val
                     }))
                     .bind(serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
-                        "inbox_message_id": message_id,
+                        "unified_message_id": message_id,
                         "quote_id": quote_id_opt
                     }))
                     .execute(&self.db.pool).await {
@@ -327,11 +336,21 @@ Output JSON format:
                         .execute(&self.db.pool).await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
-                        .bind(&action_payload)
-                        .bind(&message_id)
+
+                    let action_card_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO unified_action_cards (id, tenant_id, conversation_id, message_id, action_type, proposed_content, context_used, status, created_at) VALUES (?, ?, (SELECT conversation_id FROM unified_messages WHERE id = ? LIMIT 1), ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)")
+                        .bind(&action_card_id)
                         .bind(&tenant_id)
+                        .bind(&message_id)
+                        .bind(&message_id)
+                        .bind(&action_type)
+                        .bind(&action_payload)
+                        .bind(serde_json::json!({
+                            "context_summary": context_summary,
+                            "priority": priority
+                        }).to_string())
                         .execute(sqlite_pool).await;
+
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -344,13 +363,13 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
-                        "inbox_message_id": message_id,
+                        "unified_message_id": message_id,
                         "customer_id": customer_id_val
                     }).to_string())
                     .bind(serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
-                        "inbox_message_id": message_id,
+                        "unified_message_id": message_id,
                         "quote_id": quote_id_opt
                     }).to_string())
                     .execute(sqlite_pool).await {

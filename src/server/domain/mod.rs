@@ -14,5 +14,6 @@ pub mod subscription;
 pub mod action_router;
 pub mod quotes;
 pub mod inbox;
+pub mod unified_inbox;
 pub mod incidents;
 pub mod agent_approvals;
