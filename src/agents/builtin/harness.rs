@@ -765,6 +765,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
+    #[allow(dead_code)]
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,

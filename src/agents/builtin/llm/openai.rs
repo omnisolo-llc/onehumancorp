@@ -298,7 +298,6 @@ struct OpenAIChoice {
 
 #[derive(Deserialize, Debug)]
 struct OpenAIResponseMessage {
-    role: String,
     content: Option<String>,
     tool_calls: Option<Vec<OpenAIResponseToolCall>>,
 }

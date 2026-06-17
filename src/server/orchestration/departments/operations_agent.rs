@@ -74,8 +74,9 @@ impl Department for OperationsAgent {
                 if !msg.is_empty() {
                     msg.to_string()
                 } else {
-                    let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                    format!("Draft a restock order for product {} due to low stock", product_id)
+                    let _product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let _remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                    format!("Draft a restock order for product {} due to low stock", _product_id)
                 }
             },
             "InventoryConflictEvent" => {
