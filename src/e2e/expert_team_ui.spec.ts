@@ -14,6 +14,8 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
 
     // Mock the backend API response to avoid actual LLM calls
     await page.route('**/api/expert-team', async (route) => {
+      // Add a small delay so the loading state can be caught by Playwright assertions
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
