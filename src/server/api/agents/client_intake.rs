@@ -53,13 +53,33 @@ async fn handle_client_intake(
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.unwrap_or_else(|| "default".to_string());
 
-    // Analyze the unstructured inquiry and extract parameters (mock logic for AI generation)
-    // Create a drafted proposal
-    let suggested_price = 1500.00;
-    let service_name = "Custom Project Scope";
+    // Discovery: Dynamic Quoting Logic
+    // In a real system, we would use an LLM here to match the inquiry against the pricing heuristics.
+    // For this implementation, we'll perform a keyword-based heuristic lookup to fulfill the requirement.
+
+    let mut suggested_price = 1500.00;
+    let mut service_name = "Custom Project Scope";
+
+    // Attempt to find a matching heuristic for the tenant
+    let heuristics_res = sqlx::query!(
+        "SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1",
+        tenant_id
+    )
+    .fetch_all(&state.orchestrator.db().pool)
+    .await;
+
+    if let Ok(heuristics) = heuristics_res {
+        for h in heuristics {
+            if payload.details.to_lowercase().contains(&h.service_category.to_lowercase()) {
+                suggested_price = (h.base_rate_cents as f64) / 100.0;
+                service_name = &h.service_category;
+                break;
+            }
+        }
+    }
 
     let drafted_message = format!(
-        "Hi there! Based on your request for '{}', I've put together a drafted proposal. The estimated scope will cost around ${}, including standard services.",
+        "Hi there! Based on your request for '{}', I've put together a drafted proposal. The estimated scope will cost around ${:.2}, including standard services.",
         payload.details, suggested_price
     );
 
