@@ -133,3 +133,6 @@ dummy_*
 .next/
 /*.patch
 *.pid
+target/
+node_modules/
+.next/
