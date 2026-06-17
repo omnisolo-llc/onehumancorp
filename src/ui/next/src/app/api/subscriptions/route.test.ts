@@ -20,7 +20,13 @@ describe("GET /api/subscriptions", () => {
     };
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => backendResponse,
+      json: async () => backendResponse.plans,
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => backendResponse.subscribers,
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => backendResponse.batches,
     });
 
     const req = new Request("http://localhost/api/subscriptions", {
@@ -35,13 +41,8 @@ describe("GET /api/subscriptions", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/subscriptions", {
-      method: "GET",
-      headers: {
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-    });
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/subscriptions/plans", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/subscriptions/subscribers", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/subscriptions/fulfillment-batches", expect.anything());
   });
 });

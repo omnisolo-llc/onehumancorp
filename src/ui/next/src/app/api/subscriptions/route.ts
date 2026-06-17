@@ -14,13 +14,15 @@ export async function GET(req: Request) {
     }
 
     try {
-        const res = await fetch(`${backendUrl}/api/subscriptions`, {
-            method: 'GET',
-            headers,
-        });
+        const plansRes = await fetch(`${backendUrl}/api/subscriptions/plans`, { headers });
+        const subscribersRes = await fetch(`${backendUrl}/api/subscriptions/subscribers`, { headers });
+        const batchesRes = await fetch(`${backendUrl}/api/subscriptions/fulfillment-batches`, { headers });
 
-        if (res.ok) {
-            return NextResponse.json(await res.json());
+        if (plansRes.ok && subscribersRes.ok && batchesRes.ok) {
+            const plans = await plansRes.json();
+            const subscribers = await subscribersRes.json();
+            const batches = await batchesRes.json();
+            return NextResponse.json({ plans, subscribers, batches });
         }
 
         return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: res.status });

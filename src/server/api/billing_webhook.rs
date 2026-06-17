@@ -485,6 +485,71 @@ pub async fn stripe_webhook_handler(
                         };
                         let _ = orch.dispatch_event(evt).await;
                     });
+
+                    // Check if it's a product subscription and add to subscribers table
+                    let mode = obj.get("mode").and_then(|v| v.as_str()).unwrap_or("");
+                    if mode == "subscription" {
+                        let customer_id = obj.get("customer")
+                            .and_then(|c| c.as_str())
+                            .or_else(|| obj.get("client_reference_id").and_then(|c| c.as_str()))
+                            .unwrap_or("unknown_customer")
+                            .to_string();
+
+                        let stripe_subscription_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                        let product_id = obj.get("metadata").and_then(|m| m.get("product_id")).and_then(|p| p.as_str());
+
+                        if let Some(pid) = product_id {
+                            // Find the subscription plan associated with this product
+                            let plan_result: Result<Option<(String,)>, sqlx::Error> = match &webhook_state.db.store {
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query_as("SELECT id FROM subscription_plans WHERE tenant_id = ? AND product_id = ?")
+                                        .bind(tenant_id)
+                                        .bind(pid)
+                                        .fetch_optional(pool)
+                                        .await
+                                }
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query_as("SELECT id FROM subscription_plans WHERE tenant_id = $1 AND product_id = $2")
+                                        .bind(tenant_id)
+                                        .bind(pid)
+                                        .fetch_optional(&webhook_state.db.pool)
+                                        .await
+                                }
+                            };
+
+                            if let Ok(Some((plan_id,))) = plan_result {
+                                let sub_id = uuid::Uuid::new_v4().to_string();
+                                let insert_res = match &webhook_state.db.store {
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        sqlx::query("INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, stripe_subscription_id) VALUES (?, ?, ?, ?, 'ACTIVE', ?)")
+                                            .bind(&sub_id)
+                                            .bind(tenant_id)
+                                            .bind(&customer_id)
+                                            .bind(&plan_id)
+                                            .bind(&stripe_subscription_id)
+                                            .execute(pool)
+                                            .await
+                                            .map(|_| ())
+                                    }
+                                    crate::db::DbStore::Postgres => {
+                                        sqlx::query("INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, stripe_subscription_id) VALUES ($1, $2, $3, $4, 'ACTIVE', $5)")
+                                            .bind(&sub_id)
+                                            .bind(tenant_id)
+                                            .bind(&customer_id)
+                                            .bind(&plan_id)
+                                            .bind(&stripe_subscription_id)
+                                            .execute(&webhook_state.db.pool)
+                                            .await
+                                            .map(|_| ())
+                                    }
+                                };
+
+                                if let Err(e) = insert_res {
+                                    tracing::error!("Failed to insert subscriber: {}", e);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

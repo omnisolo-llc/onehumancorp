@@ -46,6 +46,24 @@ beforeEach(() => {
   });
 });
 
+  it('updates price when Subscribe & Save is toggled', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => { render(<CheckoutPage />); });
+
+    expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
+    expect(screen.getAllByText('$45.00')[0]).toBeDefined(); // Initial price
+
+    const subscribeLabel = screen.getByText('Subscribe & Save 10%');
+    fireEvent.click(subscribeLabel);
+
+    await waitFor(() => {
+        expect(screen.getAllByText('$40.50')[0]).toBeDefined(); // Subscribed price (45 * 0.9)
+    });
+  });
+
   it('displays subscription UI when tier is provided and handles checkout session', async () => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
     const assign = vi.fn();

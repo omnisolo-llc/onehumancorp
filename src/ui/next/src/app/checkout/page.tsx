@@ -322,7 +322,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
+                 ${((((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * (isSubscription ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
@@ -330,7 +330,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${((45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)).toFixed(2)}
+                 ${(((45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * (isSubscription ? 0.9 : 1)).toFixed(2)}
                </span>
              </div>
           )}
