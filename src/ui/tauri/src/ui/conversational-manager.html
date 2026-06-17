@@ -339,6 +339,21 @@
 
       cardDiv.appendChild(title);
       cardDiv.appendChild(desc);
+
+      if (actionData.action_type === 'generate_social_post' && actionData.payload && actionData.payload.content) {
+        const preview = document.createElement('div');
+        preview.style.marginTop = '10px';
+        preview.style.padding = '10px';
+        preview.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+        preview.style.borderRadius = '8px';
+        preview.style.fontSize = '14px';
+        preview.style.fontStyle = 'italic';
+        preview.innerText = actionData.payload.content;
+        cardDiv.appendChild(preview);
+
+        approveBtn.textContent = 'Post to X (Twitter)';
+      }
+
       cardDiv.appendChild(btnContainer);
 
       chatContainer.appendChild(cardDiv);
@@ -408,6 +423,10 @@
                   approveBtn.textContent = 'Published';
                   approveBtn.style.backgroundColor = '#10B981'; // Green success
                   appendAgentMessage("Successfully published the changes to your storefront.");
+
+                  if (data.draft_action.action_type === 'generate_social_post' && data.draft_action.payload && data.draft_action.payload.content) {
+                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(data.draft_action.payload.content), '_blank');
+                  }
                 } else {
                   approveBtn.textContent = 'Failed';
                   approveBtn.style.backgroundColor = '#EF4444'; // Red error
