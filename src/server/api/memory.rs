@@ -39,8 +39,8 @@ pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<(dyn crate::mesh_handler::Me
     Router::new()
         .route("/", get(list_memories))
         .route("/upload", post(upload_memory))
-        .route("/:id/override", post(override_memory))
-        .route("/:id", delete(delete_memory))
+        .route("/{id}/override", post(override_memory))
+        .route("/{id}", delete(delete_memory))
         .with_state(repo)
 }
 

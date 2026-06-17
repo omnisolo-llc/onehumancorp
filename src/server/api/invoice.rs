@@ -101,6 +101,7 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items: saved_items,
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
+            last_reminded_at: 0,
         }))
     }
 
@@ -157,6 +158,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let first_row_amount_paid_cents: i32 = rows[0].try_get("amount_paid_cents").unwrap_or_default();
         let first_row_stripe_invoice_id: String = rows[0].try_get("stripe_invoice_id").unwrap_or_default();
         let first_row_stripe_payment_link: String = rows[0].try_get("stripe_payment_link").unwrap_or_default();
+        let first_row_last_reminded_at: i64 = rows[0].try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_reminded_at").unwrap_or_default().map(|t| t.timestamp()).unwrap_or(0);
 
         let mut line_items = Vec::new();
         for row in rows {
@@ -189,6 +191,7 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items,
             created_at: 0,
             updated_at: 0,
+            last_reminded_at: first_row_last_reminded_at,
         };
 
         Ok(Response::new(invoice))
@@ -239,6 +242,7 @@ impl InvoiceService for InvoiceServiceImpl {
                 line_items: vec![],
                 created_at: 0,
                 updated_at: 0,
+                last_reminded_at: row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_reminded_at").unwrap_or_default().map(|t| t.timestamp()).unwrap_or(0),
             });
         }
 
@@ -315,6 +319,7 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items,
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),
+        last_reminded_at: row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_reminded_at").unwrap_or_default().map(|t| t.timestamp()).unwrap_or(0),
         };
 
         Ok(Response::new(invoice))
@@ -353,11 +358,109 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items: vec![line_item1],
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
+            last_reminded_at: 0,
         };
 
         Ok(Response::new(DraftInvoiceFromContextResponse { draft: Some(invoice) }))
     }
+
+    async fn check_overdue_invoices(
+        &self,
+        request: Request<::server_ohc::invoice::CheckOverdueInvoicesRequest>,
+    ) -> Result<Response<::server_ohc::invoice::CheckOverdueInvoicesResponse>, Status> {
+        let req = request.into_inner();
+        let pool = &self.hub.pool;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+
+        let now = chrono::Utc::now().timestamp();
+        // Assume due_date is stored as unix timestamp. We find invoices past due_date,
+        // and either never reminded, or reminded > 3 days ago
+        let rows = sqlx::query(
+            "SELECT id, client_name, total_amount, due_date, last_reminded_at FROM invoices WHERE due_date < $1 AND payment_status != 'paid' AND (last_reminded_at IS NULL OR EXTRACT(EPOCH FROM last_reminded_at) < $2) LIMIT 10"
+        )
+            .bind(now)
+            .bind(now - 86400 * 3) // 3 days
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut drafts = Vec::new();
+        for row in rows {
+            let invoice_id: String = row.try_get("id").unwrap_or_default();
+            let client_name: String = row.try_get("client_name").unwrap_or_default();
+            let amount: f64 = row.try_get("total_amount").unwrap_or_default();
+            let due_date: i64 = row.try_get("due_date").unwrap_or_default();
+
+            // In a real system, query context from Unified Customer Graph DB. Mocking for now.
+            let context_summary = format!("Client ({}) was last active in WhatsApp yesterday.", client_name);
+            let drafted_message = format!("Hi {}, friendly reminder that invoice #{} is overdue. Please let us know if you have any questions.", client_name, invoice_id);
+
+            drafts.push(::server_ohc::invoice::OverdueInvoiceDraft {
+                invoice_id,
+                client_name,
+                drafted_message,
+                amount,
+                due_date,
+                context_summary,
+            });
+        }
+
+        Ok(Response::new(::server_ohc::invoice::CheckOverdueInvoicesResponse { drafts }))
+    }
+
+    async fn send_invoice_reminder(
+        &self,
+        request: Request<::server_ohc::invoice::SendInvoiceReminderRequest>,
+    ) -> Result<Response<Invoice>, Status> {
+        let req = request.into_inner();
+        let pool = &self.hub.pool;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let now = chrono::Utc::now();
+
+        // Update the last_reminded_at
+        sqlx::query("UPDATE invoices SET last_reminded_at = $1 WHERE id = $2")
+            .bind(now)
+            .bind(&req.invoice_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Record the communication event
+        let event_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO invoice_communication_events (id, tenant_id, invoice_id, status, channel, drafted_content) VALUES ($1, $2, $3, 'sent', 'email', $4)")
+            .bind(&event_id)
+            .bind(&req.tenant_id)
+            .bind(&req.invoice_id)
+            .bind(&req.message)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Return the updated invoice
+        let get_req = Request::new(GetInvoiceRequest { tenant_id: req.tenant_id, invoice_id: req.invoice_id });
+        self.get_invoice(get_req).await
+    }
 }
+
 
 #[derive(Deserialize)]
 
@@ -649,6 +752,7 @@ mod payload_tests {
             }],
             created_at: 1234567800,
             updated_at: 1234567800,
+            last_reminded_at: 0,
         };
 
         // Test mobile mapping

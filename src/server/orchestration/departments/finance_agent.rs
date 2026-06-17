@@ -20,7 +20,8 @@ impl Department for FinanceAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.payment.received".to_string(),
-            "payment.captured".to_string()
+            "payment.captured".to_string(),
+            "invoices.check_overdue".to_string()
         ]
     }
 
@@ -36,19 +37,30 @@ impl Department for FinanceAgent {
             ActionRisk::DraftForReview
         };
 
-        let action_description = if event.event_type == "payment.captured" {
-            "Analyze transaction for split tags and record ledger split".to_string()
+        if event.event_type == "invoices.check_overdue" {
+            // Check overdue invoices
+            self.orchestrator.execute_action(
+                DepartmentType::Finance,
+                "Scan for overdue invoices and draft contextual reminders".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                serde_json::json!({}),
+            ).await.map(|_| ())
         } else {
-            "Record deposit and track payment".to_string()
-        };
+            let action_description = if event.event_type == "payment.captured" {
+                "Analyze transaction for split tags and record ledger split".to_string()
+            } else {
+                "Record deposit and track payment".to_string()
+            };
 
-        self.orchestrator.execute_action(
-            DepartmentType::Finance,
-            action_description,
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+            self.orchestrator.execute_action(
+                DepartmentType::Finance,
+                action_description,
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            ).await.map(|_| ())
+        }
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {

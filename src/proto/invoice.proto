@@ -28,6 +28,7 @@ message Invoice {
   repeated InvoiceLineItem line_items = 10;
   int64 created_at = 11;
   int64 updated_at = 12;
+  int64 last_reminded_at = 17;
 }
 
 message CreateInvoiceRequest {
@@ -74,4 +75,29 @@ service InvoiceService {
   rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
   rpc UpdateInvoiceStatus(UpdateInvoiceStatusRequest) returns (Invoice);
   rpc DraftInvoiceFromContext(DraftInvoiceFromContextRequest) returns (DraftInvoiceFromContextResponse);
+  rpc CheckOverdueInvoices(CheckOverdueInvoicesRequest) returns (CheckOverdueInvoicesResponse);
+  rpc SendInvoiceReminder(SendInvoiceReminderRequest) returns (Invoice);
+}
+
+message CheckOverdueInvoicesRequest {
+  string tenant_id = 1;
+}
+
+message OverdueInvoiceDraft {
+  string invoice_id = 1;
+  string client_name = 2;
+  string drafted_message = 3;
+  double amount = 4;
+  int64 due_date = 5;
+  string context_summary = 6;
+}
+
+message CheckOverdueInvoicesResponse {
+  repeated OverdueInvoiceDraft drafts = 1;
+}
+
+message SendInvoiceReminderRequest {
+  string tenant_id = 1;
+  string invoice_id = 2;
+  string message = 3;
 }
