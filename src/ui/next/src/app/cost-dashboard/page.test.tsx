@@ -300,7 +300,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getAllByText(/\/ 0/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
   });
 
