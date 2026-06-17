@@ -367,16 +367,16 @@
     // 3. Fetch Metrics Data
     async function fetchMetricsData() {
       try {
-        const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', {
+        const res = await fetch('/api/v1/growth/referrals/stats', {
           headers: getAuthHeaders()
         });
 
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('metrics-invites').innerText = data.total_invites || '0';
-          document.getElementById('metrics-active').innerText = data.metrics?.active_referrals || '0';
-          document.getElementById('metrics-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
-          document.getElementById('metrics-pending').innerText = '$' + (data.metrics?.pending_rewards || 0).toFixed(2);
+          document.getElementById('metrics-invites').innerText = data.active_referrals || '0';
+          document.getElementById('metrics-active').innerText = data.active_referrals || '0';
+          document.getElementById('metrics-revenue').innerText = '$' + (data.revenue_from_referrals || 0).toFixed(2);
+          document.getElementById('metrics-pending').innerText = '$' + (data.pending_rewards || 0).toFixed(2);
         }
       } catch (e) {
         console.error("Failed to fetch metrics", e);
