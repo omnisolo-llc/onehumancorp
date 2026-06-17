@@ -374,7 +374,7 @@ export default function POSTerminal() {
           </div>
         )}
         {offlineConversion && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100/80 backdrop-blur-md border border-amber-200 shadow-xl shadow-amber-500/20 text-amber-900 px-4 py-2 rounded-full text-xs font-bold animate-bounce">
             {t('Using cached rates - Syncing soon')}
           </div>
         )}

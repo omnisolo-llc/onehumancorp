@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
-    script: String,
+    pub script: String,
 
     max_concurrent: usize,
     max_total_agents: usize,
