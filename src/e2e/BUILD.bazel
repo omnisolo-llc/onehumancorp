@@ -61,6 +61,7 @@ _NEXT_UI_E2E_SPECS = [
 
 _ROOT_E2E_SPECS = [
     "quote_deposit_pipeline.spec.ts",
+    "miser_cost_features.spec.ts",
 ]
 
 
