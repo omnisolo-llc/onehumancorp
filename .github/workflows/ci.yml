@@ -491,11 +491,11 @@ jobs:
           if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
             docker load -i /tmp/ohc-kind-images/images.tar
           fi
-          docker pull postgres:15-alpine
+          docker pull pgvector/pgvector:pg15
           docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-kind-images
           docker save \
-            postgres:15-alpine \
+            pgvector/pgvector:pg15 \
             valkey/valkey:8-alpine \
             -o /tmp/ohc-kind-images/images.tar
 
