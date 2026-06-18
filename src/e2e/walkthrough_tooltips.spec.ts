@@ -89,7 +89,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await page.goto('/help.html');
 
     // Verify title
-    await expect(page.locator('h1')).toHaveText('Help Center');
+    await expect(page.locator('h1')).toHaveText('In-App Help Center');
 
     // Verify search
     const search = page.locator('#search-input');
@@ -102,5 +102,27 @@ test.describe('Walkthrough and Tooltips features', () => {
     // The chat widget should also be there
     const chatBtn = page.locator('#ohc-floating-help-btn');
     await expect(chatBtn).toBeVisible();
+    await chatBtn.click();
+
+    // The chat widget should open
+    const chatWidget = page.locator('#ohc-floating-help-widget');
+    await expect(chatWidget).toBeVisible();
+
+    // Switch to Ask AI tab
+    const chatTab = page.locator('.ohc-help-tab[data-target="tab-chat"]');
+    await chatTab.click();
+
+    // Type in the input
+    const chatInput = page.locator('#ohc-help-chat-input');
+    await expect(chatInput).toBeVisible();
+    await chatInput.fill('Hello help agent');
+
+    // Click send
+    const sendBtn = page.locator('#ohc-help-chat-send');
+    await sendBtn.click();
+
+    // Check that our message appears in the chat
+    const messages = page.locator('#ohc-help-chat-messages');
+    await expect(messages).toContainText('Hello help agent');
   });
 });
