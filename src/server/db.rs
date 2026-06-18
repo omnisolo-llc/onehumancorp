@@ -104,13 +104,16 @@ impl DB {
     pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         match &self.store {
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
                 let rows = sqlx::query(
                     "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
                 )
                 .bind(tenant_id)
                 .bind(service_id)
-                .fetch_all(&self.pool)
+                .fetch_all(&mut *tx)
                 .await?;
+                tx.commit().await?;
 
                 let mut slots = Vec::new();
                 for row in rows {
@@ -265,23 +268,41 @@ impl DB {
                             }
                         }
 
-                        if let Ok(file) = OpenOptions::new()
-                            .read(true)
-                            .write(true)
-                            .create(true) // Use create(true) instead of create_new(true) to handle existing files but still apply mode if creating
-                            .mode(0o600)
-                            .open(&db_path)
-                        {
-                            if let Ok(metadata) = file.metadata() {
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o600 {
-                                    perms.set_mode(0o600);
-                                    if let Err(e) = file.set_permissions(perms) {
-                                        tracing::error!(
-                                            "Failed to securely update existing standalone database file permissions: {}",
-                                            e
-                                        );
-                                        return Err(e.into());
+                        if !db_path.exists() {
+                            if let Ok(file) = OpenOptions::new()
+                                .read(true)
+                                .write(true)
+                                .create_new(true) // Prevent TOCTOU vulnerabilities
+                                .mode(0o600)
+                                .open(&db_path)
+                            {
+                                if let Ok(metadata) = file.metadata() {
+                                    let mut perms = metadata.permissions();
+                                    if (perms.mode() & 0o777) != 0o600 {
+                                        perms.set_mode(0o600);
+                                        if let Err(e) = file.set_permissions(perms) {
+                                            tracing::error!(
+                                                "Failed to securely update existing standalone database file permissions: {}",
+                                                e
+                                            );
+                                            return Err(e.into());
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if let Ok(file) = OpenOptions::new().read(true).write(true).open(&db_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let mut perms = metadata.permissions();
+                                    if (perms.mode() & 0o777) != 0o600 {
+                                        perms.set_mode(0o600);
+                                        if let Err(e) = file.set_permissions(perms) {
+                                            tracing::error!(
+                                                "Failed to securely update existing standalone database file permissions: {}",
+                                                e
+                                            );
+                                            return Err(e.into());
+                                        }
                                     }
                                 }
                             }
@@ -546,11 +567,13 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| format!("DB Error: {}", e))?;
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -572,7 +595,7 @@ impl DB {
                 let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -595,9 +618,10 @@ impl DB {
                 let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
-                    .fetch_all(&self.pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
+                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
 
                 for row in message_rows {
                     use sqlx::Row;
@@ -2080,18 +2104,32 @@ mod security_tests_final {
                             use std::fs::OpenOptions;
                             use std::os::unix::fs::OpenOptionsExt;
                             use std::os::unix::fs::PermissionsExt;
-                            let file = OpenOptions::new()
-                                .read(true)
-                                .write(true)
-                                .create(true)
-                                .mode(0o600)
-                                .open(&db_path)
-                                .expect("Database URL or operation failed in test");
-                            let metadata = file.metadata().expect("Database URL or operation failed in test");
-                            let mut perms = metadata.permissions();
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                file.set_permissions(perms).expect("Database URL or operation failed in test");
+                            if !db_path.exists() {
+                                let file = OpenOptions::new()
+                                    .read(true)
+                                    .write(true)
+                                    .create_new(true)
+                                    .mode(0o600)
+                                    .open(&db_path)
+                                    .expect("Database URL or operation failed in test");
+                                let metadata = file.metadata().expect("Database URL or operation failed in test");
+                                let mut perms = metadata.permissions();
+                                if (perms.mode() & 0o777) != 0o600 {
+                                    perms.set_mode(0o600);
+                                    file.set_permissions(perms).expect("Database URL or operation failed in test");
+                                }
+                            } else {
+                                let file = OpenOptions::new()
+                                    .read(true)
+                                    .write(true)
+                                    .open(&db_path)
+                                    .expect("Database URL or operation failed in test");
+                                let metadata = file.metadata().expect("Database URL or operation failed in test");
+                                let mut perms = metadata.permissions();
+                                if (perms.mode() & 0o777) != 0o600 {
+                                    perms.set_mode(0o600);
+                                    file.set_permissions(perms).expect("Database URL or operation failed in test");
+                                }
                             }
                         }
                         #[cfg(not(unix))]
