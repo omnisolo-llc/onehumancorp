@@ -122,7 +122,7 @@ export default function ActionCenterPage() {
       statusItems={[
         { label: "Pending", value: String(approvals.length), tone: approvals.length > 0 ? "warn" : "good" },
       ]}
-      actions={[{ label: "Team", href: "/team" }]}
+      actions={[{ label: "Team", href: "/team" }, { label: "Testimonials", href: "/testimonial-collector" }]}
     >
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
         {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
