@@ -115,6 +115,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
     "//src/server/domain:quotes.rs",
+    "//src/server/domain:booking.rs",
     "//src/server/domain:subscription.rs",
     "//src/server/domain:sre.rs",
     "//src/server/domain:unified_tenant_test.rs",

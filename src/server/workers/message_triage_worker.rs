@@ -118,13 +118,14 @@ Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
+If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking details.\"
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -209,7 +210,71 @@ Output JSON format:
             let mut quote_id_opt: Option<String> = None;
             let mut quote_total_amount_cents: Option<i64> = None;
 
-            if action_type == "Draft Quote" {
+            let mut booking_id_opt: Option<String> = None;
+
+            if action_type == "Draft Booking" {
+                if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                    let draft_booking_id = Uuid::new_v4();
+                    booking_id_opt = Some(draft_booking_id.to_string());
+                    let service_id = booking_data.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown_service");
+                    let start_time_str = booking_data.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                    let end_time_str = booking_data.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                    let st = chrono::DateTime::parse_from_rfc3339(start_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
+                    let et = chrono::DateTime::parse_from_rfc3339(end_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
+
+                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
+
+                    match &self.db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Ok(mut tx) = self.db.pool.begin().await {
+                                let _ = sqlx::query(
+                                    "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW(), NOW())"
+                                )
+                                .bind(&draft_booking_id.to_string())
+                                .bind(&tenant_id)
+                                .bind(customer_id_uuid)
+                                .bind(service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&mut *tx).await;
+
+                                let _ = sqlx::query(
+                                    "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4"
+                                )
+                                .bind(&tenant_id)
+                                .bind(service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&mut *tx).await;
+
+                                let _ = tx.commit().await;
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                            let _ = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(&draft_booking_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(customer_id_uuid.to_string())
+                            .bind(service_id)
+                            .bind(st)
+                            .bind(et)
+                            .execute(sqlite_pool).await;
+
+                            let _ = sqlx::query(
+                                "UPDATE availability_blocks SET is_available = false WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
+                            )
+                            .bind(&tenant_id)
+                            .bind(service_id)
+                            .bind(st)
+                            .bind(et)
+                            .execute(sqlite_pool).await;
+                        }
+                    }
+                }
+            } else if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_quote_id = Uuid::new_v4();
                     quote_id_opt = Some(draft_quote_id.to_string());
@@ -323,7 +388,9 @@ Output JSON format:
                         "action_type": action_type,
                         "draft_reply": action_payload,
                         "inbox_message_id": message_id,
-                        "quote_id": quote_id_opt
+                        "quote_id": quote_id_opt,
+                        "booking_id": booking_id_opt,
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -396,7 +463,9 @@ Output JSON format:
                         "action_type": action_type,
                         "draft_reply": action_payload,
                         "inbox_message_id": message_id,
-                        "quote_id": quote_id_opt
+                        "quote_id": quote_id_opt,
+                        "booking_id": booking_id_opt,
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else { "quote_draft" }
                     }).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
