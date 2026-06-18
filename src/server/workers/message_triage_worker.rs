@@ -207,6 +207,7 @@ Output JSON format:
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
             let mut quote_id_opt: Option<String> = None;
+            let mut quote_total_amount_cents: Option<i64> = None;
 
             if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
