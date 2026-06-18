@@ -542,3 +542,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174001', '823e4567-e89b-12d3-a456-426614174000', 'Fix leaking sink including labor and standard materials', 15000, 1, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+('e2e-feed-pricing-surge', 'e2e-tenant', 'Yield Agent', '{"type": "pricing_analysis"}'::jsonb, '{"type": "yield_management_recommendation", "feature_type": "create_rule", "target_id": "e2e-product-cake", "recommendation": "High Demand Surge: Vegan Celebration Cake", "action": "create_rule", "rule_config": {"name": "Surge: Vegan Celebration Cake", "type": "DemandSurge", "config": {"threshold_score": 0.0, "adjustment_percent": 15.0}}}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = EXCLUDED.lifecycle_state,
+    updated_at = CURRENT_TIMESTAMP;

@@ -29,6 +29,44 @@ pub async fn dispatch_action(
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
         }
+        "create_rule" => {
+            tracing::info!("Approved and created pricing rule for tenant: {}", tenant_id);
+            if let Some(rule_config) = payload.get("rule_config") {
+                let id = uuid::Uuid::new_v4();
+                let name = rule_config.get("name").and_then(|v| v.as_str()).unwrap_or("Dynamic Rule");
+
+                // get the target_id
+                let target_id = payload.get("target_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                // get the base price
+                let base_price_cents: i64 = sqlx::query_scalar("SELECT price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(target_id)
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .unwrap_or(None)
+                    .unwrap_or(0);
+
+                let rule_json = serde_json::json!([{
+                    "id": id.to_string(),
+                    "name": name,
+                    "rule_type": rule_config,
+                    "is_active": true
+                }]);
+
+                if let Err(e) = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, rules_json, is_active) VALUES ($1, $2, $3, $4, $5, $6, true)")
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(target_id)
+                    .bind(name)
+                    .bind(base_price_cents)
+                    .bind(rule_json)
+                    .execute(pool)
+                    .await {
+                        tracing::error!("Failed to insert dynamic pricing rule: {}", e);
+                    }
+            }
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }
