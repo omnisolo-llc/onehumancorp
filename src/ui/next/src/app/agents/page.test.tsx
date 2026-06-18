@@ -274,6 +274,9 @@ test('supports interactive tab transitions and toggling grid extensions', async 
 });
 
 test('renders paywall dialog and handles simulated upgrade flow', async () => {
+  const openSpy = vi.fn();
+  vi.stubGlobal('open', openSpy);
+
   render(<AgentsPage />);
 
   // Click Toggle Pro Mode switch to trigger paywall
@@ -286,6 +289,8 @@ test('renders paywall dialog and handles simulated upgrade flow', async () => {
   fireEvent.click(screen.getByText('Share on X to get 7 Days Free'));
   // Dialog closes and gives Pro
   expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+  expect(openSpy).toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });
 
 
