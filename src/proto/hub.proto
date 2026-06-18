@@ -1789,3 +1789,47 @@ message SemanticRoutingResponse {
   string target_department = 2;
   float confidence_score = 3;
 }
+
+// P2P Mesh Sync for POS offline capabilities
+message P2PHandshakeRequest {
+  string peer_id = 1;
+  string spiffe_id = 2;
+  string public_key = 3;
+  string tenant_id = 4;
+}
+
+message P2PHandshakeResponse {
+  bool success = 1;
+  string error_message = 2;
+  string peer_id = 3;
+}
+
+message CrdtDelta {
+  string resource_id = 1;
+  bytes delta_payload = 2;
+  int64 timestamp = 3;
+  string signature = 4;
+  string origin_peer_id = 5;
+}
+
+message DeviceDiscoveryRequest {
+  string tenant_id = 1;
+}
+
+message DeviceDiscoveryResponse {
+  repeated string peer_ids = 1;
+}
+
+message PosCrdtPayload {
+  string type = 1; // "inventory" or "transaction"
+  string item_id = 2;
+  int32 quantity_delta = 3;
+  int64 updated_at = 4;
+  string transaction_id = 5;
+}
+
+service P2PMeshService {
+  rpc Handshake(P2PHandshakeRequest) returns (P2PHandshakeResponse);
+  rpc BroadcastCrdt(CrdtDelta) returns (PublishMessageResponse);
+  rpc DiscoverPeers(DeviceDiscoveryRequest) returns (DeviceDiscoveryResponse);
+}
