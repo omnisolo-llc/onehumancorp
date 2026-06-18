@@ -356,7 +356,7 @@ async fn approve_quote(
         &format!("Quote #{}", quote.id),
         &quote.customer_id.to_string(),
         amount_usd,
-        false
+        None
     ).await {
         Ok(url) => {
             let _ = sqlx::query("UPDATE quotes SET checkout_url = $1 WHERE id = $2")

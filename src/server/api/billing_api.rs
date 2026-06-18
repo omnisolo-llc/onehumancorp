@@ -88,6 +88,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 pub struct CreateCheckoutSessionRequest {
     pub tier: Option<String>,
     pub is_subscription: Option<bool>,
+    pub subscription_interval: Option<String>,
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
     pub ttl_seconds: Option<i32>,
@@ -112,8 +113,9 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let amount_usd;
+    let mut amount_usd;
     let item_name;
+    let mut actual_interval: Option<String> = None;
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
@@ -123,6 +125,9 @@ pub async fn create_checkout_session_handler(
             _ => return Err(StatusCode::BAD_REQUEST),
         };
         item_name = tier.clone();
+        if req.is_subscription.unwrap_or(false) {
+            actual_interval = Some("month".to_string());
+        }
     } else if let Some(product_id) = &req.product_id {
         let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let row = sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
@@ -137,6 +142,30 @@ pub async fn create_checkout_session_handler(
         let quantity = req.quantity.unwrap_or(1);
         amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
         item_name = title;
+
+        if req.is_subscription.unwrap_or(false) {
+            // Check subscription_plans table for discount and interval
+            let plan_row = sqlx::query("SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
+                .bind(product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *conn)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            if let Some(plan) = plan_row {
+                let interval: String = plan.try_get("interval").unwrap_or_else(|_| "month".to_string());
+                let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
+                actual_interval = Some(interval);
+
+                if discount_percentage > 0 {
+                    amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
+                }
+            } else if let Some(fallback_interval) = &req.subscription_interval {
+                actual_interval = Some(fallback_interval.clone());
+            } else {
+                actual_interval = Some("month".to_string());
+            }
+        }
     } else {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -162,7 +191,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
@@ -676,6 +705,7 @@ mod department_tier_usage_tests {
         let req = CreateCheckoutSessionRequest {
             tier: Some("starter".to_string()),
             is_subscription: Some(false),
+            subscription_interval: None,
             product_id: Some("prod_123".to_string()),
             quantity: Some(1),
             ttl_seconds: Some(300),
