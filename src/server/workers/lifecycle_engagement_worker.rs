@@ -126,16 +126,21 @@ mod tests {
     use crate::db::DbStore;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let db = match DB::new().await {
-            Ok(db) => db,
-            Err(_) => return None,
-        };
-        let pool = db.pool.clone();
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
 
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id UUID PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+        let pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/test").unwrap();
+        let db = DB {
+            pool,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&sqlite_pool).await;
 
         Some(Arc::new(db))
     }
@@ -146,17 +151,20 @@ mod tests {
             Some(db) => db,
             None => return,
         };
-        let pool = db.pool.clone();
+        let pool = match &db.store {
+            DbStore::Sqlite(p) => p.clone(),
+            _ => panic!("Expected sqlite"),
+        };
 
         sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant-1', 'Music Tutor', 'Education')")
             .execute(&pool).await.unwrap();
 
-        let customer_id = Uuid::new_v4();
+        let customer_id = Uuid::new_v4().to_string();
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email, updated_at) VALUES ($1, 'tenant-1', 'Sarah', 'sarah@example.com', datetime('now', '-100 days'))")
             .bind(customer_id)
             .execute(&pool).await.unwrap();
 
-        let active_customer_id = Uuid::new_v4();
+        let active_customer_id = Uuid::new_v4().to_string();
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email, updated_at) VALUES ($1, 'tenant-1', 'John', 'john@example.com', datetime('now', '-10 days'))")
             .bind(active_customer_id)
             .execute(&pool).await.unwrap();
