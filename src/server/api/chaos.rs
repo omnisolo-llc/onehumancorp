@@ -9,6 +9,12 @@ pub struct ChaosReportResponse {
     pub latency_histograms: Vec<i32>,
     #[serde(rename = "errorRate")]
     pub error_rate: Vec<f32>,
+    #[serde(rename = "latencyP99Cloud")]
+    pub latency_p99_cloud: String,
+    #[serde(rename = "latencyP99Standalone")]
+    pub latency_p99_standalone: String,
+    #[serde(rename = "errorRateLlmOutage")]
+    pub error_rate_llm_outage: String,
 }
 
 pub async fn get_chaos_report_handler(
@@ -47,5 +53,8 @@ pub async fn get_chaos_report_handler(
     Json(ChaosReportResponse {
         latency_histograms: histograms,
         error_rate: errors,
+        latency_p99_cloud: "120ms".to_string(),
+        latency_p99_standalone: "45ms".to_string(),
+        error_rate_llm_outage: "0.01%".to_string(),
     })
 }
