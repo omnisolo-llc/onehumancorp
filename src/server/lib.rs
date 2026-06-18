@@ -171,13 +171,13 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("search-input".to_string(), "Search our knowledge base for help articles.".to_string());
     m.insert("nav-store".to_string(), "Your Storefront. This is where you manage what you sell.".to_string());
     m.insert("nav-agents".to_string(), "AI Helpers. These are your digital employees.".to_string());
-    m.insert("ohc-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("ohc-floating-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("ohc-help-btn".to_string(), "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes.".to_string());
+    m.insert("ohc-floating-help-btn".to_string(), "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes.".to_string());
     m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
     m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
     m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());
     m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes.".to_string());
     m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
     m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
@@ -190,7 +190,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
     m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
     m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes.".to_string());
     m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
     m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
