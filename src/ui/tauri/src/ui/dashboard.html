@@ -841,9 +841,16 @@
       <div class="ohc-growth-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
         <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
-        <a href="referrals.html" id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
-          Go to Referral Dashboard
-        </a>
+        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
+          Generate Invite Link
+        </button>
+        <div id="dashboard-invite-result" style="display: none; margin-top: 15px;">
+          <input type="text" id="dashboard-invite-link" readonly style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.05); margin-bottom: 10px; box-sizing: border-box;" />
+          <div style="display: flex; gap: 10px;">
+            <button id="dashboard-copy-btn" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #0066FF; background: transparent; color: #0066FF; font-weight: 600; cursor: pointer;">Copy</button>
+            <button id="dashboard-share-x-btn" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #000; color: white; font-weight: 600; cursor: pointer;">Share on X</button>
+          </div>
+        </div>
       </div>
 
       <div class="ohc-growth-card" id="cloud-bridge-section" style="margin-top: 20px;">
@@ -3291,6 +3298,60 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
+
+    // Invite & Earn Widget Logic
+    const inviteBtn = document.getElementById('dashboard-invite-btn');
+    if (inviteBtn) {
+      inviteBtn.addEventListener('click', async () => {
+        const resultContainer = document.getElementById('dashboard-invite-result');
+        const linkInput = document.getElementById('dashboard-invite-link');
+        const token = localStorage.getItem('ohc_token');
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
+
+        // Generate Link
+        inviteBtn.textContent = 'Generating...';
+        inviteBtn.disabled = true;
+
+        try {
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+            method: 'POST',
+            headers: token ? { 'authorization': `Bearer ${token}` } : {}
+          });
+          const data = await res.json();
+          let generatedLink = `https://ohc.app/invite/${tenantId}`;
+          if (res.ok && data.referral_link) {
+            generatedLink = data.referral_link;
+          }
+          linkInput.value = generatedLink;
+        } catch (err) {
+          console.error("Failed to generate referral link", err);
+          linkInput.value = `https://ohc.app/invite/${tenantId}`;
+        }
+
+        inviteBtn.style.display = 'none';
+        resultContainer.style.display = 'block';
+      });
+    }
+
+    const copyBtn = document.getElementById('dashboard-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const linkInput = document.getElementById('dashboard-invite-link');
+        navigator.clipboard.writeText(linkInput.value).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        });
+      });
+    }
+
+    const shareXBtn = document.getElementById('dashboard-share-x-btn');
+    if (shareXBtn) {
+      shareXBtn.addEventListener('click', () => {
+        const linkInput = document.getElementById('dashboard-invite-link');
+        const text = `I just discovered Advanced AI Automations on OneHumanCorp! This is going to revolutionize how I work. 🚀 #OneHumanCorp #SmallBiz ${linkInput.value}`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+      });
+    }
 </script>
 </body>
 </html>
