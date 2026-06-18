@@ -406,7 +406,6 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');
 INSERT INTO agent_actions (id, tenant_id, session_id, agent_id, action_type, result, created_at, input_tokens, output_tokens)
-VALUES ('e2e-cost-1', 'e2e-tenant', 'session1', 'e2e-agent', 'generate', '{"status": "ok"}', CURRENT_TIMESTAMP, 1000000000, 1000000000)
 ON CONFLICT DO NOTHING;
 ALTER TABLE IF EXISTS active_discounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS affiliate_ledgers ENABLE ROW LEVEL SECURITY;
@@ -541,4 +540,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174001', '823e4567-e89b-12d3-a456-426614174000', 'Fix leaking sink including labor and standard materials', 15000, 1, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+INSERT INTO agent_actions (id, tenant_id, session_id, agent_id, action_type, result, created_at, input_tokens, output_tokens)
+VALUES ('e2e-cost-1', 'e2e-tenant', 'session1', 'e2e-agent', 'generate', '{"status": "ok"}', CURRENT_TIMESTAMP, 1000000000, 1000000000)
 ON CONFLICT DO NOTHING;
