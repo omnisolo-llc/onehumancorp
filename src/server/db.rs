@@ -896,6 +896,16 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+                    CREATE TABLE IF NOT EXISTS agent_feed_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        event_source TEXT NOT NULL,
+                        context_payload JSON,
+                        proposed_action JSON,
+                        lifecycle_state TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
