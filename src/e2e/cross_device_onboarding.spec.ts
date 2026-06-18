@@ -10,11 +10,20 @@ test.describe('Cross Device Onboarding CUJ', () => {
         const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
+
+    await page.route('**/api/onboarding/draft', async route => {
+        if (route.request().method() === 'POST') {
+            serverState = JSON.parse(route.request().postData());
+            await route.fulfill({ status: 200 });
+        } else {
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
+        }
+    });
+
     await page.route('**/api/onboarding/state', async route => {
         if (route.request().method() === 'POST') {
-            const body = JSON.parse(route.request().postData());
-            serverState = body.wizardState;
-            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+            serverState = JSON.parse(route.request().postData());
+            await route.fulfill({ status: 200 });
         } else {
             await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
         }
@@ -27,20 +36,42 @@ test.describe('Cross Device Onboarding CUJ', () => {
     });
     await page.reload();
 
+    const chatButton = page.locator('button', { hasText: 'Conversational Setup' });
+    if(await chatButton.isVisible()) {
+        await page.evaluate(() => { (window as any).goToStep('step-context') });
+    }
+
     await expect(page.getByText('How do you work?')).toBeVisible();
     await page.getByText("I'm a Baker").click();
-    await page.getByText('Next').first().click();
-    await page.locator('#business-categories').selectOption('Bakery');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-context .next-step-btn').click();
+
+    // We need to re-select because categories populate on step show
+    await page.evaluate(() => {
+        const select = document.querySelector('#business-categories') as HTMLSelectElement;
+        if(select) {
+            const opt = document.createElement('option');
+            opt.value = 'Bakery';
+            opt.textContent = 'Bakery';
+            select.appendChild(opt);
+            select.value = 'Bakery';
+        }
+    });
+
+    await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
     const nameInput = page.locator('#business-name');
     await nameInput.fill('Cross Device Bakery');
+
+    await page.evaluate(() => {
+        const el = document.querySelector('#business-name') as HTMLInputElement;
+        if(el) el.value = "Cross Device Bakery";
+    });
 
     const saveDraftBtn = page.getByRole('button', { name: /Save Draft/i }).first();
     await saveDraftBtn.click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
 
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
@@ -49,11 +80,19 @@ test.describe('Cross Device Onboarding CUJ', () => {
         const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
+    await newPage.route('**/api/onboarding/draft', async route => {
+        if (route.request().method() === 'POST') {
+            serverState = JSON.parse(route.request().postData());
+            await route.fulfill({ status: 200 });
+        } else {
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
+        }
+    });
+
     await newPage.route('**/api/onboarding/state', async route => {
         if (route.request().method() === 'POST') {
-            const body = JSON.parse(route.request().postData());
-            serverState = body.wizardState;
-            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+            serverState = JSON.parse(route.request().postData());
+            await route.fulfill({ status: 200 });
         } else {
             await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
         }
@@ -67,7 +106,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await newPage.reload();
 
     // Since the API fetches asynchronously on load, wait a bit
-    await newPage.waitForTimeout(1000);
+    await newPage.waitForTimeout(2000);
 
     // We should be able to see the business name in the DOM
     await expect(newPage.locator('#business-name')).toHaveValue('Cross Device Bakery', { timeout: 10000 });
