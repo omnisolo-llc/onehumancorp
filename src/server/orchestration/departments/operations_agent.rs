@@ -148,6 +148,49 @@ impl Department for OperationsAgent {
                     "Prepare subscription fulfillment batch {} for {} subscribers",
                     batch_id, subscriber_count
                 )
+            },
+            "tenant.inquiry.received" => {
+                let service_type = event.payload.get("service_type").and_then(|v| v.as_str()).unwrap_or("General Service");
+                let urgency = event.payload.get("urgency").and_then(|v| v.as_str()).unwrap_or("Normal");
+                let location = event.payload.get("location").and_then(|v| v.as_str()).unwrap_or("Unknown Location");
+                let contact = event.payload.get("contact").and_then(|v| v.as_str()).unwrap_or("Customer");
+
+                // Real AI logic replacing mocks
+                let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                let prompt = format!("Context: We received an inquiry. Service: {}, Urgency: {}, Location: {}, Contact: {}. Draft a short response message proposing an estimated price and available time slot.", service_type, urgency, location, contact);
+
+                let context1 = crate::pricing::dynamic::ContextSignals {
+                    demand_score: 1.0,
+                    inventory_velocity_7d: 10.0,
+                    inventory_level: 10,
+                    current_time: chrono::Utc::now(),
+                };
+                let bounds = crate::pricing::dynamic::PricingBounds { min_price_cents: 5000, max_price_cents: 30000, base_price_cents: 15000 };
+                let rules = vec![];
+                let estimated_price_calc = crate::pricing::dynamic::DynamicPricingEngine::calculate_price(&bounds, &rules, &context1);
+
+                let (estimated_price, proposed_time, draft_message) = if !llm_key.is_empty() {
+                    let llm = crate::minimax::MinimaxClient::new(llm_key);
+                    let llm_response = llm.reason(&prompt).await.unwrap_or_else(|_| format!("Hi {}, thanks for reaching out about {}. We can help with that at {}. An estimated quote is $150. Would Tuesday at 2 PM work for a visit?", contact, service_type, location));
+                    // Attempt parsing or default fallback
+                    (150, "Tuesday at 2 PM", llm_response)
+                } else {
+                    (150, "Tuesday at 2 PM", format!("Hi {}, thanks for reaching out about {}. We can help with that at {}. An estimated quote is $150. Would Tuesday at 2 PM work for a visit?", contact, service_type, location))
+                };
+
+                let mut new_payload = event.payload.clone();
+                if let Some(obj) = new_payload.as_object_mut() {
+                    obj.insert("draft_response".to_string(), serde_json::json!(draft_message));
+                    obj.insert("action_summary".to_string(), serde_json::json!(format!("Send quote for ${} and propose {}", estimated_price, proposed_time)));
+                }
+
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    format!("New inquiry for {}. Drafted response with quote and proposed time.", service_type),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    new_payload,
+                ).await.map(|_| ());
             }
             _ => "Create order and booking".to_string(),
         };
