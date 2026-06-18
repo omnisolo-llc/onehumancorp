@@ -27,7 +27,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "https://graph.facebook.com/v19.0".to_string(),
         ),
         metadata_provider(
-            "whatsapp",
+            "whatsapp_cloud_api",
             "WhatsApp Cloud API",
             "social",
             "https://graph.facebook.com/v19.0".to_string(),

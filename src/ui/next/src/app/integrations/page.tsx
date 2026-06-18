@@ -62,6 +62,11 @@ export default function Integrations() {
       setStatusMessage("Enter your Twilio API credentials to connect WhatsApp.");
       return;
     }
+    if (id === 'whatsapp_cloud_api') {
+      setShowWhatsAppCloudApiModal(true);
+      setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
+      return;
+    }
     setStatusMessage(`Connecting ${integration?.name || id}...`);
     try {
       const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
@@ -123,11 +128,28 @@ export default function Integrations() {
   };
 
   const saveWhatsAppCloudApiIntegration = async () => {
-    // Mock API call to save connection status
-    setTimeout(() => {
+    try {
+      const res = await fetch(`/api/integrations/whatsapp_cloud_api/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration_id: 'whatsapp_cloud_api',
+        })
+      });
+
+      if (!res.ok) {
+        setStatusMessage("Failed to connect WhatsApp Cloud API.");
+        return;
+      }
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'whatsapp_cloud_api' ? { ...integration, status: "connected" } : integration
+      ));
       setShowWhatsAppCloudApiModal(false);
       setStatusMessage("WhatsApp Cloud API connected.");
-    }, 500);
+      router.push('/inbox');
+    } catch (e) {
+      setStatusMessage("Failed to connect WhatsApp Cloud API.");
+    }
   };
 
   return (
