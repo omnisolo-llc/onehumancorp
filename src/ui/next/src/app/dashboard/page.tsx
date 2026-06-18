@@ -17,6 +17,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
+import P2PJoinPrompt from "../../components/p2p/P2PJoinPrompt";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -583,6 +584,7 @@ export default function Dashboard() {
         </section>
       )}
 
+      <P2PJoinPrompt />
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">

@@ -129,7 +129,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks revenue, costs, and profit margins per product/service\n\
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
-                - Provides tax-ready financial summaries (income statements, expense tracking)").leak(),
+                - Provides tax-ready financial summaries (income statements, expense tracking)\n\
+                - Reconciles batched, multi-device P2P transactions to ensure ledger integrity and identifies any Tap-to-Pay declines from the offline queue").leak(),
             allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
             confidence_threshold: 0.95,
         },
