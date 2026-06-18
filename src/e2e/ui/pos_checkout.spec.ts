@@ -8,7 +8,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
       await route.fulfill({ json });
     });
 
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     // Ensure 375px mobile responsiveness
     await page.setViewportSize({ width: 375, height: 667 });
 
@@ -27,7 +27,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
       await route.fulfill({ json });
     });
 
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Assuming the user discovers and connects to a reader, and clicks 'Charge'

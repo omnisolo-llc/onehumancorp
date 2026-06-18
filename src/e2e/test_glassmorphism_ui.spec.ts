@@ -35,7 +35,7 @@ test.describe('Glassmorphism UI Audit', () => {
 
   test('Verify POS buttons use 8px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
 
     // Test the POS keypad buttons (they are round)
     // The test originally checked 8px, but POS keypad is rounded-full. We will check 9999px.

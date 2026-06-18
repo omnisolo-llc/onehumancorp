@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Offline-First AI Sync Mesh', () => {
   test('should queue mutations locally via App UI, sync when online, and trigger AI agent invoice drafting', async ({ page, context }) => {
     // Navigate to the POS Dashboard where we can perform a transaction
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
 
     // Wait for the UI to be ready
     await expect(page.locator('body')).toBeVisible();

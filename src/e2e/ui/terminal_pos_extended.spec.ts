@@ -4,7 +4,7 @@ test.describe('Terminal POS Extended - Inventory and Layout Sync', () => {
   const TENANT_ID = 'terminal-test-tenant';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     const pins = ['1', '2', '3', '4'];
     for (const p of pins) {
       await page.getByRole('button', { name: p, exact: true }).click();
