@@ -1,12 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
   test.use({ viewport: { width: 375, height: 812 } }); // Mobile resolution
 
   test('generates an action via background task and approves it in the UI', async ({ page, request }) => {
     // 1. Simulate the webhook/agent action background task
-    const tenantId = 'default';
+    // Note: The loginAs fixture runs automatically with 'test' from '../fixtures'
+    // so we just need to ensure the request is authenticated or use a test tenant.
+    const tenantId = 'e2e-tenant'; // Matching E2E setup
 
+    // The simulate-agent-feed-item endpoint doesn't seem to enforce strict auth if it's a dev endpoint
     const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();

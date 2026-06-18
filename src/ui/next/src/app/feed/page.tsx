@@ -189,7 +189,7 @@ export default function FeedPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">You're all caught up!</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">All caught up! You're a hero.</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               There are no pending actions for you right now. Your team is handling things.
             </p>

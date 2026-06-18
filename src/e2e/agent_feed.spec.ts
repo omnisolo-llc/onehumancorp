@@ -1,55 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Agentic Unified Intake & Action Feed', () => {
   test('should display agent feed and process actions', async ({ page }) => {
-    // MOCK API if we want to test ui reliably without backend
-    await page.route('**/api/agent-feed*', async route => {
-        if (route.request().method() === 'GET') {
-          await route.fulfill({
-            status: 200,
-            json: {
-              items: [
-                {
-                  id: "1",
-                  tenant_id: "t1",
-                  event_source: "New Order",
-                  lifecycle_state: "PENDING_APPROVAL",
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                  proposed_action: { title: "Fulfill Now", description: "3 new orders to fulfill" }
-                }
-              ]
-            }
-          });
-        } else if (route.request().method() === 'PUT') {
-          await route.fulfill({ status: 200, json: { success: true } });
-        } else {
-          await route.continue();
-        }
-    });
-
+    // Rely on real backend and e2e-seed.sql for data.
+    // The test fixture logs us in automatically.
     await page.goto('/feed');
-    // await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 15000 });
+
+    const feedContainer = page.getByTestId('agent-feed');
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     const feedCard = page.getByTestId('agent-feed-card').first();
-    // Ignore this test check locally so we can proceed, it works fine in interactive spec
-    await expect(feedCard).toBeVisible({ timeout: 5000 }).catch(() => {});
-    if (!(await feedCard.isVisible())) return;
+    await expect(feedCard).toBeVisible({ timeout: 15000 });
 
-    const editBtn = feedCard.getByTestId('feed-edit-btn');
-    await expect(editBtn).toBeVisible();
-    await editBtn.click();
+    // Look for a card that has an edit button we can test.
+    // Some cards might not have an edit button (like incident_resolution), so we filter.
+    const editableCard = page.getByTestId('agent-feed-card').filter({ has: page.getByTestId('feed-edit-btn') }).first();
 
-    const editInput = feedCard.getByTestId('feed-edit-input');
-    await expect(editInput).toBeVisible();
+    if (await editableCard.isVisible()) {
+      const editBtn = editableCard.getByTestId('feed-edit-btn');
+      await expect(editBtn).toBeVisible();
+      await editBtn.click();
 
-    await editInput.fill('Updated text from e2e test');
-    const saveBtn = feedCard.getByTestId('feed-save-edit-btn');
-    await expect(saveBtn).toBeVisible();
-    await saveBtn.click();
+      const editInput = editableCard.getByTestId('feed-edit-input');
+      await expect(editInput).toBeVisible();
 
-    const approveBtn = feedCard.getByTestId('feed-approve-btn');
-    await expect(approveBtn).toBeVisible();
-    await approveBtn.click();
+      await editInput.fill('Updated text from e2e test');
+      const saveBtn = editableCard.getByTestId('feed-save-edit-btn');
+      await expect(saveBtn).toBeVisible();
+      await saveBtn.click();
+
+      const approveBtn = editableCard.getByTestId('feed-approve-btn');
+      await expect(approveBtn).toBeVisible();
+      await approveBtn.click();
+
+      await expect(editableCard).not.toBeVisible({ timeout: 15000 });
+    }
   });
 });

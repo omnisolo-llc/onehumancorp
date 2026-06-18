@@ -1,63 +1,53 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Unified Agent Feed (Mobile MVP)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('displays action cards and allows approval without horizontal scrolling', async ({ page }) => {
-    // MOCK API if we want to test ui reliably without backend
-    await page.route('/api/agent-feed', async route => {
-        const json = {
-            items: [
-                {
-                    id: "1",
-                    tenant_id: "t1",
-                    event_source: "New Order",
-                    lifecycle_state: "PENDING_APPROVAL",
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    proposed_action: { title: "Fulfill Now", description: "3 new orders to fulfill" }
-                }
-            ]
-        };
-        await route.fulfill({ json });
-    });
-
-    // Navigate to the feed page
+    // Navigate to the feed page directly. The \`loginAs\` fixture (used in page)
+    // logs us in. If we need to explicitly navigate to /feed we can:
     await page.goto('/feed');
 
-    // Wait for feed items to load
-    await page.waitForSelector('[data-testid="agent-feed"]');
+    // Wait for feed items to load from the real backend, seeded by e2e-seed.sql
+    const feedContainer = page.getByTestId('agent-feed');
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
+
+    // Wait a moment for network to settle so cards are rendered
+    await page.waitForLoadState('networkidle');
 
     // Ensure there is no horizontal scroll
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
-    await page.waitForSelector('[data-testid="agent-feed-card"]');
+    const cards = page.getByTestId('agent-feed-card');
 
-    const cards = page.locator('[data-testid="agent-feed-card"]');
+    // There should be at least one card seeded by e2e-seed.sql
+    // (e.g., e2e-feed-social, app-test-ab12-34f7-e43e-7264a9c4021d, etc.)
+    await expect(cards.first()).toBeVisible({ timeout: 15000 });
 
     const count = await cards.count();
     expect(count).toBeGreaterThan(0);
 
     if (count > 0) {
-      const buttons = cards.first().locator('button');
+      const firstCard = cards.first();
+      const buttons = firstCard.locator('button');
       const buttonCount = await buttons.count();
       for (let i = 0; i < buttonCount; i++) {
           const boundingBox = await buttons.nth(i).boundingBox();
+          // Touch targets must be >= 44x44
           expect(boundingBox?.width).toBeGreaterThanOrEqual(44);
           expect(boundingBox?.height).toBeGreaterThanOrEqual(44);
       }
 
-      const firstApproveButton = buttons.filter({ hasText: 'Approve' }).first();
-
-      // MOCK API for patch
-      await page.route('**/api/agent-feed/*', async route => {
-          await route.fulfill({ status: 200, json: { success: true } });
-      });
+      // Try to find an "Approve" button or similar action button
+      const firstApproveButton = buttons.filter({ hasText: /(Approve|Approve & Schedule|Yes, draft it!|Send Draft|Review Estimate|Send Follow-up)/i }).first();
 
       if (await firstApproveButton.isVisible()) {
         await firstApproveButton.click();
+
+        // Wait for the card to disappear (optimistic update or real update)
+        await expect(firstCard).not.toBeVisible({ timeout: 15000 });
       }
     }
   });

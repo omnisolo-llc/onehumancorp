@@ -587,7 +587,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up! You're a hero.</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
