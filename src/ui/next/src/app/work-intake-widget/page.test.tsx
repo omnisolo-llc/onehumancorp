@@ -44,7 +44,7 @@ describe('WorkIntakeWidgetPage', () => {
     expect(textarea.value).toContain('Powered by OHC');
   });
 
-  it('shows soft paywall when checkbox is checked', () => {
+  it('shows soft paywall when checkbox is checked and includes viral loop option', () => {
     render(<WorkIntakeWidgetPage />);
 
     // Click checkbox
@@ -53,6 +53,9 @@ describe('WorkIntakeWidgetPage', () => {
 
     // Check if soft paywall shows up
     expect(screen.getAllByText('Upgrade to Pro')).toBeDefined();
+
+    // Check if viral loop option is present
+    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
 
     // Checkbox should be un-checked
     expect((checkbox as HTMLInputElement).checked).toBe(false);
