@@ -4812,6 +4812,7 @@ async fn ui_dashboard_unified_feed_handler(
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
                 "priority_tasks": priority_tasks,
+                "supply": supply,
             });
             if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
