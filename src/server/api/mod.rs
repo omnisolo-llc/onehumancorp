@@ -1,3 +1,5 @@
+pub mod e2e;
+pub mod setup;
 pub mod sync;
 pub mod oauth;
 pub mod offline_sync;

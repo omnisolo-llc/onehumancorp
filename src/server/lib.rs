@@ -4821,7 +4821,7 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
-            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+            let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
@@ -4872,7 +4872,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+    let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
 
 
     let cacheable_result = serde_json::json!({
@@ -4890,7 +4890,7 @@ async fn ui_dashboard_unified_feed_handler(
     // Add supply to the final result
     let mut final_result = cacheable_result;
     if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply);
+        obj.insert("supply".to_string(), _supply);
     }
 
     (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
@@ -6266,6 +6266,8 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest("/api/e2e", api::e2e::router(db.clone()))
+        .nest("/api/e2e/setup", api::setup::router(db.clone()))
         .nest("/api/sync", api::sync_gateway::router())
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))

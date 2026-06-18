@@ -1,4 +1,4 @@
-exports_files(["chaos.rs", "sync_gateway.rs"])
+exports_files(["chaos.rs", "sync_gateway.rs", "e2e.rs", "setup.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
@@ -92,6 +92,8 @@ rust_library(
         "invoice.rs",
     "quotes.rs",
         "sync_gateway.rs",
+        "e2e.rs",
+        "setup.rs",
         "//src/server/api/inbox:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
