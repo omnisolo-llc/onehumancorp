@@ -695,7 +695,7 @@ impl VectorRepository {
                         ORDER BY b_inner.embedding <=> a.embedding
                         LIMIT 1
                     ) b ON a.embedding <=> b.embedding < 0.05
-                    LIMIT 10
+                    LIMIT 100
                 ";
                 let rows = sqlx::query(query)
                     .fetch_all(pool)
@@ -729,7 +729,7 @@ impl VectorRepository {
                             LIMIT 1
                         )
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
-                        LIMIT 10
+                        LIMIT 100
                     ";
                     let rows = sqlx::query(query)
                         .fetch_all(pool)
