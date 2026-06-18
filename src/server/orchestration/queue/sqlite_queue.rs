@@ -145,7 +145,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         }
 
         let start_poll = std::time::Instant::now();
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let job_opt: Option<sqlx::sqlite::SqliteRow> = tokio::time::timeout(std::time::Duration::from_secs(60), query.fetch_optional(&mut *tx)).await.map_err(|_| "Timeout fetching job from queue".to_string())?.map_err(|e| e.to_string())?;
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());

@@ -1006,7 +1006,7 @@ impl TaskQueue for SqliteTaskQueue {
             query = query.bind(role);
         }
 
-        let row = query.fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row = tokio::time::timeout(std::time::Duration::from_secs(60), query.fetch_optional(&self.pool)).await.map_err(|_| "Timeout fetching job from queue".to_string())?.map_err(|e| e.to_string())?;
 
         if let Some(row) = row {
             use sqlx::Row;
