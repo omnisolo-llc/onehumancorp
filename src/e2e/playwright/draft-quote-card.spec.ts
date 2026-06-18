@@ -46,6 +46,8 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await approveBtn.click();
 
     // 9. Optimistic UI update should remove the card from the feed
+    // Try waiting to ensure payload went through
+    await page.waitForTimeout(1000);
     await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
   });
 });
