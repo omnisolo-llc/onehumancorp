@@ -27,7 +27,7 @@ test.describe('Task List Page', () => {
       window.localStorage.setItem('tenant_id', `tasks-${Date.now()}`);
       window.localStorage.setItem('user_id', `tasks-${Date.now()}`);
     });
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
     await expect(page.locator('#setup-screen')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Setup' })).toBeVisible();
   });
