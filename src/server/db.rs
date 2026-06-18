@@ -205,6 +205,11 @@ impl DB {
                 })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
+            let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?;
+            // Force create_if_missing to false to avoid insecure creation by sqlx
+            // Only our manual secure creation below will be allowed to create it.
+            conn_opts = conn_opts.create_if_missing(false);
+
             // Ensure secure directory creation for SQLite database in Standalone mode
             let path_str_opt = if let Some(p) = database_url.strip_prefix("sqlite://") {
                 Some(p)
@@ -316,12 +321,6 @@ impl DB {
                     }
                 }
             }
-
-
-            let mut conn_opts =
-                SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
-
-
 
 
             // sqlite-vec is optional at runtime. The memory repository probes for
