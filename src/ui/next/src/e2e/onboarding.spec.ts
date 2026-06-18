@@ -359,3 +359,37 @@ test.describe('OnboardingWizard CUJ', () => {
     await context.unroute('/api/onboarding/start');
     await context.unroute('/api/onboarding/intake');
   });
+
+  test('User can use Conversational Setup to launch storefront quickly via real API', async ({ page }) => {
+    await page.goto('/onboarding');
+    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+
+    await page.getByRole('button', { name: 'Conversational Setup' }).click();
+    await expect(page.getByText("What do you do?")).toBeVisible();
+
+    const chatInput = page.locator('#chat-input');
+    await expect(chatInput).toBeVisible();
+
+    // Type a clear business description so the real backend LLM (or mock, if any) can process it.
+    await chatInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
+    await page.locator('#chat-send-btn').click();
+
+    // After sending, the assistant should reply. It might ask for more details or be ready.
+    // The exact text from LLM varies, but it should appear as an assistant message.
+    await expect(page.locator('#chat-messages').locator('text=Assistant:').nth(1)).toBeVisible({ timeout: 60000 });
+
+    // Assuming the LLM responds and might be complete or incomplete.
+    // We type another response to be safe.
+    await chatInput.fill('My target audience is local families and tech startups. I want to sell online. My business name is Maya Custom Cakes. First product: Vegan Celebration Cake for $45.');
+    await page.locator('#chat-send-btn').click();
+
+    // It should eventually transition to step 1 or finish depending on backend.
+    // If it finishes, it might navigate or show "You're Live!".
+    // We just ensure we don't get an error and we get some progression.
+    // Wait for either the chat to say it's done, or the wizard to progress.
+    await Promise.race([
+        expect(page.getByText("Review Details")).toBeVisible({ timeout: 60000 }),
+        expect(page.locator('#chat-messages').locator('text=Assistant:').nth(2)).toBeVisible({ timeout: 60000 })
+    ]);
+  });
+});

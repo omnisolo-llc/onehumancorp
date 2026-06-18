@@ -1849,15 +1849,20 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           chatSendBtn.disabled = true;
 
           try {
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ messages: chatHistory })
-              });
+              let data = null;
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  data = await window.__TAURI__.core.invoke("process_chat", { messages: chatHistory });
+              } else {
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ messages: chatHistory })
+                  });
 
-              if (!res.ok) throw new Error('Chat request failed');
-              const data = await res.json();
+                  if (!res.ok) throw new Error('Chat request failed');
+                  data = await res.json();
+              }
 
               chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
               chatHistory.push({ role: 'assistant', content: data.reply });

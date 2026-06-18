@@ -140,6 +140,37 @@ struct IntakeData {
     initial_products: Vec<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct ChatMessage {
+    role: String,
+    content: String,
+    image_url: Option<String>,
+}
+
+#[tauri::command]
+async fn process_chat(messages: Vec<ChatMessage>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/chat", backend_url);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|err| err.to_string())?;
+
+    let response = client.post(&url)
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({ "messages": messages }))
+        .send().await
+        .map_err(|err| err.to_string())?;
+
+    if response.status().is_success() {
+        let text = response.text().await.map_err(|e| e.to_string())?;
+        serde_json::from_str(&text).map_err(|e| e.to_string())
+    } else {
+        Err(format!("Backend error: {}", response.status()))
+    }
+}
+
 #[tauri::command]
 async fn process_intake(input: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
@@ -573,6 +604,7 @@ pub fn run() {
             save_onboarding_state,
             start_onboarding,
             process_intake,
+            process_chat,
             get_help_articles,
             get_help_article,
             get_help_videos,
