@@ -86,20 +86,20 @@ impl BudgetManager {
     }
 
     pub fn check_alert_threshold(&self) -> bool {
-        if self.total_limit <= 0.0 {
-            return false;
-        }
         let current = f64::from_bits(self.current.load(Ordering::SeqCst));
+        if self.total_limit <= 0.0 {
+            return current > 0.0;
+        }
         let usage_percent = (current / self.total_limit) * 100.0;
         usage_percent >= self.alert_threshold_percent
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
-        if total_limit_cents <= 0 {
-            return false;
-        }
         let current = f64::from_bits(self.current.load(Ordering::SeqCst));
         let current_cents = (current * 100.0).round() as i64;
+        if total_limit_cents <= 0 {
+            return current_cents > 0;
+        }
         let limit_threshold_cents = ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current_cents >= limit_threshold_cents
     }
@@ -198,6 +198,10 @@ mod tests {
         let manager = BudgetManager::new(0.0);
         assert!(!manager.check_alert_threshold());
         assert!(!manager.check_alert_threshold_cents(0));
+
+        manager.record_spend(1.0).unwrap();
+        assert!(manager.check_alert_threshold());
+        assert!(manager.check_alert_threshold_cents(0));
     }
 
     #[test]

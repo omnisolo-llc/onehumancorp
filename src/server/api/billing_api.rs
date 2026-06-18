@@ -426,9 +426,8 @@ pub async fn cost_dashboard_handler(
 
     let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
 
-    // For free tier, base_price is 0, so any cost > 0 might trigger it, but let's say the budget is $10 for free, $50 for starter, $150 for pro, $500 for business
+    // Free tier gets a $0 budget. Any positive spend will trigger the soft limit.
     let budget_limit = tier.base_price();
-    let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
     budget_manager.record_spend_cents(projected_cents).unwrap_or(false);
