@@ -2879,6 +2879,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let twilio_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .route("/api/v1/webhooks/twilio/voice", axum::routing::post(crate::api::twilio_webhook::twilio_voice_webhook_handler))
+        .route("/api/v1/webhooks/twilio/voice/gather", axum::routing::post(crate::api::twilio_webhook::twilio_voice_gather_handler))
+        .route("/api/v1/webhooks/twilio/voice/record", axum::routing::post(crate::api::twilio_webhook::twilio_voice_record_handler))
         .with_state(twilio_webhook_state);
 
     let health_router = axum::Router::new()

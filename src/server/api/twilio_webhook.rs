@@ -182,6 +182,283 @@ pub async fn twilio_webhook_post_handler(
     StatusCode::OK.into_response()
 }
 
+
+pub async fn twilio_voice_webhook_handler(
+    State(state): State<TwilioWebhookState>,
+    body_bytes: axum::body::Bytes,
+) -> impl IntoResponse {
+    let body_str = String::from_utf8_lossy(&body_bytes);
+    let mut params = HashMap::new();
+    for pair in body_str.split('&') {
+        let mut parts = pair.split('=');
+        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+            params.insert(url_decode(key), url_decode(value));
+        }
+    }
+
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let pool = &state.db.pool;
+
+    let (_tenant_id, persona) = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query_as::<_, (String, Option<String>)>(
+                "SELECT tenant_id, voice_receptionist_persona FROM settings WHERE voice_receptionist_number = $1 LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(pool)
+            .await {
+                Ok(Some((id, p))) => (id, p),
+                _ => ("test_tenant".to_string(), Some("Friendly".to_string())),
+            }
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            match sqlx::query_as::<_, (String, Option<String>)>(
+                "SELECT tenant_id, voice_receptionist_persona FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(sqlite_pool)
+            .await {
+                Ok(Some((id, p))) => (id, p),
+                _ => ("test_tenant".to_string(), Some("Friendly".to_string())),
+            }
+        }
+    };
+
+    let greeting = match persona.as_deref() {
+        Some("Professional") => "Hello, you have reached our office. How may I direct your call or assist you today?",
+        Some("Efficient") => "Hi, what do you need help with?",
+        _ => "Hello! I am the AI assistant for this business. How can I help you today?",
+    };
+
+    let twiml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+        <Response>\n\
+            <Say voice=\"Polly.Matthew-Neural\">{}</Say>\n\
+            <Gather input=\"speech\" action=\"/api/v1/webhooks/twilio/voice/gather\" timeout=\"3\" speechTimeout=\"auto\" />\n\
+        </Response>",
+        greeting
+    );
+
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/xml")],
+        twiml,
+    ).into_response()
+}
+
+pub async fn twilio_voice_gather_handler(
+    State(_state): State<TwilioWebhookState>,
+    body_bytes: axum::body::Bytes,
+) -> impl IntoResponse {
+    let body_str = String::from_utf8_lossy(&body_bytes);
+    let mut params = HashMap::new();
+    for pair in body_str.split('&') {
+        let mut parts = pair.split('=');
+        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+            params.insert(url_decode(key), url_decode(value));
+        }
+    }
+
+    let speech = params.get("SpeechResult").cloned().unwrap_or_else(|| "".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let pool = &_state.db.pool;
+
+    let (_tenant_id, persona) = match &_state.db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query_as::<_, (String, Option<String>)>(
+                "SELECT tenant_id, voice_receptionist_persona FROM settings WHERE voice_receptionist_number = $1 LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(pool)
+            .await {
+                Ok(Some((id, p))) => (id, p),
+                _ => ("test_tenant".to_string(), Some("Friendly".to_string())),
+            }
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            match sqlx::query_as::<_, (String, Option<String>)>(
+                "SELECT tenant_id, voice_receptionist_persona FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(sqlite_pool)
+            .await {
+                Ok(Some((id, p))) => (id, p),
+                _ => ("test_tenant".to_string(), Some("Friendly".to_string())),
+            }
+        }
+    };
+
+    let p = persona.unwrap_or_else(|| "Friendly".to_string());
+    let prompt = format!("You are an AI receptionist. Your persona is {}. A customer called and said: '{}'. Give a concise, one-sentence answer (if applicable) and always end by politely asking them to leave a message with their name and number after the beep.", p, speech);
+
+    let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "dummy".to_string());
+    let llm = crate::minimax::MinimaxClient::new(llm_key);
+    let response_text = llm.reason(&prompt).await.unwrap_or_else(|_| "I understand. Let me take a message so the team can help you. Please leave your name, number, and message after the beep.".to_string());
+
+    let twiml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+        <Response>\n\
+            <Say voice=\"Polly.Matthew-Neural\">{}</Say>\n\
+            <Record action=\"/api/v1/webhooks/twilio/voice/record\" transcribe=\"true\" maxLength=\"60\" />\n\
+        </Response>",
+        response_text
+    );
+
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/xml")],
+        twiml,
+    ).into_response()
+}
+
+pub async fn twilio_voice_record_handler(
+    State(state): State<TwilioWebhookState>,
+    body_bytes: axum::body::Bytes,
+) -> impl IntoResponse {
+    let body_str = String::from_utf8_lossy(&body_bytes);
+    let mut params = HashMap::new();
+    for pair in body_str.split('&') {
+        let mut parts = pair.split('=');
+        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+            params.insert(url_decode(key), url_decode(value));
+        }
+    }
+
+    let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let recording_url = params.get("RecordingUrl").cloned().unwrap_or_else(|| "".to_string());
+    let transcription_text = params.get("TranscriptionText").cloned().unwrap_or_else(|| "Voicemail received.".to_string());
+
+    let text = format!("Missed Call Voicemail: {} [Audio: {}]", transcription_text, recording_url);
+
+    let pool = &state.db.pool;
+
+    let tenant_id = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query_scalar::<_, String>(
+                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = $1 LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(pool)
+            .await {
+                Ok(Some(id)) => id,
+                _ => "test_tenant".to_string(),
+            }
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            match sqlx::query_scalar::<_, String>(
+                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(sqlite_pool)
+            .await {
+                Ok(Some(id)) => id,
+                _ => "test_tenant".to_string(),
+            }
+        }
+    };
+
+    let inbox_id = Uuid::new_v4().to_string();
+    let source = "voice".to_string();
+
+    let resolver = IdentityResolver::new(state.db.clone());
+    let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &sender_id, &source).await;
+    let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
+
+    let insert_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(&source)
+            .bind(&text)
+            .bind(&text)
+            .bind(&sender_id)
+            .bind(&customer_id)
+            .execute(pool)
+            .await.map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(&source)
+            .bind(&text)
+            .bind(&text)
+            .bind(&sender_id)
+            .bind(&customer_id)
+            .execute(sqlite_pool)
+            .await.map(|_| ())
+        }
+    };
+
+    if let Err(e) = insert_result {
+        tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+    }
+
+    let job_id = Uuid::new_v4().to_string();
+    let mut payload_json = serde_json::json!({
+        "message_id": inbox_id,
+        "inbox_message_id": inbox_id,
+        "source": source,
+        "content": text,
+        "sender_id": sender_id
+    });
+
+    if let Ok(c_id) = &customer_id_result {
+        payload_json["customer_id"] = serde_json::json!(c_id);
+    }
+
+    let enqueue_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(payload_json.to_string())
+                .execute(&state.db.pool)
+                .await
+                .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(payload_json.to_string())
+                .execute(sqlite_pool)
+                .await
+                .map(|_| ())
+        }
+    };
+
+    if let Err(e) = enqueue_result {
+        tracing::error!("Failed to enqueue message_triage job: {}", e);
+    }
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.omnichannel.message.received".to_string(),
+        payload: payload_json,
+    };
+
+    let orchestrator_clone = state.orchestrator.clone();
+    tokio::spawn(async move {
+        let _ = orchestrator_clone.dispatch_event(event).await;
+    });
+
+    let twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Say>Goodbye.</Say><Hangup/></Response>";
+
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/xml")],
+        twiml,
+    ).into_response()
+}
+
 // Basic URL decode
 fn url_decode(input: &str) -> String {
     let mut decoded = String::new();
