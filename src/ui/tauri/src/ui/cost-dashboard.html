@@ -243,7 +243,7 @@
 
             <div style="margin-bottom: 24px;">
               <span class="stat-title" style="display:block; margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">AI actions used this month</span>
-              <div class="stat-value" id="ai-actions-text">0 / Unlimited</div>
+              <div class="stat-value" id="ai-actions-text">Loading...</div>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="ai-actions-bar" style="width: 0%;"></div>
               </div>
@@ -251,7 +251,7 @@
 
             <div style="margin-bottom: 24px;">
               <div class="stat-title">Storage used</div>
-              <div class="stat-value" id="storage-text">0 GB / Unlimited</div>
+              <div class="stat-value" id="storage-text">Loading...</div>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="storage-bar" style="width: 0%;"></div>
               </div>
@@ -259,7 +259,7 @@
 
             <div style="margin-bottom: 24px;">
               <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Estimated Next Bill:</h2>
-              <div class="stat-value" id="my-plan-next-bill" style="color: #34C759;">$0.00</div>
+              <div class="stat-value" id="my-plan-next-bill" style="color: #34C759;">Loading...</div>
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
@@ -279,15 +279,15 @@
             <div class="metrics-grid">
                <div class="metric-box">
                   <div class="stat-title">Total Revenue</div>
-                  <div class="stat-value" id="cost-dashboard-revenue" style="color: #34C759; font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-revenue" style="color: #34C759; font-size: 20px;">Loading...</div>
                </div>
                <div class="metric-box">
                   <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</h2>
-                  <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">Loading...</div>
                </div>
                <div class="metric-box">
                   <div class="stat-title">Projected Monthly Cost</div>
-                  <div class="stat-value" id="projected-monthly-cost" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="projected-monthly-cost" style="font-size: 20px;">Loading...</div>
                </div>
             </div>
 
@@ -297,42 +297,42 @@
                 </svg>
                 <div>
                     <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Soft Limit Approaching</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your plan.</p>
                 </div>
             </div>
 
             <h2 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 18px;">Cost Breakdown</h2>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">LLM Usage</span>
-                <span id="cost-dashboard-llm" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-llm" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Storage</span>
-                <span id="cost-dashboard-storage" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-storage" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Payment Fees</span>
-                <span id="cost-dashboard-payment-fees" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-payment-fees" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Network & Storage Savings</span>
-                <span id="cost-dashboard-total-savings" style="font-weight: 500; color: #34C759;">$0.00</span>
+                <span id="cost-dashboard-total-savings" style="font-weight: 500; color: #34C759;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Compute Usage</span>
-                <span id="compute-cost" style="font-weight: 500;">$0.00</span>
+                <span id="compute-cost" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Network Cost</span>
-                <span id="cost-dashboard-network" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-network" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Email Sends</span>
-                <span id="email-cost" style="font-weight: 500;">$0.00</span>
+                <span id="email-cost" style="font-weight: 500;">Loading...</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Outbound API Calls</span>
-                <span id="api-cost" style="font-weight: 500;">$0.00</span>
+                <span id="api-cost" style="font-weight: 500;">Loading...</span>
             </div>
 
             <h3 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Agent & Feature Costs</h3>
@@ -451,7 +451,7 @@
 
                 if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
+                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your plan.`;
                 } else {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
