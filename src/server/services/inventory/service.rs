@@ -53,7 +53,10 @@ impl InventoryService {
                 .arg("NX")
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(false);
+                .map_err(|e| {
+                    tracing::error!("Redis lock acquisition error: {}", e);
+                    e
+                }).unwrap_or(false);
 
             if !acquired {
                 let pool = crate::db::get_pool();
@@ -92,7 +95,10 @@ impl InventoryService {
                     if let Some(stock) = current_stock {
                         if stock < quantity {
                             let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
+                                tracing::error!("Redis unlock error: {}", e);
+                                e
+                            }).unwrap_or(());
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -117,7 +123,10 @@ impl InventoryService {
                         if let Some(f_stock) = fallback_stock {
                             if f_stock < quantity {
                                 let _ = tx.rollback().await;
-                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
+                                    tracing::error!("Redis unlock error: {}", e);
+                                    e
+                                }).unwrap_or(());
                                 return Ok(ReserveResult {
                                     success: false,
                                     lock_id: "".to_string(),
@@ -133,7 +142,10 @@ impl InventoryService {
                             }
                         } else {
                             let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
+                                tracing::error!("Redis unlock error: {}", e);
+                                e
+                            }).unwrap_or(());
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -151,10 +163,16 @@ impl InventoryService {
                             "action": "reserve",
                             "quantity": quantity
                         }).to_string();
-                        let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.unwrap_or(());
+                let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
                     }
                 } else {
-                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
+                tracing::error!("Redis unlock error: {}", e);
+                e
+            }).unwrap_or(());
                     return Ok(ReserveResult {
                         success: false,
                         lock_id: "".to_string(),
@@ -162,7 +180,10 @@ impl InventoryService {
                     });
                 }
             } else {
-                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis unlock error: {}", e);
+                    e
+                }).unwrap_or(());
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
@@ -195,7 +216,10 @@ impl InventoryService {
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(None);
+                .map_err(|e| {
+                    tracing::error!("Redis get lock error: {}", e);
+                    e
+                }).unwrap_or(None);
 
             if let Some(cid) = current_lock_id {
                 if cid != lock_id && !lock_id.is_empty() {
@@ -223,7 +247,10 @@ impl InventoryService {
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(());
+                .map_err(|e| {
+                    tracing::error!("Redis unlock error: {}", e);
+                    e
+                }).unwrap_or(());
         }
 
         Ok(ReleaseResult {
@@ -249,7 +276,10 @@ impl InventoryService {
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(None);
+                .map_err(|e| {
+                    tracing::error!("Redis get lock error: {}", e);
+                    e
+                }).unwrap_or(None);
 
             if let Some(cid) = current_lock_id {
                 if cid != lock_id && !lock_id.is_empty() {
@@ -264,7 +294,10 @@ impl InventoryService {
                 .arg(&lock_key)
                 .query_async(&mut conn)
                 .await
-                .unwrap_or(());
+                .map_err(|e| {
+                    tracing::error!("Redis unlock error: {}", e);
+                    e
+                }).unwrap_or(());
         }
 
         let pool = crate::db::get_pool();
@@ -409,7 +442,10 @@ impl InventoryService {
                     "action": "commit",
                     "quantity": quantity
                 }).to_string();
-                let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.unwrap_or(());
+                let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
             }
         }
 
