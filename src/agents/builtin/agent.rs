@@ -760,7 +760,6 @@ impl Agent {
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
-        let mut messages = vec![crate::types::Message::user(initial_message)];
         let session_id = cfg
             .thread_id
             .clone()
@@ -769,6 +768,16 @@ impl Agent {
             .memory_store
             .as_ref()
             .map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
+
+        let mut processed_initial_message = initial_message.to_string();
+        if let Some(retriever) = &jit_retriever {
+            let temp_msgs = vec![crate::types::Message::user(initial_message)];
+            if let Some(jit_context) = retriever.retrieve_context(&temp_msgs).await {
+                processed_initial_message = format!("{}\n\n{}", jit_context, initial_message);
+            }
+        }
+
+        let mut messages = vec![crate::types::Message::user(processed_initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
         let mut total_session_cost = 0.0;
