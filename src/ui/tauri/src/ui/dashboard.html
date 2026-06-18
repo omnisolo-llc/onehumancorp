@@ -895,7 +895,7 @@
     </div>
 
     <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="/onboarding" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <a href="/setup.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -1124,7 +1124,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `/onboarding?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
+          footerLink.href = `/setup.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
@@ -1188,7 +1188,7 @@
               // Once it is "Copy Link", next click will copy and unlock
               aiReferBtn.onclick = () => {
                 const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
-                const link = `${window.location.origin}/onboarding?ref=${tenantId}&source=ai_feature_paywall`;
+                const link = `${window.location.origin}/setup.html?ref=${tenantId}&source=ai_feature_paywall`;
                 navigator.clipboard.writeText(link).then(() => {
                   aiReferBtn.innerText = "Copied Link!";
                   aiReferBtn.style.background = "#34C759";
