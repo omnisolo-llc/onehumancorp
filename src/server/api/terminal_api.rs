@@ -334,8 +334,6 @@ pub async fn sync_offline_transactions_handler(
     let mut synced_count = 0;
     let mut failed_ids = Vec::new();
 
-    let mut futures = Vec::new();
-
     let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
     // Update pos_terminal_sessions
@@ -352,94 +350,111 @@ pub async fn sync_offline_transactions_handler(
     .execute(&pool)
     .await;
 
-    for tx in &req_data.transactions {
+    if !req_data.transactions.is_empty() {
+        let mut db_tx = match pool.begin().await {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction: {}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Internal server error" })),
+                ).into_response();
+            }
+        };
 
-        let pool_clone = pool.clone();
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
+            tracing::error!("Failed to set org context: {}", e);
+            let _ = db_tx.rollback().await;
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Internal server error" })),
+            ).into_response();
+        }
+
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status) "
+        );
+
         let tenant_id_clone = tenant_id.clone();
-        let client_id_clone = tx.client_id.clone().unwrap_or_default();
-        let tx_id = tx.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        query_builder.push_values(req_data.transactions.iter(), |mut b, tx| {
+            let tx_id = tx.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+            let client_id_clone = tx.client_id.clone().unwrap_or_default();
+            let amount_cents = tx.amount_cents;
+            let currency = tx.currency.clone();
+            let payload_str = tx.payload.clone();
 
-        let amount_cents = tx.amount_cents;
-        let currency = tx.currency.clone();
-        let payload_str = tx.payload.clone();
+            b.push_bind(tx_id)
+             .push_bind(tenant_id_clone.clone())
+             .push_bind(client_id_clone)
+             .push_bind(amount_cents)
+             .push_bind(currency)
+             .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
+             .push_bind("PENDING")
+             .push_bind("pending");
+        });
 
-        futures.push(tokio::spawn(async move {
-            let mut db_tx = match pool_clone.begin().await {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {}", e);
-                    return Err(tx_id);
+        query_builder.push(" ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload");
+
+        match query_builder.build().fetch_all(&mut *db_tx).await {
+            Ok(rows) => {
+                if !rows.is_empty() {
+                    let mut job_query_builder = sqlx::QueryBuilder::new(
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) "
+                    );
+
+                    job_query_builder.push_values(rows.into_iter(), |mut b, row| {
+                        use sqlx::Row;
+                        let job_id = uuid::Uuid::new_v4().to_string();
+                        let tx_id: String = row.get("id");
+                        let client_id_clone: String = row.get("client_id");
+                        let amount_cents: i64 = row.get("amount_cents");
+                        let currency: String = row.get("currency");
+                        let payload_val: serde_json::Value = row.get("payload");
+                        let payload_str = payload_val.to_string();
+
+                        let job_payload = serde_json::json!({
+                            "pos_transaction_id": tx_id,
+                            "client_id": client_id_clone,
+                            "amount_cents": amount_cents,
+                            "currency": currency,
+                            "payload": payload_str,
+                        }).to_string();
+
+                        b.push_bind(job_id)
+                         .push_bind(tenant_id.clone())
+                         .push_bind("offline_pos_sync")
+                         .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&job_payload).unwrap_or(serde_json::json!({}))));
+                    });
+
+                    if let Err(e) = job_query_builder.build().execute(&mut *db_tx).await {
+                        tracing::error!("Failed to enqueue jobs: {}", e);
+                        for tx in &req_data.transactions {
+                            failed_ids.push(tx.id.clone().unwrap_or_default());
+                        }
+                        let _ = db_tx.rollback().await;
+                    } else {
+                        if let Err(e) = db_tx.commit().await {
+                            tracing::error!("Failed to commit transaction: {}", e);
+                            for tx in &req_data.transactions {
+                                failed_ids.push(tx.id.clone().unwrap_or_default());
+                            }
+                        } else {
+                            synced_count = req_data.transactions.len() as i32;
+                        }
+                    }
+                } else {
+                    if let Err(e) = db_tx.commit().await {
+                        tracing::error!("Failed to commit transaction (empty rows): {}", e);
+                    }
+                    synced_count = req_data.transactions.len() as i32; // Assuming empty meant duplicates were ignored, consider it synced.
                 }
-            };
-
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id_clone).await {
-                tracing::error!("Failed to set org context: {}", e);
-                return Err(tx_id);
-            }
-
-            let insert_res = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', 'pending')"
-            )
-            .bind(&tx_id)
-            .bind(&tenant_id_clone)
-            .bind(&client_id_clone)
-            .bind(amount_cents)
-            .bind(&currency)
-            .bind(&payload_str)
-            .execute(&mut *db_tx)
-            .await;
-
-            if let Err(e) = insert_res {
-                tracing::error!("Failed to insert offline transaction: {}", e);
-                return Err(tx_id);
-            }
-
-            let job_id = uuid::Uuid::new_v4().to_string();
-            let job_payload = serde_json::json!({
-                "pos_transaction_id": tx_id,
-                "client_id": client_id_clone,
-                "amount_cents": amount_cents,
-                "currency": currency,
-                "payload": payload_str,
-            }).to_string();
-
-            let job_res = sqlx::query(
-                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
-            )
-            .bind(&job_id)
-            .bind(&tenant_id_clone)
-            .bind(&job_payload)
-            .execute(&mut *db_tx)
-            .await;
-
-            if let Err(e) = job_res {
-                tracing::error!("Failed to enqueue job: {}", e);
-                return Err(tx_id);
-            }
-
-            if let Err(e) = db_tx.commit().await {
-                tracing::error!("Failed to commit transaction: {}", e);
-                return Err(tx_id);
-            }
-
-            Ok(())
-        }));
-    }
-
-    let results = futures::future::join_all(futures).await;
-
-    for res in results {
-        match res {
-            Ok(Ok(())) => {
-                synced_count += 1;
-            }
-            Ok(Err(id)) => {
-                failed_ids.push(id);
             }
             Err(e) => {
-                tracing::error!("Task failed to execute: {}", e);
+                tracing::error!("Failed to insert offline transactions: {}", e);
+                for tx in &req_data.transactions {
+                    failed_ids.push(tx.id.clone().unwrap_or_default());
+                }
+                let _ = db_tx.rollback().await;
             }
         }
     }
@@ -562,12 +577,14 @@ pub async fn create_payment_intent_handler(
 
     info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
-    let _ = ::server_telemetry::record_api_call_cost(
+    if let Err(e) = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
         &tenant_id,
         "stripe_terminal_payment_intent",
         0.05
-    ).await;
+    ).await {
+        tracing::warn!("Failed to record api call cost: {}", e);
+    }
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
@@ -584,7 +601,7 @@ pub async fn create_payment_intent_handler(
             Ok(client_secret) => {
                 let pool = crate::db::get_pool();
                 let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
-                let _ = sqlx::query(
+                if let Err(e) = sqlx::query(
                     "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
                      VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
                      ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'"
@@ -593,7 +610,9 @@ pub async fn create_payment_intent_handler(
                 .bind(&tenant_id)
                 .bind(device_id)
                 .execute(&pool)
-                .await;
+                .await {
+                    tracing::warn!("Failed to update pos terminal session for generic intent: {}", e);
+                }
                 Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
             },
             Err(e) => {
@@ -602,7 +621,9 @@ pub async fn create_payment_intent_handler(
                     let service = crate::services::inventory::InventoryService::new(
                         hub.redis_client.clone()
                     );
-                    let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
+                    if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
+                        tracing::error!("Failed to release inventory after stripe intent failed: {}", err);
+                    }
                 }
                 Json(Err(e))
             }
@@ -613,7 +634,9 @@ pub async fn create_payment_intent_handler(
                 let service = crate::services::inventory::InventoryService::new(
                     hub.redis_client.clone()
                 );
-                let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
+                if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
+                    tracing::error!("Failed to release inventory after stripe intent failed: {}", err);
+                }
             }
             Json(Err(e.to_string()))
         }

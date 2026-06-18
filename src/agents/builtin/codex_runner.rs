@@ -29,14 +29,13 @@ impl CodexCore {
         message: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         // OpenAI Mechanic: Input Guardrails (Early Check)
-        if let Some(guardrails) = &self.runtime_config.guardrails {
-            if let Err(e) = guardrails.check_input(message) {
+        if let Some(guardrails) = &self.runtime_config.guardrails
+            && let Err(e) = guardrails.check_input(message) {
                 return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!("Codex Runner Input Guardrail tripped: {}", e),
                 )));
             }
-        }
 
         let mut total_cost = 0.0;
         let mut on_event = |e: AgentEvent| {
@@ -65,7 +64,7 @@ pub struct Runner {
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
-        let core = Arc::new(CodexCore::new(agent, AgentRunConfig::default()));
+        let core = Arc::new(CodexCore::new(agent.clone(), AgentRunConfig::default()));
         Self {
             core,
             session_id: uuid::Uuid::new_v4().to_string(),
@@ -112,8 +111,8 @@ impl Runner {
 
         tokio::spawn(async move {
             // OpenAI Mechanic: Input Guardrails (Early Check) for streamed execution
-            if let Some(guardrails) = &core.runtime_config.guardrails {
-                if let Err(e) = guardrails.check_input(&msg) {
+            if let Some(guardrails) = &core.runtime_config.guardrails
+                && let Err(e) = guardrails.check_input(&msg) {
                     let _ = tx
                         .send(AgentEvent::TaskError {
                             error: format!("Codex Runner Input Guardrail tripped: {}", e),
@@ -121,7 +120,6 @@ impl Runner {
                         .await;
                     return;
                 }
-            }
 
             let tx_clone = tx.clone();
             let mut on_event = move |event: AgentEvent| {
@@ -578,7 +576,6 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let _cfg = AgentRunConfig::default();
 
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
@@ -857,7 +854,7 @@ impl AppServer {
                     &self,
                     chunk: crate::scalable_multi_agent::TaskChunk,
                 ) -> Result<crate::scalable_multi_agent::TaskResult, String> {
-                    let _cfg = AgentRunConfig::default();
+
                     match self.runner.run_async(&chunk.payload).await {
                         Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
                             chunk_id: chunk.id,
@@ -971,7 +968,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let result = runner.run_async("test").await.unwrap();
         assert_eq!(result, "async success");
     }
@@ -988,7 +985,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let result = runner.run_sync_blocking("test").unwrap();
         assert_eq!(result, "sync success");
     }
@@ -1005,7 +1002,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let mut rx = runner.run_streamed("test");
 
         let mut events = vec![];

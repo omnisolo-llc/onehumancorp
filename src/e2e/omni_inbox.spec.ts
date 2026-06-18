@@ -7,10 +7,13 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
     const senderId = `user_${randomUUID()}@example.com`;
     const messageContent = 'Hello, do you fix sinks?';
 
-    const response = await request.post('/api/v1/webhooks/omni_inbox', {
+    const response = await request.post('/api/v1/webhooks/omnichannel', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       data: {
-        tenant_id: 'e2e-tenant',
-        source: 'email',
+        tenant_id: 'default',
+        channel: 'email',
         sender_id: senderId,
         message: messageContent
       }
@@ -19,6 +22,12 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
     expect(response.ok()).toBeTruthy();
 
     // 2. Load the inbox UI
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
 

@@ -20,7 +20,7 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     await expect(page.getByText('Product Published!')).toBeVisible({ timeout: 10000 });
 
     // 2. Navigate to POS terminal path
-    await page.goto(`/pos/terminal`);
+    await page.goto(`/pos.html`);
 
     // Unlock the terminal
     const pins = ['1', '2', '3', '4'];

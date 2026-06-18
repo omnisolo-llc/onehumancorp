@@ -514,7 +514,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -524,7 +524,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         </button>
         <button
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] px-2 py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1056,7 +1056,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1131,7 +1131,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         <div className="flex flex-col gap-1">
                           <label className="text-xs text-gray-500 font-semibold">Scope of Work</label>
                           <textarea
-                            className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                            className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                             rows={3}
                             value={editQuoteScope}
                             onChange={(e) => setEditQuoteScope(e.target.value)}
@@ -1271,7 +1271,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}

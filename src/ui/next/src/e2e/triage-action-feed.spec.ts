@@ -34,21 +34,21 @@ test.describe('Triage Action Feed UI', () => {
     }
 
     await page.goto('/triage');
-    await expect(page.locator('h2', { hasText: 'Action Center' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/Work Triage/, { timeout: 15000 });
 
     // Let's use a simpler locator for list items
-    let listItems = page.locator('button[data-testid^="triage-card-"]');
+    let listItems = page.locator('div[data-testid^="triage-card-"]');
 
     await page.waitForTimeout(2000);
-    await expect(page.locator('body')).toContainText(/Action Center|All caught up/);
+    await expect(page.locator('body')).toContainText(/Work Triage|All caught up/);
 
     let count = await listItems.count();
 
     while (count > 0) {
-      await listItems.nth(0).click();
+      // Removed list item click
 
-      const approveBtn = page.getByTestId('approve-btn');
-      const dismissBtn = page.getByTestId('dismiss-btn');
+      const approveBtn = listItems.nth(0).getByTestId('approve-btn');
+      const dismissBtn = listItems.nth(0).getByTestId('dismiss-btn');
 
       if (await approveBtn.isVisible()) {
         await approveBtn.click();

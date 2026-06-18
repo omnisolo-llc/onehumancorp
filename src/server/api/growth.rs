@@ -1091,12 +1091,26 @@ pub struct ZeroClickGenerateResponse {
     pub name: String,
     pub url: String,
     pub products_count: usize,
+    pub organization_id: String,
+    pub user_id: String,
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<TrackVisitorRequest>,
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<serde_json::Value>,
 ) -> impl IntoResponse {
+    if let Some(event_type) = req.get("event_type").and_then(|v| v.as_str()) {
+        if event_type == "loyalty_program_generated" {
+            if let Some(metadata) = req.get("metadata") {
+                if let Some(tenant) = metadata.get("tenant").and_then(|v| v.as_str()) {
+                    state.hub.log_event(serde_json::json!({
+                        "tenant_id": tenant,
+                        "type": "growth.loyalty_program_generated"
+                    }));
+                }
+            }
+        }
+    }
     Json(TrackVisitorResponse { tracked: true })
 }
 
@@ -2835,6 +2849,8 @@ pub async fn handle_zero_click_generate(
         name: intake_data.business_name,
         url,
         products_count: intake_data.initial_products.len(),
+        organization_id: _start_res.organization_id,
+        user_id: _start_res.user_id,
     }))
 }
 
