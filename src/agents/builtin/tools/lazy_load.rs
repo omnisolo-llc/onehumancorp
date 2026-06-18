@@ -14,22 +14,39 @@ struct LazyLoadArgs {
 
 struct LazyLoadToolsExecutor {
     active_tools: Arc<RwLock<HashSet<String>>>,
+    available_tools: Arc<Vec<String>>,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
     async fn execute_typed(&self, args: LazyLoadArgs) -> Result<String, ToolError> {
-        let mut active = self.active_tools.write().await;
-        let mut loaded = Vec::new();
-
-        for name in args.tool_names {
-            active.insert(name.clone());
-            loaded.push(name);
+        let mut invalid_tools = Vec::new();
+        for name in &args.tool_names {
+            if !self.available_tools.contains(name) {
+                invalid_tools.push(name.clone());
+            }
         }
 
-        if loaded.is_empty() {
+        if !invalid_tools.is_empty() {
+            return Err(ToolError::LlmRecoverable(format!(
+                "The following tools are not available in the global registry: {}. Please check your tool name spelling or use ToolSearch to find the correct tool name.",
+                invalid_tools.join(", ")
+            )));
+        }
+
+        if args.tool_names.is_empty() {
             Ok("No valid tool names provided to load.".to_string())
         } else {
+            let mut active = self.active_tools.write().await;
+            let mut loaded = Vec::new();
+
+            for name in args.tool_names {
+                // Re-check just to be absolutely certain we don't load something that wasn't allowed,
+                // though we already validated above.
+                active.insert(name.clone());
+                loaded.push(name);
+            }
+
             Ok(format!(
                 "Successfully loaded {} tools into your context window. You may now use them in the next turn.",
                 loaded.join(", ")
@@ -38,7 +55,7 @@ impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
     }
 }
 
-pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
+pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>, available_tools: Arc<Vec<String>>) -> Tool {
     Tool {
         name: "LazyLoadTools".to_string(),
         description: "Loads additional tools into your context window. Use this when you discover tools via ToolSearch that you need to use.".to_string(),
@@ -56,7 +73,7 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
             },
             "required": ["tool_names"]
         }),
-        execute: Arc::new(PydanticAdapter::new(LazyLoadToolsExecutor { active_tools })),
+        execute: Arc::new(PydanticAdapter::new(LazyLoadToolsExecutor { active_tools, available_tools })),
     }
 }
 
@@ -70,7 +87,8 @@ mod tests {
     #[tokio::test]
     async fn test_lazy_load_tool() {
         let active_tools = Arc::new(RwLock::new(HashSet::new()));
-        let tool = lazy_load_tool(active_tools.clone());
+        let available_tools = Arc::new(vec!["Bash".to_string(), "Write".to_string()]);
+        let tool = lazy_load_tool(active_tools.clone(), available_tools);
 
         let args = serde_json::json!({
             "tool_names": ["Bash", "Write"]
@@ -93,10 +111,11 @@ mod tests {
     #[tokio::test]
     async fn test_lazy_load_tool_invalid_args() {
         let active_tools = Arc::new(RwLock::new(HashSet::new()));
-        let tool = lazy_load_tool(active_tools.clone());
+        let available_tools = Arc::new(vec!["Bash".to_string(), "ValidTool".to_string()]);
+        let tool = lazy_load_tool(active_tools.clone(), available_tools);
 
         let args = serde_json::json!({
-            "tool_names": "Not an array"
+            "tool_names": ["Bash", "InvalidTool"]
         });
 
         let res = tool.execute.execute(args).await;

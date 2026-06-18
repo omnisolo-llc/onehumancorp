@@ -3008,8 +3008,12 @@ impl Agent {
             if !session_tools.iter().any(|t| t.name == "ToolSearch") {
                 session_tools.push(tool_search);
             }
+
+            // Gather all available tool names to enforce strict checking inside the lazy_load_tool
+            let available_tools_names: Vec<String> = self.tools.iter().map(|t| t.name.clone()).collect();
+
             let active_tools_clone = active_tools.clone();
-            session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
+            session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone, std::sync::Arc::new(available_tools_names)));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
 
