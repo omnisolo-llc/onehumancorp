@@ -186,7 +186,7 @@ export default function TriagePage() {
                   type="button"
                   data-testid={`triage-card-${item.id}`}
                   onClick={() => setSelectedId(item.id)}
-                  className="app-list-item w-full text-left min-h-[44px] rounded-[16px] transition-all hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]"
+                  className="app-list-item w-full text-left min-h-[44px] min-w-[44px] rounded-[16px] transition-all hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]"
                   style={{
                     background:
                       selected?.id === item.id
