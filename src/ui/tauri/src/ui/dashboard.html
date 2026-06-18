@@ -878,8 +878,8 @@
 
 
       <section aria-label="Unified Agent Feed">
-        <div class="ohc-growth-card" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
-          <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Unified Agent Feed</h2>
+        <div class="ohc-growth-card app-panel" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
+          <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Action Required</h2>
           <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
           <div class="triage-tab-container">
             <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')">Proposals</button>
@@ -1756,22 +1756,22 @@
             let proposedAction = item.proposed_action || {};
             let draftReply = proposedAction.draft_reply || parsedPayload.draft_reply || '';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
+              <div class="triage-item glassmorphism" data-testid="instagram-dm-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.4);">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                     <span style="font-size: 18px;">💬</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Instagram DM</strong>
                   </div>
-                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'Action Needed'}</div>
+                  <div class="triage-priority glassmorphism" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'Action Needed'}</div>
                 </div>
                 <div class="triage-context" style="font-weight: 500; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
                   "${parsedPayload.customer_message || 'New message'}"
                 </div>
                 <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
-                  <div style="font-size: 10px; font-weight: 700; color: #0066FF; text-transform: uppercase; margin-bottom: 4px;">Draft Reply</div>
+                  <div style="font-size: 10px; font-weight: 700; color: #0066FF; text-transform: uppercase; margin-bottom: 4px;">Draft:</div>
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
                 </div>
               </div>
