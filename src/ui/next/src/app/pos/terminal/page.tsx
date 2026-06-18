@@ -23,17 +23,40 @@ export default function POSTerminal() {
   const [offlineConversion, setOfflineConversion] = useState(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const checkQueue = async () => {
+      const qLen = await SyncManager.getInstance().getQueueLength();
+      if (navigator.onLine && qLen > 0) {
+        setSyncing(true);
+      } else {
+        setSyncing(false);
+      }
+    };
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      checkQueue();
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      checkQueue();
+    };
+
+    const handleQueueUpdated = () => {
+      checkQueue();
+    };
 
     if (typeof window !== 'undefined') {
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+        window.addEventListener('ohc_queue_updated', handleQueueUpdated);
+
+        checkQueue();
 
         return () => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
+          window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
         };
     }
   }, []);
