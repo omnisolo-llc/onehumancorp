@@ -318,7 +318,7 @@ mod tests {
 
     #[async_trait]
     impl P2PTransport for MockP2PTransport {
-        async fn handshake(&self, peer_id: &str, spiffe_id: &str, _public_key: &str, tenant_id: &str) -> Result<bool, String> {
+        async fn handshake(&self, _peer_id: &str, spiffe_id: &str, _public_key: &str, tenant_id: &str) -> Result<bool, String> {
             if spiffe_id.starts_with("spiffe://") && tenant_id == "test_tenant" {
                 Ok(true)
             } else {
