@@ -206,6 +206,9 @@ impl MyDashboardService {
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                 }
                             },
+                            is_subscribable: r.try_get("is_subscribable").unwrap_or(false),
+                            subscription_frequency: r.try_get("subscription_frequency").unwrap_or_default(),
+                            subscription_discount_percent: r.try_get("subscription_discount_percent").unwrap_or(0),
                         };
                         results.push(p);
                     }
@@ -230,6 +233,9 @@ impl MyDashboardService {
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                 }
                             },
+                            is_subscribable: r.try_get("is_subscribable").unwrap_or(false),
+                            subscription_frequency: r.try_get("subscription_frequency").unwrap_or_default(),
+                            subscription_discount_percent: r.try_get("subscription_discount_percent").unwrap_or(0),
                         };
                         results.push(p);
                     }

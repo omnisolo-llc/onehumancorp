@@ -36,9 +36,9 @@ pub struct CreateProductRequest {
     pub duration: Option<i32>,
     pub description: String,
     pub item_type: String,
-    pub is_subscription: Option<bool>,
-    pub subscription_interval: Option<String>,
-    pub subscription_discount: Option<i32>,
+    pub is_subscribable: Option<bool>,
+    pub subscription_frequency: Option<String>,
+    pub subscription_discount_percent: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -151,7 +151,7 @@ async fn handle_create_product(
 
     let price_cents = (payload.price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
     let insert_product = sqlx::query(
-        "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscription_enabled, subscription_interval, subscription_discount) VALUES ($1, $2, $3, $4, $5, $6, 100, $7, $8, $9)"
+        "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscribable, subscription_frequency, subscription_discount_percent) VALUES ($1, $2, $3, $4, $5, $6, 100, $7, $8, $9)"
     )
     .bind(&product_id)
     .bind(&tenant_id)
@@ -159,9 +159,9 @@ async fn handle_create_product(
     .bind(&payload.description)
     .bind(&payload.item_type)
     .bind(price_cents)
-    .bind(payload.is_subscription.unwrap_or(false))
-    .bind(payload.subscription_interval.clone())
-    .bind(payload.subscription_discount)
+    .bind(payload.is_subscribable.unwrap_or(false))
+    .bind(payload.subscription_frequency.clone())
+    .bind(payload.subscription_discount_percent)
     .execute(&mut *conn)
     .await;
 
@@ -190,26 +190,23 @@ async fn handle_create_product(
         );
     }
 
-    if payload.is_subscription.unwrap_or(false) {
+    if payload.is_subscribable.unwrap_or(false) {
         let plan_id = uuid::Uuid::new_v4().to_string();
-        let interval = payload
-            .subscription_interval
+        let frequency = payload
+            .subscription_frequency
             .clone()
             .unwrap_or_else(|| "Monthly".to_string())
             .to_lowercase();
-        let discount = payload.subscription_discount.unwrap_or(0);
+        let discount = payload.subscription_discount_percent.unwrap_or(0);
 
         let insert_plan = sqlx::query(
-            "INSERT INTO subscription_plans (id, tenant_id, product_id, interval, discount_percentage, name, price_cents, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+            "INSERT INTO subscription_plans (id, tenant_id, name, price_cents, frequency) VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&plan_id)
         .bind(&tenant_id)
-        .bind(&product_id)
-        .bind(&interval)
-        .bind(discount)
         .bind(&payload.name)
         .bind(price_cents)
-        .bind(&interval)
+        .bind(&frequency)
         .execute(&mut *conn)
         .await;
 

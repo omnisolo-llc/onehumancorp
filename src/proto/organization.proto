@@ -47,6 +47,9 @@ message Product {
   string currency = 6;
   string fulfillment_strategy = 7;
   string metadata_json = 8;
+  bool is_subscribable = 9;
+  string subscription_frequency = 10;
+  int32 subscription_discount_percent = 11;
 }
 
 message OnboardingRequest {
