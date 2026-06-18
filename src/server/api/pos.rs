@@ -19,6 +19,8 @@ where
     Router::new()
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
+        .route("/inventory/lock", axum::routing::post(lock_inventory_handler))
+        .route("/inventory/release", axum::routing::post(release_inventory_handler))
         .with_state(hub)
 }
 
@@ -221,4 +223,83 @@ mod tests {
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct LockInventoryRequest {
+    pub item_id: String,
+    pub lock_id: String,
+    pub context: String, // "online" or "instore"
+}
+
+pub async fn lock_inventory_handler(
+    State(_hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<LockInventoryRequest>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let duration = match payload.context.as_str() {
+        "online" => std::time::Duration::from_secs(300), // 5 minutes
+        "instore" => std::time::Duration::from_secs(15),  // 15 seconds
+        _ => std::time::Duration::from_secs(60),
+    };
+
+    // Ensure product actually exists in postgres before locking
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+        .bind(&payload.item_id)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await;
+
+    if let Ok(Some(row)) = rows {
+        let count: i32 = row.get("inventory_count");
+        if count <= 0 {
+            return Json(json!({"status": "error", "message": "Item is out of stock in central ledger"}));
+        }
+
+        if let Some(redis_client) = crate::get_redis_client() {
+            let manager = crate::tools::inventory_lock::DistributedLockManager::new(redis_client.clone());
+            let success = manager.acquire_lock(&tenant_id, &payload.item_id, &payload.lock_id, duration).await;
+            if success {
+                // Operations Agent would be triggered here via hub events in full implementation
+                return Json(json!({"status": "acquired"}));
+            } else {
+                return Json(json!({"status": "locked", "message": "Item is currently reserved"}));
+            }
+        }
+    }
+
+    Json(json!({"status": "error", "message": "Lock mechanism unavailable or item not found"}))
+}
+
+#[derive(serde::Deserialize)]
+pub struct ReleaseInventoryRequest {
+    pub item_id: String,
+    pub lock_id: String,
+}
+
+pub async fn release_inventory_handler(
+    State(_hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<ReleaseInventoryRequest>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    if let Some(redis_client) = crate::get_redis_client() {
+        let manager = crate::tools::inventory_lock::DistributedLockManager::new(redis_client.clone());
+        let success = manager.release_lock(&tenant_id, &payload.item_id, &payload.lock_id).await;
+        if success {
+            return Json(json!({"status": "released"}));
+        }
+    }
+
+    Json(json!({"status": "error", "message": "Release failed or not holding lock"}))
 }
