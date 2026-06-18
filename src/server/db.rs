@@ -66,7 +66,7 @@ pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
         .max_connections(2)
         .connect(&uri)
         .await
-        .unwrap()
+        .expect("Failed to connect to in-memory test database")
 }
 
 #[cfg(test)]
@@ -87,7 +87,7 @@ pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
             })
         })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-        .unwrap()
+        .expect("Failed to connect to in-memory test database")
 }
 
 #[derive(serde::Serialize)]
