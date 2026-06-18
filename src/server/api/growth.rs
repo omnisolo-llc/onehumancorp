@@ -429,6 +429,58 @@ pub struct TimeSavingsResponse {
     pub auto_replied: i64,
 }
 
+async fn fetch_time_savings_data(
+    pool: &sqlx::PgPool,
+    parsed_uuid: uuid::Uuid,
+    tenant_id_str: &str,
+) -> Result<TimeSavingsResponse, sqlx::Error> {
+    let f1 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_one(pool)
+            .await
+    };
+
+    let f2 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_one(pool)
+            .await
+    };
+
+    let f3 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_one(pool)
+            .await
+    };
+
+    let f4 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+            .bind(tenant_id_str)
+            .fetch_one(pool)
+            .await
+    };
+
+    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+
+    let inquiries_handled = res1?;
+    let appointments_scheduled = res2?;
+    let carts_recovered = res3?;
+    let auto_replied = res4?;
+
+    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
+    let hours_saved = (base_hours * 10.0).round() / 10.0;
+
+    Ok(TimeSavingsResponse {
+        hours_saved,
+        inquiries_handled,
+        appointments_scheduled,
+        carts_recovered,
+        auto_replied,
+    })
+}
+
 async fn handle_time_savings(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
@@ -443,68 +495,41 @@ async fn handle_time_savings(
     let cache_key = format!("time_savings:{}", tenant_id_str);
     let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
-    if let Some(cached_res) = cache.get(&cache_key).await {
+    if let Some((cached_res, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return Ok(Json(cached_res));
+        }
+
+        let pool_bg = state.pool.clone();
+        let cache_key_bg = cache_key.clone();
+        let tenant_id_str_bg = tenant_id_str.clone();
+
+        tokio::spawn(async move {
+            match fetch_time_savings_data(&pool_bg, parsed_uuid, &tenant_id_str_bg).await {
+                Ok(response) => {
+                    if let Some(c) = TIME_SAVINGS_CACHE.get() {
+                        c.set(&cache_key_bg, response, std::time::Duration::from_secs(60)).await;
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to fetch background time savings data: {}", e);
+                }
+            }
+        });
+
         return Ok(Json(cached_res));
     }
 
-    let pool1 = state.pool.clone();
-    let pool2 = state.pool.clone();
-    let pool3 = state.pool.clone();
-    let pool4 = state.pool.clone();
-    let parsed_uuid1 = parsed_uuid;
-    let parsed_uuid2 = parsed_uuid;
-    let parsed_uuid3 = parsed_uuid;
-    let tenant_id_str4 = tenant_id_str.clone();
-
-    let f1 = async move {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid1)
-            .fetch_optional(&pool1)
-            .await
-    };
-
-    let f2 = async move {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid2)
-            .fetch_optional(&pool2)
-            .await
-    };
-
-    let f3 = async move {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid3)
-            .fetch_optional(&pool3)
-            .await
-    };
-
-    let f4 = async move {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-            .bind(tenant_id_str4)
-            .fetch_optional(&pool4)
-            .await
-    };
-
-    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
-    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
-    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
-    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
-
-    // Calculate total hours saved
-    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
-    let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
-
-    let response = TimeSavingsResponse {
-        hours_saved,
-        inquiries_handled,
-        appointments_scheduled,
-        carts_recovered,
-        auto_replied,
-    };
-
-    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
-
-    Ok(Json(response))
+    match fetch_time_savings_data(&state.pool, parsed_uuid, &tenant_id_str).await {
+        Ok(response) => {
+            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Json(response))
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch time savings data: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
