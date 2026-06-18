@@ -4866,17 +4866,12 @@ async fn ui_dashboard_unified_feed_handler(
         "pending_approvals": approvals,
         "agent_feed": agent_feed,
         "priority_tasks": priority_tasks,
+        "supply": supply,
     });
 
     let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
 
-    // Add supply to the final result
-    let mut final_result = cacheable_result;
-    if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply);
-    }
-
-    (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
+    (axum::http::StatusCode::OK, axum::Json(cacheable_result)).into_response()
 }
 
 async fn ui_dashboard_unified_agent_feed_handler(
