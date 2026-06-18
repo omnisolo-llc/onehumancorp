@@ -46,7 +46,7 @@ export class SyncManager {
     if (typeof window === 'undefined') return;
 
     if (!mutation.id) {
-        mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        mutation.id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
     }
     if (!mutation.timestamp) {
         mutation.timestamp = Date.now();

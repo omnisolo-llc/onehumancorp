@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::db::DB;
 use serde_json::json;
-use std::time::Duration;
 use uuid::Uuid;
 
 pub struct LifecycleEngagementWorker {
