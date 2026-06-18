@@ -2321,7 +2321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   if (nextBtn) {
                       nextBtn.click();
                   } else if (activeStep.id === 'step-instant' || activeStep.id === 'step-template') {
-                      const launchBtn = activeStep.querySelector('#generate-storefront-btn, button[onclick*="start_onboarding"]');
+                      const launchBtn = activeStep.querySelector('#generate-storefront-btn, #finish-btn, button[onclick*="start_onboarding"]');
                       if (launchBtn) {
                           launchBtn.click();
                       } else {
