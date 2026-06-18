@@ -25,8 +25,13 @@ pub struct CommitResult {
 }
 
 impl InventoryService {
-    pub fn new( redis_client: Option<redis::Client>) -> Self {
+    pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self { redis_client }
+    }
+
+    #[inline]
+    fn get_lock_key(tenant_id: &str, product_id: &str) -> String {
+        format!("ohc:lock:{}:inventory:{}", tenant_id, product_id)
     }
 
     pub async fn reserve_inventory(
@@ -37,13 +42,13 @@ impl InventoryService {
         ttl_seconds: i32,
     ) -> Result<ReserveResult, String> {
         let lock_id = Uuid::new_v4().to_string();
-        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+        let lock_key = Self::get_lock_key(tenant_id, product_id);
 
         if let Some(client) = &self.redis_client {
             let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| format!("Redis conn failed: {}", e))?;
 
-            let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 };
+            let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 }; // Distributed Redis lock TTL
 
             let acquired: bool = redis::cmd("SET")
                 .arg(&lock_key)
@@ -185,7 +190,7 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<ReleaseResult, String> {
-        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+        let lock_key = Self::get_lock_key(tenant_id, product_id);
 
         if let Some(client) = &self.redis_client {
             let mut conn = client.get_multiplexed_async_connection().await
@@ -239,7 +244,7 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<CommitResult, String> {
-        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+        let lock_key = Self::get_lock_key(tenant_id, product_id);
 
         if let Some(client) = &self.redis_client {
             let mut conn = client.get_multiplexed_async_connection().await
