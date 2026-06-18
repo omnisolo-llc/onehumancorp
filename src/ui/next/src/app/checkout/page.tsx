@@ -18,6 +18,7 @@ function CheckoutContent() {
   const quantity = parseInt(searchParams?.get("quantity") || "1", 10);
   const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isReserving, setIsReserving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [tenant, setTenant] = useState("my-store");
   const [checkoutStatus, setCheckoutStatus] = useState("");
@@ -33,6 +34,7 @@ function CheckoutContent() {
     if (lastMessage && lastMessage.product_id === productId && lastMessage.action === 'reserve') {
       setIsSoldOut(true);
       setCheckoutStatus('Item just sold out.');
+      setIsSoldOut(true);
     }
   }, [lastMessage, productId]);
 

@@ -14,6 +14,7 @@ export default function POSTerminal() {
   const [clockedIn, setClockedIn] = useState(false);
   const [activeStaff, setActiveStaff] = useState<any>(null);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [isSyncingInitial, setIsSyncingInitial] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [reserving, setReserving] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
@@ -240,7 +241,7 @@ export default function POSTerminal() {
 
   return (
      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-x-hidden">
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">

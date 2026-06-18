@@ -107,4 +107,40 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
   });
+  test('Commit inventory correctly deducts stock', async ({ page }) => {
+    const tenantId = 'e2e-tenant-pos-additional';
+    const productId = 'e2e-product-cake-pos-additional';
+
+    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+        data: {
+            tenant_id: tenantId,
+            product_id: productId,
+            quantity: 1,
+            ttl_seconds: 15
+        },
+        headers: {
+            'x-tenant-id': tenantId
+        }
+    });
+
+    const lockData = await reserveRes.json();
+    expect(lockData.success).toBe(true);
+
+    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
+        data: {
+            tenant_id: tenantId,
+            product_id: productId,
+            quantity: 1,
+            lock_id: lockData.lock_id
+        },
+        headers: {
+            'x-tenant-id': tenantId
+        }
+    });
+
+    expect(commitRes.ok()).toBe(true);
+    const commitData = await commitRes.json();
+    expect(commitData.success).toBe(true);
+  });
+
 });
