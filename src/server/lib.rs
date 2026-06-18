@@ -3130,6 +3130,7 @@ pub async fn list_ui_triage_handler(
 
     let items = match load_ui_triage_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(items) => items,
+        Err(sqlx::Error::RowNotFound) => vec![],
         Err(e) => {
             tracing::error!("Failed to fetch triage items: {:?}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
@@ -3238,6 +3239,7 @@ pub async fn list_ui_omni_inbox_handler(
 
     let items = match load_ui_omni_inbox_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(items) => items,
+        Err(sqlx::Error::RowNotFound) => vec![],
         Err(e) => {
             tracing::error!("Failed to fetch omni inbox items: {:?}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
