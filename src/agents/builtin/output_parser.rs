@@ -231,15 +231,10 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         let tool_results = msg
                             .tool_calls
                             .iter()
-                            .map(|tc| crate::types::ToolResult {
-                                tool_call_id: tc.id.clone(),
-                                content: String::new(),
-                                error: crate::types::ToolResult::new_llm_recoverable(
-                                    tc.id.clone(),
-                                    &detailed_error,
-                                )
-                                .error,
-                            })
+                            .map(|tc| crate::types::ToolResult::new_llm_recoverable(
+                                tc.id.clone(),
+                                &detailed_error,
+                            ))
                             .collect();
 
                         current_req.messages.push(Message {
