@@ -63,11 +63,32 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                     Err(_) => "<unprintable>".to_string(),
                 };
 
+                let err_str = e.to_string();
+                let mut detailed_instruction = self.custom_instruction.clone();
+
+                // Provide specific hints for common serde errors
+                if err_str.contains("missing field") {
+                    let field_name = err_str.split('`').nth(1).unwrap_or("unknown");
+                    let hint = format!("The required field '{}' is missing. Please provide it.", field_name);
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(&hint);
+                        instr
+                    }));
+                } else if err_str.contains("invalid type") {
+                    let hint = "There is a type mismatch. Ensure strings are quoted, numbers are not quoted, and arrays/objects are formatted correctly as JSON.";
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(hint);
+                        instr
+                    }));
+                }
+
                 return Err(ToolError::LlmRecoverable(
                     ohc_builtin_agent_core::types::format_pydantic_error(
                         &e,
                         Some(args_str.as_str()),
-                        self.custom_instruction.as_deref(),
+                        detailed_instruction.as_deref(),
                     ),
                 ));
             }
@@ -118,8 +139,8 @@ mod tests {
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             assert!(msg.contains("invalid type"));
-            assert!(msg.contains("invalid type"));
             assert!(msg.contains("not a number"));
+            assert!(msg.contains("There is a type mismatch"));
         } else {
             panic!("Expected LlmRecoverable error with detailed semantic validation feedback");
         }
@@ -134,6 +155,7 @@ mod tests {
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             assert!(msg.contains("missing field `bar`"));
+            assert!(msg.contains("The required field 'bar' is missing."));
         } else {
             panic!("Expected LlmRecoverable error about missing field");
         }
@@ -201,7 +223,7 @@ mod tests_custom {
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             assert!(msg.contains("Please provide an integer for bar"));
-            assert!(!msg.contains("Please strictly follow the tool's JSON schema and try again."));
+            assert!(msg.contains("Hint: There is a type mismatch."));
         } else {
             panic!("Expected LlmRecoverable error with custom instruction");
         }
