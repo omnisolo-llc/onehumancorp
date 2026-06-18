@@ -348,6 +348,16 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
+        let _ = sqlx::query(
+            "UPDATE pos_terminal_sessions
+             SET sync_status = 'SYNCED', pending_reconciliation = '[]'::jsonb
+             WHERE tenant_id = $1 AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $2)"
+        )
+        .bind(&job.tenant_id)
+        .bind(transaction_id)
+        .execute(&mut *tx)
+        .await;
+
         tx.commit().await.unwrap();
 
         Ok(Ok(()))
@@ -376,6 +386,10 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-1', 'tenant-worker-test', 'Test Prod', 10) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, sync_status) VALUES ('ts-1', 'tenant-worker-test', 'client-1', 'CONFLICTS_PENDING') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
         sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker', 'tenant-worker-test', 'client-1', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
@@ -421,6 +435,10 @@ mod tests {
         let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(conflict_jobs.0, 0); // No conflict for this test
+
+        let ts_sync_status: (String,) = sqlx::query_as("SELECT sync_status FROM pos_terminal_sessions WHERE id = 'ts-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(ts_sync_status.0, "SYNCED");
         // Verify agent_action_requests created for low stock (10 - 2 = 8, not low. Wait, I should deduct 6 instead)
     }
 
