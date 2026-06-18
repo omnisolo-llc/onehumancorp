@@ -20,7 +20,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         expect(response.ok()).toBeTruthy();
 
         // Step 3: Navigate to Work Triage UI
-        await page.goto('/ui/triage.html');
+        await page.goto('/triage');
 
         // Wait for feed to load
         await page.waitForSelector('.app-list-item');
@@ -36,8 +36,8 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         await page.locator('.app-list-item').first().click();
 
         // Step 5: Verify Thread view & Draft reply
-        await page.waitForSelector('.detail-group:has-text("AI Draft Reply")');
-        const draftReplyText = await page.locator('.proposed-action').textContent();
+        await page.waitForSelector('.text-xs:has-text("Proposed Action")');
+        const draftReplyText = await page.locator('.text-sm.leading-6').textContent();
         expect(draftReplyText).toContain('vegan cake');
 
         // Step 6: Click "Approve & Send"
@@ -46,7 +46,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         await approveBtn.click();
 
         // Step 7: Verify UI updates
-        const actionStatus = page.locator('#action-status');
+        const actionStatus = page.locator('[role="status"]');
         await expect(actionStatus).toBeVisible();
         await expect(actionStatus).toHaveText('Approved!');
     });
