@@ -603,11 +603,43 @@ export default function WebsiteBuilderPage() {
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
                       className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-[16px] shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                      onClick={() => {
+                      onClick={async () => {
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                        const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+                        try {
+                            const startRes = await fetch('/api/onboarding/start', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                              body: JSON.stringify({
+                                company_name: businessName || 'My Business',
+                                admin_email: userEmail || 'admin@example.com',
+                                admin_name: userName || 'Admin',
+                                admin_password: userPassword || '',
+                                business_type: businessType || 'Online Store',
+                                first_product_name: productName || 'First Product',
+                                first_product_price: productPrice || '10.00',
+                                price_type: hasPhysicalProducts ? 'physical' : 'digital',
+                                location: 'Unknown',
+                                ai_agents: aiAgents.length > 0 ? aiAgents : ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
+                                auto_respond: aiAutoRespond,
+                                initial_products: []
+                              })
+                            });
+
+                            if (!startRes.ok) {
+                                throw new Error('Failed to start');
+                            }
+                            const startData = await startRes.json();
+                            if (startData.organization_id) {
+                                localStorage.setItem('tenant_id', startData.organization_id);
+                                localStorage.setItem('tenant', startData.organization_id);
+                            }
+                            setStatus('live');
+                        } catch (err) {
+                          console.error(err);
+                          setStatus('live'); // Fail open for the wizard flow so users don't get stuck just like the instant-build fallback
+                        }
                       }}
                     >
                       Publish my business

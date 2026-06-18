@@ -89,7 +89,7 @@ impl WorkerPool {
                                 }
                                 Err(e) => {
                                     ::server_telemetry::record_error_signal("[bug] Worker failed to dequeue");
-                                    tracing::error!("Worker {} failed to dequeue: {}", i, e);
+                                    tracing::trace!("Worker {} failed to dequeue: {}", i, e);
                                 }
                             }
                         }

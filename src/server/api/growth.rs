@@ -244,7 +244,7 @@ pub async fn handle_conversational_chat(
             .await
             .unwrap_or(0.0);
 
-        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.", rating);
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC", rating);
         if rating < 4.5 {
              draft_action = Some(ChatDraftAction {
                 id: "start_review_campaign_action".to_string(),
@@ -254,6 +254,17 @@ pub async fn handle_conversational_chat(
                 payload: serde_json::json!({}),
             });
         }
+    } else if lower.contains("social") || lower.contains("post") || lower.contains("share") {
+        response_text = "I've drafted a social media post highlighting your recent success to help you grow your audience. You can publish it right away.".to_string();
+        draft_action = Some(ChatDraftAction {
+            id: "generate_social_post_action".to_string(),
+            title: "Post to Social Media".to_string(),
+            description: "Share your latest business milestone with your followers.".to_string(),
+            action_type: "generate_social_post".to_string(),
+            payload: serde_json::json!({
+                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://ohc.app/onboarding?ref=social-share \n\n⚡ Powered by OHC"
+            }),
+        });
     }
 
     if response_text.is_empty() {
@@ -295,6 +306,14 @@ pub async fn handle_conversational_execute(
         }));
         state.hub.append_recent_event(msg);
         message = "Review campaign is now active. We're reaching out to your recent customers.".to_string();
+    } else if req.action_id == "generate_social_post_action" {
+        let msg = state.hub.sanitize_hub_event(serde_json::json!({
+            "type": "growth.social_post_published",
+            "tenant_id": auth_info.org_id,
+            "source": "conversational_manager"
+        }));
+        state.hub.append_recent_event(msg);
+        message = "Successfully prepared social media post.".to_string();
     }
 
     (StatusCode::OK, Json(ExecuteRes {
@@ -303,7 +322,7 @@ pub async fn handle_conversational_execute(
     }))
 }
 
-pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
+pub fn router<S>(pool: PgPool, hub: Arc<Hub>, viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -336,7 +355,7 @@ where
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
-        .route("/referrals/click", post(handle_referral_click))
+        .route("/referrals/click", post(handle_referral_click_post).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -355,7 +374,7 @@ where
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
-        .layer(Extension(GrowthState { pool, hub }))
+        .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
 #[derive(Debug, Serialize)]
@@ -437,39 +456,39 @@ async fn handle_time_savings(
     let parsed_uuid3 = parsed_uuid;
     let tenant_id_str4 = tenant_id_str.clone();
 
-    let f1 = tokio::spawn(async move {
+    let f1 = async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
             .bind(parsed_uuid1)
             .fetch_optional(&pool1)
             .await
-    });
+    };
 
-    let f2 = tokio::spawn(async move {
+    let f2 = async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
             .bind(parsed_uuid2)
             .fetch_optional(&pool2)
             .await
-    });
+    };
 
-    let f3 = tokio::spawn(async move {
+    let f3 = async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
             .bind(parsed_uuid3)
             .fetch_optional(&pool3)
             .await
-    });
+    };
 
-    let f4 = tokio::spawn(async move {
+    let f4 = async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
             .bind(tenant_id_str4)
             .fetch_optional(&pool4)
             .await
-    });
+    };
 
     let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-    let inquiries_handled = res1.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
-    let appointments_scheduled = res2.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
-    let carts_recovered = res3.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
-    let auto_replied = res4.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
+    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
+    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
+    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
+    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
 
     // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
@@ -549,6 +568,13 @@ async fn handle_trial_extension_claim(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReferralClickQuery {
+    pub target: String,
+    pub r#ref: String,
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -671,6 +697,7 @@ pub struct TeamInvitesResponse {
 pub struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
+    pub viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
 }
 
 async fn handle_social_post(
@@ -734,7 +761,7 @@ async fn handle_generate_review(
 async fn handle_promoter_generate(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GeneratePromoterRequest>,
-) -> impl IntoResponse {
+) -> Result<Json<GeneratePromoterResponse>, StatusCode> {
     let mut variants = Vec::new();
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
@@ -831,34 +858,18 @@ async fn handle_promoter_generate(
     }
 
     if variants.is_empty() {
-        // Fallback to static if LLM fails or is missing key
-        // Generate TikTok variant
-        variants.push(PromoterVariant {
-            platform: "TikTok".to_string(),
-            content: format!("Check out our amazing {}! {} Get yours today! 🚀 #{} #trending #musthave\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
-        });
+        // Return 500 error if generation fails, ensuring no mock data is used
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
 
-        // Generate Instagram variant
-        variants.push(PromoterVariant {
-            platform: "Instagram".to_string(),
-            content: format!("✨ So excited to share our new {}! ✨\n\n{}\n\nTap the link in bio to shop now. 🛍️\n\n#{} #shoplocal #newarrival\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
-        });
-
-        // Generate Twitter variant
-        variants.push(PromoterVariant {
-            platform: "Twitter".to_string(),
-            content: format!("Just dropped: {}! 🔥 {}\n\nGrab it here before it's gone: [link]\n\n⚡ Powered by OHC", req.name, desc),
-        });
-    } else {
-        // Append Powered by OHC
-        for v in variants.iter_mut() {
-            if !v.content.contains("Powered by OHC") {
-                v.content.push_str("\n\n⚡ Powered by OHC");
-            }
+    // Append Powered by OHC
+    for v in variants.iter_mut() {
+        if !v.content.contains("Powered by OHC") {
+            v.content.push_str("\n\n⚡ Powered by OHC");
         }
     }
 
-    Json(GeneratePromoterResponse { variants })
+    Ok(Json(GeneratePromoterResponse { variants }))
 }
 
 async fn handle_generate_customer_referral(
@@ -1665,22 +1676,25 @@ async fn handle_get_milestone_card(
             .into_response();
     }
 
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
       <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#grad1)" />
+  <rect width="1200" height="630" fill="url(#grad1)" rx="24" ry="24" filter="url(#drop-shadow)" />
 
-  <text x="600" y="200" font-family="sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+  <text x="600" y="200" font-family="Outfit, sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
+  <text x="600" y="350" font-family="Outfit, sans-serif" font-size="80" font-weight="700" text-anchor="middle" fill="#ffffff">{title}</text>
+  <text x="600" y="450" font-family="Outfit, sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
 
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
-  <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
+  <text x="600" y="560" font-family="Outfit, sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
 </svg>"##,
     grad_start = grad_start,
@@ -1819,10 +1833,10 @@ async fn handle_onboarding_metrics(
     }
 }
 
-async fn handle_referral_click(
+async fn handle_referral_click_post(
     Extension(state): Extension<GrowthState>,
-    Json(req): Json<ReferralIdRequest>,
-) -> Result<Json<()>, StatusCode> {
+    Json(req): axum::extract::Json<ReferralIdRequest>,
+) -> Result<axum::response::Response, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
         .bind(&req.id)
         .execute(&state.pool)
@@ -1837,10 +1851,42 @@ async fn handle_referral_click(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg);
 
-            Ok(Json(()))
+            Ok(Json(()).into_response())
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_referral_click_get(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(q): axum::extract::Query<ReferralClickQuery>,
+) -> Result<axum::response::Response, StatusCode> {
+    let tenant_ref = &q.r#ref;
+    let target_url = &q.target;
+
+    // Log the click for tracking
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.referral_link_clicked",
+        "ref": tenant_ref,
+        "target": target_url,
+        "source": q.source.clone().unwrap_or_else(|| "unknown".to_string())
+    }));
+    state.hub.append_recent_event(msg);
+
+    // Record click if it maps to an actual referral code
+    let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
+        .bind(tenant_ref)
+        .execute(&state.pool)
+        .await;
+
+    // Redirect user to the intended target (or dashboard if not specified)
+    let redirect_url = if target_url.starts_with('/') {
+        format!("https://ohc.app{}", target_url)
+    } else {
+        "https://ohc.app/dashboard".to_string()
+    };
+
+    Ok(axum::response::Redirect::to(&redirect_url).into_response())
 }
 
 async fn handle_referral_stats(
@@ -1932,13 +1978,16 @@ async fn handle_team_invite_accept(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
 
     // Before accepting, fetch the invite to get the team_id to invalidate cache
-    let team_id_opt = match repo.get_invite(&req.id).await {
-        Ok(Some(invite)) => Some(invite.team_id),
-        _ => None,
+    let (team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
+        Ok(Some(invite)) => (Some(invite.team_id), Some(invite.invitee_id)),
+        _ => (None, None),
     };
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => {
+            if let Some(invitee_id) = invitee_id_opt {
+                state.viral_loop_tracker.record_invite_accepted(&invitee_id);
+            }
             if let Some(team_id) = team_id_opt {
                 let cache_key_prefix = format!("team_invites:{}:", team_id);
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
@@ -1967,6 +2016,7 @@ async fn handle_create_team_invite(
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
+            state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
@@ -2009,7 +2059,7 @@ mod tests {
         let pool = setup_db().await;
         let (tx, _) = tokio::sync::mpsc::channel(10);
         let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = ZeroClickGenerateRequest {
             prompt: "I sell coffee".to_string(),
@@ -2036,7 +2086,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -2107,7 +2157,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -2118,7 +2168,7 @@ mod tests {
         let click_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
-        let res = handle_referral_click(Extension(state.clone()), Json(click_req)).await;
+        let res = handle_referral_click_post(Extension(state.clone()), Json(click_req)).await;
         assert!(res.is_ok());
 
         let convert_req = ReferralIdRequest {
@@ -2131,7 +2181,7 @@ mod tests {
         let click_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res_not_found = handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
+        let res_not_found = handle_referral_click_post(Extension(state.clone()), Json(click_req_not_found)).await;
         assert!(res_not_found.is_err());
         assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
@@ -2157,7 +2207,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -2168,7 +2218,7 @@ mod tests {
         let req = ReferralIdRequest { id: ref_id.to_string() };
 
         // Test Click
-        let res = handle_referral_click(Extension(state.clone()), Json(req)).await;
+        let res = handle_referral_click_post(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let clicks: i32 = sqlx::query_scalar("SELECT clicks FROM referrals WHERE id = $1")
@@ -2197,7 +2247,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let test_tenant = format!("test-org-{}", uuid::Uuid::new_v4());
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -2237,7 +2287,7 @@ mod tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = ZeroClickGenerateRequest {
             prompt: "I am a home baker selling cakes.".to_string(),
@@ -2286,7 +2336,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -2316,7 +2366,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
@@ -2355,22 +2405,16 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
+
         let res = handle_promoter_generate(Extension(state.clone()), Json(req)).await;
 
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GeneratePromoterResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert_eq!(res_json.variants.len(), 3);
-        assert!(res_json.variants.iter().any(|v| v.platform == "TikTok"));
-        assert!(res_json.variants.iter().any(|v| v.platform == "Instagram"));
-        assert!(res_json.variants.iter().any(|v| v.platform == "Twitter"));
-
-        for variant in res_json.variants {
-            assert!(variant.content.contains("Vegan Chocolate Cake"));
-        }
+        // Since we are running hermetic tests and removed the mock fallback, the LLM request will fail
+        // without API keys/mock adapters and thus variants will be empty causing the method to return Err.
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     #[tokio::test]
@@ -2378,7 +2422,7 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
         let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
@@ -2395,7 +2439,7 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GenerateCartRequest {
             customer_name: Some("Bob".to_string()),
@@ -2427,7 +2471,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -2462,7 +2506,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")
@@ -2485,7 +2529,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Pro', 'pro') ON CONFLICT (id) DO UPDATE SET plan_tier = 'pro'")
             .bind("11111111-1111-1111-1111-111111111111")
@@ -2597,6 +2641,7 @@ async fn handle_cloud_bridge_invite(
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
+            state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             // Invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
@@ -2626,7 +2671,7 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None, hide_branding: None };
         let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
@@ -2655,7 +2700,7 @@ mod cloud_bridge_tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CloudBridgeInviteRequest {
             team_id: "test-team-cb".to_string(),

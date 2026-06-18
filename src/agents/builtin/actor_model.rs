@@ -58,6 +58,27 @@ impl ActorSystem {
         mb.insert(name, sender);
     }
 
+    pub async fn broadcast(&self, mut msg: ActorMessage) -> Result<(), String> {
+        let senders = {
+            let mb = self.mailboxes.lock().await;
+            mb.clone()
+        };
+
+        let mut errors = Vec::new();
+        for (name, sender) in senders {
+            msg.recipient = name.clone();
+            if let Err(e) = sender.send(msg.clone()).await {
+                errors.push(format!("Failed to send to {}: {}", name, e));
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join(", "))
+        }
+    }
+
     pub async fn send(&self, msg: ActorMessage) -> Result<(), String> {
         let sender = {
             let mb = self.mailboxes.lock().await;
@@ -109,7 +130,10 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(t, tc, 2).await;
+                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                t, tc, 2,
+                            )
+                            .await;
                             match res {
                                 Ok(content) => {
                                     tool_results.push(ToolResult {
@@ -209,9 +233,7 @@ impl Actor for AgentActor {
                 );
 
                 // Track conversation thread using correlation_id
-                let messages = threads
-                    .entry(msg.correlation_id.clone())
-                    .or_default();
+                let messages = threads.entry(msg.correlation_id.clone()).or_default();
 
                 // Is it a tool result coming back from the ToolActor?
                 if !msg.tool_results.is_empty() {
@@ -288,10 +310,11 @@ impl Actor for AgentActor {
 
                             // Routing convention: if the response starts with "@ActorName ", route it to that actor.
                             if actual_content.starts_with('@')
-                                && let Some(space_idx) = actual_content.find(' ') {
-                                    target_recipient = actual_content[1..space_idx].to_string();
-                                    actual_content = actual_content[space_idx + 1..].to_string();
-                                }
+                                && let Some(space_idx) = actual_content.find(' ')
+                            {
+                                target_recipient = actual_content[1..space_idx].to_string();
+                                actual_content = actual_content[space_idx + 1..].to_string();
+                            }
 
                             let reply_msg = ActorMessage {
                                 sender: name.clone(),
@@ -743,5 +766,37 @@ mod tests {
         assert_eq!(dlq.len(), 1);
         assert_eq!(dlq[0].content, "Lost message");
         assert_eq!(dlq[0].recipient, "NonExistentActor");
+    }
+
+    #[tokio::test]
+    async fn test_actor_system_broadcast() {
+        let system = Arc::new(ActorSystem::new());
+
+        let (tx1, mut rx1) = mpsc::channel(10);
+        let (tx2, mut rx2) = mpsc::channel(10);
+
+        system.register("Actor1".to_string(), tx1).await;
+        system.register("Actor2".to_string(), tx2).await;
+
+        let msg = ActorMessage {
+            sender: "Broadcaster".to_string(),
+            recipient: "Unknown".to_string(),
+            content: "Broadcast message".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-bcast".to_string(),
+            original_sender: "Broadcaster".to_string(),
+        };
+
+        let result = system.broadcast(msg).await;
+        assert!(result.is_ok());
+
+        let received1 = rx1.recv().await.expect("Actor1 should receive message");
+        assert_eq!(received1.recipient, "Actor1");
+        assert_eq!(received1.content, "Broadcast message");
+
+        let received2 = rx2.recv().await.expect("Actor2 should receive message");
+        assert_eq!(received2.recipient, "Actor2");
+        assert_eq!(received2.content, "Broadcast message");
     }
 }

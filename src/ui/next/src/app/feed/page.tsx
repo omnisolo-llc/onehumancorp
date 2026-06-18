@@ -300,7 +300,7 @@ export default function FeedPage() {
                         aria-label="Approve & Send Draft"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : '✨ 1-Tap Approve'}
+                        {isProcessing ? 'Processing...' : 'Send Draft'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}

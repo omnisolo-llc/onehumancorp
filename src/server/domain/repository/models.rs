@@ -345,6 +345,9 @@ pub struct Quote {
     pub customer_id: String,
     pub status: String,
     pub valid_until: Option<DateTime<Utc>>,
+    pub total_amount: Option<i64>,
+    pub required_deposit: Option<i64>,
+    pub checkout_url: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -371,4 +374,44 @@ pub struct LedgerEntry {
     pub entry_type: String,
     pub reference_id: String,
     pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ServiceLead {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: Option<uuid::Uuid>,
+    pub description: Option<String>,
+    pub images: Option<sqlx::types::Json<serde_json::Value>>,
+    pub source: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Estimate {
+    pub id: String,
+    pub tenant_id: String,
+    pub service_lead_id: Option<String>,
+    pub customer_id: Option<uuid::Uuid>,
+    pub description: Option<String>,
+    pub min_price_cents: Option<i64>,
+    pub max_price_cents: Option<i64>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DepositRequirement {
+    pub id: String,
+    pub tenant_id: String,
+    pub estimate_id: String,
+    pub amount_cents: i64,
+    pub percentage: Option<f64>,
+    pub status: String,
+    pub payment_intent_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }

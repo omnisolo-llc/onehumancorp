@@ -761,10 +761,10 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div id="chat-messages" className="glassmorphism flex-1 overflow-y-auto p-4 rounded-[16px] text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
-                  {chatHistory.length === 0 && (
+                  {chatMessages.length === 0 && (
                     <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
                   )}
-                  {chatHistory.map((msg, index) => (
+                  {chatMessages.map((msg, index) => (
                     <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-[#0066FF]' : 'text-[#333] dark:text-[#A1A1A6]'}`}>
                       <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong> {msg.content}
                       {msg.image_url && <><br /><span className="text-xs text-gray-500 dark:text-gray-400">[Attached Image: {msg.image_url}]</span></>}

@@ -439,6 +439,9 @@ mod tests {
                 let ws_url = format!("ws://{}/ws", addr);
                 let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
 
+                // Sleep briefly to ensure server has subscribed to the pubsub topic
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
                 // Publish mock message to redis channel
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let topic = "agent_feed:test_ws_tenant";

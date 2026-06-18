@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 pub fn router(pool: PgPool) -> Router {
     Router::new()
         .route("/quotes", post(create_quote))
-        .route("/quotes/:id", get(get_quote))
-        .route("/quotes/:id/approve", patch(approve_quote))
+        .route("/quotes/{id}", get(get_quote))
+        .route("/quotes/{id}/approve", patch(approve_quote))
         .route("/pricing-rules", get(get_pricing_rules))
         .route("/pricing-rules", post(create_pricing_rule))
         .with_state(pool)

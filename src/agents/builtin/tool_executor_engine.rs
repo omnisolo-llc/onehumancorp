@@ -1,7 +1,7 @@
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention)
-use tokio::time::{Duration, sleep};
+use tokio::time::Duration;
 use tracing::{error, info, warn};
 
 pub struct ToolExecutionEngine;
@@ -14,6 +14,7 @@ impl ToolExecutionEngine {
         tc: &ToolCall,
         max_retries: usize,
     ) -> Result<String, ToolError> {
+        // SOTA Harness Patterns (2025-2026): Error Handling
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
 
@@ -38,7 +39,7 @@ impl ToolExecutionEngine {
                             max_retries,
                             backoff.as_millis()
                         );
-                        sleep(backoff).await;
+                        tokio::time::sleep(backoff).await;
                         continue;
                     } else {
                         error!("Transient error retries exhausted: {}", msg);
@@ -51,11 +52,12 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    let formatted_msg = if msg.contains("Validation Error (Pydantic-first tool schema)") {
-                        msg
-                    } else {
-                        format!("Validation Error (Pydantic-first tool schema): {}", msg)
-                    };
+                    let formatted_msg =
+                        if msg.contains("Validation Error (Pydantic-first tool schema)") {
+                            msg
+                        } else {
+                            format!("Validation Error (Pydantic-first tool schema): {}", msg)
+                        };
                     info!("LLM-recoverable error encountered: {}", formatted_msg);
                     return Err(ToolError::LlmRecoverable(formatted_msg));
                 }

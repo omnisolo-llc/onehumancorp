@@ -43,6 +43,14 @@ pub enum DbStore {
     Sqlite(SqlitePool),
 }
 
+#[derive(serde::Serialize, Clone)]
+pub struct AvailableSlot {
+    pub id: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+}
+
+
 #[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
@@ -93,6 +101,72 @@ pub struct SearchResult {
 
 
 impl DB {
+    pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
+        match &self.store {
+            DbStore::Postgres => {
+                let rows = sqlx::query(
+                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                let mut slots = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
+                    let end_time: chrono::DateTime<chrono::Utc> = row.get("end_time");
+                    slots.push(AvailableSlot {
+                        id,
+                        start_time,
+                        end_time,
+                    });
+                }
+                Ok(slots)
+            }
+            DbStore::Sqlite(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
+                )
+                .bind(tenant_id)
+                .bind(service_id)
+                .fetch_all(pool)
+                .await?;
+
+                let mut slots = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+
+                    // Sqlite might return string or integer for DateTime depending on the setup.
+                    // To handle safely:
+                    let start_time = match row.try_get::<String, _>("start_time") {
+                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
+                            .with_timezone(&chrono::Utc),
+                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
+                    };
+
+                    let end_time = match row.try_get::<String, _>("end_time") {
+                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
+                            .with_timezone(&chrono::Utc),
+                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
+                    };
+
+                    slots.push(AvailableSlot {
+                        id,
+                        start_time,
+                        end_time,
+                    });
+                }
+                Ok(slots)
+            }
+        }
+    }
+
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,
@@ -564,7 +638,10 @@ impl DB {
 
         // Enforce the 60-second ML-Resilience rule for database operations
         let start_time = std::time::Instant::now();
+        #[cfg(not(test))]
         let timeout_duration = std::time::Duration::from_secs(60);
+        #[cfg(test)]
+        let timeout_duration = std::time::Duration::from_millis(2000);
 
         loop {
             if start_time.elapsed() > timeout_duration {
@@ -650,6 +727,9 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -664,15 +744,22 @@ impl DB {
                         source_type TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
                         context TEXT NOT NULL,
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -690,6 +777,9 @@ impl DB {
                         dependencies TEXT NOT NULL DEFAULT '[]',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -711,6 +801,9 @@ impl DB {
                         depth INTEGER,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         action_risk TEXT,
                         approval_status TEXT,
                         proposed_content TEXT,
@@ -743,6 +836,9 @@ impl DB {
                         dependencies TEXT DEFAULT '[]',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -769,6 +865,9 @@ impl DB {
                         embedding BLOB,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -785,6 +884,9 @@ impl DB {
                         payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -803,6 +905,9 @@ impl DB {
                         payload TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         tenant_id TEXT NOT NULL DEFAULT 'default_tenant',
                         auto_dreamed BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
@@ -817,6 +922,9 @@ impl DB {
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -826,6 +934,9 @@ impl DB {
                         actions_used INTEGER NOT NULL DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         PRIMARY KEY (tenant_id, year_month)
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
@@ -835,6 +946,9 @@ impl DB {
                         state_json TEXT NOT NULL DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, user_id)
@@ -848,6 +962,9 @@ impl DB {
                         preferences TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -872,6 +989,9 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -884,6 +1004,9 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -896,6 +1019,9 @@ impl DB {
                         price REAL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -909,8 +1035,21 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS quotes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        total_amount_cents INTEGER NOT NULL,
+                        status TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        last_follow_up_at TEXT,
+                        follow_up_count INTEGER NOT NULL DEFAULT 0
                     );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
@@ -931,6 +1070,9 @@ impl DB {
                         supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -944,6 +1086,9 @@ impl DB {
                         created_at_unix BIGINT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -955,6 +1100,9 @@ impl DB {
                         probed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -967,6 +1115,9 @@ impl DB {
                         details TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -978,6 +1129,9 @@ impl DB {
                         status TEXT NOT NULL DEFAULT 'FILE_SYNC_PENDING',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1009,6 +1163,9 @@ impl DB {
                         raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         department TEXT,
@@ -1023,6 +1180,9 @@ impl DB {
                         embedding BLOB,
                         source_type TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         topic TEXT DEFAULT ''
@@ -1161,6 +1321,9 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1173,6 +1336,9 @@ impl DB {
                         payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1300,13 +1466,20 @@ impl DB {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?;
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+                    .bind(memory_id)
+                    .bind(tenant_id)
+                    .bind(context)
+                    .bind(embedding)
+                    .execute(sqlite_pool)
+                    .await?;
             }
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, embedding) VALUES ($1, $2, $3, $4) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
+                .bind(tenant_id)
                 .bind(context)
                 .bind(embedding)
                 .execute(&mut *tx)
@@ -1695,6 +1868,9 @@ mod autodream_db_tests {
                 source_type TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_subscription_enabled BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT,
+                        subscription_discount INTEGER DEFAULT 0,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1
             )"

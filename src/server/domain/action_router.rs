@@ -18,6 +18,13 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+        "supply_order" => {
+            tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id);
+            // Simulating outbound communication to vendor via omnichannel dispatcher
+            if let Some(msg) = payload.get("draft_message").and_then(|v| v.as_str()) {
+                tracing::info!("Omnichannel Dispatcher sent: {}", msg);
+            }
+        }
         "social_post_draft" => {
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);

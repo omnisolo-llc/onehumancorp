@@ -288,11 +288,21 @@ Output JSON format:
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
-                        .execute(&self.db.pool).await;
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to update omni_inbox_messages: {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(&action_payload)
+                        .bind(&message_id)
+                        .bind(&tenant_id)
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to update inbox_messages: {}", e);
+                    }
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
@@ -322,16 +332,50 @@ Output JSON format:
                         return Ok(false);
                     }
 
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, 'DRAFT', 'DraftForReview', $4, NOW(), NOW())"
+                    )
+                    .bind(&agent_feed_item_id)
+                    .bind(&tenant_id)
+                    .bind(&context_summary)
+                    .bind(serde_json::json!({
+                        "feature_type": event_source,
+                        "original_message": customer_message,
+                        "generated_response": action_payload,
+                        "context_used": context_summary,
+                        "inbox_message_id": message_id,
+                        "source": source,
+                        "sender_id": sender_id,
+                        "customer_id": customer_id_val,
+                    }))
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert agent approvals item: {}", e);
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id)
+                            .execute(&self.db.pool).await;
+                        return Ok(false);
+                    }
+
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
-                        .execute(sqlite_pool).await;
+                        .execute(sqlite_pool).await {
+                        tracing::error!("Failed to update omni_inbox_messages: {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                        .bind(&action_payload)
+                        .bind(&message_id)
+                        .bind(&tenant_id)
+                        .execute(sqlite_pool).await {
+                        tracing::error!("Failed to update inbox_messages: {}", e);
+                    }
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -355,6 +399,30 @@ Output JSON format:
                     }).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&job_id)
+                            .execute(sqlite_pool).await;
+                        return Ok(false);
+                    }
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, 'DRAFT', 'DraftForReview', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&agent_feed_item_id)
+                    .bind(&tenant_id)
+                    .bind(&context_summary)
+                    .bind(serde_json::json!({
+                        "feature_type": event_source,
+                        "original_message": customer_message,
+                        "generated_response": action_payload,
+                        "context_used": context_summary,
+                        "inbox_message_id": message_id,
+                        "source": source,
+                        "sender_id": sender_id,
+                        "customer_id": customer_id_val,
+                    }).to_string())
+                    .execute(sqlite_pool).await {
+                        tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
                             .execute(sqlite_pool).await;

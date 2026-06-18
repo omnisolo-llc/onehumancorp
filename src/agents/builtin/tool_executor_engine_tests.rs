@@ -240,6 +240,7 @@ mod tests {
         // We simulate the pydantic loop which returns the recoverable error directly
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
         assert!(res.is_err());
+        assert!(res.as_ref().unwrap_err().to_string().contains("Validation Error (Pydantic-first tool schema)"));
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
             _ => panic!("Expected LlmRecoverable error"),

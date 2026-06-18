@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Referral Dashboard</title>
@@ -202,11 +218,22 @@
       margin-right: 4px;
     }
 
+
+    .link-display-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .link-display-group .link-input {
+      margin-bottom: 0;
+      flex: 1;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container glassmorphism glassmorphism">
   <div class="header-nav">
     <a href="/dashboard.html" class="back-btn">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -225,10 +252,12 @@
     </div>
 
     <div id="link-state" style="display: none;">
-      <input type="text" class="link-input" id="referral-link" readonly value="" />
+      <div class="link-display-group">
+        <input type="text" class="link-input" id="referral-link" readonly value="" />
+        <button class="btn-primary" id="copy-btn" style="white-space: nowrap;">Copy Link</button>
+      </div>
 
       <div class="action-buttons">
-        <button class="btn-primary" id="copy-btn">Copy Link</button>
         <button class="btn-secondary" id="share-whatsapp-btn" style="background-color: #25D366; color: white; border: none;">Share on WhatsApp</button>
         <button class="btn-secondary" id="share-x-btn" style="background-color: #000000; color: white; border: none;">Share on X</button>
       </div>
@@ -332,7 +361,7 @@
             else if (data.current_tier === 'Silver') { maxForTier = 20; baseForTier = 5; }
             else if (data.current_tier === 'Gold') { maxForTier = 50; baseForTier = 20; }
 
-            const currentInTier = data.total_conversions - baseForTier;
+            const currentInTier = (data.total_conversions || 0) - baseForTier;
             const range = maxForTier - baseForTier;
             let pct = (currentInTier / range) * 100;
             if (pct < 0) pct = 0;
@@ -354,16 +383,16 @@
     // 3. Fetch Metrics Data
     async function fetchMetricsData() {
       try {
-        const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', {
+        const res = await fetch('/api/v1/growth/referrals/stats', {
           headers: getAuthHeaders()
         });
 
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('metrics-invites').innerText = data.total_invites || '0';
-          document.getElementById('metrics-active').innerText = data.metrics?.active_referrals || '0';
-          document.getElementById('metrics-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
-          document.getElementById('metrics-pending').innerText = '$' + (data.metrics?.pending_rewards || 0).toFixed(2);
+          document.getElementById('metrics-invites').innerText = data.active_referrals || '0';
+          document.getElementById('metrics-active').innerText = data.active_referrals || '0';
+          document.getElementById('metrics-revenue').innerText = '$' + (data.revenue_from_referrals || 0).toFixed(2);
+          document.getElementById('metrics-pending').innerText = '$' + (data.pending_rewards || 0).toFixed(2);
         }
       } catch (e) {
         console.error("Failed to fetch metrics", e);

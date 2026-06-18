@@ -55,7 +55,7 @@ test.describe('Visual/low-code orchestration', () => {
 
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
 
-    await page.locator('#visual-workflow-name').fill('Test Workflow');
+    await page.getByRole('textbox', { name: /Workflow Name/i }).fill('Test Workflow');
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
 
     await page.getByTestId('palette-block-trigger_message').click();
@@ -84,7 +84,7 @@ test.describe('Visual/low-code orchestration', () => {
     await page.goto('/agents');
     await page.getByRole('button', { name: 'Workflows' }).click();
 
-    await expect(page.getByText('Click blocks on the left to add them to your workflow')).toBeVisible();
+    await expect(page.getByText('Click blocks on the left to add them to your workflow', { exact: true })).toBeVisible();
     await expect(page.getByTestId('canvas-block-0')).not.toBeVisible();
   });
 
@@ -93,14 +93,14 @@ test.describe('Visual/low-code orchestration', () => {
     await page.goto('/agents');
     await page.getByRole('button', { name: 'Workflows' }).click();
 
-    await page.locator('#visual-workflow-name').fill('Temp Workflow');
+    await page.getByRole('textbox', { name: /Workflow Name/i }).fill('Temp Workflow');
 
     await page.getByTestId('palette-block-trigger_message').click();
     await expect(page.locator('#btn-create-run-workflow')).toBeEnabled();
 
     await page.getByTestId('canvas-block-0').getByRole('button', { name: 'Remove block' }).click();
 
-    await expect(page.getByText('Click blocks on the left to add them to your workflow')).toBeVisible();
+    await expect(page.getByText('Click blocks on the left to add them to your workflow', { exact: true })).toBeVisible();
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
   });
 });

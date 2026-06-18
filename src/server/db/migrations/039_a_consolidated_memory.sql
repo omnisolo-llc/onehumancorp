@@ -19,3 +19,6 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 
 CREATE INDEX IF NOT EXISTS consolidated_memory_tenant_id_idx ON consolidated_memory(tenant_id);
 CREATE INDEX IF NOT EXISTS consolidated_memory_embedding_idx ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
+
+
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;

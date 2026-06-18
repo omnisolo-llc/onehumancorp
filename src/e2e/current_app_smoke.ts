@@ -28,7 +28,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible({ timeout: 5000 });

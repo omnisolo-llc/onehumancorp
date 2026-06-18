@@ -23,8 +23,8 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
-        max-width: 480px;
-        width: 100%;
+        max-width: 100%;
+        width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
@@ -57,8 +57,8 @@
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
@@ -75,11 +75,11 @@
       select, textarea, input {
         border-radius: 8px;
       }
-      input:focus {
+      input:focus, textarea:focus, select:focus {
         outline: none;
-        border-color: #0066FF;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
       button {
         background-color: #0066FF;
@@ -261,8 +261,8 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        input:focus {
-          border-color: #0066FF;
+        input:focus, textarea:focus, select:focus {
+          border-color: #0071E3;
           background: rgba(255, 255, 255, 0.15);
         }
       }
@@ -305,13 +305,13 @@
 
       .step-indicator.active {
         background: #0066FF;
-        border-color: #0066FF;
+        border-color: #0071E3;
         transform: scale(1.3);
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
       .step-indicator.completed {
         background: #0066FF;
-        border-color: #0066FF;
+        border-color: #0071E3;
       }
 
 
@@ -439,15 +439,15 @@
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       input:focus, select:focus, textarea:focus {
         outline: none;
-        border-color: #0066FF;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
 
       .work-context-cards {
@@ -470,13 +470,14 @@
         flex-direction: column;
         gap: 8px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        min-height: 44px;
       }
       .context-card:hover {
         background: rgba(255, 255, 255, 0.8);
         transform: translateY(-2px);
       }
       .context-card.selected {
-        border-color: #0066FF;
+        border-color: #0071E3;
         background: rgba(0, 102, 255, 0.1);
         box-shadow: 0 0 0 1px #0066FF, 0 4px 12px rgba(0, 102, 255, 0.15);
       }
@@ -509,8 +510,8 @@
         align-items: center;
         gap: 10px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
         min-height: 44px !important;
@@ -522,7 +523,7 @@
         background: rgba(255, 255, 255, 0.7);
       }
       .radio-option.selected {
-        border-color: #0066FF;
+        border-color: #0071E3;
         background: rgba(0, 102, 255, 0.1);
       }
       .radio-option input[type="radio"] {
@@ -698,7 +699,7 @@
           color: #F5F5F7;
         }
         input:focus, select:focus, textarea:focus {
-          border-color: #0066FF;
+          border-color: #0071E3;
           background: rgba(255, 255, 255, 0.15);
         }
         .radio-option {
@@ -709,7 +710,7 @@
           background: rgba(255, 255, 255, 0.15);
         }
         .radio-option.selected {
-          border-color: #0066FF;
+          border-color: #0071E3;
           background: rgba(0, 102, 255, 0.2);
         }
         .radio-label {
@@ -743,6 +744,9 @@
       }
 
             @media (max-width: 375px) {
+        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); }
+        .context-card { padding: 12px; }
+        .work-context-cards { grid-template-columns: 1fr; }
         .container { box-sizing: border-box; overflow-x: hidden; padding: 20px; }
         .stepper {
           gap: 4px;
@@ -792,7 +796,7 @@
 
       /* OHC Premium Glassmorphism Overrides */
       .glassmorphism {
-        border-radius: 16px;
+        border-radius: 16px !important;
       }
       button.glassmorphism,
       input.glassmorphism,
@@ -985,13 +989,14 @@
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
+            <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="8">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-domain"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
@@ -1201,13 +1206,30 @@
         <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
-      <!-- Step 6: Template -->
+      <!-- Step 7: Domain -->
+      <div class="step" id="step-domain">
+        <h1>Where will your business live?</h1>
+        <p>Choose a free subdomain for your store.</p>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" style="flex: 1; margin-bottom: 0;" />
+          <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
+        </div>
+        <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 8: Template -->
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
@@ -1223,7 +1245,7 @@
           <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-domain">Back</button>
         </div>
       </div>
 
@@ -1286,7 +1308,8 @@
           adminEmail: document.getElementById('admin-email'),
           adminPassword: document.getElementById('admin-password'),
           firstOffer: document.getElementById('first-offer'),
-          templateSelection: document.getElementById('template-selection')
+          templateSelection: document.getElementById('template-selection'),
+          domainName: document.getElementById('domain-name')
       };
 
 
@@ -1299,7 +1322,8 @@
           adminEmail: document.getElementById('email-error'),
           adminPassword: document.getElementById('password-error'),
           firstOffer: document.getElementById('offer-error'),
-          templateSelection: document.getElementById('template-error')
+          templateSelection: document.getElementById('template-error'),
+          domainName: document.getElementById('domain-error')
       };
 
 
@@ -1312,7 +1336,8 @@
           categories: '',
           tagline: '',
           first_offer: '',
-          templateSelection: ''
+          templateSelection: '',
+          domain: ''
       };
 
 
@@ -1390,7 +1415,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1448,7 +1473,8 @@
           if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
           if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
-          if (state.capabilities && document.getElementById('cap-draft')) {
+          if (state.domain) inputs.domainName.value = state.domain;
+if (state.capabilities && document.getElementById('cap-draft')) {
               document.getElementById('cap-draft').checked = state.capabilities.draft !== false;
               document.getElementById('cap-schedule').checked = state.capabilities.schedule !== false;
               document.getElementById('cap-inventory').checked = state.capabilities.inventory === true;
@@ -1466,14 +1492,15 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
           }
       }
 
-            function saveCurrentState() {
+      let saveStateTimer = null;
+      function saveCurrentState() {
           state.categories = inputs.categories.value;
           state.businessName = inputs.name.value;
           state.tagline = inputs.tagline.value;
@@ -1497,7 +1524,7 @@
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
               if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
@@ -1508,17 +1535,20 @@
           const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
           const userId = localStorage.getItem('user_id') || 'e2e-admin-user';
 
-          if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
-          } else {
-              localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-              fetch(`${backendUrl}/api/onboarding/draft`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-                  body: JSON.stringify(state)
-              }).catch(console.error);
-          }
+          clearTimeout(saveStateTimer);
+          saveStateTimer = setTimeout(() => {
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
+              } else {
+                  localStorage.setItem('onboardingState', JSON.stringify(state));
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  fetch(`${backendUrl}/api/onboarding/draft`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+                      body: JSON.stringify(state)
+                  }).catch(console.error);
+              }
+          }, 1000);
       }
 
       function validateStep(stepId) {
@@ -1582,7 +1612,7 @@
 
               if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
                   errors.adminEmail.style.display = 'block';
-                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required' : 'Please enter a valid email address.';
+                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required.' : 'Please enter a valid email address.';
                   inputs.adminEmail.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
@@ -1590,9 +1620,9 @@
                   inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               }
 
-              if (passVal.length < 8 || !/\d/.test(passVal)) {
+              if (passVal === '' || passVal.length < 8 || !/\d/.test(passVal)) {
                   errors.adminPassword.style.display = 'block';
-                  errors.adminPassword.innerText = passVal === '' ? 'Password is required' : 'Password must be at least 8 characters and contain a number';
+                  errors.adminPassword.innerText = passVal === '' ? 'Password is required.' : 'Password must be at least 8 characters and contain a number.';
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
@@ -1614,6 +1644,18 @@
               } else {
                   errors.firstOffer.style.display = 'none';
                   state.first_offer = inputs.firstOffer.value.trim();
+              }
+          }
+          else if (stepId === 'step-domain') {
+              const domainVal = inputs.domainName.value.trim();
+              if (domainVal === '' || !/^[a-zA-Z0-9-]+$/.test(domainVal)) {
+                  errors.domainName.style.display = 'block';
+                  if(inputs.domainName) inputs.domainName.style.borderColor = '#FF3B30';
+                  isValid = false;
+              } else {
+                  errors.domainName.style.display = 'none';
+                  if(inputs.domainName) inputs.domainName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  state.domain = domainVal;
               }
           }
           else if (stepId === 'step-template') {
@@ -1654,7 +1696,7 @@
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
           }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
           if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
@@ -1828,24 +1870,24 @@
                   const autoRespondChecked = document.getElementById('ai-auto-respond') ? document.getElementById('ai-auto-respond').checked : true;
 
                   const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: chatHistory.map(m => m.content).join(" "),
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password123",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
+                      company_name: intakeData.business_name || "My Business",
+                      business_type: intakeData.business_type || "Online Store",
+                      company_description: chatHistory.map(m => m.content).join(" "),
+                      selling_categories: intakeData.categories || ["physical"],
+                      payment_pref: "online",
+                      admin_email: "admin@mybusiness.com",
+                      admin_name: "Admin",
+                      admin_password: "password123",
+                      website_template: "auto",
+                      first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
+                      first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+                      domain_choice: state.domain || "subdomain",
+                      price_type: "fixed",
                       location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || [],
-                      aiAgents: selectedAgents,
-                      aiAutoRespond: autoRespondChecked
+                      target_audience: intakeData.target_audience || "General",
+                      initial_products: intakeData.initial_products || [],
+                      ai_agents: selectedAgents,
+                      ai_auto_respond: autoRespondChecked
                   };
 
 
@@ -1853,15 +1895,15 @@
                   const approvalDetails = document.getElementById('approval-details');
                   if (approvalDetails) {
                       let productsHtml = '';
-                      if (req.initialProducts && req.initialProducts.length > 0) {
-                          productsHtml = req.initialProducts.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
+                      if (req.initial_products && req.initial_products.length > 0) {
+                          productsHtml = req.initial_products.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
                       } else {
-                          productsHtml = `<li>${req.firstProductName} - ${req.firstProductPrice}</li>`;
+                          productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
                       }
 
                       approvalDetails.innerHTML = `
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.companyName}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.businessType}</div>
+                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
+                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
                           <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
                       `;
                   }
@@ -1939,7 +1981,8 @@
 
                       window.location.href = "success.html";
                   } else {
-                      throw new Error('Failed to start onboarding');
+                      const errData = await response.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to start onboarding');
                   }
               } catch (e) {
                   approvePublishBtn.disabled = false;
@@ -2180,7 +2223,7 @@
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
-                   domain_choice: "subdomain",
+                   domain_choice: state.domain || "subdomain",
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General",
@@ -2224,16 +2267,19 @@
                          'Content-Type': 'application/json'
                      },
                      body: JSON.stringify(req)
-                 }).then(response => {
+                 }).then(async response => {
                      if (response.ok) {
-                         localStorage.setItem('onboardingState', JSON.stringify(state));
-
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
-
+                         const data = await response.json().catch(()=>({}));
+                         if (data && data.organization_id) {
+                             localStorage.setItem('tenant_id', data.organization_id);
+                             localStorage.setItem('tenant', data.organization_id);
+                         }
+                         localStorage.removeItem('onboardingState');
+                         localStorage.setItem('has_onboarded', 'true');
                          window.location.href = "success.html";
                      } else {
-                         throw new Error('Failed to start onboarding');
+                         const errData = await response.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to start onboarding');
                      }
                  }).catch((err) => {
                    console.error(err);
@@ -2304,8 +2350,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(2.1);
+            -webkit-backdrop-filter: blur(20px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -2714,6 +2760,7 @@ function initWalkthrough() {
                     currentStep++;
                     renderStep();
                 }
+            };
 
 
             if (target) {
@@ -2758,7 +2805,6 @@ initWalkthrough();
 </script>
 
 <script src="help-widget.mjs"></script>
-<script src="assistant/ohc-assistant.mjs"></script>
 </body>
 </html>
 

@@ -3,7 +3,6 @@
 /// Just-in-Time (JIT) Retrieval Mechanic
 /// "Never load full files. Implement tools that act like grep, glob, head, and tail."
 /// And dynamically pull relevant past sessions, tool docs, or code snippets before LLM calls.
-
 use crate::memory_store::LongTermMemory;
 use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
@@ -25,7 +24,10 @@ impl JitContextRetriever {
     /// JIT context from the FTS5-backed LongTermMemory.
     pub async fn retrieve_context(&self, messages: &[Message]) -> Option<String> {
         // Simple keyword extraction heuristic: take the last user message
-        let last_user_msg = messages.iter().rev().find(|m| m.role == ohc_builtin_agent_core::types::Role::User)?;
+        let last_user_msg = messages
+            .iter()
+            .rev()
+            .find(|m| m.role == ohc_builtin_agent_core::types::Role::User)?;
 
         let content = &last_user_msg.content;
 
@@ -35,11 +37,20 @@ impl JitContextRetriever {
         }
 
         // Basic keyword extraction: remove common stop words and keep long words
-        let stop_words = ["the", "and", "a", "an", "is", "in", "to", "of", "for", "with", "on", "this", "that", "it", "as", "at", "by", "be", "this", "which", "or", "from", "but", "not", "are", "was"];
+        let stop_words = [
+            "the", "and", "a", "an", "is", "in", "to", "of", "for", "with", "on", "this", "that",
+            "it", "as", "at", "by", "be", "this", "which", "or", "from", "but", "not", "are",
+            "was",
+        ];
 
         let mut keywords: Vec<String> = content
             .split_whitespace()
-            .map(|s| s.to_lowercase().chars().filter(|c| c.is_alphanumeric()).collect::<String>())
+            .map(|s| {
+                s.to_lowercase()
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>()
+            })
             .filter(|s| !s.is_empty() && s.len() > 3 && !stop_words.contains(&s.as_str()))
             .collect();
 
@@ -51,37 +62,49 @@ impl JitContextRetriever {
         }
 
         // Take top 3 keywords
-        let query = keywords.into_iter().take(3).collect::<Vec<_>>().join(" OR ");
+        let query = keywords
+            .into_iter()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join(" OR ");
 
         // 1. Try to search general memory
         let mut combined_context = String::new();
 
         if let Ok(results) = self.memory_store.retrieve(&query, 3).await
-            && !results.is_empty() {
-                combined_context.push_str("Relevant General Knowledge (JIT Retrieval):\n");
-                for res in results {
-                    combined_context.push_str(&res);
-                    combined_context.push_str("\n---\n");
-                }
+            && !results.is_empty()
+        {
+            combined_context.push_str("Relevant General Knowledge (JIT Retrieval):\n");
+            for res in results {
+                combined_context.push_str(&res);
+                combined_context.push_str("\n---\n");
             }
+        }
 
         // 2. Try to search past session messages
-        if let Ok(results) = self.memory_store.search_session_messages(&self.session_id, &query, 3, false).await
-            && !results.is_empty() {
-                if !combined_context.is_empty() {
-                    combined_context.push('\n');
-                }
-                combined_context.push_str("Relevant Past Session Context (JIT Retrieval):\n");
-                for res in results {
-                    combined_context.push_str(&res);
-                    combined_context.push_str("\n---\n");
-                }
+        if let Ok(results) = self
+            .memory_store
+            .search_session_messages(&self.session_id, &query, 3, false)
+            .await
+            && !results.is_empty()
+        {
+            if !combined_context.is_empty() {
+                combined_context.push('\n');
             }
+            combined_context.push_str("Relevant Past Session Context (JIT Retrieval):\n");
+            for res in results {
+                combined_context.push_str(&res);
+                combined_context.push_str("\n---\n");
+            }
+        }
 
         if combined_context.is_empty() {
             None
         } else {
-            Some(format!("[System: The following Just-In-Time (JIT) context was automatically retrieved based on your recent message to help you.]\n{}", combined_context.trim_end_matches("\n---\n")))
+            Some(format!(
+                "[System: The following Just-In-Time (JIT) context was automatically retrieved based on your recent message to help you.]\n{}",
+                combined_context.trim_end_matches("\n---\n")
+            ))
         }
     }
 }
@@ -108,9 +131,17 @@ mod tests {
             Ok(())
         }
 
-        async fn search_session_messages(&self, _session_id: &str, query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
-             if query.contains("error") {
-                Ok(vec!["User previously encountered a compiler error in main.rs".to_string()])
+        async fn search_session_messages(
+            &self,
+            _session_id: &str,
+            query: &str,
+            _limit: usize,
+            _summarize: bool,
+        ) -> Result<Vec<String>, String> {
+            if query.contains("error") {
+                Ok(vec![
+                    "User previously encountered a compiler error in main.rs".to_string(),
+                ])
             } else {
                 Ok(vec![])
             }

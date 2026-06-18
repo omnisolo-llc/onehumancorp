@@ -51,3 +51,12 @@ CREATE TABLE IF NOT EXISTS walkthrough_steps (
 
 CREATE INDEX IF NOT EXISTS idx_walkthrough_steps_tenant_id ON walkthrough_steps(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_walkthrough_steps_page ON walkthrough_steps(page);
+
+
+ALTER TABLE help_articles ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE video_tutorials ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE tooltips ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE walkthrough_steps ENABLE ROW LEVEL SECURITY;
