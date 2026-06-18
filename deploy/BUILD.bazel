@@ -1,3 +1,6 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
+load("@rules_pkg//pkg:pkg.bzl", "pkg_tar")
+
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
@@ -10,17 +13,18 @@ exports_files([
     "setup_k8s.sh",
 ])
 
+
+# ── server image (onehumancorp/server) ────────────────────────────────────────
 filegroup(
     name = "hybrid_telemetry_dashboard_mirrors",
-    srcs = [
-        "docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json",
-        "grafana/dashboards/ohc-hybrid-telemetry.json",
-        "helm/ohc/dashboards/ohc-hybrid-telemetry.json",
-    ],
+    srcs = glob([
+        "grafana/dashboards/*.json",
+        "docker/grafana/provisioning/dashboards/*.json",
+        "helm/ohc/dashboards/*.json",
+    ]),
     visibility = ["//visibility:public"],
 )
 
-# ── server image (onehumancorp/server) ────────────────────────────────────────
 
 # Package backend binary
 pkg_tar(

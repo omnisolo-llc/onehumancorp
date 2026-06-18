@@ -614,6 +614,27 @@ Your response:",
 
         let flags_json = onboarding_feature_state(&req, &company_name, &business_type, &location);
 
+        // Provision initial Agent Feed items (Action Required)
+        let feed_id = uuid::Uuid::new_v4().to_string();
+        let feed_payload = serde_json::json!({
+            "description": format!("Welcome to OHC! I've set up your {} business. Click here to review your new storefront.", business_type),
+            "feature_type": "onboarding_welcome",
+            "company_name": company_name
+        });
+
+        if let Err(e) = sqlx::query(
+            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL')"
+        )
+        .bind(&feed_id)
+        .bind(&org_id)
+        .bind("system")
+        .bind(&feed_payload)
+        .bind(serde_json::json!({"action_type": "review_storefront"}))
+        .execute(&self.db.pool)
+        .await {
+            tracing::error!("Failed to create initial feed item: {}", e);
+        }
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4)"
         )

@@ -8,7 +8,7 @@ test.describe('Wizard Cross Device E2E', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('onboarding-storage-v3');
     }, 'storefront');
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
 
     // 2. Click Start My Business to advance to step 1
@@ -59,7 +59,7 @@ test.describe('Wizard Cross Device E2E', () => {
         localStorage.setItem('user_id', 'storefront');
     }, wizardState);
 
-    await newPage.goto('/onboarding');
+    await newPage.goto('/setup.html');
     await newPage.waitForLoadState('networkidle');
 
     // 5. Verify the business name and step was properly restored

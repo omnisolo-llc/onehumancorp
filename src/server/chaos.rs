@@ -389,7 +389,7 @@ mod tests {
             let p = pool_arc.clone();
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
-                let max_attempts = 10;
+                let max_attempts = 3;
                 let mut backoff = Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")

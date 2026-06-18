@@ -24,10 +24,10 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/builder');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
+    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
 
     // Check click routing inside builder
-    await page.getByText('Selling Products').click();
+    await page.locator('text="Start My Business"').click();
     await expect(page.getByText("Let's build your store")).toBeVisible();
 
     const nameInput = page.getByPlaceholder('e.g. Acme Corp');
@@ -44,16 +44,16 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
-    await page.getByText('Selling Products').click();
+    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
+    await page.locator('text="Start My Business"').click();
 
-    await expect(page.getByText('Business Name')).toBeVisible();
+    await expect(page.locator('text="Which of these sounds most like your work?"')).toBeVisible();
 
     // Check constraints are working inside inputs.
-    await page.getByPlaceholder('e.g. Acme Corp').fill('Cakes By Maya');
-    await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Baker');
+    await page.locator('text="Online Creator"').first().click(); await page.locator('text="Next"').click(); await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('Cakes By Maya');
+    await page.getByPlaceholder('Tagline (optional)').fill('Baker');
 
     await page.getByRole('button', { name: 'Next' }).click();
 
@@ -68,17 +68,17 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.goto('/business-setup');
 
     // Should immediately reroute to onboarding
-    await expect(page.getByText('What are you building today?')).toBeVisible();
+    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
   });
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
 
-    await expect(page.getByText('What are you building today?')).toBeVisible();
+    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
     await page.getByText('Offering Services').click();
 
-    await expect(page.getByText('Business Name')).toBeVisible();
+    await expect(page.locator('text="Which of these sounds most like your work?"')).toBeVisible();
 
     await page.getByPlaceholder('e.g. Acme Corp').fill('Auto Repair');
     await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Mechanic');
