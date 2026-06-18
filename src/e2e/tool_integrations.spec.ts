@@ -14,7 +14,7 @@ test.describe('Tool Integrations UI', () => {
 
   test('shows premium integrations dashboard header and copy', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
-    await expect(page.getByText('Supercharge your workflow by connecting your favorite tools.')).toBeVisible();
+    await expect(page.getByText('Supercharge your workflow by connecting your favorite marketing, finance, and operations tools.')).toBeVisible();
   });
 
   test('displays social media integration card', async ({ page }) => {
