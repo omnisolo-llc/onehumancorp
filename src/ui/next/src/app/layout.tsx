@@ -24,8 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-        <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <link rel="stylesheet" href="/api/ui/swagger-ui.css" />
+        <script src="/api/ui/swagger-ui-bundle.js"></script>
       </head>
       <body>
         <RateLimitWarningProvider>
