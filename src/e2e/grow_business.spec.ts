@@ -32,7 +32,7 @@ test.describe('Navigation', () => {
   });
 
   test('should navigate to business setup', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
     await expect(page.getByRole('heading', { name: 'Setup' })).toBeVisible();
     await expect(page.locator('#setup-screen')).toBeVisible();
   });

@@ -257,7 +257,7 @@
       const linkPreview = document.getElementById('linkPreview');
 
       const originUrl = window.location.origin.includes('file://') ? 'https://ohc.app' : window.location.origin;
-      const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=affiliate_badge`;
+      const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}&source=affiliate_badge`;
 
       linkPreview.textContent = targetUrl;
 
