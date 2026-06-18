@@ -771,7 +771,7 @@
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
           if (!navigator.onLine) {
-              document.querySelector('.receipt-text').innerText = "Payment saved offline. Will sync when network is restored.";
+              document.querySelector('.receipt-text').innerText = "Offline Quick Charge Saved.";
               enqueueOfflineMutation({
                   type: 'tap_to_pay',
                   id: 'tx_' + Date.now(),
