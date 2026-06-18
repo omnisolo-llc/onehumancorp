@@ -8,6 +8,13 @@ use async_trait::async_trait;
 use opentelemetry::KeyValue;
 
 #[async_trait]
+pub trait P2PTransport: Send + Sync {
+    async fn handshake(&self, peer_id: &str, spiffe_id: &str, public_key: &str, tenant_id: &str) -> Result<bool, String>;
+    async fn broadcast_crdt_delta(&self, delta: ::server_ohc::orchestration::CrdtDelta) -> Result<(), String>;
+    async fn discover_peers(&self, tenant_id: &str) -> Result<Vec<String>, String>;
+}
+
+#[async_trait]
 pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String>;
@@ -42,6 +49,28 @@ impl LocalTeammateMesh {
             hub,
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
+    }
+}
+
+#[async_trait]
+impl P2PTransport for LocalTeammateMesh {
+    async fn handshake(&self, _peer_id: &str, spiffe_id: &str, _public_key: &str, tenant_id: &str) -> Result<bool, String> {
+        let (parsed_tenant, _) = ::server_auth::parse_spiffe_id(spiffe_id)
+            .map_err(|_| "invalid spiffe id".to_string())?;
+
+        if parsed_tenant != tenant_id {
+            return Err("spiffe identity does not match tenant id".to_string());
+        }
+
+        Ok(true)
+    }
+
+    async fn broadcast_crdt_delta(&self, _delta: ::server_ohc::orchestration::CrdtDelta) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn discover_peers(&self, _tenant_id: &str) -> Result<Vec<String>, String> {
+        Ok(vec![])
     }
 }
 
@@ -284,6 +313,51 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
+
+    struct MockP2PTransport;
+
+    #[async_trait]
+    impl P2PTransport for MockP2PTransport {
+        async fn handshake(&self, peer_id: &str, spiffe_id: &str, _public_key: &str, tenant_id: &str) -> Result<bool, String> {
+            if spiffe_id.starts_with("spiffe://") && tenant_id == "test_tenant" {
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
+
+        async fn broadcast_crdt_delta(&self, _delta: ::server_ohc::orchestration::CrdtDelta) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn discover_peers(&self, tenant_id: &str) -> Result<Vec<String>, String> {
+            if tenant_id == "test_tenant" {
+                Ok(vec!["peer_1".to_string(), "peer_2".to_string()])
+            } else {
+                Ok(vec![])
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_p2p_handshake_validation() {
+        let transport = MockP2PTransport;
+        let valid_handshake = transport.handshake("peer_1", "spiffe://trust_domain/agent", "pub_key", "test_tenant").await.unwrap();
+        assert!(valid_handshake);
+
+        let invalid_handshake = transport.handshake("peer_1", "invalid_spiffe", "pub_key", "test_tenant").await.unwrap();
+        assert!(!invalid_handshake);
+    }
+
+    #[tokio::test]
+    async fn test_p2p_peer_discovery() {
+        let transport = MockP2PTransport;
+        let peers = transport.discover_peers("test_tenant").await.unwrap();
+        assert_eq!(peers.len(), 2);
+
+        let no_peers = transport.discover_peers("unknown_tenant").await.unwrap();
+        assert_eq!(no_peers.len(), 0);
+    }
 
 
     #[tokio::test]
