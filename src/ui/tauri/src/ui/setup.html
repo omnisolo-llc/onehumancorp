@@ -2301,10 +2301,23 @@ if (state.capabilities && document.getElementById('cap-draft')) {
       document.querySelectorAll('input[type="text"]').forEach(input => {
           input.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
-                  e.preventDefault();
                   const step = e.target.closest('.step');
-                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
-                  if (nextBtn) nextBtn.click();
+                  let isValid = true;
+                  const inputs = step.querySelectorAll('input, select');
+                  for (let i = 0; i < inputs.length; i++) {
+                      if (!inputs[i].checkValidity()) {
+                          isValid = false;
+                          inputs[i].reportValidity();
+                          break;
+                      }
+                  }
+                  if (isValid) {
+                      e.preventDefault();
+                      const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
+                      if (nextBtn) nextBtn.click();
+                  } else {
+                      e.preventDefault();
+                  }
               }
           });
       });
@@ -2323,22 +2336,39 @@ document.addEventListener('DOMContentLoaded', () => {
                       sendChatMessage();
                       return;
                   }
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const nextBtn = activeStep.querySelector('.next-step-btn');
-                  if (nextBtn) {
-                      nextBtn.click();
-                  } else if (activeStep.id === 'step-instant' || activeStep.id === 'step-template') {
-                      const launchBtn = activeStep.querySelector('#generate-storefront-btn, #finish-btn, button[onclick*="start_onboarding"]');
-                      if (launchBtn) {
-                          launchBtn.click();
-                      } else {
-                          // Try to find any submit/launch button
-                          const anyLaunchBtn = document.querySelector('button[onclick*="start_onboarding"]');
-                          if (anyLaunchBtn) {
-                              anyLaunchBtn.click();
+
+                  // Let browser handle validation tooltips before we forcefully prevent default
+                  // Only simulate button click if the form elements inside the step are valid
+                  let isValid = true;
+                  const inputs = activeStep.querySelectorAll('input, select');
+                  for (let i = 0; i < inputs.length; i++) {
+                      if (!inputs[i].checkValidity()) {
+                          isValid = false;
+                          inputs[i].reportValidity();
+                          break;
+                      }
+                  }
+
+                  if (isValid) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const nextBtn = activeStep.querySelector('.next-step-btn');
+                      if (nextBtn) {
+                          nextBtn.click();
+                      } else if (activeStep.id === 'step-instant' || activeStep.id === 'step-template') {
+                          const launchBtn = activeStep.querySelector('#generate-storefront-btn, #finish-btn, button[onclick*="start_onboarding"]');
+                          if (launchBtn) {
+                              launchBtn.click();
+                          } else {
+                              // Try to find any submit/launch button
+                              const anyLaunchBtn = document.querySelector('button[onclick*="start_onboarding"]');
+                              if (anyLaunchBtn) {
+                                  anyLaunchBtn.click();
+                              }
                           }
                       }
+                  } else {
+                     e.preventDefault(); // prevent form submit
                   }
               }
           }
