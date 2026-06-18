@@ -8,7 +8,7 @@ test.describe('Documentation Flows', () => {
     // Make sure the title renders
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
 
-    await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
+    await expect(page.locator('input[placeholder="Search for help articles and videos..."]')).toBeAttached();
     await expect(page.getByText('Articles').or(page.getByText('Tutorials')).first()).toBeVisible();
   });
 
@@ -21,7 +21,7 @@ test.describe('Documentation Flows', () => {
     await expect(helpBtn).toBeVisible();
 
     // Hover over the help button to trigger the tooltip
-    await page.locator('#help-btn-tooltip').dispatchEvent('touchstart');
+    await page.locator('#help-btn-tooltip-appshell').dispatchEvent('touchstart');
     await page.waitForTimeout(600); // 500ms for long press
 
     // Verify the tooltip loads with expected content
