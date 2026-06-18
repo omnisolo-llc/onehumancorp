@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::db::DB;
 use serde_json::json;
-use std::time::Duration;
 use uuid::Uuid;
 
 pub struct LifecycleEngagementWorker {
@@ -216,7 +215,7 @@ mod tests {
             .bind(state_change)
             .execute(&pool).await;
 
-        let processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
+        let _processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
         // Since we are mocking/ignoring DB errors, let's just make sure it runs without panicking.
         // If it successfully processed, great. If not, it means the inserts above didn't take because of locking.
 
