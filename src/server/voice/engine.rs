@@ -100,6 +100,11 @@ impl VoiceAIEdgeEngine {
         actions_guard.push(action);
     }
 
+    pub async fn get_transcripts(&self, session_id: &str) -> Vec<TranscriptLog> {
+        let transcripts = self.transcripts.lock().await;
+        transcripts.iter().filter(|t| t.session_id == session_id).cloned().collect()
+    }
+
     pub async fn end_call(&self, session_id: &str) {
         let mut calls = self.active_calls.lock().await;
         if let Some(call) = calls.iter_mut().find(|c| c.session_id == session_id) {

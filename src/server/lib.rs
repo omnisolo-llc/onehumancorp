@@ -2872,6 +2872,25 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
 
+    let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+    let twilio_voice_webhook_state = api::twilio_voice_webhook::TwilioVoiceWebhookState {
+        db: db.clone(),
+        hub: hub.clone(),
+        orchestrator: dept_orchestrator.clone(),
+        engine: voice_engine.clone(),
+        router: Arc::new(crate::voice::VoiceContextRouter::new(
+            voice_engine.clone(),
+            Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(
+                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+            )),
+        )),
+    };
+    let twilio_voice_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_voice_webhook::twilio_voice_webhook_handler))
+        .route("/api/v1/webhooks/twilio/voice/status", axum::routing::post(api::twilio_voice_webhook::twilio_voice_status_webhook_handler))
+        .with_state(twilio_voice_webhook_state);
+
     let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -5798,34 +5817,6 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
             }
         }))
-        .route("/api/voice/incoming", axum::routing::post({
-            let settings_store = settings_store.clone();
-            let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
-            let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
-                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
-                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
-            ));
-            let voice_router = Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
-
-            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let caller_phone = req.get("caller_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let user_text = req.get("user_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-                let settings = settings_store.get();
-                if !settings.voice_receptionist_enabled {
-                    return axum::response::Json(serde_json::json!({ "reply": "The voice receptionist is currently disabled." }));
-                }
-
-                let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
-                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
-
-                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
-
-                voice_engine.end_call(&session_id).await;
-
-                axum::response::Json(serde_json::json!({ "reply": reply }))
-            }
-        }))
         .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
             let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
             let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
@@ -6351,6 +6342,7 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
+        .merge(twilio_voice_webhook_router)
         .merge(twilio_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
