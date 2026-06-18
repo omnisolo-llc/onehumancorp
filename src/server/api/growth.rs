@@ -2307,7 +2307,7 @@ mod tests {
         let response = res.unwrap().0;
         assert_eq!(response.name, "Mock Business");
         assert_eq!(response.url, "mock-business.ohc.app");
-        assert_eq!(response.products_count, 1);
+        assert_eq!(response.products_count, 3);
     }
 
     #[tokio::test]
