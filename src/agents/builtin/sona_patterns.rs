@@ -1,8 +1,7 @@
+use std::collections::HashSet;
 /// Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
 /// Implements a simple pattern matching system to record and retrieve successful trajectories.
-
 use std::path::Path;
-use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrajectoryPattern {
@@ -208,7 +207,10 @@ mod tests {
         let loaded_matcher = load_res.unwrap();
         assert_eq!(loaded_matcher.get_patterns().len(), 1);
         assert_eq!(loaded_matcher.get_patterns()[0].id, "test1");
-        assert_eq!(loaded_matcher.get_patterns()[0].initial_context, "fix null pointer exception in java");
+        assert_eq!(
+            loaded_matcher.get_patterns()[0].initial_context,
+            "fix null pointer exception in java"
+        );
     }
 
     #[test]

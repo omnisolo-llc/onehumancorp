@@ -873,7 +873,7 @@ impl DepartmentOrchestrator {
                         let deposit_amount = (price * 0.20) as i64 * 100;
                         let total_amount_cents = (price * 100.0) as i64;
                         let now = Utc::now();
-                        let expires_at = now + chrono::Duration::days(2);
+                        let _expires_at = now + chrono::Duration::days(2);
                         let quote_id = uuid::Uuid::new_v4().to_string();
 
 
@@ -895,13 +895,14 @@ impl DepartmentOrchestrator {
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
-                                .bind("Approved")
+                                .bind(&customer_id_to_use)
+                                .bind("SENT")
                                 .bind(total_amount_cents)
                                 .bind(deposit_amount)
-                                .bind(expires_at)
+
                                 .bind(&stripe_link)
                                 .execute(&self.db.pool)
                                 .await
@@ -971,10 +972,11 @@ impl DepartmentOrchestrator {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
-                                .bind("Approved")
+                                .bind(&customer_id_to_use)
+                                .bind("SENT")
                                 .bind(total_amount_cents)
                                 .bind(deposit_amount)
-                                .bind(expires_at)
+
                                 .bind(&stripe_link)
                                 .execute(pool)
                                 .await

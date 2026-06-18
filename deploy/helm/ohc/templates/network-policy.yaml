@@ -257,6 +257,18 @@ spec:
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-backend
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-core
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-chatwoot
       ports:
         - protocol: TCP
           port: {{ .Values.valkey.service.port }}
@@ -297,6 +309,24 @@ spec:
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-backend
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-core
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-chatwoot
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-powersync
       ports:
         - protocol: TCP
           port: 5432

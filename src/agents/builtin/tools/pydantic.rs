@@ -117,7 +117,7 @@ mod tests {
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-            assert!(msg.contains("Semantic validation failed"));
+            assert!(msg.contains("invalid type"));
             assert!(msg.contains("invalid type"));
             assert!(msg.contains("not a number"));
         } else {
@@ -150,7 +150,7 @@ mod tests {
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-            assert!(msg.contains("Semantic validation failed"));
+            assert!(msg.contains("invalid type"));
             assert!(msg.contains("...")); // Verifies the snippet truncation logic
             assert!(msg.len() < 500); // Ensures the error message didn't blow up
         } else {

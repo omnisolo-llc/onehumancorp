@@ -285,39 +285,40 @@ When finished or if you need to report progress, write your final summary to {}.
             );
 
             let runner_clone = self.runner.clone();
-            let task_clone = teammate_task.clone();
             let outbox_path_clone = outbox_path.clone();
             let mailbox_dir_clone = mailbox_dir.clone();
+            let executor_clone = Self { runner: self.runner.clone(), llm: self.llm.clone() };
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = runner_clone.run("ohc_builtin_agent", &["--task", &task_clone, "--mailbox", &mailbox_dir_clone], None, envs).await;
+            tokio::spawn(async move {
+                let output = runner_clone.run("ohc_builtin_agent", &["--task", &teammate_task, "--mailbox", &mailbox_dir_clone], None, envs).await;
 
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        self.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}
+                let res = match output {
+                    Ok(out) => {
+                        let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                        let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                        if out.status.success() {
+                            executor_clone.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}
 
 {}", e, stdout))
-                    } else {
-                        format!("Subagent error: {}", stderr)
+                        } else {
+                            format!("Subagent error: {}", stderr)
+                        }
                     }
-                }
-                Err(e) => format!("Subagent failed: {}", e),
-            };
+                    Err(e) => format!("Subagent failed: {}", e),
+                };
 
-
-            use tokio::io::AsyncWriteExt;
-            if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
-                let _ = file.write_all(format!("
+                use tokio::io::AsyncWriteExt;
+                if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
+                    let _ = file.write_all(format!("
 [System: Subagent Process Terminated]
 Final Result: {}", res).as_bytes()).await;
-            }
+                }
+            });
 
             Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
         } else {

@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>OHC - Cost Transparency Dashboard</title>
@@ -204,7 +220,7 @@
       <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
     </div>
 
-    <div class="container">
+    <div class="container glassmorphism glassmorphism">
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
         <h1 style="margin: 0;">My Plan</h1>
         <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
