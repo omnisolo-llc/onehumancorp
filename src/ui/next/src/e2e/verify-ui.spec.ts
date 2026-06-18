@@ -49,7 +49,7 @@ test('Verify onboarding UI', async ({ page }) => {
   await page.locator('button:has-text("Next")').click();
 
   // Step 2: What do you sell
-  await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom vegan cakes in Portland, OR...');
+  await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes"]').fill('I bake custom vegan cakes in Portland, OR...');
   await page.locator('button:has-text("Next")').click();
 
   // Step 3: Location

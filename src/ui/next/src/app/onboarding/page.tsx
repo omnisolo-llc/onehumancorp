@@ -321,7 +321,12 @@ export default function OnboardingWizard() {
       }
       setAiAgents(newAgents);
 
-      setStep(2); await syncStateToBackend({ step: 2, aiAgents: newAgents }); // Go to review step
+      setStep(2); await syncStateToBackend({
+        step: 2,
+        aiAgents: newAgents,
+        firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+        firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
+      }); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -379,7 +384,11 @@ export default function OnboardingWizard() {
 
         // Let the normal handleStartOnboarding function take over if admin details are missing
         if (!adminEmail.trim() || !adminPassword.trim()) {
-          setStep(3); syncStateToBackend({ step: 3 });
+          setStep(3); syncStateToBackend({
+            step: 3,
+            firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+            firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00"
+          });
           setIsLoading(false);
           return;
         }
@@ -496,7 +505,11 @@ export default function OnboardingWizard() {
     if (intakeDataOverride && intakeDataOverride.business_name) {
       setIsLoading(true);
       setError('');
-      setStep(4); syncStateToBackend({ step: 4 });
+      setStep(4); syncStateToBackend({
+        step: 4,
+        firstProductName: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
+        firstProductPrice: intakeDataOverride.initial_products?.[0]?.price || '0.00'
+      });
       try {
         const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
         const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -735,7 +748,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div id="chat-messages" className="glassmorphism flex-1 overflow-y-auto p-4 rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
                   {chatMessages.length === 0 && (
-                    <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
+                    <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
                   )}
                   {chatMessages.map((msg, index) => (
                     <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-[#0066FF]' : 'text-[#333] dark:text-[#A1A1A6]'}`}>
@@ -950,7 +963,7 @@ export default function OnboardingWizard() {
                             setChatStep(3); syncStateToBackend({ chatStep: 3 });
                           }
                         }}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                        placeholder="e.g. I bake custom vegan cakes"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
