@@ -52,14 +52,7 @@ impl MyAgentManagerService {
         let (total_cost, total_tokens, agent_costs_data) = cost_res_spawn.unwrap();
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
-        let mut proto_task_queue: Vec<::server_ohc::orchestration::SharedTask> = task_queue.into_iter().map(|t| t.into_proto()).collect();
-
-        if mobile_optimized {
-            for task in proto_task_queue.iter_mut() {
-                task.description = String::new();
-                task.payload = String::new();
-            }
-        }
+        let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
@@ -426,31 +419,6 @@ mod tests {
 
         let res = service.get_dashboard_snapshot(request).await.unwrap().into_inner();
         assert!(res.costs.is_some());
-    }
-
-
-    #[tokio::test]
-    async fn test_agent_get_dashboard_snapshot_mobile_optimized() {
-        let service = setup_test_agent_manager_service().await;
-
-        let _ = service.hub.task_manager().create_task("system".to_string(), "miss1".to_string(), "Test Task".to_string(), "This is a detailed description of the task.".to_string(), "high".to_string());
-
-        let req = EmptyRequest {};
-        let mut request = Request::new(req);
-        let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        metadata.insert("x-mobile-optimized", "true".parse().unwrap());
-        *request.metadata_mut() = metadata;
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let res = service.get_dashboard_snapshot(request).await.unwrap().into_inner();
-        assert!(res.task_queue.len() > 0, "Task queue should not be empty");
-        assert_eq!(res.task_queue[0].description, "");
-        assert_eq!(res.task_queue[0].payload, "");
     }
 
     #[tokio::test]
