@@ -118,7 +118,7 @@ impl SipDB {
         let threshold_time = Utc::now() - stagnant_threshold;
 
         let mut attempt = 0;
-        let max_attempts = 10;
+        let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
@@ -181,7 +181,7 @@ impl SipDB {
         let fail_threshold = Utc::now() - age_threshold;
         
         let mut attempt = 0;
-        let max_attempts = 10;
+        let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
@@ -279,7 +279,7 @@ impl SipDB {
 
     pub async fn drain_mission_queue(&self) -> Result<(), sqlx::Error> {
         let mut attempt = 0;
-        let max_attempts = 10;
+        let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {

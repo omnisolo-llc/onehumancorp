@@ -176,7 +176,7 @@ impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport
 
         let mut success = false;
         let mut attempts = 0;
-        let max_attempts = 5;
+        let max_attempts = 3;
 
         while attempts < max_attempts {
             let should_drop = (rand::random::<f64>() * 100.0) < rate as f64;
