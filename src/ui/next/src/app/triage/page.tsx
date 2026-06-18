@@ -168,7 +168,7 @@ export default function TriagePage() {
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-5/6"></div>
               </div>
             ) : !error && items.length === 0 ? (
-              <div className="app-empty flex flex-col items-center justify-center py-12">
+              <div className="app-empty flex flex-col items-center justify-center py-12" data-testid="triage-feed-empty">
                 <div className="text-4xl mb-4">✨</div>
                 <div className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                   All caught up! You're a hero.
@@ -186,7 +186,7 @@ export default function TriagePage() {
                   type="button"
                   data-testid={`triage-card-${item.id}`}
                   onClick={() => setSelectedId(item.id)}
-                  className="app-list-item w-full text-left min-h-[44px] rounded-[16px] transition-colors"
+                  className="app-list-item w-full text-left min-h-[44px] rounded-[16px] transition-all hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]"
                   style={{
                     background:
                       selected?.id === item.id
@@ -284,7 +284,7 @@ export default function TriagePage() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 w-full">
                 <button
-                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] font-medium transition-transform active:scale-[0.98] shadow-md flex items-center justify-center cursor-pointer text-white"
+                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] font-medium transition-all hover:shadow-lg active:scale-[0.98] shadow-md flex items-center justify-center cursor-pointer text-white hover:bg-[#0052CC]"
                   style={{ background: "#0066FF" }}
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
@@ -292,7 +292,7 @@ export default function TriagePage() {
                   ✨ Approve &amp; Execute
                 </button>
                 <button
-                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-200 dark:border-white/10 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-200 dark:border-white/10 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >
