@@ -171,7 +171,7 @@ export default function GiveawayGeneratorPage() {
                      </div>
 
                      <div className="mt-8">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Powered by OHC</span>
+                        <a href={`/onboarding?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
                      </div>
                  </div>
              </div>
