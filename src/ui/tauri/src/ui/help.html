@@ -19,7 +19,7 @@
     </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Help Center</title>
+    <title>OHC In-App Help Center</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -45,7 +45,7 @@
         padding: 40px;
         text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         margin-bottom: 40px;
       }
       h1 {
@@ -61,10 +61,10 @@
         max-width: 500px;
         padding: 16px 20px;
         border-radius: 16px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         font-size: 16px;
         background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         outline: none;
         transition: border-color 0.2s, box-shadow 0.2s;
         box-sizing: border-box;
@@ -94,6 +94,16 @@
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 20px;
+      }
+
+      @media (max-width: 480px) {
+        body { padding: 20px 10px; }
+        .header-card { padding: 24px 16px; margin-bottom: 24px; border-radius: 16px; }
+        h1 { font-size: 26px; margin-bottom: 16px; }
+        input[type="text"] { font-size: 15px; padding: 14px 16px; }
+        .grid { grid-template-columns: 1fr; gap: 16px; }
+        .section-title { font-size: 20px; margin-top: 30px; margin-bottom: 16px; }
+        .card { padding: 16px; min-height: auto; }
       }
       .card {
         background: rgba(255, 255, 255, 0.65);
@@ -367,7 +377,7 @@
       </a>
 
       <div class="header-card">
-        <h1>Help Center</h1>
+        <h1>In-App Help Center</h1>
         <input type="text" id="search-input" placeholder="Search for help articles and videos..." data-tooltip="Search for articles, videos, and guides" />
       </div>
 
@@ -1111,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.id = 'ohc-floating-help-widget';
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
-            <h3>Help Center</h3>
+            <h3>In-App Help Center</h3>
             <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -1125,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
