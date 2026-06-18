@@ -284,7 +284,7 @@ export function HelpWidget() {
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "checkout-pay-now-tooltip", title: "Connect Stripe", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "sales-card-target", title: "Accept Payment", content: "Click here to accept your first payment." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
                   <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Activate your AI Support Agent", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
