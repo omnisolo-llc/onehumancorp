@@ -1,9 +1,9 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Carlos Field Ops Notification', () => {
   test('Carlos receives and approves an agentic notification for a new inquiry', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('http://localhost:3000/');
+    await page.goto('http://127.0.0.1:3000/');
 
     // Ensure notification appears
     await expect(page.getByText('New plumbing inquiry from Carlos')).toBeVisible({ timeout: 10000 });

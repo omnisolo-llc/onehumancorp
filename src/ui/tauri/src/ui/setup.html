@@ -935,7 +935,7 @@
         <p>Our AI will handle the rest in 30 seconds.</p>
 
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
+        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
 
@@ -965,7 +965,7 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
                 <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
@@ -1068,7 +1068,7 @@
         <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" />
 
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-assistant">Next</button>
@@ -1086,7 +1086,7 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" inputmode="text" autocomplete="off" />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism" style="margin-bottom: 0;">

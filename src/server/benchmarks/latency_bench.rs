@@ -306,6 +306,25 @@ pub async fn bench_agent_snapshot() {
 
     fetch_times.sort();
     println!("Agent Snapshot Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+
+    let mut mobile_fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap());
+        request.metadata_mut().insert("x-mobile-optimized", "true".parse().unwrap());
+        use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap().into_inner();
+        mobile_fetch_times.push(start.elapsed().as_micros());
+    }
+    mobile_fetch_times.sort();
+    println!("Agent Snapshot Fetch (Mobile Optimized): p50: {} us, p95: {} us, p99: {} us", mobile_fetch_times[iterations / 2], mobile_fetch_times[(iterations as f32 * 0.95) as usize], mobile_fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {

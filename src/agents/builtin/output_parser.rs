@@ -159,6 +159,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         max_retries: usize,
         strategy: &dyn RetryStrategy,
     ) -> Result<T, ToolError> {
+        // SOTA Harness Patterns (2025-2026): Error Handling
+        let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut current_req = req.clone();
 
         // Inject the schema as a tool definition to encourage the model to use tool_calls API
@@ -844,5 +846,79 @@ mod exponential_backoff_tests {
                 "Backoff with 0 jitter should be exactly the base backoff"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_clamped {
+    use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+    use serde::Deserialize;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct TestOutput {
+        result: String,
+    }
+
+    struct FailingLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for FailingLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+            Err("Network error".into())
+        }
+    }
+
+    fn create_test_req() -> ChatRequest {
+        ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_retry_parser_clamped_to_two() {
+        let failing_client = Arc::new(FailingLlmClient {
+            call_count: Mutex::new(0),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(StructuredOutputParser::new());
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, failing_client.clone() as Arc<dyn LlmClientForParser>);
+
+        // Pass max_retries = 10, but it should be clamped to 2
+        let handle = tokio::spawn(async move {
+            retry_parser.parse_with_prompt(req, 10).await
+        });
+
+        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+
+        let result = handle.await.unwrap();
+
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::Transient(msg)) => {
+                assert!(msg.contains("LLM Error after retries"));
+            }
+            _ => panic!("Expected Transient error for exhaustion"),
+        }
+
+        // It tries once initially, then retries twice (clamped), making 3 calls total.
+        assert_eq!(*failing_client.call_count.lock().await, 3);
     }
 }
