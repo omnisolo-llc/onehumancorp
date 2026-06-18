@@ -731,7 +731,9 @@ impl DB {
                         subscription_interval TEXT,
                         subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        industry TEXT DEFAULT '',
+                        geohash TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
@@ -748,7 +750,9 @@ impl DB {
                         subscription_interval TEXT,
                         subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        industry TEXT DEFAULT '',
+                        geohash TEXT
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
@@ -926,7 +930,9 @@ impl DB {
                         subscription_interval TEXT,
                         subscription_discount INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        industry TEXT DEFAULT '',
+                        geohash TEXT
                     );
                     CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
                         tenant_id TEXT NOT NULL,
@@ -1406,6 +1412,48 @@ impl DB {
                         action_type TEXT NOT NULL,
                         state_change TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        location_center TEXT,
+                        radius_meters FLOAT,
+                        target_industries TEXT,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective_member (
+                        collective_id TEXT NOT NULL REFERENCES ohc_collective(id) ON DELETE CASCADE,
+                        tenant_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (collective_id, tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_shared_loyalty_ledger (
+                        id TEXT PRIMARY KEY,
+                        collective_id TEXT NOT NULL REFERENCES ohc_collective(id) ON DELETE CASCADE,
+                        originating_tenant_id TEXT NOT NULL,
+                        target_tenant_id TEXT NOT NULL,
+                        buyer_id TEXT NOT NULL,
+                        points_redeemed INTEGER NOT NULL,
+                        value_cents BIGINT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective_loyalty_balance (
+                        collective_id TEXT NOT NULL REFERENCES ohc_collective(id) ON DELETE CASCADE,
+                        buyer_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        balance INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (collective_id, buyer_id, tenant_id)
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;

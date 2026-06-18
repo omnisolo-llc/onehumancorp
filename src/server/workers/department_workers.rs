@@ -948,8 +948,22 @@ impl PromoterWorker {
     }
 
     pub fn start(&self) {
-        let _db = self.db.clone();
+        let db = self.db.clone();
         let hub = self.hub.clone();
+
+        // Start discovery loop
+        let db_discovery = db.clone();
+        let hub_discovery = hub.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(300)); // Every 5 mins
+            loop {
+                interval.tick().await;
+                if let Err(e) = Self::poll_discovery(&db_discovery, &hub_discovery).await {
+                    tracing::error!("Promoter discovery error: {}", e);
+                }
+            }
+        });
+
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
 
@@ -1209,6 +1223,109 @@ let db_for_products = self.db.clone();
                 }
             }
         });
+    }
+
+    pub async fn poll_discovery(db: &Arc<DB>, _hub: &Arc<crate::hub::Hub>) -> Result<(), String> {
+        // 1. Fetch all tenants with geohashes
+        let tenants: Vec<(String, String, String, String)> = match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query_as("SELECT id, name, COALESCE(industry, ''), geohash FROM tenants WHERE geohash IS NOT NULL")
+                    .fetch_all(&db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_as("SELECT id, name, COALESCE(industry, ''), geohash FROM tenants WHERE geohash IS NOT NULL")
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+        };
+
+        if tenants.len() < 2 { return Ok(()); }
+
+        // 2. Simple N^2 neighbor check (optimized for OHC scale)
+        for i in 0..tenants.len() {
+            for j in i + 1..tenants.len() {
+                let (id_a, name_a, ind_a, gh_a) = &tenants[i];
+                let (id_b, name_b, ind_b, gh_b) = &tenants[j];
+
+                if crate::utils::geo::are_neighbors(gh_a, gh_b) {
+                    // Check if they are already in a collective or have a pending proposal
+                    // For now, we'll just check if a proposal already exists for this pair
+                    Self::propose_collective_if_needed(db, id_a, name_a, ind_a, id_b, name_b, ind_b).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn propose_collective_if_needed(db: &Arc<DB>, id_a: &str, name_a: &str, ind_a: &str, id_b: &str, name_b: &str, ind_b: &str) -> Result<(), String> {
+        // Check if proposal already exists
+        let exists: bool = match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'marketing' AND context_payload->>'partner_id' = $2)")
+                    .bind(id_a)
+                    .bind(id_b)
+                    .fetch_one(&db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_feed_items WHERE tenant_id = ? AND event_source = 'marketing' AND context_payload LIKE ?)")
+                    .bind(id_a)
+                    .bind(format!("%{}%", id_b))
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+        };
+
+        if exists { return Ok(()); }
+
+        // Create proposal for Tenant A
+        let proposal_id = Uuid::new_v4().to_string();
+        let description = format!("Form a neighborhood collective with {} ({} nearby)?", name_b, ind_b);
+        let context = serde_json::json!({
+            "feature_type": "neighborhood_proposal",
+            "partner_id": id_b,
+            "partner_name": name_b,
+            "partner_industry": ind_b,
+            "description": description
+        });
+
+        let action = serde_json::json!({
+            "action_type": "INVITE_TO_COLLECTIVE",
+            "partner_id": id_b
+        });
+
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'marketing', $3, $4, 'PENDING_APPROVAL')")
+                    .bind(&proposal_id)
+                    .bind(id_a)
+                    .bind(&context)
+                    .bind(&action)
+                    .execute(&db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let context_str = context.to_string();
+                let action_str = action.to_string();
+                sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, 'marketing', ?, ?, 'PENDING_APPROVAL')")
+                    .bind(&proposal_id)
+                    .bind(id_a)
+                    .bind(context_str)
+                    .bind(action_str)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(())
     }
 }
 

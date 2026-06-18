@@ -4274,6 +4274,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                         "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     })
                             } else {
                                 serde_json::json!({
@@ -4314,6 +4315,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                         "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     })
                             } else {
                                 serde_json::json!({
@@ -4351,10 +4353,26 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     .await {
                         for row in rows {
                             let item = if mobile_optimized {
+                                let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
+                                let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
@@ -4401,10 +4419,26 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     .await {
                         for row in rows {
                             let item = if mobile_optimized {
+                                let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("context_payload") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
+                                let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                                    Ok(j) => Some(j.0),
+                                    Err(_) => match row.try_get::<String, _>("proposed_action") {
+                                        Ok(s) => serde_json::from_str(&s).ok(),
+                                        Err(_) => None
+                                    }
+                                };
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
                                     "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
+                                    "context_payload": context_payload,
+                                    "proposed_action": proposed_action,
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
@@ -6397,7 +6431,7 @@ async fn create_ui_bom_item_handler(
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
-    let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
+    let collective_service = crate::services::collective::service::MyCollectiveService::new(db.clone());
     let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client.clone());
 
     Server::builder()

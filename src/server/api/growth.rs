@@ -374,6 +374,10 @@ where
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
+        .route("/collectives", get(handle_get_collectives))
+        .route("/collectives/settlement", get(handle_get_collective_settlement))
+        .route("/collectives/earn", post(handle_collective_earn))
+        .route("/collectives/redeem", post(handle_collective_redeem))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
@@ -3158,4 +3162,108 @@ pub async fn handle_post_link_in_bio(
 
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::OK)
+}
+
+pub async fn handle_get_collectives(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = query.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
+
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT c.id, c.name FROM ohc_collective c JOIN ohc_collective_member m ON c.id = m.collective_id WHERE m.tenant_id = $1 AND m.status = 'ACTIVE'"
+    )
+    .bind(tenant_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let collectives: Vec<serde_json::Value> = rows.into_iter().map(|(id, name)| {
+        serde_json::json!({ "id": id, "name": name })
+    }).collect();
+
+    Ok(Json(serde_json::json!({ "collectives": collectives })))
+}
+
+pub async fn handle_get_collective_settlement(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = query.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
+
+    let summary = crate::domain::collective::get_collective_settlement_summary(tenant_id, &state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Settlement summary error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(serde_json::to_value(summary).unwrap_or(serde_json::json!({}))))
+}
+
+#[derive(serde::Deserialize)]
+pub struct CollectivePointsReq {
+    pub collective_id: String,
+    pub buyer_id: String,
+    pub amount: i32,
+    pub tenant_id: Option<String>,
+}
+
+pub async fn handle_collective_earn(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<CollectivePointsReq>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = req.tenant_id.unwrap_or(auth_info.org_id);
+
+    sqlx::query("INSERT INTO ohc_collective_loyalty_balance (collective_id, buyer_id, tenant_id, balance) VALUES ($1, $2, $3, $4) ON CONFLICT(collective_id, buyer_id, tenant_id) DO UPDATE SET balance = ohc_collective_loyalty_balance.balance + $4, updated_at = CURRENT_TIMESTAMP")
+        .bind(&req.collective_id)
+        .bind(&req.buyer_id)
+        .bind(&tenant_id)
+        .bind(req.amount)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Earn points error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(serde_json::json!({"status": "success"})))
+}
+
+pub async fn handle_collective_redeem(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<CollectivePointsReq>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = req.tenant_id.unwrap_or(auth_info.org_id);
+
+    // Create CollectiveService instance to use its complex FIFO logic
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: state.pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    });
+    let service = crate::services::collective::service::MyCollectiveService::new(db);
+
+    use tonic::Request;
+    let tonic_req = Request::new(::server_ohc::collective::RedeemPointsRequest {
+        collective_id: req.collective_id,
+        buyer_id: req.buyer_id,
+        tenant_id,
+        amount: req.amount,
+    });
+
+    use ::server_ohc::collective::collective_service_server::CollectiveService;
+    let res = service.redeem_points(tonic_req).await
+        .map_err(|e| {
+            tracing::error!("Redeem points error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let inner = res.into_inner();
+    Ok(Json(serde_json::json!({
+        "success": inner.success,
+        "message": inner.message,
+        "new_balance": inner.new_balance.map(|b| b.balance)
+    })))
 }

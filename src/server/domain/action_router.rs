@@ -29,6 +29,16 @@ pub async fn dispatch_action(
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
         }
+        "neighborhood_proposal" => {
+            crate::domain::collective::handle_collective_action(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        "neighborhood_invitation" => {
+            crate::domain::collective::handle_join_collective(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }

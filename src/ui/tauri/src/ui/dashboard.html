@@ -638,6 +638,35 @@
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Mutations Pending Sync</div>
 
+      <div id="neighborhood-widget" class="ohc-growth-card" style="display: none; margin-top: 20px; background: linear-gradient(135deg, rgba(0, 102, 255, 0.05), rgba(52, 199, 89, 0.05)); border: 1px solid rgba(0, 102, 255, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700;">My Neighborhood</h2>
+          <span id="collective-count-badge" style="background: #0066FF; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">0 Partners</span>
+        </div>
+        <div id="collective-list" style="display: flex; flex-direction: column; gap: 8px; text-align: left;">
+          <!-- Collectives will be rendered here -->
+        </div>
+        <div id="loyalty-mesh-card" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.05); display: none;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-size: 20px;">🏆</span>
+                <strong style="font-size: 14px;">Neighborhood Loyalty Mesh Active</strong>
+            </div>
+            <p style="font-size: 12px; color: #6b7280; margin: 0;">Customers earn points across all partner stores. AI Accountant handles the clearinghouse.</p>
+        </div>
+        <div id="collective-settlement-card" style="margin-top: 16px; padding: 12px; border-radius: 12px; background: rgba(0, 102, 255, 0.1); border: 1px solid rgba(0, 102, 255, 0.2); display: none;">
+            <div style="font-size: 10px; font-weight: 800; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Accountant: Monthly Settlement</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 12px; color: #6b7280;">Net Position</div>
+                    <div id="settlement-net-position" style="font-size: 18px; font-weight: 700; color: #1D1D1F;">$0.00</div>
+                </div>
+                <div style="text-align: right;">
+                    <div id="settlement-details" style="font-size: 11px; color: #6b7280;">$0.00 Owed · $0.00 Due</div>
+                </div>
+            </div>
+        </div>
+      </div>
+
       <div id="sold-out-toggle-falafel-container" style="display: none;">
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
@@ -1517,6 +1546,53 @@
       }
       loadReferralTierWidget();
 
+      async function loadNeighborhood() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          // In real implementation, this would call get_collectives RPC via a wrapped API
+          const res = await fetch(`/api/v1/growth/collectives?tenant_id=${tenantId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const collectives = data.collectives || [];
+            if (collectives.length > 0) {
+              document.getElementById('neighborhood-widget').style.display = 'block';
+              document.getElementById('collective-count-badge').innerText = `${collectives.length} Partner${collectives.length > 1 ? 's' : ''}`;
+              document.getElementById('loyalty-mesh-card').style.display = 'block';
+
+              const list = document.getElementById('collective-list');
+              list.innerHTML = collectives.map(c => `
+                <div style="background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <strong style="font-size: 14px; color: #1D1D1F;">${c.name}</strong>
+                    <div style="font-size: 11px; color: #86868b;">Neighborhood Mesh Active</div>
+                  </div>
+                  <button style="width: auto; min-height: 32px; font-size: 12px; padding: 4px 12px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border: none; box-shadow: none;">Manage</button>
+                </div>
+              `).join('');
+
+              // Load settlement data
+              try {
+                const sres = await fetch(`/api/v1/growth/collectives/settlement?tenant_id=${tenantId}`);
+                if (sres.ok) {
+                    const sdata = await sres.json();
+                    if (sdata.pending_settlements_count > 0) {
+                        document.getElementById('collective-settlement-card').style.display = 'block';
+                        const net = (sdata.total_due_cents - sdata.total_owed_cents) / 100;
+                        const netEl = document.getElementById('settlement-net-position');
+                        netEl.innerText = (net >= 0 ? '$' : '-$') + Math.abs(net).toFixed(2);
+                        netEl.style.color = net >= 0 ? '#34C759' : '#FF3B30';
+                        document.getElementById('settlement-details').innerText = `$${(sdata.total_owed_cents/100).toFixed(2)} Owed · $${(sdata.total_due_cents/100).toFixed(2)} Due`;
+                    }
+                }
+              } catch(e) { console.error("Settlement load fail", e); }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load collectives", e);
+        }
+      }
+      loadNeighborhood();
+
       async function checkWrapped() {
         try {
           const res = await fetch('/api/v1/growth/wrapped');
@@ -1678,6 +1754,12 @@
           // Adjust logic to match new ui triage shape if necessary
           agentFeedItems = Array.isArray(data) ? data : (data.items || []);
           renderTriageItems(agentFeedItems);
+
+          // Update neighborhood widget if we have neighborhood data
+          const neighborhoodProposals = agentFeedItems.filter(i => i.context_payload?.feature_type === 'neighborhood_proposal');
+          if (neighborhoodProposals.length > 0) {
+            document.getElementById('neighborhood-widget').style.display = 'block';
+          }
         } catch (err) {
           console.error("Agent Feed load error:", err);
           triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading agent feed items.</div>';
@@ -1893,6 +1975,48 @@
                   <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Deny</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (item.context_payload?.feature_type === 'neighborhood_proposal') {
+            const partnerName = item.context_payload.partner_name || 'Nearby Business';
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(0, 102, 255, 0.05); backdrop-filter: blur(30px) saturate(2.1); border-radius: 16px; padding: 16px; border: 1px solid rgba(0, 102, 255, 0.3);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">📍</span> <strong>Neighborhood Pulse</strong>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #0066FF;">Partner Found</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
+                  ${item.context_payload.description}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Invite ${partnerName}</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Ignore</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (item.context_payload?.feature_type === 'neighborhood_invitation') {
+            const partnerName = item.context_payload.partner_id || 'A neighbor';
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.1)); backdrop-filter: blur(30px) saturate(2.1); border-radius: 16px; padding: 16px; border: 1px solid rgba(52, 199, 89, 0.3);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🤝</span> <strong>Collective Invite</strong>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #34C759;">New Request</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
+                  ${item.context_payload.description}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #34C759; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(52,199,89,0.3); cursor: pointer;">Join Collective</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Decline</button>
                 </div>
               </div>
             `;

@@ -74,4 +74,35 @@ service CollectiveService {
   rpc InviteTenant(InviteTenantRequest) returns (InviteTenantResponse);
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetCollectives(GetCollectivesRequest) returns (GetCollectivesResponse);
+
+  // Loyalty Mesh
+  rpc GetLoyaltyBalance(GetLoyaltyBalanceRequest) returns (CollectiveLoyaltyBalance);
+  rpc EarnPoints(EarnPointsRequest) returns (CollectiveLoyaltyBalance);
+  rpc RedeemPoints(RedeemPointsRequest) returns (RedeemPointsResponse);
+}
+
+message GetLoyaltyBalanceRequest {
+  string collective_id = 1;
+  string buyer_id = 2;
+  string tenant_id = 3;
+}
+
+message EarnPointsRequest {
+  string collective_id = 1;
+  string buyer_id = 2;
+  string tenant_id = 3;
+  int32 amount = 4;
+}
+
+message RedeemPointsRequest {
+  string collective_id = 1;
+  string buyer_id = 2;
+  string tenant_id = 3;
+  int32 amount = 4;
+}
+
+message RedeemPointsResponse {
+  bool success = 1;
+  string message = 2;
+  CollectiveLoyaltyBalance new_balance = 3;
 }
