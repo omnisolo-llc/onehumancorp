@@ -1096,9 +1096,21 @@ pub struct ZeroClickGenerateResponse {
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<TrackVisitorRequest>,
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<serde_json::Value>,
 ) -> impl IntoResponse {
+    if let Some(event_type) = req.get("event_type").and_then(|v| v.as_str()) {
+        if event_type == "loyalty_program_generated" {
+            if let Some(metadata) = req.get("metadata") {
+                if let Some(tenant) = metadata.get("tenant").and_then(|v| v.as_str()) {
+                    state.hub.log_event(serde_json::json!({
+                        "tenant_id": tenant,
+                        "type": "growth.loyalty_program_generated"
+                    }));
+                }
+            }
+        }
+    }
     Json(TrackVisitorResponse { tracked: true })
 }
 
