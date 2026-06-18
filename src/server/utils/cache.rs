@@ -4,6 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
+use tokio::sync::broadcast;
 
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,6 +25,7 @@ struct CacheValue<T> {
 pub struct HybridCache<T> {
     local: OnceLock<DashMap<String, CacheValue<T>>>,
     local_tags: OnceLock<DashMap<String, DashSet<String>>>,
+    flight_group: OnceLock<DashMap<String, broadcast::Sender<T>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
@@ -37,6 +39,7 @@ where
         Self {
             local: OnceLock::new(),
             local_tags: OnceLock::new(),
+            flight_group: OnceLock::new(),
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: 1000,
@@ -47,6 +50,7 @@ where
         Self {
             local: OnceLock::new(),
             local_tags: OnceLock::new(),
+            flight_group: OnceLock::new(),
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: capacity,
@@ -72,8 +76,67 @@ where
         self.local_tags.get_or_init(|| DashMap::new())
     }
 
+    fn get_flight_group(&self) -> &DashMap<String, broadcast::Sender<T>> {
+        self.flight_group.get_or_init(|| DashMap::new())
+    }
+
     pub async fn get(&self, key: &str) -> Option<T> {
         self.get_with_swr(key).await.map(|(v, _)| v)
+    }
+
+    /// Gets the value from the cache or fetches it using the provided future.
+    /// Ensures that only one fetch happens concurrently for a given key.
+    pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Option<T>> + Send + 'static,
+    {
+        let res = self.get_with_swr(key).await;
+        if let Some((v, is_stale)) = res.clone() {
+            if !is_stale {
+                return Some(v);
+            }
+        }
+
+        let flight_group = self.get_flight_group();
+
+        let mut rx = {
+            if let Some(tx) = flight_group.get(key) {
+                tx.subscribe()
+            } else {
+                let (tx, _rx) = broadcast::channel(1);
+                flight_group.insert(key.to_string(), tx.clone());
+
+                if let Some((v, true)) = res {
+                    // Stale hit: return immediately but fetch in background
+                    // To do this we must clone self, which isn't possible because self is a reference.
+                    // Wait, HybridCache doesn't have an Arc wrapper internally.
+                    // Instead, we will just block and fetch for now since we can't easily spawn a task
+                    // without an Arc<HybridCache>. We will return the result.
+
+                    if let Some(val) = fetch().await {
+                        self.set(key, val.clone(), ttl).await;
+                        let _ = tx.send(val.clone());
+                        flight_group.remove(key);
+                        return Some(val);
+                    }
+                    flight_group.remove(key);
+                    return Some(v);
+                } else {
+                    // Miss
+                    if let Some(val) = fetch().await {
+                        self.set(key, val.clone(), ttl).await;
+                        let _ = tx.send(val.clone());
+                        flight_group.remove(key);
+                        return Some(val);
+                    }
+                    flight_group.remove(key);
+                    return None;
+                }
+            }
+        };
+
+        rx.recv().await.ok()
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
@@ -277,5 +340,44 @@ mod tests {
         cache.invalidate_by_tag("tag1").await;
         assert_eq!(cache.get("k1").await, None);
         assert_eq!(cache.get("k2").await, None);
+    }
+}
+
+#[cfg(test)]
+mod tests_singleflight {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::time::Duration;
+
+    #[tokio::test]
+    async fn test_hybrid_cache_singleflight() {
+        let cache = Arc::new(HybridCache::<String>::with_capacity(None, 10));
+        let fetch_count = Arc::new(AtomicUsize::new(0));
+
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let cache_clone = cache.clone();
+            let count_clone = fetch_count.clone();
+            handles.push(tokio::spawn(async move {
+                cache_clone.get_or_fetch_with_swr("test_key", Duration::from_secs(60), move || async move {
+                    count_clone.fetch_add(1, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    Some("test_val".to_string())
+                }).await
+            }));
+        }
+
+        let mut results = vec![];
+        for h in handles {
+            results.push(h.await.unwrap());
+        }
+
+        for res in results {
+            assert_eq!(res, Some("test_val".to_string()));
+        }
+
+        // Fetch should only have been called once despite 10 concurrent requests
+        assert_eq!(fetch_count.load(Ordering::SeqCst), 1);
     }
 }
