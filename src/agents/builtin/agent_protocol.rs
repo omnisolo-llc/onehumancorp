@@ -228,7 +228,8 @@ impl AgentProtocolServer {
     pub async fn get_artifact(&self, task_id: &str, artifact_id: &str) -> serde_json::Value {
         let map = self.artifacts.lock().await;
         if let Some(list) = map.get(task_id) {
-            if let Some(artifact) = list.iter().find(|a| a.artifact_id == artifact_id) {
+            let artifact_opt = list.iter().find(|a| a.artifact_id == artifact_id);
+            if let Some(artifact) = artifact_opt {
                 return serde_json::to_value(artifact).unwrap();
             }
         }
@@ -253,7 +254,8 @@ impl AgentProtocolServer {
         drop(map); // drop the lock before file IO
 
         if let Some(a) = artifact {
-            if let Some(path) = &a.relative_path {
+            let path_opt = &a.relative_path;
+            if let Some(path) = path_opt {
                 return tokio::fs::read(path)
                     .await
                     .map_err(|e| format!("Failed to read file: {}", e));

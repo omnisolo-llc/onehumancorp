@@ -100,7 +100,7 @@ impl ClaudeSubagentSpawner {
                     .arg("worktree")
                     .arg("add")
                     .arg("-b")
-                    .arg(&branch_name)
+                    .arg(branch_name.as_str())
                     .arg(&worktree_dir)
                     .current_dir(base_repo_path)
                     .output()
@@ -129,7 +129,7 @@ impl ClaudeSubagentSpawner {
                     // Merge branch into main repo
                     let merge_output = Command::new("git")
                         .arg("merge")
-                        .arg(&branch_name)
+                        .arg(branch_name.as_str())
                         .current_dir(base_repo_path)
                         .output()
                         .await?;
@@ -164,7 +164,7 @@ impl ClaudeSubagentSpawner {
                         let branch_del_output = Command::new("git")
                             .arg("branch")
                             .arg("-D")
-                            .arg(&branch_name)
+                            .arg(branch_name.as_str())
                             .current_dir(base_repo_path)
                             .output()
                             .await?;
@@ -238,7 +238,7 @@ impl ClaudeSubagentSpawner {
 
                 let req = ohc_builtin_agent_core::types::ChatRequest {
                     model: config.model.clone(),
-                    system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+                    system: ::server_pricing::compression::reduce_tokens(system_prompt),
                     messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
                     tools: vec![],
                     max_tokens: 2000,
@@ -270,7 +270,7 @@ impl ClaudeSubagentSpawner {
         if raw_output.len() == current_text.len() {
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: config.model.clone(),
-                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+                system: ::server_pricing::compression::reduce_tokens(system_prompt),
                 messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
                 tools: vec![],
                 max_tokens: 2000,

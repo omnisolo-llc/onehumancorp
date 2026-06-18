@@ -30,7 +30,8 @@ impl CodexCore {
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         // OpenAI Mechanic: Input Guardrails (Early Check)
         if let Some(guardrails) = &self.runtime_config.guardrails {
-            if let Err(e) = guardrails.check_input(message) {
+            if guardrails.check_input(message).is_err() {
+                let e = guardrails.check_input(message).unwrap_err();
                 return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!("Codex Runner Input Guardrail tripped: {}", e),
@@ -113,7 +114,8 @@ impl Runner {
         tokio::spawn(async move {
             // OpenAI Mechanic: Input Guardrails (Early Check) for streamed execution
             if let Some(guardrails) = &core.runtime_config.guardrails {
-                if let Err(e) = guardrails.check_input(&msg) {
+                if guardrails.check_input(&msg).is_err() {
+                    let e = guardrails.check_input(&msg).unwrap_err();
                     let _ = tx
                         .send(AgentEvent::TaskError {
                             error: format!("Codex Runner Input Guardrail tripped: {}", e),
