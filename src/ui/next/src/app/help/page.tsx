@@ -42,7 +42,7 @@ export default function HelpCenterPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">Help Center</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">In-App Help Center</h1>
 
         <div className="mb-8 sm:mb-10 w-full sm:w-3/4 mx-auto">
           <input
@@ -107,20 +107,6 @@ export default function HelpCenterPage() {
                  <VideoTutorialList videos={filteredVideos} loading={false} />
               </div>
             )}
-
-            <section className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-200/50">
-              <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
-                <div className="bg-yellow-50/50 glassmorphism p-5 sm:p-6 rounded-2xl border-yellow-200/50 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold font-outfit text-yellow-900">Advanced Users</h3>
-                    <p className="text-yellow-800/80 text-xs sm:text-sm mt-1">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
-                  </div>
-                  <Link href="/api-docs" className="shrink-0 px-6 py-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-semibold rounded-xl shadow-sm transition-all border border-yellow-300/50 w-full sm:w-auto text-center min-h-[44px]">
-                    API Documentation
-                  </Link>
-                </div>
-              </WithTooltip>
-            </section>
           </div>
         )}
       </div>
