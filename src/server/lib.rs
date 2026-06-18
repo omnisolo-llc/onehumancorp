@@ -4796,7 +4796,6 @@ async fn ui_dashboard_unified_feed_handler(
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
-                "supply": supply,
                 "triage": triage,
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
@@ -4807,6 +4806,8 @@ async fn ui_dashboard_unified_feed_handler(
             }
         });
 
+        // Supply should not be cached because it changes continuously (inventory counts),
+        // so we fetch supply and merge it on cache hit.
         let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
         if let Some(obj) = final_cached.as_object_mut() {
