@@ -28,7 +28,7 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
 
     // The backend should eventually process the webhook and generate an approval.
     // In our test environment, we wait for the feed to update or poll.
-    // Wait for the "quote_draft" card to appear in the dashboard.
+    // Wait for the "proposal_draft" card to appear in the dashboard.
     await expect(async () => {
       await page.reload();
       const quoteDraftCard = page.getByTestId('quote-draft-card').first();
