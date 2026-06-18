@@ -8,7 +8,7 @@ use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::builder::edge::{get_edge_cache, regenerate_cache};
+use crate::builder::edge::{get_edge_cache, regenerate_cache, inject_dynamic_inventory};
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -47,8 +47,9 @@ async fn get_storefront_product(
     let cache = get_edge_cache();
     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
 
-    if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
+    if let Some((mut cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
+            cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
             let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
                 http::header::CACHE_CONTROL,
@@ -70,7 +71,8 @@ async fn get_storefront_product(
 
     if let Ok(site_id) = site_id_res {
         // Just call regenerate_cache from builder edge
-        if let Ok((html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+        if let Ok((mut html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+            html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
             let mut response = Html(html).into_response();
             if !tags.is_empty() {
                 if let Ok(cache_tag) = tags.join(", ").parse() {
@@ -92,4 +94,28 @@ async fn get_storefront_product(
         "public, max-age=10".parse().unwrap(),
     );
     Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Request;
+    use hyper::Body;
+    use tower::ServiceExt;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_storefront_delivery_router() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let state = DeliveryState { pool };
+        let app = router().with_state(state);
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000")
+            .body(Body::empty())
+            .unwrap();
+
+        let _ = app.clone().oneshot(req).await.unwrap();
+    }
 }

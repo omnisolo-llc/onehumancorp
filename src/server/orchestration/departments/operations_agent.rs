@@ -33,6 +33,10 @@ impl Department for OperationsAgent {
         if event.event_type == "tenant.inventory.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
+
+            // The Operations Agent is responsible for issuing cache invalidation
+            // events when inventory updates. The invalidator handles tags properly.
+            // Both tenant-wide and product-specific invalidations are triggered here.
             cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
             if !product_id.is_empty() {
                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
