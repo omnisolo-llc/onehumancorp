@@ -76,6 +76,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>("");
+  const [editQuotePrice, setEditQuotePrice] = useState<string>("");
+  const [editQuoteScope, setEditQuoteScope] = useState<string>("");
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -1109,24 +1111,73 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </div>
                     )
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="approve-quote-draft"
-                      >
-                        Approve & Send
-                      </button>
-                      <a
-                        href={`/quotes/${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="edit-quote-draft"
-                      >
-                        Edit Draft
-                      </a>
-                    </div>
+                    editingId === approval.id ? (
+                      <div className="flex flex-col gap-3 w-full">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-500 font-semibold">Total Price ($)</label>
+                          <input
+                            type="number"
+                            className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all"
+                            value={editQuotePrice}
+                            onChange={(e) => setEditQuotePrice(e.target.value)}
+                            data-testid="edit-quote-price"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-500 font-semibold">Scope of Work</label>
+                          <textarea
+                            className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                            rows={3}
+                            value={editQuoteScope}
+                            onChange={(e) => setEditQuoteScope(e.target.value)}
+                            data-testid="edit-quote-scope"
+                          />
+                        </div>
+                        <div className="flex gap-3 mt-2">
+                          <button
+                            onClick={() => {
+                              handleDecision(approval.id, true, JSON.stringify({ price: editQuotePrice, scope: editQuoteScope }));
+                              setEditingId(null);
+                            }}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                            data-testid="modal-approve-btn"
+                          >
+                            Approve & Send
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                            data-testid="cancel-edit-quote"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row gap-3 w-full">
+                        <button
+                          onClick={() => handleDecision(approval.id, true)}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                          aria-label="Approve & Send"
+                          data-testid="approve-quote-draft"
+                        >
+                          Approve & Send
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingId(approval.id);
+                            setEditQuotePrice((approval.proposed_action || approval.context_payload)?.suggested_price?.toString() || "");
+                            setEditQuoteScope((approval.proposed_action || approval.context_payload)?.scope || "");
+                          }}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          aria-label="Edit Draft"
+                          data-testid="edit-quote-draft"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )
                   ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
