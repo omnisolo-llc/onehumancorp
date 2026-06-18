@@ -630,7 +630,7 @@ impl DB {
         E: std::fmt::Debug + std::fmt::Display + From<String>,
     {
         let mut attempt = 0;
-        let max_attempts = 10;
+        let max_attempts = 3;
         #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
         #[cfg(test)]
