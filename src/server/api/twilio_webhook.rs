@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::hub::Hub;
+use crate::orchestration::identity_resolution::IdentityResolver;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {
@@ -85,45 +86,91 @@ pub async fn twilio_webhook_post_handler(
         // but we can also just hardcode the source to whatsapp for this specific webhook if it's meant exclusively for whatsapp
         let source = if sender_id.starts_with("whatsapp:") { "whatsapp".to_string() } else { "sms".to_string() };
 
+        // Identity Resolution
+        let resolver = IdentityResolver::new(state.db.clone());
+        let clean_sender_id = sender_id.replace("whatsapp:", "");
+        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_sender_id, &source).await;
+        let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
+
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
                 )
                 .bind(&inbox_id)
                 .bind(&tenant_id)
                 .bind(&source)
                 .bind(&text)
+                .bind(&text)
+                .bind(&clean_sender_id)
+                .bind(&customer_id)
                 .execute(pool)
                 .await.map(|_| ())
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
                 )
                 .bind(&inbox_id)
                 .bind(&tenant_id)
                 .bind(&source)
                 .bind(&text)
+                .bind(&text)
+                .bind(&clean_sender_id)
+                .bind(&customer_id)
                 .execute(sqlite_pool)
                 .await.map(|_| ())
             }
         };
 
         if let Err(e) = insert_result {
-            tracing::error!("Failed to insert inbox message: {}", e);
+            tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+        }
+
+        // Enqueue to ohc_job_queue
+        let job_id = Uuid::new_v4().to_string();
+        let mut payload_json = serde_json::json!({
+            "message_id": inbox_id,
+            "inbox_message_id": inbox_id,
+            "source": source,
+            "content": text,
+            "sender_id": clean_sender_id
+        });
+
+        if let Ok(c_id) = &customer_id_result {
+            payload_json["customer_id"] = serde_json::json!(c_id);
+        }
+
+        let enqueue_result = match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                    .bind(&job_id)
+                    .bind(&tenant_id)
+                    .bind(payload_json.to_string())
+                    .execute(&state.db.pool)
+                    .await
+                    .map(|_| ())
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                    .bind(&job_id)
+                    .bind(&tenant_id)
+                    .bind(payload_json.to_string())
+                    .execute(sqlite_pool)
+                    .await
+                    .map(|_| ())
+            }
+        };
+
+        if let Err(e) = enqueue_result {
+            tracing::error!("Failed to enqueue message_triage job: {}", e);
         }
 
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
-            event_type: "tenant.message.received".to_string(),
-            payload: serde_json::json!({
-                "source": source,
-                "message": text,
-                "sender_id": sender_id.replace("whatsapp:", ""),
-                "inbox_message_id": inbox_id,
-            }),
+            event_type: "tenant.omnichannel.message.received".to_string(),
+            payload: payload_json,
         };
 
         let orchestrator_clone = state.orchestrator.clone();

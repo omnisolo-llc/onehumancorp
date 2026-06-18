@@ -18,6 +18,7 @@ export default function Integrations() {
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
+    { id: "whatsapp_cloud_api", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Direct WhatsApp Cloud API connection for messages." },
     { id: "whatsapp", name: "Twilio for WhatsApp", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant powered by Twilio." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
     { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
@@ -28,6 +29,7 @@ export default function Integrations() {
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showWhatsAppCloudApiModal, setShowWhatsAppCloudApiModal] = useState(false);
   const [whatsappTwilioCreds, setWhatsappTwilioCreds] = useState({ accountSid: '', authToken: '', phoneNumber: '' });
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
@@ -120,6 +122,14 @@ export default function Integrations() {
     }
   };
 
+  const saveWhatsAppCloudApiIntegration = async () => {
+    // Mock API call to save connection status
+    setTimeout(() => {
+      setShowWhatsAppCloudApiModal(false);
+      setStatusMessage("WhatsApp Cloud API connected.");
+    }, 500);
+  };
+
   return (
     <AppShell
       title="Tool Integrations"
@@ -190,6 +200,39 @@ export default function Integrations() {
             </div>
           </div>
         )}
+
+
+        {/* WhatsApp Cloud API Connect Modal */}
+        {showWhatsAppCloudApiModal && (
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-teal-50/10 rounded-xl flex items-center justify-center text-2xl text-teal-600 border border-teal-100/30">
+                  💬
+                </div>
+                <button
+                  onClick={() => setShowWhatsAppCloudApiModal(false)}
+                  className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect WhatsApp Cloud API</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                Connect your WhatsApp Business Account directly using the WhatsApp Cloud API. You will be redirected to Facebook to complete the onboarding flow securely.
+              </p>
+
+              <button
+                onClick={saveWhatsAppCloudApiIntegration}
+                className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
+              >
+                Continue with Meta
+              </button>
+            </div>
+          </div>
+        )}
+
 
         {/* Twilio Conversations Connect Modal */}
         {showTwilioModal && (
