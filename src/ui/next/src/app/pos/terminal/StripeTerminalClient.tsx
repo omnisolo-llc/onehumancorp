@@ -176,7 +176,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
           await SyncManager.getInstance().enqueue(tx);
           await SyncManager.getInstance().enqueue(crdtTx);
 
-          setStatus('Synced locally. Will push to cloud when network is restored.');
+          setStatus('Payment saved offline. Will sync when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);
           setReserving(false);
        }, 1500);
