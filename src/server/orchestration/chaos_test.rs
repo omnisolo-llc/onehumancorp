@@ -318,8 +318,8 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_timeout_cascade_prevention() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Simulate a scenario where lock acquisition takes 1.9s out of a 2s timeout
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(1900));
+        // Simulate a scenario where lock acquisition takes 80ms out of a 100ms timeout
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(80));
 
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
@@ -357,16 +357,16 @@ mod chaos_tests {
         let start = std::time::Instant::now();
 
 
-        // This attempts to acquire lock (takes 1.9s) and then query DB.
+        // This attempts to acquire lock (takes 80ms) and then query DB.
         // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
         // We use temp_env to safely mock the environment variable without concurrent race conditions
-        temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"))], async {
-            let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+            let result = tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung");
             let elapsed = start.elapsed();
 
-            // Timeout cascade prevention means it should either succeed within 2s,
+            // Timeout cascade prevention means it should either succeed within 100ms,
             // or safely timeout without panicking or cascading failure.
-            assert!(elapsed < std::time::Duration::from_millis(3500));
+            assert!(elapsed < std::time::Duration::from_millis(300));
             assert!(result.is_ok(), "Operation should complete or degrade gracefully");
         }).await;
     }
@@ -443,7 +443,9 @@ mod chaos_tests {
 
         // This attempts to pull tasks, and should gracefully skip or handle the corrupted task
         // We verify that the pull doesn't crash on deserialization errors
-        let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let result = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
 
         assert!(result.is_ok(), "StateManager must not panic when encountering corrupted rows");
         let tasks = result.unwrap();
@@ -461,7 +463,9 @@ mod chaos_tests {
         .await
         .unwrap();
 
-        let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let result = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("100"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
         assert!(result.is_ok(), "StateManager must not panic when pulling a PENDING task with corrupt dependencies");
 
         // Let's verify the system safely ignored or handled the corrupted dependency list.
@@ -642,9 +646,9 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_network_partition_parity() {
-        // Test network partition via LatencyMockMesh (1000ms delay) on both Cloud and Standalone
+        // Test network partition via LatencyMockMesh (100ms delay) on both Cloud and Standalone
 
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(1000));
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(100));
 
         // 1. Cloud (Postgres)
         let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -686,11 +690,15 @@ mod chaos_tests {
         // if they timeout, they return an empty vector rather than panicking.
 
         let start_cloud = std::time::Instant::now();
-        let cloud_tasks = tokio::time::timeout(std::time::Duration::from_secs(5), cloud_state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let cloud_tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), cloud_state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
         let elapsed_cloud = start_cloud.elapsed();
 
         let start_standalone = std::time::Instant::now();
-        let standalone_tasks = tokio::time::timeout(std::time::Duration::from_secs(5), standalone_state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let standalone_tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), standalone_state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
         let elapsed_standalone = start_standalone.elapsed();
 
         // Parity verification: both should gracefully fallback (likely to empty lists or error, but must not panic)
@@ -824,13 +832,15 @@ mod chaos_tests {
 
         let start = std::time::Instant::now();
 
-        let tasks = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung").unwrap_or(vec![]);
+        let tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung").unwrap_or(vec![])
+        }).await;
         let elapsed = start.elapsed();
 
-        // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
-        // The mocked sleeping mesh sleeps for 61s, forcing the 2s timeout to trigger.
-        assert!(elapsed < std::time::Duration::from_millis(4000));
-        assert!(elapsed > std::time::Duration::from_millis(1500));
+        // The pull_available_tasks for cloud has a 50ms timeout on the lock or DB
+        // The mocked latency mesh sleeps for 100ms, forcing the 50ms timeout to trigger.
+        assert!(elapsed < std::time::Duration::from_millis(250));
+        assert!(elapsed > std::time::Duration::from_millis(40));
 
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
@@ -885,8 +895,8 @@ mod chaos_tests {
     async fn test_host_memory_exhaustion_degradation() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // We simulate host memory exhaustion by synthetically increasing database operation latency
-        // and verifying that the 2-second timeout triggers graceful degradation.
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(3000));
+        // and verifying that the 50ms timeout triggers graceful degradation.
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(100));
 
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
@@ -921,11 +931,13 @@ mod chaos_tests {
 
         let start = std::time::Instant::now();
 
-        let res = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let res = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(250), state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
         let elapsed = start.elapsed();
 
-        // Operation takes 3s due to LatencyMockMesh, but StateManager has 2s timeout
-        assert!(elapsed < std::time::Duration::from_millis(3500));
+        // Operation takes 100ms due to LatencyMockMesh, but StateManager has 50ms timeout
+        assert!(elapsed < std::time::Duration::from_millis(300));
         assert!(res.is_ok());
         assert_eq!(res.unwrap().len(), 0);
     }
