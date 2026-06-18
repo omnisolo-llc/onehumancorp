@@ -26,6 +26,7 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+                    "tenant.inquiry.received".to_string(),
         ]
     }
 
@@ -306,6 +307,47 @@ mod tests {
         assert_eq!(
             approval.payload.as_ref().unwrap()["subscriber_count"],
             serde_json::json!(2)
+        );
+    }
+
+    #[tokio::test]
+    async fn operations_agent_handles_inquiry_received() {
+        let orchestrator = test_orchestrator().await;
+        let agent = OperationsAgent::new(orchestrator.clone());
+
+        assert!(agent
+            .subscribed_events()
+            .contains(&"tenant.inquiry.received".to_string()));
+
+        let event = DepartmentEvent {
+            id: "evt-inq".to_string(),
+            tenant_id: "tenant-ops".to_string(),
+            event_type: "tenant.inquiry.received".to_string(),
+            payload: serde_json::json!({
+                "service_type": "Plumbing Repair",
+                "urgency": "High",
+                "location": "123 Main St",
+                "contact": "Carlos Lead"
+            }),
+        };
+
+        agent.handle_event(&event).await.unwrap();
+
+        let approvals = orchestrator.get_activity_feed("tenant-ops", None, 10).await;
+        let approval = approvals
+            .iter()
+            .find(|approval| approval.description.contains("New inquiry for Plumbing Repair"))
+            .expect("inquiry received should create an operations action");
+
+        assert_eq!(approval.status, ApprovalStatus::PendingApproval);
+        assert_eq!(approval.department, DepartmentType::Operations);
+        assert_eq!(approval.action_risk, ActionRisk::DraftForReview);
+        assert_eq!(
+            approval.payload.as_ref().unwrap()["action_summary"],
+            serde_json::json!("Send quote for $150 and propose Tuesday at 2 PM")
+        );
+        assert!(
+            approval.payload.as_ref().unwrap()["draft_response"].as_str().unwrap().contains("Hi Carlos Lead")
         );
     }
 }

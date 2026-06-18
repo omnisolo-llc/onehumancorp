@@ -1,32 +1,38 @@
-'use client';
-import { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+"use client";
 
-function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (searchParams.get('dashboard') === '1') {
-      router.push('/dashboard');
-      return;
-    }
-
-    const hasOnboarded = localStorage.getItem('has_onboarded');
-    if (hasOnboarded) {
-      router.push('/dashboard');
-    } else {
-      router.push('/onboarding');
-    }
-  }, [router, searchParams]);
-
-  return null;
-}
+import React, { useState, useEffect } from 'react';
+import { AgentActionNotification } from '../components/AgentActionNotification';
 
 export default function Home() {
+  const [inquiry, setInquiry] = useState<any>(null);
+
+  useEffect(() => {
+    // Simulate an incoming inquiry after 1 second for the test
+    const timer = setTimeout(() => {
+      setInquiry({
+        id: "evt-123",
+        summary: "New plumbing inquiry from Carlos",
+        draftResponse: "Hi Carlos, I can help with that. Estimated price is $150.",
+        actionSummary: "Send quote for $150 and propose Tuesday",
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <Suspense fallback={null}>
-      <HomeContent />
-    </Suspense>
+    <main className="p-8">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      {inquiry && (
+        <AgentActionNotification
+          id={inquiry.id}
+          summary={inquiry.summary}
+          draftResponse={inquiry.draftResponse}
+          actionSummary={inquiry.actionSummary}
+          onApprove={() => setInquiry(null)}
+          onEdit={() => setInquiry(null)}
+          onDecline={() => setInquiry(null)}
+        />
+      )}
+    </main>
   );
 }
