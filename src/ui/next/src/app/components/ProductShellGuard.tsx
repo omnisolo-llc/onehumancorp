@@ -69,7 +69,7 @@ const standaloneRoutes = new Set([
   "/leave-review",
   "/login",
   "/pricing",
-  "/referral-widget",
+  "/referrals",
   "/share-and-save-widget",
   "/share-card",
   "/share-cards",

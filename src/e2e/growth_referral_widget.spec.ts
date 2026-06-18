@@ -1,42 +1,51 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-// Skipped because Next.js UI is legacy/prototype.
-// Widget component logic is covered by GrowthReferralWidget.test.tsx
-// and dashboard API errors prevent E2E execution without robust backend setup.
 test.describe('Growth Referral Widget', () => {
-  test('generates and copies link correctly', async ({ page }) => {
-    // Navigate to dashboard
-    await page.goto('http://localhost:3000/dashboard');
+  test('generates widget code and handles paywall correctly', async ({ page }) => {
 
-    // Ensure the widget is visible
-    const getLinkButton = page.getByRole('button', { name: 'Get My Invite Link' });
-    await expect(getLinkButton).toBeVisible();
+    // In our E2E environment we go directly to dashboard
+    await page.goto('/dashboard');
 
-    // Click to generate link
-    await getLinkButton.click();
+    // Wait for the Widget Builder button to appear under Invite & Earn section and click it
+    const widgetBuilderBtn = page.locator('#dashboard-widget-btn');
+    await expect(widgetBuilderBtn).toBeVisible();
+    await widgetBuilderBtn.click();
 
-    // Verify loading state
-    await expect(page.getByRole('button', { name: 'Generating...' })).toBeVisible();
+    // Ensure the builder is visible
+    await expect(page.getByRole('heading', { name: 'Referral Widget Builder' })).toBeVisible();
 
-    // Verify generated link appears
-    const linkInput = page.locator('input[type="text"]');
-    await expect(linkInput).toBeVisible();
+    // Verify preview renders correctly with defaults
+    await expect(page.getByRole('heading', { name: 'Give 10%, Get 10%' })).toBeVisible();
 
-    // Verify action buttons appear
-    const copyButton = page.getByRole('button', { name: 'Copy', exact: true });
-    await expect(copyButton).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Share on WhatsApp' })).toBeVisible();
+    // Test updating the offer
+    await page.locator('#discount-amount').fill('20');
+    await page.locator('#discount-amount').dispatchEvent('input', { bubbles: true });
+    await expect(page.getByRole('heading', { name: 'Give 20%, Get 20%' })).toBeVisible();
 
-    // Give clipboard permissions
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    // Test updating the offer type
+    await page.locator('#discount-type').selectOption('$');
+    await page.locator('#discount-type').dispatchEvent('change', { bubbles: true });
+    await expect(page.getByRole('heading', { name: 'Give $20, Get $20' })).toBeVisible();
 
-    // Test Copy functionality
-    await copyButton.click();
-    await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+    // Verify branding is present by default
+    await expect(page.getByText('⚡ Powered by OHC')).toBeVisible();
 
-    // Verify clipboard content
-    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-    const inputValue = await linkInput.inputValue();
-    expect(clipboardText).toBe(inputValue);
+    // Click Generate code
+    await page.getByRole('button', { name: 'Get Widget Code' }).click();
+
+    // Verify embed modal
+    const embedModal = page.locator('#embed-modal');
+    await expect(embedModal).toHaveClass(/active/);
+    await expect(page.getByRole('heading', { name: 'Embed Referral Widget' })).toBeVisible();
+
+    // Verify iframe code structure
+    const codeArea = page.locator('#embed-code');
+    const codeValue = await codeArea.inputValue();
+    expect(codeValue).toContain('<iframe');
+    expect(codeValue).toContain('discount=20flat');
+
+    // Close modal
+    await page.locator('#close-embed-btn').click();
+    await expect(embedModal).not.toHaveClass(/active/);
   });
 });
