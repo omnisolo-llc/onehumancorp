@@ -440,7 +440,10 @@
         if (items.length === 0) {
           listEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
         } else {
-          listEl.innerHTML = items.map(item => `
+          listEl.innerHTML = items.map(item => {
+            const displaySource = item.source === "instagram_dm" ? "Instagram DM" : (item.source || "Unknown Source");
+            const displayContent = item.original_content || item.context || "No content";
+            return `
             <button
               type="button"
               data-testid="triage-card-${item.id}"
@@ -448,12 +451,12 @@
               onclick="selectItem('${item.id}')"
             >
               <div style="min-width: 0;">
-                <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.original_content || "No content"}</div>
+                <div class="app-list-title">${displaySource}</div>
+                <div class="app-list-subtitle">${displayContent}</div>
               </div>
               <span class="app-badge neutral">${item.status || "unread"}</span>
             </button>
-          `).join('');
+          `}).join('');
         }
 
         // Detail
@@ -468,12 +471,14 @@
             : new Date().toLocaleString();
 
           let actionHtml = '';
-          if (selected.draft_reply) {
+          let draftReply = selected.draft_reply || (selected.proposed_action ? selected.proposed_action.message || selected.proposed_action.draft_reply : null) || selected.action_payload || (selected.context_payload ? selected.context_payload.draft_reply : null);
+
+          if (draftReply) {
             actionHtml = `
 
               <div class="detail-group">
                 <div class="app-metric-label">AI Draft Reply (Edit before sending)</div>
-                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical;">${selected.draft_reply}</textarea>
+                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical;">${draftReply}</textarea>
               </div>
 
             `;
