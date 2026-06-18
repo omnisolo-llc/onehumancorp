@@ -114,38 +114,19 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await page.getByText('New Order').click();
      await expect(page.getByRole('status')).toHaveText(/New Order Total/);
 
-     // 4. Concurrently simulate an online checkout
-     const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
-        data: {
-          tenant_id: 'default_tenant',
-          product_id: 'prod_123',
-          quantity: 1,
-          ttl_seconds: 15,
-        },
-        headers: {
-          'x-tenant-id': 'default_tenant',
-        }
-      });
-      const onlineLockData = await onlineLockReq.json();
-      expect(onlineLockReq.ok()).toBeTruthy();
-      expect(onlineLockData.success).toBeFalsy();
-      expect(onlineLockData.error_message).toContain('another customer');
+     // 4. Concurrently simulate an online checkout via the UI
+     const customerContext = await page.context().browser()!.newContext();
+     const customerPage = await customerContext.newPage();
 
-      // 5. Test online checkout API directly as well (billing_api create_checkout_session)
-      const onlineCheckoutReq = await request.post('/api/billing/create-checkout-session', {
-        data: {
-          tier: 'starter',
-          is_subscription: false,
-          product_id: 'prod_123',
-          quantity: 1,
-        },
-        headers: {
-          'x-tenant-id': 'default_tenant',
-          // mock fake auth token or tenant_id handling is via x-tenant-id in e2e setup
-        }
-      });
-      // Should fail since it's already reserved by POS
-      expect(onlineCheckoutReq.status()).toBe(409); // Conflict
+     await customerPage.goto('/checkout?product_id=prod_123');
+     await customerPage.evaluate(() => localStorage.setItem('tenant', 'default_tenant'));
+     await customerPage.reload();
+
+     await customerPage.getByRole('button', { name: "Pay" }).click();
+
+     // Should fail since it's already reserved by POS
+     await expect(customerPage.getByText('Item just sold out.')).toBeVisible();
+     await customerContext.close();
   });
 
   test('Persona: Operations Agent is alerted when inventory drops below threshold', async ({ request, page }) => {
