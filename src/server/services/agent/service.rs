@@ -23,8 +23,8 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(&self, org_id: &str) -> Result<DashboardSnapshot, Status> {
-        let cache_key = format!("agent_dashboard_snapshot_{}", org_id);
+    async fn get_snapshot(&self, org_id: &str, mobile_optimized: bool) -> Result<DashboardSnapshot, Status> {
+        let cache_key = format!("agent_dashboard_snapshot_{}:mobile:{}", org_id, mobile_optimized);
         if let Some(snapshot) = self.snapshot_cache.get(&cache_key).await {
             return Ok(snapshot);
         }
@@ -58,7 +58,7 @@ impl MyAgentManagerService {
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
             let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agent_costs.push(AgentCostSummary {
-                name,
+                name: if mobile_optimized { String::new() } else { name },
                 cost_usd: cost,
                 roi,
                 efficiency,
@@ -72,16 +72,29 @@ impl MyAgentManagerService {
             total_tokens,
         };
 
+        let mut agents_list = Arc::unwrap_or_clone(agents);
+        let mut meetings_list = Arc::unwrap_or_clone(meetings);
+        if mobile_optimized {
+            for agent in agents_list.iter_mut() {
+                agent.name = String::new();
+                agent.role = String::new();
+                agent.organization_id = String::new();
+            }
+            for meeting in meetings_list.iter_mut() {
+                meeting.transcript.clear();
+            }
+        }
+
         let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
+        for a in agents_list.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
-            meetings: Arc::unwrap_or_clone(meetings),
+            meetings: meetings_list,
             costs: Some(costs),
-            agents: Arc::unwrap_or_clone(agents),
+            agents: agents_list,
             statuses,
             task_queue: proto_task_queue,
             queue_length,
@@ -117,8 +130,9 @@ impl AgentManagerService for MyAgentManagerService {
         };
 
         self.hub.register_agent(agent);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn fire_agent(
@@ -134,8 +148,9 @@ impl AgentManagerService for MyAgentManagerService {
         }
 
         self.hub.fire_agent(&req.agent_id);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn delegate_task(
@@ -154,8 +169,9 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
     async fn get_agent_providers(
@@ -298,7 +314,8 @@ impl AgentManagerService for MyAgentManagerService {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id_req = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
-        Ok(Response::new(self.get_snapshot(&org_id_req).await?))
+        let mobile_optimized = request.metadata().get("x-mobile-optimized").map(|v| v.to_str().unwrap_or("false") == "true").unwrap_or(false);
+        Ok(Response::new(self.get_snapshot(&org_id_req, mobile_optimized).await?))
     }
 
     async fn restore_snapshot(
@@ -313,7 +330,7 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("snapshotId is required"));
         }
 
-        Ok(Response::new(self.get_snapshot(&org_id).await?))
+        Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 }
 
@@ -472,7 +489,7 @@ mod benchmark_tests {
         let service = setup_test_service().await;
 
         let start = std::time::Instant::now();
-        let _snapshot = service.get_snapshot("test_org").await.unwrap();
+        let _snapshot = service.get_snapshot("test_org", false).await.unwrap();
         let elapsed = start.elapsed();
 
         tracing::info!("AgentManagerService::get_snapshot benchmark completed in {} ms", elapsed.as_millis());
