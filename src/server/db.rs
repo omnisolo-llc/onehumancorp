@@ -58,7 +58,6 @@ pub struct DB {
 }
 
 
-#[cfg(test)]
 pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
     let db_id = uuid::Uuid::new_v4().to_string();
     let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -69,7 +68,6 @@ pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
         .expect("Failed to connect to in-memory test database")
 }
 
-#[cfg(test)]
 pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
     sqlx::postgres::PgPoolOptions::new()
         .before_acquire(|conn, _meta| {
