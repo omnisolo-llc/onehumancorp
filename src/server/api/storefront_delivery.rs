@@ -4,11 +4,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use http::StatusCode;
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::builder::edge::{get_edge_cache, regenerate_cache};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -51,7 +52,7 @@ async fn get_storefront_product(
         if !is_stale {
             let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
-                http::header::CACHE_CONTROL,
+                axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
@@ -78,7 +79,7 @@ async fn get_storefront_product(
                 }
             }
             response.headers_mut().insert(
-                http::header::CACHE_CONTROL,
+                axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
@@ -88,7 +89,7 @@ async fn get_storefront_product(
     // Fallback simple HTML
     let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
     response.headers_mut().insert(
-        http::header::CACHE_CONTROL,
+        axum::http::header::CACHE_CONTROL,
         "public, max-age=10".parse().unwrap(),
     );
     Ok(response)
