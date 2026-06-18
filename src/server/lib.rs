@@ -2992,10 +2992,6 @@ pub async fn create_ui_triage_item_handler(
                     return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
                 }
             };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
 
             let new_id = format!("triage-{}", uuid::Uuid::new_v4());
             let source = payload.source.unwrap_or_else(|| "Unknown".to_string());
@@ -3043,8 +3039,42 @@ pub async fn create_ui_triage_item_handler(
 
             (axum::http::StatusCode::CREATED, axum::Json(serde_json::json!({"id": new_id, "status": "success"}))).into_response()
         }
-        crate::db::DbStore::Sqlite(_) => {
-            (axum::http::StatusCode::NOT_IMPLEMENTED, axum::Json(serde_json::json!({"error": "Sqlite not supported"}))).into_response()
+        crate::db::DbStore::Sqlite(pool) => {
+            let new_id = format!("triage-{}", uuid::Uuid::new_v4());
+            let source = payload.source.unwrap_or_else(|| "Unknown".to_string());
+            let priority = payload.priority.unwrap_or_else(|| "normal".to_string());
+            let context = payload.context.unwrap_or_else(|| "".to_string());
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+            )
+            .bind(&new_id)
+            .bind(&tenant_id)
+            .bind(&payload.customer_id)
+            .bind(&source)
+            .bind(&priority)
+            .bind(&context)
+            .execute(pool).await {
+                tracing::error!("Failed to insert triage item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            if let Some(action_type) = payload.action_type {
+                let action_id = format!("act-{}", uuid::Uuid::new_v4());
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                )
+                .bind(&action_id)
+                .bind(&new_id)
+                .bind(&tenant_id)
+                .bind(&action_type)
+                .bind(&payload.action_payload)
+                .execute(pool).await {
+                    tracing::error!("Failed to insert triage action: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            }
+            (axum::http::StatusCode::CREATED, axum::Json(serde_json::json!({"id": new_id, "status": "success"}))).into_response()
         }
     }
 }

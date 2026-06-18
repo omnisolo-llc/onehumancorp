@@ -141,7 +141,7 @@ export default function TriagePage() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full">
+      <div className="flex flex-col lg:flex-row gap-6 w-full max-w-[375px] md:max-w-full mx-auto">
         <section className="flex-[1.5] w-full app-panel glassmorphism shadow-sm flex flex-col">
           <div className="app-panel-header">
             <div>
@@ -160,7 +160,7 @@ export default function TriagePage() {
               <div className="app-empty flex flex-col items-center justify-center py-12">
                 <div className="text-4xl mb-4">✨</div>
                 <div className="text-lg font-medium text-gray-900 dark:text-white">
-                  All caught up!
+                  All caught up! You're a hero.
                 </div>
                 <div className="text-sm text-gray-500 mt-2">
                   {loading

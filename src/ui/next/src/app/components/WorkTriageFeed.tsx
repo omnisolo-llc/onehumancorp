@@ -30,6 +30,53 @@ function badgeTone(priority?: string) {
   return "neutral";
 }
 
+
+function getCardTokens(item: TriageItem) {
+  const s = (item.source || "").toLowerCase();
+  if (s.includes("message") || s.includes("dm") || s.includes("email") || s.includes("inquiry")) {
+    return {
+      icon: "✉️",
+      title: item.source || "Message",
+      bgClass: "bg-blue-50/50 dark:bg-blue-900/10",
+      borderClass: "border-blue-400/50 dark:border-blue-500/30",
+      barClass: "bg-blue-500",
+      textClass: "text-blue-900 dark:text-blue-100",
+      btnClass: "bg-blue-500 hover:bg-blue-600 text-white"
+    };
+  }
+  if (s.includes("book") || s.includes("appointment") || s.includes("schedule")) {
+    return {
+      icon: "📅",
+      title: item.source || "Booking",
+      bgClass: "bg-green-50/50 dark:bg-green-900/10",
+      borderClass: "border-green-400/50 dark:border-green-500/30",
+      barClass: "bg-green-500",
+      textClass: "text-green-900 dark:text-green-100",
+      btnClass: "bg-green-500 hover:bg-green-600 text-white"
+    };
+  }
+  if (s.includes("alert") || s.includes("proactive") || s.includes("inventory")) {
+    return {
+      icon: "⚠️",
+      title: item.source || "Alert",
+      bgClass: "bg-orange-50/50 dark:bg-orange-900/10",
+      borderClass: "border-orange-400/50 dark:border-orange-500/30",
+      barClass: "bg-orange-500",
+      textClass: "text-orange-900 dark:text-orange-100",
+      btnClass: "bg-orange-500 hover:bg-orange-600 text-white"
+    };
+  }
+  return {
+    icon: "✨",
+    title: item.source || "Triage Action",
+    bgClass: "bg-white/50 dark:bg-black/20",
+    borderClass: "border-white/40 dark:border-white/10",
+    barClass: "bg-[#0066FF]",
+    textClass: "text-[#1D1D1F] dark:text-[#F5F5F7]",
+    btnClass: "bg-[#0066FF] hover:bg-[#0052CC] text-white"
+  };
+}
+
 export function WorkTriageFeed({
   items,
   loading,
@@ -79,7 +126,7 @@ export function WorkTriageFeed({
           </svg>
         </div>
         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-          You're all caught up!
+          All caught up! You're a hero.
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           There are no pending triage actions right now.
@@ -93,72 +140,19 @@ export function WorkTriageFeed({
       className="w-full max-w-[375px] sm:max-w-full mx-auto"
       data-testid="work-triage-feed"
     >
-      {items
-        .filter((item) => item.source === "Proactive Context Agent")
-        .map((item) => (
+      {items.map((item) => {
+        const tokens = getCardTokens(item);
+        return (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
+            className={`mb-6 p-6 rounded-[16px] glassmorphism border ${tokens.borderClass} ${tokens.bgClass} shadow-lg relative overflow-hidden flex flex-col gap-4`}
             data-testid={`triage-card-${item.id}`}
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
-                  <span className="text-2xl">✨</span> Needs Attention Today
-                </h2>
-                <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">
-                  {item.context}
-                </p>
-              </div>
-              <span className={`app-badge ${badgeTone(item.priority)}`}>
-                {item.priority || "High"}
-              </span>
-            </div>
-
-            {item.action_type && (
-              <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
-                <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">
-                  Suggested Action: {item.action_type}
-                </div>
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
-                  {item.action_payload}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3 mt-2 w-full">
-              <button
-                onClick={() => onDecision(item.id, true)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center cursor-pointer"
-                data-testid={`triage-approve-${item.id}`}
-              >
-                Approve & Execute
-              </button>
-              <button
-                onClick={() => onDecision(item.id, false)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center cursor-pointer"
-                data-testid={`triage-dismiss-${item.id}`}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        ))}
-
-      {items
-        .filter((item) => item.source !== "Proactive Context Agent")
-        .map((item) => (
-          <div
-            key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
-            data-testid={`triage-card-${item.id}`}
-          >
+            <div className={`absolute top-0 left-0 w-1 h-full ${tokens.barClass}`}></div>
             <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">✨</span>
-                <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  {item.source || "Triage Action"}
+              <div>
+                <h2 className={`text-xl font-bold font-outfit ${tokens.textClass} flex items-center gap-2`}>
+                  <span className="text-2xl">{tokens.icon}</span> {tokens.title}
                 </h2>
               </div>
               <span className={`app-badge ${badgeTone(item.priority)}`}>
@@ -166,16 +160,16 @@ export function WorkTriageFeed({
               </span>
             </div>
 
-            <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-pre-wrap break-words">
+            <div className={`text-sm font-medium ${tokens.textClass} whitespace-pre-wrap break-words opacity-80`}>
               {item.context}
             </div>
 
             {item.action_type && (
-              <div className="p-4 rounded-[12px] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2 border border-[#0066FF]/20 dark:border-[#0066FF]/30">
-                <div className="text-xs uppercase tracking-wider font-semibold text-[#0066FF] dark:text-[#3388FF]">
+              <div className="p-4 rounded-[12px] bg-white/60 dark:bg-black/40 flex flex-col gap-2 border border-black/5 dark:border-white/5">
+                <div className={`text-xs uppercase tracking-wider font-semibold ${tokens.textClass}`}>
                   Proposed Action: {item.action_type}
                 </div>
-                <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-pre-wrap break-words">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
                   {item.action_payload}
                 </div>
               </div>
@@ -184,21 +178,22 @@ export function WorkTriageFeed({
             <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
               <button
                 onClick={() => onDecision(item.id, true)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-md transition-transform active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                className={`w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] ${tokens.btnClass} font-medium shadow-md transition-transform active:scale-[0.98] flex items-center justify-center cursor-pointer`}
                 data-testid={`triage-approve-${item.id}`}
               >
-                ✨ Approve & Execute
+                {tokens.icon} Approve & Execute
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[8px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                className={`w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 ${tokens.textClass} font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer`}
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss
               </button>
             </div>
           </div>
-        ))}
+        );
+      })}
     </div>
   );
 }

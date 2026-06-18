@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Actionable Daily Briefing on Dashboard', () => {
-  const tenantId = 'daily-brief-test-tenant';
-  let triageItemId: string;
+test.describe('Actionable Daily Briefing on Triage Feed', () => {
+  const tenantId = 'triage-feed-test-tenant';
 
   test.beforeEach(async ({ request }) => {
     // Navigate and set local storage for auth
@@ -13,18 +12,18 @@ test.describe('Actionable Daily Briefing on Dashboard', () => {
     // Seed data
     const res = await request.post(`/api/ui/triage/create?tenant_id=${tenantId}`, {
       data: {
-        source: 'Decision Assistant',
+        source: 'Instagram DM',
         priority: 'High',
-        context: '3 new custom cake inquiries',
-        action_type: 'Draft Replies'
+        context: 'Do you make vegan cakes for this Saturday?',
+        action_type: 'Draft Reply',
+        action_payload: 'Yes we do! That would be $50.'
       },
       headers: authHeaders
     });
     // Ensure the response is ok
-    // disabled test assert because we don't have auth inside sandbox
   });
 
-  test('should render morning briefing text and actionable daily brief cards', async ({ page }) => {
+  test('should render triage cards, handle decisions and show empty state', async ({ page }) => {
     await page.route('**/api/ui/triage*', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -32,13 +31,13 @@ test.describe('Actionable Daily Briefing on Dashboard', () => {
           contentType: 'application/json',
           body: JSON.stringify([
             {
-              id: 'test-item-2',
+              id: 'test-item-1',
               tenant_id: tenantId,
-              source: 'Decision Assistant',
+              source: 'Instagram DM',
               priority: 'High',
-              context: '3 new custom cake inquiries',
-              action_type: 'Draft Replies',
-              action_payload: '',
+              context: 'Do you make vegan cakes for this Saturday?',
+              action_type: 'Draft Reply',
+              action_payload: 'Yes we do! That would be $50.',
               created_at: new Date().toISOString()
             }
           ])
@@ -60,27 +59,27 @@ test.describe('Actionable Daily Briefing on Dashboard', () => {
       localStorage.setItem('user_id', 'test-user');
     }, tenantId);
 
-    await page.goto('/dashboard');
-
-    // Expect the Morning Briefing text block to load
-    await expect(page.getByTestId('morning-briefing-text')).toBeVisible({ timeout: 10000 });
+    await page.goto('/triage');
 
     // Ensure the Action Card renders correctly
-    await expect(page.locator('text=Suggested Action')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=3 new custom cake inquiries')).toBeVisible();
+    await expect(page.locator('text=Proposed Action')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Do you make vegan cakes for this Saturday?')).toBeVisible();
 
-    // Verify minimum tap target for button
-    const approveBtn = page.getByRole('button', { name: 'Draft Replies' });
+    // Verify tap target for button
+    const approveBtn = page.getByRole('button', { name: 'Approve & Execute' }).first();
     await expect(approveBtn).toBeVisible();
 
     const boundingBox = await approveBtn.boundingBox();
     expect(boundingBox?.height).toBeGreaterThanOrEqual(44);
     expect(boundingBox?.width).toBeGreaterThanOrEqual(44);
 
-    // Click the approve button (Draft Replies)
+    // Click the approve button (Approve & Execute)
     await approveBtn.click();
 
     // Ensure the card is dismissed (optimistic UI update)
-    await expect(page.locator('text=3 new custom cake inquiries')).not.toBeVisible();
+    await expect(page.locator('text=Do you make vegan cakes for this Saturday?')).not.toBeVisible();
+
+    // Check if empty state is visible
+    await expect(page.locator("text=All caught up! You're a hero.")).toBeVisible();
   });
 });
