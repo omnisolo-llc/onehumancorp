@@ -872,7 +872,7 @@ export default function OnboardingWizard() {
 
                         autoCapitalize="words"
                         autoComplete="organization"
-                        value={businessName}
+                        value={businessName} enterKeyHint="next"
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1003,7 +1003,7 @@ export default function OnboardingWizard() {
                         autoFocus
 
                         autoCapitalize="words"
-                        value={location}
+                        value={location} enterKeyHint="next"
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1070,7 +1070,7 @@ export default function OnboardingWizard() {
                         autoFocus
 
                         autoCapitalize="words"
-                        value={targetAudience}
+                        value={targetAudience} enterKeyHint="next"
                         onChange={(e) => setTargetAudience(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1148,7 +1148,7 @@ export default function OnboardingWizard() {
                     autoFocus
 
                     autoCapitalize="words"
-                    value={businessName}
+                    value={businessName} enterKeyHint="next"
                     onChange={(e) => {
                       setBusinessName(e.target.value);
                       setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
@@ -1163,7 +1163,7 @@ export default function OnboardingWizard() {
                     type="text"
 
                     autoCapitalize="words"
-                    value={businessType}
+                    value={businessType} enterKeyHint="next"
                     onChange={(e) => {
                       setBusinessType(e.target.value);
                       setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
@@ -1178,7 +1178,7 @@ export default function OnboardingWizard() {
                     type="text"
 
                     autoCapitalize="words"
-                    value={categories.join(', ')}
+                    value={categories.join(", ")} enterKeyHint="next"
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
                     className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
@@ -1190,7 +1190,7 @@ export default function OnboardingWizard() {
                         type="text"
 
                         autoCapitalize="words"
-                        value={firstProductName}
+                        value={firstProductName} enterKeyHint="next"
                         onChange={(e) => setFirstProductName(e.target.value)}
                         className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
@@ -1318,7 +1318,7 @@ export default function OnboardingWizard() {
 
                         autoCapitalize="words"
                         autoComplete="name"
-                        value={adminName}
+                        value={adminName} enterKeyHint="next"
                         onChange={(e) => {
                           const val = e.target.value;
                           setAdminName(val);
@@ -1336,7 +1336,7 @@ export default function OnboardingWizard() {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
-                        type="email"
+                        type="email" inputMode="email" enterKeyHint="next"
 
                         autoCapitalize="none"
 
