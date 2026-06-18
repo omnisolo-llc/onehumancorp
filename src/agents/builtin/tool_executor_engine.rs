@@ -52,13 +52,17 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    let formatted_msg =
-                        if msg.contains("Validation Error (Pydantic-first tool schema)") {
-                            msg
-                        } else {
-                            format!("Validation Error (Pydantic-first tool schema): {}", msg)
-                        };
+                    // Instead of appending a prefix if it's missing, we pass the error exactly as formatted
+                    // by the Pydantic parser logic, ensuring semantic details remain intact for the LLM.
+                    let formatted_msg = if !msg.contains("Validation Error (Pydantic-first tool schema)") {
+                        let arg_str = tc.arguments.to_string();
+                        ohc_builtin_agent_core::types::format_pydantic_error_string(&msg, Some(arg_str.as_str()), None)
+                    } else {
+                        msg
+                    };
                     info!("LLM-recoverable error encountered: {}", formatted_msg);
+                    // Master Catalog B.6. Output Parsing: fallback mechanic (RetryWithErrorOutputParser logic)
+                    // The error is routed directly back as a ToolMessage (via the orchestrator)
                     return Err(ToolError::LlmRecoverable(formatted_msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {

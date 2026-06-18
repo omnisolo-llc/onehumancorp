@@ -4837,7 +4837,7 @@ mod tests {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
                     let expected_error = crate::types::format_llm_recoverable_error(
-                        "Validation Error (Pydantic-first tool schema): Failing for test",
+                        &crate::types::format_pydantic_error_string("Failing for test", Some("{}"), None)
                     );
                     let has_error = last_msg.tool_results.iter().any(|r| {
                         r.content.contains("LLM-Recoverable Error")
@@ -4899,7 +4899,7 @@ mod tests {
 
         // Verify the ToolCall event has the LlmRecoverable message
         let expected_error = crate::types::format_llm_recoverable_error(
-            "Validation Error (Pydantic-first tool schema): Failing for test",
+            &crate::types::format_pydantic_error_string("Failing for test", Some("{}"), None)
         );
         let has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
