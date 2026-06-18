@@ -1756,6 +1756,13 @@ if (state.capabilities && document.getElementById('cap-draft')) {
       }
 
       function goToStep(stepId) {
+          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
+              document.getElementById('instant-bio').value = '';
+              const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = true;
+              }
+          }
           if (stepId === 'step-categories') {
               populateCategories();
           }

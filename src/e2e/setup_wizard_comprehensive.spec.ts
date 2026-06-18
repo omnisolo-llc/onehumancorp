@@ -33,7 +33,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     await page.getByRole('button', { name: /Next/ }).click();
 
-    await expect(page.getByText('Building Your Business...')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#loading-title')).toBeVisible({ timeout: 10000 });
 
     // Verify glassmorphism style is present on loading screen
     await expect(page.locator('.glassmorphism', { hasText: 'Building Your Business' }).first()).toBeVisible({ timeout: 5000 });
@@ -74,9 +74,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
     await page.goto('/setup.html');
-    await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: /Which of these sounds most like your work?/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /How do you work?/ })).toBeVisible();
     await expect(page.locator('text="Online Creator"').first()).toBeVisible();
     await expect(page.locator('text="Storefront"').first()).toBeVisible();
   });
