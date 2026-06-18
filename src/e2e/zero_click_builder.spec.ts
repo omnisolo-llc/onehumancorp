@@ -32,18 +32,16 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Wait for the loading state to complete and the result to appear
     await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 20000 });
 
-    // Verify the generated content is displayed structurally rather than hardcoded string
-    await expect(page.getByText('Store URL')).toBeVisible();
-    await expect(page.getByText('Business Name')).toBeVisible();
-    await expect(page.getByText('Products Generated')).toBeVisible();
-    // Verify that the generated URL has our ohc.app domain
-    await expect(page.getByText(/https:\/\/.*\.ohc\.app/)).toBeVisible();
+    // Verify the generated preview iframe is visible
+    const previewIframe = page.locator('iframe[title="Live Storefront Preview"]');
+    await expect(previewIframe).toBeVisible();
 
-    // Verify the viral share buttons are present
-    const shareBtn = page.getByRole('button', { name: /Share to Twitter/i });
-    await expect(shareBtn).toBeVisible();
+    // Verify the launch button is present
+    const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
+    await expect(launchBtn).toBeVisible();
 
-    const goToDashboardBtn = page.getByRole('button', { name: /Go to Dashboard/i });
-    await expect(goToDashboardBtn).toBeVisible();
+    // Click the launch button to verify redirect
+    await launchBtn.click();
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 });
