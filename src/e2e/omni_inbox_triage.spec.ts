@@ -23,25 +23,21 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         await page.goto('/ui/triage.html');
 
         // Wait for feed to load
-        await page.waitForSelector('.app-list-item');
+        await page.waitForSelector('.triage-item');
 
         // Step 4: Verify the message appears in the feed
-        const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
+        const sourceText = await page.locator('.triage-item .triage-source').first().textContent();
         expect(sourceText).toContain('Instagram DM');
 
-        const messageText = await page.locator('.app-list-item .app-list-subtitle').first().textContent();
+        const messageText = await page.locator('.triage-item .triage-context').first().textContent();
         expect(messageText).toContain('Do you make vegan cakes for this Saturday?');
 
-        // Click the first item to select it
-        await page.locator('.app-list-item').first().click();
-
-        // Step 5: Verify Thread view & Draft reply
-        await page.waitForSelector('.detail-group:has-text("AI Draft Reply")');
-        const draftReplyText = await page.locator('.proposed-action').textContent();
+        // Step 5: Verify Thread view & Draft reply (it is now inline)
+        const draftReplyText = await page.locator('.triage-item textarea').first().inputValue();
         expect(draftReplyText).toContain('vegan cake');
 
         // Step 6: Click "Approve & Send"
-        const approveBtn = page.getByTestId('approve-btn');
+        const approveBtn = page.getByTestId('approve-btn').first();
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
 

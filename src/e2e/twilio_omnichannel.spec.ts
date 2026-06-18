@@ -22,25 +22,21 @@ test.describe('Twilio WhatsApp Omnichannel', () => {
         await page.goto('/ui/triage.html');
 
         // Wait for feed to load
-        await page.waitForSelector('.app-list-item');
+        await page.waitForSelector('.triage-item');
 
         // Verify the message appears in the feed
-        const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
+        const sourceText = await page.locator('.triage-item .triage-source').first().textContent();
         expect(sourceText?.toLowerCase()).toContain('whatsapp');
 
-        const messageText = await page.locator('.app-list-item .app-list-subtitle').first().textContent();
+        const messageText = await page.locator('.triage-item .triage-context').first().textContent();
         expect(messageText).toContain('Do you make vegan cakes for this Saturday? (via WhatsApp)');
 
-        // Click the first item to select it
-        await page.locator('.app-list-item').first().click();
-
         // Verify Thread view & Draft reply
-        await page.waitForSelector('.detail-group:has-text("AI Draft Reply")');
-        const draftReplyText = await page.locator('.proposed-action').textContent();
+        const draftReplyText = await page.locator('.triage-item textarea').first().inputValue();
         expect(draftReplyText?.toLowerCase()).toContain('vegan cake');
 
         // Click "Approve & Send"
-        const approveBtn = page.getByTestId('approve-btn');
+        const approveBtn = page.getByTestId('approve-btn').first();
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
 

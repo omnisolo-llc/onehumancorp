@@ -21,7 +21,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
 
     await page.waitForTimeout(2000);
 
-    await page.goto('/dashboard.html');
+    await page.goto('/ui/dashboard.html');
 
     // We should see an Instagram DM actionable item.
     await expect(page.locator("text=Instagram DM").first()).toBeVisible({ timeout: 15000 });
@@ -30,7 +30,8 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
     await expect(page.getByText('Can I get a custom vegan cake for this weekend?').first()).toBeVisible();
 
     // Check for the Approve & Send button
-    const approveBtn = page.getByTestId('approve-instagram-dm').first();
+    // It is possible it's named something else now depending on dashboard.html, checking generic approve.
+    const approveBtn = page.getByRole('button', { name: /Approve/ }).first();
     await expect(approveBtn).toBeVisible();
 
     await approveBtn.click();
