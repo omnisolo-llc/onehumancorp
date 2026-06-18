@@ -126,6 +126,8 @@ mod tests {
     use crate::db::DbStore;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
+        let db_id = uuid::Uuid::new_v4().to_string();
+        unsafe { std::env::set_var("OHC_DATABASE_URL", format!("sqlite:file:{}?mode=memory&cache=shared", db_id)); }
         let db = match DB::new().await {
             Ok(db) => db,
             Err(_) => return None,
