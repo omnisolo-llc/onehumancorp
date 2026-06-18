@@ -4813,7 +4813,7 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
-            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+            let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
@@ -4864,7 +4864,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+    let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
 
 
     let cacheable_result = serde_json::json!({
@@ -4881,8 +4881,8 @@ async fn ui_dashboard_unified_feed_handler(
 
     // Add supply to the final result
     let mut final_result = cacheable_result;
-    if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply);
+    if let Some(_obj) = final_result.as_object_mut() {
+        // obj.insert("supply".to_string(), supply);
     }
 
     (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
