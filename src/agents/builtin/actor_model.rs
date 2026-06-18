@@ -84,7 +84,11 @@ impl ActorSystem {
         mb.remove(name);
     }
 
-    pub async fn ask(&self, mut msg: ActorMessage, timeout: std::time::Duration) -> Result<ActorMessage, String> {
+    pub async fn ask(
+        &self,
+        mut msg: ActorMessage,
+        timeout: std::time::Duration,
+    ) -> Result<ActorMessage, String> {
         let reply_to = format!("ask-{}", uuid::Uuid::new_v4());
         let (tx, mut rx) = mpsc::channel(1);
 

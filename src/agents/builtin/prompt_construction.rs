@@ -67,9 +67,11 @@ impl PromptBuilder {
             .unwrap_or(user_instructions);
 
         // Use character counting rather than byte lengths for robustness
-        let char_count = first_paragraph.chars().count();
-        if char_count > 1000 {
-            let truncated: String = first_paragraph.chars().take(997).collect();
+        if let Some((byte_idx, _)) = first_paragraph.char_indices().nth(1000) {
+            let mut truncated = first_paragraph[..byte_idx].to_string();
+            if let Some((trunc_byte_idx, _)) = truncated.char_indices().nth(997) {
+                truncated.truncate(trunc_byte_idx);
+            }
             format!("{}...", truncated)
         } else {
             first_paragraph.to_string()
@@ -128,9 +130,11 @@ impl PromptBuilder {
                 if !error_summary.is_empty() {
                     error_summary.push_str(", ");
                 }
-                let char_count = msg.content.chars().count();
-                let err_msg = if char_count > 100 {
-                    let truncated: String = msg.content.chars().take(97).collect();
+                let err_msg = if let Some((byte_idx, _)) = msg.content.char_indices().nth(100) {
+                    let mut truncated = msg.content[..byte_idx].to_string();
+                    if let Some((trunc_byte_idx, _)) = truncated.char_indices().nth(97) {
+                        truncated.truncate(trunc_byte_idx);
+                    }
                     format!("{}...", truncated)
                 } else {
                     msg.content.clone()
@@ -175,11 +179,13 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
             combined.push_str(&content);
         }
 
-        if combined.chars().count() > limit {
-            let truncated: String = combined.chars().take(limit).collect();
+        if let Some((byte_idx, _)) = combined.char_indices().nth(limit) {
+            combined.truncate(byte_idx);
             combined = format!(
-                "{}\n\n[System: AGENTS.md content truncated to 32KiB limit.]",
-                truncated
+                "{}
+
+[System: AGENTS.md content truncated to 32KiB limit.]",
+                combined
             );
             break;
         }
@@ -242,9 +248,13 @@ impl HierarchicalPromptBuilder {
         }
         let limit = 32768;
 
-        if user_instr.chars().count() > limit {
-            let truncated: String = user_instr.chars().take(limit).collect();
-            user_instr = format!("{}\n... [User Instructions TRUNCATED TO 32KiB]", truncated);
+        if let Some((byte_idx, _)) = user_instr.char_indices().nth(limit) {
+            user_instr.truncate(byte_idx);
+            user_instr = format!(
+                "{}
+... [User Instructions TRUNCATED TO 32KiB]",
+                user_instr
+            );
         }
 
         Self {
@@ -297,7 +307,7 @@ impl HierarchicalPromptBuilder {
 
         // High-Signal Re-injection (System Anchor)
         // If the system prompt is long, re-inject critical instructions at the end.
-        if combined_system.chars().count() > 4000 {
+        if combined_system.char_indices().nth(4000).is_some() {
             let core_objective = PromptBuilder::extract_core_objective(&self.user_instructions);
             combined_system.push_str("\n\n<system_anchor_high_signal_context_reinjection>\n");
             combined_system.push_str("To maintain focus in this large context, remember your core objective and constraints:\n");
