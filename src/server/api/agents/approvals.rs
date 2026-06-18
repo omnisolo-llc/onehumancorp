@@ -52,6 +52,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -115,6 +116,38 @@ async fn simulate_stockout_reorder(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate stockout reorder: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_newsletter_draft(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "newsletter_draft",
+        "subject": "Your Weekly Update: 3 New Summer Dresses!",
+        "content_preview": "Hey everyone, we just restocked our popular summer dresses. Click here to check them out...",
+        "audience": "All Newsletter Subscribers",
+        "draft_copy": "Hey everyone, we just restocked our popular summer dresses. Click here to check them out...",
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Marketing,
+        "Draft weekly newsletter".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate newsletter draft: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }
