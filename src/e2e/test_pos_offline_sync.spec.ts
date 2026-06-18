@@ -2,65 +2,83 @@ import { test, expect } from './fixtures';
 
 test.describe('Offline-Tolerant POS Terminal Checkout', () => {
   test('POS terminal queues transaction when offline and syncs when online', async ({ memberPage, context }) => {
-    // Navigate to the POS Terminal page
-    await memberPage.goto('/pos/terminal');
+    // Navigate to the POS UI served by Tauri web
+    await memberPage.goto('/ui/pos.html');
 
-    // Enter PIN (1234 is commonly used, we just tap 4 digits)
-    await memberPage.getByRole('button', { name: '1' }).click();
-    await memberPage.getByRole('button', { name: '2' }).click();
-    await memberPage.getByRole('button', { name: '3' }).click();
-    await memberPage.getByRole('button', { name: '4' }).click();
+    // Enter a quick charge amount using UI
+    // Ensure display initializes to $0.00
+    await expect(memberPage.locator('#amount-display')).toHaveText('$0.00');
 
-    // Verify successful login
-    await memberPage.waitForTimeout(500);
-    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
-    await memberPage.waitForTimeout(500);
-    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    // Tap 5, 0, 0, 0 to create $50.00 charge
+    await memberPage.locator('button.num-btn', { hasText: '5' }).first().click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
 
-    // Set network to offline
+    await expect(memberPage.locator('#amount-display')).toHaveText('$50.00');
+
+    // Click "Charge"
+    await memberPage.locator('#charge-btn').click();
+
+    // Ensure overlay is visible
+    await expect(memberPage.locator('#tap-overlay')).toBeVisible();
+    await expect(memberPage.locator('#tap-amount-subtitle')).toHaveText('$50.00');
+
+    // Set network to offline BEFORE simulating tap
     await context.setOffline(true);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-    // Mock the UI to reflect offline if the native event isn't fully caught by playwright
-    await memberPage.evaluate(() => {
-      window.dispatchEvent(new Event('offline'));
+    // Ensure network indicator says "Working Offline"
+    await expect(memberPage.locator('#network-status-text')).toHaveText('Working Offline', { timeout: 5000 });
+
+    // Click Simulate Tap Button
+    await memberPage.locator('#simulate-tap-btn').click();
+
+    // Verify it drops back to receipt screen showing offline queue message
+    await expect(memberPage.locator('#receipt-screen')).toBeVisible();
+    await expect(memberPage.locator('.receipt-text')).toHaveText('Payment saved offline. Will sync when network is restored.');
+
+    // Check IndexedDB
+    const queuedTxs = await memberPage.evaluate(async () => {
+        return new Promise((resolve) => {
+            const request = window.indexedDB.open("OHC_Offline_Queue", 1);
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction("actions", "readonly");
+                const store = tx.objectStore("actions");
+                const all = store.getAll();
+                all.onsuccess = () => resolve(all.result);
+            };
+            request.onerror = () => resolve([]);
+        });
     });
 
-    // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
-
-    // Click "New Order" while offline
-    await memberPage.getByRole('button', { name: 'New Order' }).click();
-
-    // Verify it queues the order
-    await expect(memberPage.getByRole('status')).toContainText('Offline Quick Charge Saved.', { timeout: 1000 }).catch(() => {});
-
-    // Assert the transaction was written to localStorage
-    const queuedTxs = await memberPage.evaluate(() => {
-      return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
-    });
     expect(queuedTxs.length).toBeGreaterThan(0);
-    expect(queuedTxs[0].amount_cents).toBe(5000);
+    expect(queuedTxs[0].amount).toBe(5000);
+
+    // Click new sale to reset view
+    await memberPage.getByRole('button', { name: 'New Sale' }).click();
 
     // Make network online
     await context.setOffline(false);
-
-    // Fire online event to trigger page.tsx sync
-    await memberPage.evaluate(() => {
-      window.dispatchEvent(new Event('online'));
-    });
-
-    // Verify "Syncing..." or Online indicator
-    await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('online')));
 
     // Wait for the sync to complete and the local storage to be cleared
     await memberPage.waitForFunction(() => {
-        return true;
+        return new Promise((resolve) => {
+            const request = window.indexedDB.open("OHC_Offline_Queue", 1);
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction("actions", "readonly");
+                const store = tx.objectStore("actions");
+                const all = store.getAll();
+                all.onsuccess = () => resolve(all.result.length === 0);
+            };
+            request.onerror = () => resolve(true);
+        });
     }, { timeout: 15000 });
 
-    // Ensure the queue was cleared successfully
-    const afterSyncTxs = await memberPage.evaluate(() => {
-        return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
-    });
-    expect(afterSyncTxs.length).toBe(0);
+    // Verify online sync completion
+    await expect(memberPage.locator('#network-status-indicator')).toBeHidden();
   });
 });

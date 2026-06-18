@@ -80,6 +80,8 @@
         text-decoration: none;
         border-radius: 16px;
         transition: background-color 0.2s;
+        min-height: 44px;
+        min-width: 44px;
       }
       .back-btn:hover {
         background: rgba(0, 0, 0, 0.05);
@@ -210,6 +212,7 @@
         cursor: pointer;
         width: 100%;
         margin-bottom: 16px;
+        min-height: 44px;
       }
 
       /* Receipt Screen */
@@ -288,8 +291,8 @@
               Dashboard
             </a>
             <div style="flex-grow: 1;"></div>
-            <button id="pos-walkthrough-btn" data-tooltip="pos-walkthrough-btn" style="background: none; border: none; font-size: 14px; font-weight: 600; color: #0066FF; cursor: pointer; padding: 0 8px;" onclick="window.startWalkthrough([{selector: '#charge-btn', title: 'Accept Payment', text: 'Enter an amount and tap here to charge.'}])">Walkthrough</button>
-            <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
+            <button id="pos-walkthrough-btn" data-tooltip="pos-walkthrough-btn" style="background: none; border: none; font-size: 14px; font-weight: 600; color: #0066FF; cursor: pointer; padding: 0 8px; min-height: 44px; min-width: 44px;" onclick="window.startWalkthrough([{selector: '#charge-btn', title: 'Accept Payment', text: 'Enter an amount and tap here to charge.'}])">Walkthrough</button>
+            <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px; min-height: 44px; min-width: 44px;" onclick="window.location.href='help.html'">?</button>
           </div>
 
           <div class="amount-display" id="amount-display">$0.00</div>
@@ -327,7 +330,7 @@
 
         <!-- Hidden button to simulate the tap for E2E tests and web mode -->
         <button class="simulate-tap-btn" id="simulate-tap-btn">Simulate Customer Tap (Test)</button>
-        <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1);">Cancel</button>
+        <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1); justify-content: center;">Cancel</button>
       </div>
 
       <!-- Receipt Screen -->
@@ -338,7 +341,7 @@
         <div class="receipt-amount" id="receipt-amount">$0.00</div>
         <div class="receipt-text">Payment Successful</div>
 
-        <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
+        <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%; min-height: 44px;">Email Receipt</button>
         <button class="charge-btn" onclick="resetPOS()">New Sale</button>
       </div>
 

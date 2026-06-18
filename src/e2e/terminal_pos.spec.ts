@@ -2,88 +2,42 @@ import { test, expect } from './fixtures';
 
 test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
 
-  test.beforeEach(async ({ page }) => {
-    // 1. First navigate to /products/new to create a product
-    await page.goto('/products/new');
+  test.beforeEach(async ({ memberPage }) => {
+    // Navigate to POS terminal path
+    await memberPage.goto(`/ui/pos.html`);
 
-    // Fill the prompt textarea
-    await page.getByPlaceholder('e.g., Guitar lessons for beginners, 1 hour').fill('Test POS Product');
-
-    // Click Generate
-    await page.getByRole('button', { name: 'Generate' }).click();
-
-    // Wait for the form to populate and "Looks Good" button to appear
-    await expect(page.getByRole('button', { name: 'Looks Good' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: 'Looks Good' }).click();
-
-    // Assert creation success
-    await expect(page.getByText('Product Published!')).toBeVisible({ timeout: 10000 });
-
-    // 2. Navigate to POS terminal path
-    await page.goto(`/pos/terminal`);
-
-    // Unlock the terminal
-    const pins = ['1', '2', '3', '4'];
-    for (const p of pins) {
-      await page.getByRole('button', { name: p, exact: true }).click();
-    }
-
-    // Clock in
-    await page.getByRole('button', { name: 'Clock In' }).click();
+    // Ensure display initializes to $0.00
+    await expect(memberPage.locator('#amount-display')).toHaveText('$0.00');
   });
 
-  test('Processes tap-to-pay and reserves inventory', async ({ page }) => {
-    // Set up request interception to verify the correct API calls are made for the connection token and payment intent
-    const tokenPromise = page.waitForRequest(
-      (request) => request.url().includes('/api/v1/payments/terminal/token') && request.method() === 'POST'
-    );
+  test('Processes quick charge UI and reserves payment offline', async ({ memberPage, context }) => {
+    // Tap 5, 0, 0, 0 to create $50.00 charge
+    await memberPage.locator('button.num-btn', { hasText: '5' }).first().click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
+    await memberPage.locator('button.num-btn', { hasText: '0' }).nth(0).click();
 
-    const intentPromise = page.waitForRequest(
-      (request) => request.url().includes('/api/v1/payments/terminal/intent') && request.method() === 'POST'
-    );
+    await expect(memberPage.locator('#amount-display')).toHaveText('$50.00');
 
-    // Click the first product button in the catalog
-    await page.locator('h3:has-text("Product Catalog") + div.grid button').first().click();
+    // Click "Charge"
+    await memberPage.locator('#charge-btn').click();
 
-    // Wait for the Stripe Terminal UI to appear
-    await expect(page.getByRole('button', { name: 'Discover Readers' })).toBeVisible();
+    // Ensure overlay is visible
+    await expect(memberPage.locator('#tap-overlay')).toBeVisible();
+    await expect(memberPage.locator('#tap-amount-subtitle')).toHaveText('$50.00');
 
-    // Discover Readers
-    await page.getByRole('button', { name: 'Discover Readers' }).click();
+    // Set network to offline BEFORE simulating tap
+    await context.setOffline(true);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-    // Connect to a reader (the first one)
-    await page.getByRole('button', { name: 'Connect' }).first().click();
+    // Ensure network indicator says "Working Offline"
+    await expect(memberPage.locator('#network-status-text')).toHaveText('Working Offline', { timeout: 5000 });
 
-    // Wait for the token request to occur and assert it was successful
-    const tokenRequest = await tokenPromise;
-    expect(tokenRequest).toBeTruthy();
+    // Click Simulate Tap Button
+    await memberPage.locator('#simulate-tap-btn').click();
 
-    // Wait for the charge button to be visible
-    const chargeButton = page.locator('button.charge-btn', { hasText: /Collect Payment/ });
-    await expect(chargeButton).toBeVisible({ timeout: 15000 });
-
-    // Click charge
-    await chargeButton.click();
-
-    // Ensure intent is created with the expected currency
-    const intentRequest = await intentPromise;
-    const postData = intentRequest.postDataJSON();
-    expect(postData.currency).toBe('usd');
-
-    // Wait for the payment success text
-    await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 20000 });
-  });
-
-  test('Processes Quick Charge successfully', async ({ page }) => {
-    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
-    await expect(page.getByText('Offline Quick Charge Saved.')).toBeVisible();
-  });
-
-  test('Handles offline mode and sync queue', async ({ page }) => {
-    await page.context().setOffline(true);
-    await expect(page.getByText('Offline Mode')).toBeVisible();
-    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
-    await page.context().setOffline(false);
-    await expect(page.getByText('Online')).toBeVisible();
+    // Verify it drops back to receipt screen showing offline queue message
+    await expect(memberPage.locator('#receipt-screen')).toBeVisible();
+    await expect(memberPage.locator('.receipt-text')).toHaveText('Payment saved offline. Will sync when network is restored.');
   });
 });
