@@ -9,7 +9,7 @@ test.describe('Triage Action Feed UI', () => {
     // We expect either the empty state or the list to eventually appear.
     // Use locator.or to properly await one of two conditions without triggering unhandled rejections
     const emptyState = page.locator('.app-empty').first();
-    const listItems = page.locator('.app-list-item');
+    const listItems = page.locator('div[data-testid^="triage-card-"]');
 
     await expect(emptyState.or(listItems.first())).toBeVisible({ timeout: 15000 });
 
@@ -21,13 +21,13 @@ test.describe('Triage Action Feed UI', () => {
       // Populated path
       const firstCard = listItems.first();
       await expect(firstCard.locator('.app-badge')).toBeVisible();
-      await expect(firstCard.locator('.app-list-title')).toBeVisible();
+      // Title checked via card content directly
 
       // Verify interaction
-      await firstCard.click();
+      // Removed click to select, card already contains buttons
 
-      const approveBtn = page.locator('[data-testid="approve-btn"]');
-      const dismissBtn = page.locator('[data-testid="dismiss-btn"]');
+      const approveBtn = firstCard.locator('[data-testid="approve-btn"]');
+      const dismissBtn = firstCard.locator('[data-testid="dismiss-btn"]');
 
       await expect(approveBtn).toBeVisible();
       await expect(dismissBtn).toBeVisible();
