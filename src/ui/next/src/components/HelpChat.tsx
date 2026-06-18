@@ -148,7 +148,6 @@ export function HelpChat() {
   if (isE2E && !forceChat) {
     // We shouldn't hide the HelpChat in E2E unless we specifically want it gone, but tests rely on it.
     // Given the test failures, let's keep it mounted during E2E.
-    // return null;
   }
 
   return (
