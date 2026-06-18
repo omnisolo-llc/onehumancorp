@@ -6,8 +6,12 @@ test.describe('Cross Device Onboarding CUJ', () => {
     const fs = require('fs');
     const path = require('path');
 
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : path.resolve(__dirname, '..', '..');
+
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
 
@@ -62,11 +66,6 @@ test.describe('Cross Device Onboarding CUJ', () => {
     const nameInput = page.locator('#business-name');
     await nameInput.fill('Cross Device Bakery');
 
-    await page.evaluate(() => {
-        const el = document.querySelector('#business-name') as HTMLInputElement;
-        if(el) el.value = "Cross Device Bakery";
-    });
-
     const saveDraftBtn = page.getByRole('button', { name: /Save Draft/i }).first();
     await saveDraftBtn.click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
@@ -77,7 +76,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     const newPage = await newContext.newPage();
 
     await newPage.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await newPage.route('**/api/onboarding/draft', async route => {
