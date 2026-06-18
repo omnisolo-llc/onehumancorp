@@ -1026,20 +1026,22 @@
       const triageSection = document.getElementById('triage-section');
       const triageQueue = document.getElementById('triage-queue');
 
-      async function loadTriage() {
+      async function loadUnifiedFeed() {
         triageSection.style.display = 'block';
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
-          let url = '/api/ui/triage';
+          let url = '/api/ui/dashboard/unified-feed';
           if (false) {
-            url = '/api/ui/triage';
+            url = '/api/ui/dashboard/unified-feed';
           }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
+          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`);
           if (!res.ok) throw new Error("Failed to load");
 
-          const items = await res.json();
+          const data = await res.json();
+          let items = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
+
           if (!Array.isArray(items) || items.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
             return;
@@ -1047,8 +1049,8 @@
 
           renderTriageItems(items);
         } catch (err) {
-          console.error("Triage load error:", err);
-          triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading triage items.</div>';
+          console.error("Unified Feed load error:", err);
+          triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading agent feed items.</div>';
         }
       }
 
@@ -1101,7 +1103,7 @@
           if (!res.ok) throw new Error("Update failed");
 
           // Refresh list
-          loadTriage();
+          loadUnifiedFeed();
         } catch (err) {
           console.error(err);
           if (itemEl) itemEl.style.opacity = '1';
@@ -1110,7 +1112,7 @@
       };
 
       // Load on start
-      setTimeout(loadTriage, 500);
+      setTimeout(loadUnifiedFeed, 500);
 
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');
