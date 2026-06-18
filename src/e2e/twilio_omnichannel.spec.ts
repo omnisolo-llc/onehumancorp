@@ -3,7 +3,7 @@ import { adminPage } from './fixtures';
 
 test.describe('Twilio WhatsApp Omnichannel', () => {
     test('Should simulate receiving and drafting a reply to a Twilio WhatsApp message', async ({ browser }) => {
-        const page = await adminPage({ browser });
+        const page = await adminPage({ browser } as any);
 
         // Use the existing omni-inbox mock to create a WhatsApp message instead of Instagram
         const mockPayload = {
@@ -19,7 +19,7 @@ test.describe('Twilio WhatsApp Omnichannel', () => {
         expect(response.ok()).toBeTruthy();
 
         // Navigate to Work Triage UI
-        await page.goto('/ui/triage.html');
+        await page.goto('/triage');
 
         // Wait for feed to load
         await page.waitForSelector('.app-list-item');
@@ -35,8 +35,8 @@ test.describe('Twilio WhatsApp Omnichannel', () => {
         await page.locator('.app-list-item').first().click();
 
         // Verify Thread view & Draft reply
-        await page.waitForSelector('.detail-group:has-text("AI Draft Reply")');
-        const draftReplyText = await page.locator('.proposed-action').textContent();
+        await page.waitForSelector('.text-xs:has-text("Proposed Action")');
+        const draftReplyText = await page.locator('.text-sm.leading-6').textContent();
         expect(draftReplyText?.toLowerCase()).toContain('vegan cake');
 
         // Click "Approve & Send"
@@ -45,7 +45,7 @@ test.describe('Twilio WhatsApp Omnichannel', () => {
         await approveBtn.click();
 
         // Verify UI updates
-        const actionStatus = page.locator('#action-status');
+        const actionStatus = page.locator('[role="status"]');
         await expect(actionStatus).toBeVisible();
         await expect(actionStatus).toHaveText('Approved!');
     });
