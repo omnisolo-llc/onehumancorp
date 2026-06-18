@@ -308,7 +308,7 @@
         const badgeHeader = document.getElementById('ohc-badge-header');
         const ctaLink = document.getElementById('badge-cta-link');
 
-        ctaLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}&source=bio_expandable_badge`;
+        ctaLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_expandable_badge`;
 
         badgeHeader.addEventListener('click', () => {
             badge.classList.toggle('expanded');

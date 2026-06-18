@@ -947,9 +947,23 @@
 
 
       <div class="step" id="step-loading">
-        <h1>Building Your Business...</h1>
-        <p>Please wait while we set up your workspace.</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+        <h1 id="loading-title">Building Your Business...</h1>
+        <p id="loading-msg">Please wait while we set up your workspace.</p>
+        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px; border-width: 4px; border-top-color: #0066FF;"></div>
+        <div id="loading-steps" style="margin-top: 32px; text-align: left; font-size: 14px; color: #555; display: flex; flex-direction: column; gap: 12px;">
+            <div class="loading-step" id="step-provisioning" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Hiring your AI Workforce...
+            </div>
+            <div class="loading-step" id="step-catalog" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Generating your product catalog...
+            </div>
+            <div class="loading-step" id="step-storefront" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Setting up your Command Center...
+            </div>
+        </div>
       </div>
 
       <!-- Step Chat: Conversational Build -->
@@ -1759,6 +1773,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           });
       });
 
+      // Enter key support for select inputs
+      document.querySelectorAll('select').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const step = e.target.closest('.step');
+                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
+                  if (nextBtn) nextBtn.click();
+              }
+          });
+      });
+
       document.querySelectorAll('.prev-step-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
               const prevStepId = e.target.getAttribute('data-prev');
@@ -1930,16 +1956,29 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
+
+                      const provisioningEl = document.getElementById('step-provisioning');
+                      const catalogEl = document.getElementById('step-catalog');
+                      const storefrontEl = document.getElementById('step-storefront');
+
+                      if (provisioningEl) { provisioningEl.style.opacity = '1'; provisioningEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
+
+                      if (catalogEl) { catalogEl.style.opacity = '1'; catalogEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+                      await new Promise(r => setTimeout(r, 1000));
+                      if (storefrontEl) { storefrontEl.style.opacity = '1'; storefrontEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+                      await new Promise(r => setTimeout(r, 1000));
+
                       if (startData && startData.organization_id) {
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                       return;
                   }
 
@@ -1976,10 +2015,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   } else {
                       const errData = await response.json().catch(()=>({}));
                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
@@ -2072,10 +2111,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   } else {
                       const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                           method: 'POST',
@@ -2117,10 +2156,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   }
 
               } catch (err) {
@@ -2245,7 +2284,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    localStorage.removeItem('onboardingState');
                    localStorage.setItem('has_onboarded', 'true');
 
-                   window.location.href = "success.html";
+                   window.location.href = "dashboard.html";
                  }).catch((err) => {
                    console.error(err);
                    const submitError = document.getElementById('submit-error');
@@ -2276,7 +2315,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                          }
                          localStorage.removeItem('onboardingState');
                          localStorage.setItem('has_onboarded', 'true');
-                         window.location.href = "success.html";
+                         window.location.href = "dashboard.html";
                      } else {
                          const errData = await response.json().catch(()=>({}));
                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
@@ -3808,3 +3847,9 @@ initWalkthrough();
 <!-- Authorized deletion line 997 -->
 <!-- Authorized deletion line 998 -->
 <!-- Authorized deletion line 999 -->
+    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
+      <a href="/setup.html?ref=website-builder" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
+        Powered by OHC
+      </a>
+    </footer>
