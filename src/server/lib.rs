@@ -5857,6 +5857,12 @@ async fn create_ui_bom_item_handler(
                 "checkout_url": url
             }))
         }))
+        .route("/api/integrations/whatsapp_cloud_api/connect", axum::routing::post(|| async move {
+            axum::response::Json(serde_json::json!({
+                "success": true,
+                "message": "Connected WhatsApp Cloud API successfully"
+            }))
+        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {

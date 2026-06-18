@@ -145,10 +145,13 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
+    // 1. Resolve Identity
+    let customer_id = crate::api::omnichannel_webhook::resolve_identity(&state.db, &tenant_id, &source, &sender_id).await;
+
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, NOW())"
+            let res = sqlx::query(
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, '', 'unread', $6, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -157,11 +160,29 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&text)
             .bind(&sender_id)
             .execute(pool)
-            .await.map(|_| ())
+            .await;
+
+            if res.is_ok() {
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+                )
+                .bind(&inbox_id)
+                .bind(&tenant_id)
+                .bind(&source)
+                .bind(&text)
+                .bind(&text)
+                .bind(&sender_id)
+                .bind(&customer_id)
+                .execute(pool)
+                .await {
+                    tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+                }
+            }
+            res.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+            let res = sqlx::query(
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -170,29 +191,50 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&text)
             .bind(&sender_id)
             .execute(sqlite_pool)
-            .await.map(|_| ())
+            .await;
+
+            if res.is_ok() {
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                )
+                .bind(&inbox_id)
+                .bind(&tenant_id)
+                .bind(&source)
+                .bind(&text)
+                .bind(&text)
+                .bind(&sender_id)
+                .bind(&customer_id)
+                .execute(sqlite_pool)
+                .await {
+                    tracing::error!("Failed to insert omni_inbox_messages (SQLite): {}", e);
+                }
+            }
+            res.map(|_| ())
         }
     };
 
     if let Err(e) = insert_result {
-        tracing::error!("Failed to insert inbox_messages: {}", e);
+        tracing::error!("Failed to insert omnichannel inbox message: {}", e);
     }
 
     let job_id = Uuid::new_v4().to_string();
-    let payload = serde_json::json!({
+    let mut payload_json = serde_json::json!({
         "message_id": inbox_id,
         "source": source,
         "content": text,
         "sender_id": sender_id
     });
-    // In future iterations, customer_id can be looked up and included in payload
+
+    if let Some(c_id) = &customer_id {
+        payload_json["customer_id"] = serde_json::json!(c_id);
+    }
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
                 .bind(&job_id)
                 .bind(&tenant_id)
-                .bind(payload.to_string())
+                .bind(payload_json.to_string())
                 .execute(pool)
                 .await
                 .map(|_| ())
@@ -201,7 +243,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
                 .bind(&job_id)
                 .bind(&tenant_id)
-                .bind(payload.to_string())
+                .bind(payload_json.to_string())
                 .execute(sqlite_pool)
                 .await
                 .map(|_| ())
@@ -216,7 +258,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: payload.clone(),
+        payload: payload_json.clone(),
     };
 
     let orchestrator_clone = state.orchestrator.clone();
