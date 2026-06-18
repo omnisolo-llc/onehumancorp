@@ -102,7 +102,7 @@ beforeEach(() => {
     expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
     expect(screen.getAllByText('$45.00')[0]).toBeDefined();
 
-    const payButton = screen.getByText('Pay');
+    const payButton = screen.getByText(/Pay with Card|^Pay$/);
     fireEvent.click(payButton);
 
     await waitFor(() => {
@@ -134,7 +134,7 @@ beforeEach(() => {
     const subscribeLabel = screen.getByText('Subscribe & Save 10%');
     fireEvent.click(subscribeLabel);
 
-    const payButton = screen.getByText('Pay');
+    const payButton = screen.getByText(/Pay with Card|^Pay$/);
     fireEvent.click(payButton);
 
     await waitFor(() => {

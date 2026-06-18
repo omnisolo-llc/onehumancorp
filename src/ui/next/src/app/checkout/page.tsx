@@ -8,6 +8,7 @@ import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
 import { ShareAndSaveWidget } from "../components/ShareAndSaveWidget";
+import StripeTerminalWrapper from "./StripeTerminalWrapper";
 
 
 function CheckoutContent() {
@@ -161,6 +162,15 @@ function CheckoutContent() {
             {isSuccess ? "Order Successful" : (tier ? "Plan Upgrade" : "Secure Checkout")}
           </h1>
         </WithTooltip>
+
+          {!tier && !isSoldOut && (
+            <StripeTerminalWrapper
+              amount={Math.round((((45.00 + (deliveryFee || 0)) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * 100)}
+              productId={productId}
+              tenantId={tenant}
+              onSuccess={() => setShowSuccessModal(true)}
+            />
+          )}
       </header>
 
       <main
@@ -212,6 +222,15 @@ function CheckoutContent() {
                 </button>
               </WithTooltip>
 
+          {!tier && !isSoldOut && (
+            <StripeTerminalWrapper
+              amount={Math.round((((45.00 + (deliveryFee || 0)) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * 100)}
+              productId={productId}
+              tenantId={tenant}
+              onSuccess={() => setShowSuccessModal(true)}
+            />
+          )}
+
               <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without subscribing.">
                 <button
                   onClick={() => router.push('/pricing')}
@@ -220,6 +239,15 @@ function CheckoutContent() {
                   Cancel
                 </button>
               </WithTooltip>
+
+          {!tier && !isSoldOut && (
+            <StripeTerminalWrapper
+              amount={Math.round((((45.00 + (deliveryFee || 0)) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * 100)}
+              productId={productId}
+              tenantId={tenant}
+              onSuccess={() => setShowSuccessModal(true)}
+            />
+          )}
               <PoweredByOHC tenantId={tenant} />
             </div>
         ) : (
@@ -346,9 +374,21 @@ function CheckoutContent() {
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              {isSoldOut ? "Sold Out" : isProcessing ? "Processing..." : "Pay"}
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                {isSoldOut ? "Sold Out" : isProcessing ? "Processing..." : "Pay with Card"}
+              </>
             </button>
           </WithTooltip>
+
+          {!tier && !isSoldOut && (
+            <StripeTerminalWrapper
+              amount={Math.round((((45.00 + (deliveryFee || 0)) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * 100)}
+              productId={productId}
+              tenantId={tenant}
+              onSuccess={() => setShowSuccessModal(true)}
+            />
+          )}
 
           {checkoutStatus && checkoutStatus !== "Item just sold out." && (
             <p className="text-sm font-medium text-indigo-700" role="status">
@@ -388,6 +428,15 @@ function CheckoutContent() {
               Cancel
             </button>
           </WithTooltip>
+
+          {!tier && !isSoldOut && (
+            <StripeTerminalWrapper
+              amount={Math.round((((45.00 + (deliveryFee || 0)) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)) * (shareDiscountApplied ? 0.9 : 1)) * 100)}
+              productId={productId}
+              tenantId={tenant}
+              onSuccess={() => setShowSuccessModal(true)}
+            />
+          )}
           <PoweredByOHC tenantId={tenant} />
         </div>
         </>
