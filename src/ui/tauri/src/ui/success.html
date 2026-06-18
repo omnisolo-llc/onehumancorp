@@ -112,7 +112,7 @@
           <a href="#" id="referral-success-link" style="display: inline-block; background: #0066FF; color: white; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px;">Get OHC Free</a>
       </div>
 
-      <button id="dashboard-btn">Go to Assistant</button>
+      <button id="dashboard-btn">Go to Command Center</button>
     </div>
     <script>
       const urlParams = new URLSearchParams(window.location.search);
@@ -128,7 +128,7 @@
             const refCard = document.getElementById('referral-success-card');
             const refLink = document.getElementById('referral-success-link');
             refCard.style.display = 'block';
-            refLink.href = `/onboarding?ref=${encodeURIComponent(tenantId)}&source=success_page`;
+            refLink.href = `/setup.html?ref=${encodeURIComponent(tenantId)}&source=success_page`;
             return;
         }
 
@@ -155,7 +155,7 @@
       const dashboardBtn = document.getElementById('dashboard-btn');
       if (dashboardBtn) {
         dashboardBtn.addEventListener('click', () => {
-          window.location.href = "assistant.html";
+          window.location.href = "dashboard.html";
         });
       }
     </script>
