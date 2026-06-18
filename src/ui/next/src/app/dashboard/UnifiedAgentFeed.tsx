@@ -486,7 +486,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
+      <div className="w-full mb-6 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
         {error}
       </div>
     );
@@ -538,11 +538,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               onDecision={handleTriageDecision}
             />
 
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
+            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
+                  <span className="text-xs text-gray-500 font-sans">Just now</span>
                 </div>
                 <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
                   Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
@@ -550,11 +550,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             </div>
 
-            <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
+            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
+                  <span className="text-xs text-gray-500 font-sans">5 min ago</span>
                 </div>
                 <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
                   Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
@@ -562,17 +562,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-[#00C24B] hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-[#00C24B] hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
                   Approve
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
                 >
                   Edit
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
                 >
                   Deny
                 </button>
@@ -580,7 +580,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             </div>
 
             {(loading || triageLoading) && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Agent Proposals...
               </div>
             )}
@@ -599,31 +599,31 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4"
+                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
                       {approval.event_source.replace('_', ' ')}
                     </span>
                     {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-[8px]">
                         Requires Review
                       </span>
                     )}
                     {queuedActionIds.has(approval.id) && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md shadow-sm border border-yellow-200" data-testid="queued-badge">
+                      <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 px-2 py-1 rounded-[8px] shadow-sm border border-yellow-200" data-testid="queued-badge">
                         Queued
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+                  <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
                   {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
-                    <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
-                        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
+                        <div className="mb-4 p-4 rounded-[16px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
                           <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -638,7 +638,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && <InstagramDMCard approval={approval} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && <AmbassadorReplyCard approval={approval} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism  flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -648,7 +648,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
-                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg  relative mt-2">
+                          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px] relative mt-2">
                             <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
@@ -697,7 +697,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
                             <span className="text-pink-500 font-bold text-xs">Schedule a post?</span>
                           </div>
-                          <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
+                          <div className="app-card dark:bg-gray-800 p-3 rounded-[8px] border border-pink-100 dark:border-pink-900/50">
                             <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Instagram / TikTok Draft</div>
                             <div className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3">
                                 "{(approval.proposed_action || approval.context_payload).instagram || (approval.proposed_action || approval.context_payload).tiktok || 'Check out our new product!'}"
@@ -730,7 +730,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                                {(approval.proposed_action || approval.context_payload).vendor_name} ({(approval.proposed_action || approval.context_payload).vendor_contact})
                             </span>
                           </div>
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-gray-200 dark:border-gray-700">
                             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Drafted Message:</div>
                             <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
                               "{(approval.proposed_action || approval.context_payload).draft_message}"
@@ -1019,7 +1019,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                                {(approval.proposed_action || approval.context_payload).vendor_name} ({(approval.proposed_action || approval.context_payload).vendor_contact})
                             </span>
                           </div>
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-gray-200 dark:border-gray-700">
                             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Drafted Message:</div>
                             <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
                               "{(approval.proposed_action || approval.context_payload).draft_message}"
@@ -1050,7 +1050,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1216,7 +1216,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1290,12 +1290,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
+              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -1305,23 +1305,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                  <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
                     {activity.department.replace('_', ' ')}
                   </span>
                   {activity.event_type === 'Paused' || activity.event_type === 'PAUSED' ? (
-                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30">
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-[8px] text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30">
                       PAUSED
                     </span>
                   ) : (
-                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-[8px] text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
                       {activity.event_type === 'Approved' || activity.event_type === 'APPROVED' ? 'APPROVED' : activity.event_type}
                     </span>
                   )}
                 </div>
-                <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
                   {(() => {
                     try {
                       const p = typeof activity.payload === 'string' ? JSON.parse(activity.payload) : activity.payload;
@@ -1335,7 +1335,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     }
                   })()}
                 </h3>
-                <span className="text-xs text-gray-500 font-inter">{new Date(activity.created_at).toLocaleString()}</span>
+                <span className="text-xs text-gray-500 font-sans">{new Date(activity.created_at).toLocaleString()}</span>
               </div>
             ))}
             </div>
