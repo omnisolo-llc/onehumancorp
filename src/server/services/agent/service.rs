@@ -433,29 +433,7 @@ mod tests {
     async fn test_agent_get_dashboard_snapshot_mobile_optimized() {
         let service = setup_test_agent_manager_service().await;
 
-        let task = crate::tasks::SharedTask {
-            id: "task_1".to_string(),
-            organization_id: "system".to_string(),
-            mission_id: "miss1".to_string(),
-            parent_plan_id: "plan1".to_string(),
-            dependencies: vec![],
-            title: "Test Task".to_string(),
-            description: Some("This is a detailed description of the task.".to_string()),
-            assigned_agent_id: None,
-            status: "PENDING_APPROVAL".to_string(),
-            priority: "high".to_string(),
-            payload: "{\"data\": \"some payload\"}".to_string(),
-            locked_until: None,
-            ultraplan_phase: None,
-            deliberation_log: None,
-            depth: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            action_risk: None,
-            approval_status: None,
-            proposed_content: None,
-        };
-        let _ = service.hub.task_manager().create_task(task).await;
+        let _ = service.hub.task_manager().create_task("system".to_string(), "miss1".to_string(), "Test Task".to_string(), "This is a detailed description of the task.".to_string(), "high".to_string());
 
         let req = EmptyRequest {};
         let mut request = Request::new(req);

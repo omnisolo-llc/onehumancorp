@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::db::DB;
 use serde_json::json;
-use std::time::Duration;
 use uuid::Uuid;
 
 pub struct LifecycleEngagementWorker {
@@ -123,7 +122,6 @@ impl LifecycleEngagementWorker {
 mod tests {
     use super::*;
     use serde_json::json;
-    use crate::db::DbStore;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let db = match DB::new().await {

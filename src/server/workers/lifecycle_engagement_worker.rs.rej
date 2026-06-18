@@ -1,0 +1,10 @@
+--- src/server/workers/lifecycle_engagement_worker.rs
++++ src/server/workers/lifecycle_engagement_worker.rs
+@@ -124,7 +124,6 @@
+         return Ok(true);
+     }
+
+-    use crate::db::DbStore;
+     let mut found = false;
+     match &db.store {
+         crate::db::DbStore::Postgres => {
