@@ -3174,7 +3174,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
     match &db.store {
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -3187,7 +3187,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         })
                     }).collect())
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -3205,7 +3205,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -3218,7 +3218,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         })
                     }).collect())
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4112,7 +4112,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
     match &db.store {
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4124,7 +4124,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         })
                     }).collect())
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4144,7 +4144,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS TEXT) AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4156,7 +4156,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                         })
                     }).collect())
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS TEXT) AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4373,15 +4373,13 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             match &db1.store {
                 crate::db::DbStore::Postgres => {
                     let query_str = if mobile_optimized {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, CAST(t.created_at AS text) AS created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     } else {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, CAST(t.created_at AS text) AS created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id1)
-                    .fetch_all(&db1.pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
@@ -4413,15 +4411,13 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     let query_str = if mobile_optimized {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, CAST(t.created_at AS TEXT) AS created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     } else {
-                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                        "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, CAST(t.created_at AS TEXT) AS created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id1)
-                    .fetch_all(pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
@@ -4463,11 +4459,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id2)
-                    .fetch_all(&db2.pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id2).fetch_all(&db2.pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
@@ -4513,11 +4507,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id2)
-                    .fetch_all(pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id2).fetch_all(pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
@@ -5310,7 +5302,7 @@ async fn list_ui_inbox_handler(
                     "SELECT id,
                             COALESCE(source, '') AS source,
                             COALESCE(status, '') AS status,
-                            COALESCE(created_at::text, '') AS created_at
+                            CAST(created_at AS text) AS created_at
                      FROM inbox_messages
                      WHERE tenant_id = $1
                      ORDER BY created_at DESC
@@ -5323,7 +5315,7 @@ async fn list_ui_inbox_handler(
                             COALESCE(translated_from_language, '') AS translated_from_language,
                             COALESCE(draft_reply, '') AS draft_reply,
                             COALESCE(status, '') AS status,
-                            COALESCE(created_at::text, '') AS created_at
+                            CAST(created_at AS text) AS created_at
                      FROM inbox_messages
                      WHERE tenant_id = $1
                      ORDER BY created_at DESC
@@ -5363,7 +5355,7 @@ async fn list_ui_inbox_handler(
                     "SELECT id,
                             COALESCE(source, '') AS source,
                             COALESCE(status, '') AS status,
-                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                            CAST(created_at AS TEXT) AS created_at
                      FROM inbox_messages
                      WHERE tenant_id = ?
                      ORDER BY created_at DESC
@@ -5376,7 +5368,7 @@ async fn list_ui_inbox_handler(
                             COALESCE(translated_from_language, '') AS translated_from_language,
                             COALESCE(draft_reply, '') AS draft_reply,
                             COALESCE(status, '') AS status,
-                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                            CAST(created_at AS TEXT) AS created_at
                      FROM inbox_messages
                      WHERE tenant_id = ?
                      ORDER BY created_at DESC
