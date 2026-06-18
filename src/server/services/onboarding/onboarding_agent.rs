@@ -651,6 +651,7 @@ Your response:",
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
             organization_id: org_id,
+            user_id,
         })
     }
 

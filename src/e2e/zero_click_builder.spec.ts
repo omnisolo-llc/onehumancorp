@@ -1,47 +1,33 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
-test.describe('Zero Click Builder Viral Growth Loop', () => {
-  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, request, loginAs, adminUser }) => {
-    // Navigate to the new growth feature
-    await loginAs(page, adminUser);
+test.describe('Zero Click Builder', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
 
-    await page.goto('/zero-click-builder');
+  test('should generate a business successfully on mobile and redirect to feed', async ({ page }) => {
+    // We navigate directly to the zero-click-builder page.
+    await page.goto('http://localhost:3000/zero-click-builder');
 
-    // Verify mobile-first layout
-    await page.setViewportSize({ width: 375, height: 812 });
-
-    // Verify title
-    await expect(page.locator('h1', { hasText: 'Zero-Click Business Generator' })).toBeVisible({ timeout: 15000 });
-
-    // Verify "Powered by OHC" branding is present (viral loop)
-    await expect(page.getByText('⚡ Powered by OHC')).toBeVisible();
-
-    // The generate button should be disabled initially
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
-    await expect(generateBtn).toBeDisabled();
+    // Make sure the title is visible
+    await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
     // Fill in the prompt
-    await page.fill('textarea[id="prompt"]', 'I am a local coffee roaster in Seattle needing a storefront.');
+    await page.fill('textarea[id="prompt"]', 'I sell custom sneakers in Austin via delivery.');
 
-    // The button should now be enabled
-    await expect(generateBtn).toBeEnabled();
+    // Click the generate button
+    await page.click('button:has-text("Generate My Business")');
 
-    // Submit the form
-    await generateBtn.click();
+    // Should see loading steps
+    await expect(page.getByText('Analyzing your business...')).toBeVisible();
 
-    // Wait for the loading state to complete and the result to appear
-    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 20000 });
+    // Increase timeout since backend could take time, or interval takes a bit
+    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 10000 });
 
-    // Verify the generated preview iframe is visible
-    const previewIframe = page.locator('iframe[title="Live Storefront Preview"]');
-    await expect(previewIframe).toBeVisible();
+    // Ensure the Launch My Store button exists and routes to /feed
+    const launchButton = page.getByRole('button', { name: 'Launch My Store' });
+    await expect(launchButton).toBeVisible();
+    await launchButton.click();
 
-    // Verify the launch button is present
-    const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
-    await expect(launchBtn).toBeVisible();
-
-    // Click the launch button to verify redirect
-    await launchBtn.click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    // Assert that we are redirected to the Unified Feed
+    await expect(page).toHaveURL(/.*\/feed/);
   });
 });

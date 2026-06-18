@@ -1091,6 +1091,8 @@ pub struct ZeroClickGenerateResponse {
     pub name: String,
     pub url: String,
     pub products_count: usize,
+    pub organization_id: String,
+    pub user_id: String,
 }
 
 async fn handle_track_visitor(
@@ -2789,13 +2791,15 @@ pub async fn handle_zero_click_generate(
     let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
     let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
 
+    let generated_admin_email = if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) };
+
     let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
         business_type: intake_data.business_type,
         company_name: intake_data.business_name.clone(),
         company_description: req.prompt.clone(),
         selling_categories: intake_data.categories,
         payment_pref: "online".to_string(),
-        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
+        admin_email: generated_admin_email.clone(),
         admin_name: "Owner".to_string(),
         admin_password: uuid::Uuid::new_v4().to_string(),
         website_template: "Modern".to_string(),
@@ -2810,7 +2814,7 @@ pub async fn handle_zero_click_generate(
         ai_auto_respond: false,
     };
 
-    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+    let start_res = agent.start_onboarding(start_req).await.map_err(|e| {
         tracing::error!("Start onboarding error: {}", e);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -2835,6 +2839,8 @@ pub async fn handle_zero_click_generate(
         name: intake_data.business_name,
         url,
         products_count: intake_data.initial_products.len(),
+        organization_id: start_res.organization_id,
+        user_id: start_res.user_id,
     }))
 }
 
