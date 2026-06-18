@@ -52,6 +52,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:quotes.rs",
     "//src/server/api:meta_webhook.rs",
     "//src/server/api:twilio_webhook.rs",
+    "//src/server/api:twilio_voice.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:field_ops.rs",
     "//src/server/api:local_seo.rs",

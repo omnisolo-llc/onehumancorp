@@ -2888,6 +2888,22 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         voice_router: twilio_voice_router,
         voice_sessions: std::sync::Arc::new(dashmap::DashMap::new()),
     };
+    let twilio_voice_webhook_state = api::twilio_voice::TwilioVoiceWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+        voice_engine: std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new()),
+        twilio: std::sync::Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+            std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+            std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+        )),
+    };
+    let twilio_voice_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio_voice", axum::routing::post(api::twilio_voice::twilio_voice_incoming_handler))
+        .route("/api/v1/webhooks/twilio_voice/gather", axum::routing::post(api::twilio_voice::twilio_voice_gather_handler))
+        .route("/api/v1/webhooks/twilio_voice/status", axum::routing::post(api::twilio_voice::twilio_voice_status_handler))
+        .with_state(twilio_voice_webhook_state);
+
     let twilio_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_webhook::twilio_voice_webhook_handler))
@@ -6365,6 +6381,7 @@ async fn create_ui_bom_item_handler(
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
         .merge(twilio_webhook_router)
+        .merge(twilio_voice_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
