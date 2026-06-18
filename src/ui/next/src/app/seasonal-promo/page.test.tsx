@@ -8,6 +8,10 @@ vi.mock('next/navigation', () => {
     };
 });
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />
+}));
+
 describe('SeasonalPromoPage', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'location', {
@@ -20,5 +24,10 @@ describe('SeasonalPromoPage', () => {
   it('renders the page correctly', () => {
     render(<SeasonalPromoPage />);
     expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
+  });
+
+  it('renders the PoweredByOHC component', () => {
+    render(<SeasonalPromoPage />);
+    expect(screen.getByTestId('powered-by-ohc')).toBeInTheDocument();
   });
 });
