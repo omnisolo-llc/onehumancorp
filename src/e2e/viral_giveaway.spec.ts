@@ -33,7 +33,7 @@ test.describe('Viral Giveaway Loop', () => {
     // We mock localStorage if needed, but fixtures set it.
     await page.evaluate(() => { localStorage.setItem('has_pro', 'true'); window.dispatchEvent(new Event('storage')); });
 
-    const generatorFooterLink = page.locator('a', { hasText: 'Powered by OHC' }).first();
+    const generatorFooterLink = page.locator('a', { hasText: '⚡ Powered by OHC' }).first();
     await expect(generatorFooterLink).toBeVisible();
 
     const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
@@ -57,7 +57,7 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(publicPage.getByText('Enter your email to win an iPad')).toBeVisible();
 
     // Verify "Powered by OHC" footer
-    const footerLink = publicPage.locator('a', { hasText: 'Powered by OHC' }).first();
+    const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/onboarding?ref=');
