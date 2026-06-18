@@ -94,7 +94,7 @@ pub trait ToolExecutor: Send + Sync {
     ) -> Result<String, ToolError>;
 }
 
-/// Shared todo list state.
+// Shared todo list state.
 
 /// Shared task store state.
 pub type SharedTaskStore = Arc<RwLock<task::TaskStore>>;

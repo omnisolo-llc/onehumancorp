@@ -122,7 +122,11 @@ async fn test_expert_team_sota_quality_gates() {
         .run_full_expert_workflow(task, &mut trace_final, lead_llm_final)
         .await;
     assert!(result.is_ok());
-    let expected_roles: Vec<String> = manager.domain_experts.iter().map(|e| e.role.clone()).collect();
+    let expected_roles: Vec<String> = manager
+        .domain_experts
+        .iter()
+        .map(|e| e.role.clone())
+        .collect();
     assert!(trace_final.has_required_skills(&expected_roles));
 }
 

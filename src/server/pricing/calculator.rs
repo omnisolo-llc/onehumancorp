@@ -301,7 +301,7 @@ mod tests {
         };
 
         let original = 2 * 1024 * 1024 * 1024; // 2GB
-        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let compressed = 1024 * 1024 * 1024; // 1GB
         let savings = calculate_bandwidth_savings(original, compressed, &config);
         assert_eq!(savings, 0.50);
 
@@ -320,7 +320,7 @@ mod tests {
         };
 
         let original = 2 * 1024 * 1024 * 1024; // 2GB
-        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let compressed = 1024 * 1024 * 1024; // 1GB
         let savings = calculate_storage_savings(original, compressed, &config);
         assert_eq!(savings, 0.10);
 
