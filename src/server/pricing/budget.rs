@@ -225,6 +225,22 @@ mod tests {
     }
 
     #[test]
+    fn test_record_spend_cents_negative() {
+        let manager = BudgetManager::new(100.0);
+        let err = manager.record_spend_cents(-1000).unwrap_err();
+        assert_eq!(err, "spend amount cannot be negative");
+    }
+
+    #[test]
+    fn test_budget_manager_with_telemetry_no_tenant() {
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        let mut manager = BudgetManager::new(50.0);
+        manager.telemetry_store = Some(store);
+        assert!(manager.record_spend(10.0).unwrap());
+        assert_eq!(manager.get_remaining(), 40.0);
+    }
+
+    #[test]
     fn test_budget_manager_edge_cases() {
         let manager = BudgetManager::new(f64::MAX);
         assert!(manager.record_spend(1.0).unwrap());
