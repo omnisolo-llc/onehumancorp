@@ -1275,7 +1275,7 @@ impl BookingEngineService for NativeBookingService {
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
         let customer_id = req.customer_id;
-        let product_id = req.product_id;
+        let service_id = req.product_id;
         let start_time_str = req.start_time;
         let end_time_str = req.end_time;
 
@@ -1295,7 +1295,7 @@ impl BookingEngineService for NativeBookingService {
         let Some(capacity_lock) = soft_locks
             .acquire_capacity_lock(
                 &tenant_id,
-                &product_id,
+                &service_id,
                 start_time,
                 end_time,
                 &booking_id,
@@ -1322,11 +1322,11 @@ impl BookingEngineService for NativeBookingService {
 
         let overlap_count: i64 = match sqlx::query_scalar(
             "SELECT COUNT(*) FROM bookings \
-             WHERE tenant_id = $1 AND product_id = $2 AND start_time < $4 AND end_time > $3 \
+             WHERE tenant_id = $1 AND service_id = $2 AND start_time < $4 AND end_time > $3 \
              AND COALESCE(status, 'pending') <> 'cancelled'"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&start_time)
         .bind(&end_time)
         .fetch_one(&mut *tx)
@@ -1350,13 +1350,13 @@ impl BookingEngineService for NativeBookingService {
         let payment_intent_id = if req.requires_deposit { Some(format!("pi_test_{}", Uuid::new_v4().to_string().replace("-", ""))) } else { None };
 
         if let Err(e) = sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, payment_intent_id) \
+            "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, payment_intent_id) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&booking_id)
         .bind(&tenant_id)
-        .bind(&customer_id)
-        .bind(&product_id)
+        .bind(uuid::Uuid::parse_str(&customer_id).ok())
+        .bind(&service_id)
         .bind(start_time)
         .bind(end_time)
         .bind(initial_status)
@@ -1377,7 +1377,7 @@ impl BookingEngineService for NativeBookingService {
         )
         .bind(&ledger_id)
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(start_time)
         .bind(end_time)
         .bind(&booking_id)
