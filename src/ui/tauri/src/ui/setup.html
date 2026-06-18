@@ -27,6 +27,8 @@
         width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
       }
       .glassmorphism {
         border-radius: 16px;
@@ -744,10 +746,10 @@
       }
 
             @media (max-width: 375px) {
-        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); }
+        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
         .context-card { padding: 12px; }
         .work-context-cards { grid-template-columns: 1fr; }
-        .container { box-sizing: border-box; overflow-x: hidden; padding: 20px; }
+
         .stepper {
           gap: 4px;
         }
@@ -1758,6 +1760,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               populateCategories();
           }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+          document.querySelector('.container').scrollTo(0, 0);
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
       }
