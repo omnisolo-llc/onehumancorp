@@ -47,6 +47,7 @@ const routesWithOwnShell = new Set([
   "/assistant",
   "/dashboard",
   "/embed-builder",
+  "/exit-intent-builder",
   "/feed",
   "/finance",
   "/inbox",
