@@ -29,14 +29,13 @@ impl CodexCore {
         message: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         // OpenAI Mechanic: Input Guardrails (Early Check)
-        if let Some(guardrails) = &self.runtime_config.guardrails {
-            if let Err(e) = guardrails.check_input(message) {
+        if let Some(guardrails) = &self.runtime_config.guardrails
+            && let Err(e) = guardrails.check_input(message) {
                 return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!("Codex Runner Input Guardrail tripped: {}", e),
                 )));
             }
-        }
 
         let mut total_cost = 0.0;
         let mut on_event = |e: AgentEvent| {
@@ -112,8 +111,8 @@ impl Runner {
 
         tokio::spawn(async move {
             // OpenAI Mechanic: Input Guardrails (Early Check) for streamed execution
-            if let Some(guardrails) = &core.runtime_config.guardrails {
-                if let Err(e) = guardrails.check_input(&msg) {
+            if let Some(guardrails) = &core.runtime_config.guardrails
+                && let Err(e) = guardrails.check_input(&msg) {
                     let _ = tx
                         .send(AgentEvent::TaskError {
                             error: format!("Codex Runner Input Guardrail tripped: {}", e),
@@ -121,7 +120,6 @@ impl Runner {
                         .await;
                     return;
                 }
-            }
 
             let tx_clone = tx.clone();
             let mut on_event = move |event: AgentEvent| {
