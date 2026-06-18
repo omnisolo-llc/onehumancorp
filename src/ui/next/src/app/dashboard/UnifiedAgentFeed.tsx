@@ -6,7 +6,7 @@ import { WorkTriageFeed } from "../components/WorkTriageFeed";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from './AmbassadorReplyCard';
 import { InstagramDMCard } from './InstagramDMCard';
-
+import { QuoteReviewModal } from '../../components/QuoteReviewModal';
 
 type TriageItem = {
   id: string;
@@ -76,6 +76,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>("");
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [selectedQuoteApproval, setSelectedQuoteApproval] = useState<AgentFeedItem | null>(null);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -1118,14 +1120,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       >
                         Approve & Send
                       </button>
-                      <a
-                        href={`/quotes/${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
+                      <button
+                        onClick={() => {
+                          setSelectedQuoteApproval(approval);
+                          setIsQuoteModalOpen(true);
+                        }}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="edit-quote-draft"
+                        aria-label="Review Draft"
+                        data-testid="review-quote-draft"
                       >
-                        Edit Draft
-                      </a>
+                        Review Draft
+                      </button>
                     </div>
                   ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -1342,6 +1347,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           </>
         )}
       </div>
+      {selectedQuoteApproval && (
+        <QuoteReviewModal
+          isOpen={isQuoteModalOpen}
+          onClose={() => {
+            setIsQuoteModalOpen(false);
+            setSelectedQuoteApproval(null);
+          }}
+          onApprove={(updatedPayload) => {
+            handleDecision(selectedQuoteApproval.id, true, JSON.stringify(updatedPayload));
+            setIsQuoteModalOpen(false);
+            setSelectedQuoteApproval(null);
+          }}
+          initialPayload={selectedQuoteApproval.proposed_action || selectedQuoteApproval.context_payload}
+        />
+      )}
     </section>
   );
 }
