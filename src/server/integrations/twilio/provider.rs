@@ -2,8 +2,6 @@ use super::client::{TwilioClientWrapper, RealTwilioClient};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-
-
 pub struct TwilioProvider {
     client: Arc<dyn TwilioClientWrapper>,
     metadata: ProviderMetadata,
@@ -57,6 +55,16 @@ impl TwilioProvider {
         }
         self.client.send_whatsapp(to, from, body).await
     }
+
+    pub async fn is_opted_out(&self, _phone: &str) -> bool {
+        // In a real app, query the DB for user communication preferences
+        false
+    }
+
+    pub async fn handle_opt_out(&self, _phone: &str) -> Result<(), String> {
+        // Handle STOP messages by updating DB
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -105,17 +113,5 @@ mod tests {
         let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
         let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "twilio");
-    }
-}
-
-impl TwilioProvider {
-    pub async fn is_opted_out(&self, _phone: &str) -> bool {
-        // In a real app, query the DB for user communication preferences
-        false
-    }
-
-    pub async fn handle_opt_out(&self, _phone: &str) -> Result<(), String> {
-        // Handle STOP messages by updating DB
-        Ok(())
     }
 }
