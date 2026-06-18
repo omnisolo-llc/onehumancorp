@@ -27,7 +27,7 @@ test.describe('Quote Edit E2E', () => {
     await page.waitForLoadState('networkidle');
 
     // Open edit sheet
-    const editBtn = page.locator('#edit-quote-btn');
+    const editBtn = page.locator('#btn-edit-quote');
     await expect(editBtn).toBeVisible({ timeout: 5000 });
     await editBtn.click();
 

@@ -1,4 +1,4 @@
-import { test, expect } from '../../../../e2e/fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Draft Quote Action Card CUJ', () => {
   test('Owner sees draft quote suggestion and approves it', async ({ page, loginAs, adminUser }) => {
@@ -15,35 +15,33 @@ test.describe('Draft Quote Action Card CUJ', () => {
     });
 
     // 2. Navigate to team page where approvals are shown
-    await page.goto('/team');
+    await page.goto('/dashboard');
 
     // Switch to Sales department
-    await page.getByText('The Salesperson').click();
+    const proposalsTab = page.locator('button', { hasText: /Proposals/ }).first();
+    await expect(proposalsTab).toBeVisible({ timeout: 15000 });
 
     // 3. Verify the Draft Quote Suggestion card is visible
     await expect(page.getByTestId('quote-draft-card').first()).toBeVisible();
 
     // 4. Verify card contents
     await expect(page.getByText('Draft Quote: Plumbing Fix for Customer')).toBeVisible();
-    await expect(page.getByText('Calculated Total:')).toBeVisible();
+    await expect(page.getByText('Calculated Total ($)')).toBeVisible();
 
     // 5. Tap "Edit"
-    const editBtn = page.getByRole('button', { name: 'Edit' }).first();
-    await editBtn.waitFor({ state: 'visible' });
-    await editBtn.click();
 
     // 6. Edit the price
-    const priceInput = page.getByTestId('edit-quote-price');
+    const priceInput = page.locator('input[id^="quote-price-"]').first();
     await expect(priceInput).toBeVisible();
     await priceInput.fill('350');
 
     // 7. Edit the scope
-    const scopeInput = page.getByTestId('edit-quote-scope');
+    const scopeInput = page.locator('textarea[id^="quote-scope-"]').first();
     await expect(scopeInput).toBeVisible();
     await scopeInput.fill('Updated Plumbing Fix including labor and standard materials plus extra parts.');
 
     // 8. Tap "Approve & Send" in modal
-    const approveBtn = page.getByTestId('modal-approve-btn');
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send' }).first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
 

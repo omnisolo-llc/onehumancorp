@@ -1942,9 +1942,9 @@
              url = `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
              method = 'POST';
              if (typeof state === 'boolean') {
-                 bodyPayload = { triage_item_id: id, approved: state };
+                 bodyPayload = { triage_item_id: id, approved: state, edited_payload: editedPayload };
              } else {
-                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
+                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED', edited_payload: editedPayload };
              }
           }
 

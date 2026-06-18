@@ -895,7 +895,7 @@ impl DepartmentOrchestrator {
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind("Approved")
@@ -907,6 +907,20 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            if let Some(scope) = payload.get("scope").and_then(|v| v.as_str()) {
+                                let line_item_id = uuid::Uuid::new_v4().to_string();
+                                if let Err(e) = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
+                                    .bind(&line_item_id)
+                                    .bind(&quote_id)
+                                    .bind(scope)
+                                    .bind(total_amount_cents)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to insert quote line item: {}", e);
+                                }
                             }
 
                             // Issue #27509: Create Project, Tasks, and Invoice upon Quote Acceptance (Approval)
@@ -968,7 +982,7 @@ impl DepartmentOrchestrator {
                                 }
                             }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind("Approved")
@@ -980,6 +994,20 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            if let Some(scope) = payload.get("scope").and_then(|v| v.as_str()) {
+                                let line_item_id = uuid::Uuid::new_v4().to_string();
+                                if let Err(e) = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, 1, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&line_item_id)
+                                    .bind(&quote_id)
+                                    .bind(scope)
+                                    .bind(total_amount_cents)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to insert quote line item: {}", e);
+                                }
                             }
 
                             // Issue #27509: Create Project, Tasks, and Invoice upon Quote Acceptance (Approval)
