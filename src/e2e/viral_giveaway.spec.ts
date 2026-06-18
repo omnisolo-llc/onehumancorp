@@ -45,7 +45,7 @@ test.describe('Viral Giveaway Loop', () => {
     const linkInput = page.locator('input[readonly]');
     const generatedUrl = await linkInput.inputValue();
     expect(generatedUrl).toContain('/giveaway/enter');
-    expect(generatedUrl).toContain('Win%20a%20Free%20iPad!');
+    expect(generatedUrl).toContain('Win+a+Free+iPad%21');
 
     // 6. Navigate to the generated public URL
     // Open a new page context to simulate a public user
