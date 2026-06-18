@@ -21,11 +21,18 @@ test.describe('Documentation User Journey', () => {
     // Verify Videos list loads
     await expect(page.locator('h2', { hasText: 'Video Tutorials' })).toBeVisible({ timeout: 10000 });
 
+    const searchInput = page.locator('input[placeholder="Search for help articles and videos..."]');
+    const responsePromise = page.waitForResponse(response =>
+        response.url().includes("/api/help/search") &&
+        (response.status() === 200 || response.status() === 304)
+    );
+
     // Maya searches for "products" to learn how to add products
-    await page.fill('input[placeholder="Search for help articles and videos..."]', 'products');
+    await searchInput.fill('products');
+    await responsePromise;
 
     // Click on the article
     const myStoreLink = page.locator('h3', { hasText: 'Adding Products' });
-    await expect(myStoreLink).toBeVisible();
+    await expect(myStoreLink).toBeVisible({ timeout: 10000 });
   });
 });

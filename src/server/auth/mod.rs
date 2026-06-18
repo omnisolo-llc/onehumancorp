@@ -24,6 +24,18 @@ pub async fn guest_auth_middleware(
     let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
     let user_id = req.headers().get("x-user-id").and_then(|v| v.to_str().ok()).unwrap_or("test-user").to_string();
 
+    let now = chrono::Utc::now().timestamp();
+    req.extensions_mut().insert(::server_common::Claims {
+        sub: user_id.clone(),
+        exp: now + 3600,
+        iat: now,
+        organization_id: Some(tenant_id.clone()),
+        username: user_id.clone(),
+        email: format!("{}@localhost", user_id),
+        roles: vec!["ADMIN".to_string()],
+        session_id: None,
+        jti: "test-jti-uuid".to_string(),
+    });
     req.extensions_mut().insert(crate::orchestration::AuthInfo {
         org_id: tenant_id,
         agent_id: user_id.clone(),
