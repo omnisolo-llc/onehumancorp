@@ -1370,8 +1370,6 @@
           console.error("Failed to check referral tier", e);
         }
       }
-      checkReferralTier();
-
       // Fetch Viral Loop Performance Metrics
       async function fetchViralLoopMetrics() {
         try {
@@ -1387,7 +1385,6 @@
           console.error("Failed to fetch viral loop metrics", e);
         }
       }
-      fetchViralLoopMetrics();
 
 
 
@@ -1469,7 +1466,6 @@
           console.error("Failed to check milestones", e);
         }
       }
-      checkMilestones();
 
       async function loadReferralTierWidget() {
           try {
@@ -1515,7 +1511,6 @@
               console.error("Failed to load referral tier", e);
           }
       }
-      loadReferralTierWidget();
 
       async function checkWrapped() {
         try {
@@ -2028,9 +2023,14 @@
         }
       };
 // Load on start
-      setTimeout(() => {
-        loadTriage();
-      }, 500);
+      Promise.all([
+        checkReferralTier(),
+        fetchViralLoopMetrics(),
+        checkMilestones(),
+        loadReferralTierWidget(),
+        checkWrapped(),
+        loadTriage()
+      ]).catch(e => console.error("Parallel loading failed", e));
 
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');

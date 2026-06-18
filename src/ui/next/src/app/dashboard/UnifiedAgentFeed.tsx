@@ -161,7 +161,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
 
     async function fetchAll() {
-      fetchTriage();
       try {
         setLoading(true);
         setActivityLoading(true);
@@ -170,18 +169,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         let unifiedData = initialData;
 
         if (!unifiedData) {
-          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-          });
+          const [unifiedRes, _] = await Promise.all([
+            fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+              headers: {
+                "x-tenant-id": tenant,
+                "x-user-id": "default",
+              },
+            }),
+            fetchTriage()
+          ]);
 
           if (!unifiedRes.ok) {
             throw new Error("Failed to load agent feed");
           }
 
           unifiedData = await unifiedRes.json();
+        } else {
+          fetchTriage();
         }
 
         if (mounted) {
