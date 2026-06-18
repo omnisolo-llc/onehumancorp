@@ -4347,11 +4347,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id1)
-                    .fetch_all(&db1.pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
@@ -4387,11 +4385,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id1)
-                    .fetch_all(pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
@@ -4433,11 +4429,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id2)
-                    .fetch_all(&db2.pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id2).fetch_all(&db2.pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
@@ -4483,11 +4477,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str)
-                    .bind(&t_id2)
-                    .fetch_all(pool)
-                    .await {
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id2).fetch_all(pool).await {
                         for row in rows {
+                            use sqlx::Row;
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
