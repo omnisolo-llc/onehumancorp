@@ -4,7 +4,7 @@ use std::str::FromStr;
 pub fn calculate_geohash(lat: f64, lng: f64, resolution: u8) -> Result<String, String> {
     let latlng = LatLng::new(lat, lng).map_err(|e| e.to_string())?;
     let res = Resolution::try_from(resolution).map_err(|e| e.to_string())?;
-    let cell = CellIndex::from_latlng(latlng, res);
+    let cell = latlng.to_cell(res);
     Ok(cell.to_string())
 }
 
@@ -18,7 +18,7 @@ pub fn are_neighbors(geohash1: &str, geohash2: &str) -> bool {
         Err(_) => return false,
     };
 
-    cell1.is_neighbor_with(cell2) || cell1 == cell2
+    cell1.is_neighbor_with(cell2).unwrap_or(false) || cell1 == cell2
 }
 
 #[cfg(test)]
