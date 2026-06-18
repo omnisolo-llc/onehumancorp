@@ -800,3 +800,49 @@ mod retry_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod exponential_backoff_tests {
+    use super::*;
+
+    #[test]
+    fn test_exponential_backoff_with_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 50);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let base_backoff = 10 * (1 << attempt);
+            let min_expected = base_backoff;
+            let max_expected = base_backoff + 50 - 1;
+
+            assert!(
+                backoff.as_millis() as u64 >= min_expected,
+                "Backoff {} ms is less than min expected {}",
+                backoff.as_millis(),
+                min_expected
+            );
+            assert!(
+                backoff.as_millis() as u64 <= max_expected,
+                "Backoff {} ms is greater than max expected {}",
+                backoff.as_millis(),
+                max_expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_exponential_backoff_no_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 0);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let expected = 10 * (1 << attempt);
+
+            assert_eq!(
+                backoff.as_millis() as u64,
+                expected,
+                "Backoff with 0 jitter should be exactly the base backoff"
+            );
+        }
+    }
+}
