@@ -16,3 +16,6 @@ pub mod quotes;
 pub mod inbox;
 pub mod incidents;
 pub mod agent_approvals;
+pub mod interaction_timeline;
+pub mod loyalty;
+pub mod customer360;
