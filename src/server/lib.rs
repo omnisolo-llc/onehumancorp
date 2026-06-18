@@ -4864,7 +4864,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
 
 
     let cacheable_result = serde_json::json!({
@@ -4881,8 +4881,8 @@ async fn ui_dashboard_unified_feed_handler(
 
     // Add supply to the final result
     let mut final_result = cacheable_result;
-    if let Some(_obj) = final_result.as_object_mut() {
-        // obj.insert("supply".to_string(), supply);
+    if let Some(obj) = final_result.as_object_mut() {
+        obj.insert("supply".to_string(), supply);
     }
 
     (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
@@ -4986,7 +4986,7 @@ pub async fn list_ui_priority_tasks_handler(
     }
 }
 
-static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+
 
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
@@ -5475,28 +5475,8 @@ async fn list_ui_supply_handler(
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
-    let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if is_stale {
-            let cache_key_bg = cache_key.clone();
-            let db_bg = db.clone();
-            let t_bg = tenant_id.clone();
-            tokio::spawn(async move {
-                if let Ok(result) = load_ui_supply_from_db(&db_bg, &t_bg, mobile_optimized).await {
-                    if let Some(c) = UI_SUPPLY_CACHE.get() {
-                        c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
-                    }
-                }
-            });
-        }
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
-
     match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(result) => {
-            let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
             (axum::http::StatusCode::OK, axum::Json(result)).into_response()
         }
         Err(e) => {
