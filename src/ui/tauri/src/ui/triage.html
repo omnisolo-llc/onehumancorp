@@ -16,182 +16,6 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-
-      .triage-item {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        padding: 16px;
-        text-align: left;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        margin-bottom: 16px;
-      }
-      .triage-header {
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .triage-source {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-      .triage-priority {
-        font-size: 12px;
-        font-weight: 600;
-        color: #0066FF;
-        background: rgba(0, 102, 255, 0.1);
-        padding: 4px 8px;
-        border-radius: 8px;
-      }
-      .triage-context {
-        font-weight: 500;
-        margin-bottom: 12px;
-        font-size: 15px;
-        color: #1d1d1f;
-      }
-      .triage-draft {
-        background: rgba(0, 102, 255, 0.05);
-        padding: 12px;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        font-size: 14px;
-        color: #1d1d1f;
-        border: 1px solid rgba(0, 102, 255, 0.1);
-      }
-      .triage-draft textarea {
-        width: 100%;
-        min-height: 80px;
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 8px;
-        padding: 8px;
-        font-family: inherit;
-        font-size: 14px;
-        background: rgba(255,255,255,0.8);
-        resize: vertical;
-        box-sizing: border-box;
-      }
-      .triage-controls {
-        display: flex;
-        gap: 8px;
-      }
-      .triage-controls button {
-        flex: 1;
-        min-height: 44px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        border: none;
-      }
-      .btn-approve {
-        background: #0066FF;
-        color: white;
-        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
-      }
-      .btn-approve:hover { background: #0052cc; }
-      .btn-dismiss {
-        background: rgba(255, 255, 255, 0.65);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        color: #1d1d1f;
-      }
-      .btn-dismiss:hover { background: rgba(0, 0, 0, 0.05); }
-
-
-      .triage-item {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        padding: 16px;
-        text-align: left;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        margin-bottom: 16px;
-      }
-      .triage-header {
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .triage-source {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-      .triage-priority {
-        font-size: 12px;
-        font-weight: 600;
-        color: #0066FF;
-        background: rgba(0, 102, 255, 0.1);
-        padding: 4px 8px;
-        border-radius: 8px;
-      }
-      .triage-context {
-        font-weight: 500;
-        margin-bottom: 12px;
-        font-size: 15px;
-        color: #1d1d1f;
-      }
-      .triage-draft {
-        background: rgba(0, 102, 255, 0.05);
-        padding: 12px;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        font-size: 14px;
-        color: #1d1d1f;
-        border: 1px solid rgba(0, 102, 255, 0.1);
-      }
-      .triage-draft textarea {
-        width: 100%;
-        min-height: 80px;
-        border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 8px;
-        padding: 8px;
-        font-family: inherit;
-        font-size: 14px;
-        background: rgba(255,255,255,0.8);
-        resize: vertical;
-        box-sizing: border-box;
-      }
-      .triage-controls {
-        display: flex;
-        gap: 8px;
-      }
-      .triage-controls button {
-        flex: 1;
-        min-height: 44px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        border: none;
-      }
-      .btn-approve {
-        background: #0066FF;
-        color: white;
-        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
-      }
-      .btn-approve:hover { background: #0052cc; }
-      .btn-dismiss {
-        background: rgba(255, 255, 255, 0.65);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        color: #1d1d1f;
-      }
-      .btn-dismiss:hover { background: rgba(0, 0, 0, 0.05); }
-
     </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -499,55 +323,51 @@
 
       <div id="action-status" class="action-status"></div>
 
-      <div id="triage-list" class="app-list">
-        <div class="app-empty">Loading triage items...</div>
+      <div class="app-grid">
+        <section class="app-panel">
+          <div class="app-panel-header">Triage Queue</div>
+          <div id="triage-list" class="app-list">
+            <div class="app-empty">Loading triage items...</div>
+          </div>
+        </section>
+
+        <section class="app-panel">
+          <div class="app-panel-header">Triage Detail</div>
+          <div id="triage-detail">
+            <div class="app-empty">Select a triage item to review it.</div>
+          </div>
+        </section>
       </div>
-</div>
     </div>
 
     <script>
       let items = [];
+      let selectedId = null;
 
       function tenantId() {
         return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       }
 
+      function badgeTone(priority) {
+        const normalized = (priority || "").toLowerCase();
+        if (["urgent", "high"].includes(normalized)) return "bad";
+        if (["action needed", "medium"].includes(normalized)) return "warn";
+        if (["fyi", "low"].includes(normalized)) return "good";
+        return "neutral";
+      }
+
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const tId = encodeURIComponent(tenantId());
-          const headers = {
-            "X-Tenant-ID": tId,
-            "X-User-ID": "default"
-          };
-          const [omniRes, triageRes] = await Promise.all([
-            fetch(`/api/ui/omni_inbox?tenant_id=${tId}&mobile_optimized=false`, { headers }),
-            fetch(`/api/ui/triage?tenant_id=${tId}&mobile_optimized=true`, { headers })
-          ]);
+          const res = await fetch(`/api/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId())}&mobile_optimized=false`);
+          if (!res.ok) throw new Error("Failed to load triage items from the database");
 
-          let omniData = [];
-          if (omniRes.ok) {
-            const data = await omniRes.json();
-            omniData = (Array.isArray(data) ? data : []).map(i => ({ ...i, __type: 'omni' }));
+          const data = await res.json();
+          items = Array.isArray(data) ? data : [];
+
+          if (!selectedId && items.length > 0) {
+            selectedId = items[0].id;
           }
-
-          let triageData = [];
-          if (triageRes.ok) {
-            const data = await triageRes.json();
-            triageData = (Array.isArray(data) ? data : (data.items || [])).map(i => ({ ...i, __type: 'triage' }));
-          }
-
-          items = [...omniData, ...triageData].filter(i => {
-             if (i.__type === 'omni' && i.status !== 'unread') return false;
-             if (i.__type === 'triage' && (i.status === 'resolved' || i.status === 'dismissed' || i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED')) return false;
-             return true;
-          });
-
-          items.sort((a, b) => {
-             const timeA = new Date(a.created_at || Date.now()).getTime();
-             const timeB = new Date(b.created_at || Date.now()).getTime();
-             return timeB - timeA;
-          });
 
           renderUI();
         } catch (e) {
@@ -565,42 +385,32 @@
         }, 3000);
       }
 
-      async function handleDecision(id, approved, itemType) {
+
+      async function handleDecision(id, approved) {
         let editedReply = null;
-        if (approved && itemType === 'omni') {
-           const textarea = document.getElementById(`edit-draft-${id}`);
+        if (approved) {
+           const textarea = document.getElementById('edit-draft-reply');
            if (textarea) {
                editedReply = textarea.value;
            }
         }
 
         try {
-          const tId = encodeURIComponent(tenantId());
-          const headers = {
-            'X-Tenant-ID': tId,
-            'X-User-ID': 'default',
-            'Content-Type': 'application/json'
-          };
-          let res;
-          if (itemType === 'omni') {
-             res = await fetch(`/api/ui/omni_inbox/action?tenant_id=${tId}`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({ message_id: id, approved, edited_reply: editedReply })
-             });
-          } else {
-             res = await fetch(`/api/ui/triage/action?tenant_id=${tId}`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({ triage_item_id: id, approved })
-             });
-          }
+          const res = await fetch(`/api/ui/omni_inbox/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message_id: id, approved, edited_reply: editedReply })
+          });
 
           if (!res.ok) throw new Error("Failed to update action");
 
           showStatus(approved ? "Approved!" : "Dismissed.", true);
 
           items = items.filter(i => i.id !== id);
+          if (selectedId === id) {
+            selectedId = items.length > 0 ? items[0].id : null;
+          }
+
           renderUI();
         } catch (e) {
           console.error(e);
@@ -608,7 +418,9 @@
         }
       }
 
+
       function renderUI() {
+        // Badges
         const activeCount = items.length;
         const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
 
@@ -623,120 +435,475 @@
           urgentBadge.style.display = "none";
         }
 
+        // List
         const listEl = document.getElementById("triage-list");
         if (items.length === 0) {
-          listEl.innerHTML = `<div class="app-empty">✨ All caught up! You're a hero.</div>`;
-          return;
+          listEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
+        } else {
+          listEl.innerHTML = items.map(item => `
+            <button
+              type="button"
+              data-testid="triage-card-${item.id}"
+              class="app-list-item ${selectedId === item.id ? 'selected' : ''}"
+              onclick="selectItem('${item.id}')"
+            >
+              <div style="min-width: 0;">
+                <div class="app-list-title">${item.source || "Unknown Source"}</div>
+                <div class="app-list-subtitle">${item.original_content || "No content"}</div>
+              </div>
+              <span class="app-badge neutral">${item.status || "unread"}</span>
+            </button>
+          `).join('');
         }
 
-        listEl.innerHTML = items.map(item => {
-          if (item.__type === 'omni' || item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
-            const draftReply = item.draft_reply || item.proposed_action?.draft_reply || item.context_payload?.draft_reply || '';
-            const source = item.source || item.event_source || 'Message';
-            const context = item.original_content || item.context_payload?.customer_message || item.context || 'New message';
+        // Detail
+        const detailEl = document.getElementById("triage-detail");
+        const selected = items.find(i => i.id === selectedId);
 
-            return `
-              <div class="triage-item" data-testid="triage-card-${item.id}">
-                <div class="triage-header">
-                  <div class="triage-source">
-                    <span style="font-size: 18px;">💬</span> <strong>${source}</strong>
-                  </div>
-                  <div class="triage-priority">${item.priority || 'Action Needed'}</div>
-                </div>
-                <div class="triage-context">
-                  "${context}"
-                </div>
-                <div class="triage-draft">
-                  <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">AI Draft Reply</div>
-                  <textarea id="edit-draft-${item.id}">${draftReply}</textarea>
-                </div>
-                <div class="triage-controls">
-                  <button class="btn-approve" data-testid="approve-btn" onclick="handleDecision('${item.id}', true, '${item.__type}')">Approve & Send</button>
-                  <button class="btn-dismiss" data-testid="dismiss-btn" onclick="handleDecision('${item.id}', false, '${item.__type}')">Dismiss</button>
-                </div>
+        if (!selected) {
+          detailEl.innerHTML = `<div class="app-empty">Select a message to review it.</div>`;
+        } else {
+          const dateStr = selected.created_at
+            ? new Date(selected.created_at).toLocaleString()
+            : new Date().toLocaleString();
+
+          let actionHtml = '';
+          if (selected.draft_reply) {
+            actionHtml = `
+
+              <div class="detail-group">
+                <div class="app-metric-label">AI Draft Reply (Edit before sending)</div>
+                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255,255,255,0.8); resize: vertical;">${selected.draft_reply}</textarea>
               </div>
+
             `;
           }
 
-          const actionType = item.action_type || item.proposed_action?.action_type;
-
-          if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
-              let payload = item.proposed_action || item.context_payload || {};
-              if (typeof item.action_payload === 'string') {
-                  try { payload = JSON.parse(item.action_payload); } catch(e){}
-              } else if (item.action_payload) {
-                  payload = item.action_payload;
-              }
-              const clientName = payload.client_name || 'Client';
-              const price = payload.suggested_price || payload.price || 0;
-              const scope = payload.scope || payload.service || '';
-              return `
-                <div class="triage-item" data-testid="quote-draft-card">
-                  <div class="triage-header">
-                    <div class="triage-source">
-                      <span style="font-size: 18px;">📝</span> <strong>Draft Quote</strong>
-                    </div>
-                    <div class="triage-priority">Action Needed</div>
-                  </div>
-                  <div class="triage-context">${clientName}</div>
-                  <div style="font-size: 14px; margin-bottom: 4px;">Calculated Total: $${price}</div>
-                  <div style="font-size: 14px; margin-bottom: 16px;">Scope of Work: ${scope}</div>
-                  <div class="triage-controls">
-                    <button class="btn-approve" data-testid="approve-btn" onclick="handleDecision('${item.id}', true, 'triage')">Approve & Send</button>
-                    <button class="btn-dismiss" data-testid="dismiss-btn" onclick="handleDecision('${item.id}', false, 'triage')">Dismiss</button>
-                  </div>
-                </div>
-              `;
-          }
-
-          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft') {
-            let parsedPayload = item.proposed_action || item.context_payload || {};
-            return `
-              <div class="triage-item" data-testid="triage-card-${item.id}">
-                <div class="triage-header">
-                  <div class="triage-source">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
-                  <div class="triage-priority">Action Needed</div>
-                </div>
-                <div class="triage-context">
-                  ${item.context_payload?.description || 'New product detected! Schedule a post to drive sales?'}
-                </div>
-                <div class="triage-draft" style="background: rgba(0,0,0,0.03); border: none;">
-                  <strong>Instagram:</strong> ${parsedPayload.instagram || ''}<br/>
-                  <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
-                </div>
-                <div class="triage-controls">
-                  <button class="btn-approve" data-testid="approve-btn" onclick="handleDecision('${item.id}', true, 'triage')">Approve & Schedule</button>
-                  <button class="btn-dismiss" data-testid="dismiss-btn" onclick="handleDecision('${item.id}', false, 'triage')">Dismiss</button>
-                </div>
-              </div>
-            `;
-          }
-
-          const description = item.context || item.proposed_action?.message || item.context_payload?.description || actionType || 'Agent proposed an action.';
-          return `
-            <div class="triage-item" data-testid="triage-card-${item.id}">
-              <div class="triage-header">
-                <div class="triage-source">
-                  <span style="font-size: 18px;">🔔</span> <strong>${item.source || 'Alert'}</strong>
-                </div>
-                <div class="triage-priority">${item.priority || 'Action Needed'}</div>
-              </div>
-              <div class="triage-context">${description}</div>
-              <div class="triage-controls">
-                <button class="btn-approve" data-testid="approve-btn" onclick="handleDecision('${item.id}', true, 'triage')">Approve</button>
-                <button class="btn-dismiss" data-testid="dismiss-btn" onclick="handleDecision('${item.id}', false, 'triage')">Dismiss</button>
-              </div>
+          let buttonsHtml = `
+            <div class="btn-group">
+              <button
+                class="btn-primary"
+                data-testid="approve-btn"
+                onclick="handleDecision('${selected.id}', true)"
+              >
+                ✨ Send Reply
+              </button>
+              <button
+                class="btn-secondary"
+                data-testid="dismiss-btn"
+                onclick="handleDecision('${selected.id}', false)"
+              >
+                Dismiss
+              </button>
             </div>
           `;
-        }).join('');
+
+          detailEl.innerHTML = `
+            <div class="detail-group">
+              <div class="app-metric-label">Source</div>
+              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.source || "Unknown source"}</div>
+            </div>
+
+            <div class="detail-group">
+              <div class="app-metric-label">Message</div>
+              <div class="detail-value">
+                ${selected.original_content || "No message content"}
+              </div>
+            </div>
+
+            ${actionHtml}
+
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+              <div>
+                <div class="app-metric-label">Status</div>
+                <div style="margin-top: 8px;"><span class="app-badge neutral">${selected.status || "unread"}</span></div>
+              </div>
+              <div>
+                <div class="app-metric-label">Created</div>
+                <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${dateStr}</div>
+              </div>
+            </div>
+
+            ${buttonsHtml}
+          `;
+        }
       }
 
-      window.addEventListener("DOMContentLoaded", () => {
+      window.selectItem = function(id) {
+        selectedId = id;
+        renderUI();
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
         loadItems();
       });
     </script>
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
+
+        // Position above the element
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if out of bounds
+        if (top < 10) {
+            top = rect.bottom + 10; // show below if not enough space above
+        }
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    // Hover (desktop)
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+</script>
+
+
+
+
+
+
+
+
+<style>
+.ohc-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+});
+</script>
+
+
+<script>
+function initWalkthrough() {
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+
+        let currentStep = 0;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+        overlay.className = 'fixed z-[90]';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+        document.body.appendChild(overlay);
+
+        // Create bubble
+        const bubble = document.createElement('div');
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+        bubble.setAttribute('role', 'dialog');
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        document.body.appendChild(bubble);
+
+        function renderStep() {
+            const step = steps[currentStep];
+
+            // Clean up previous highlights
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+
+            // Find target
+            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            document.getElementById('wt-close').onclick = closeWalkthrough;
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            document.getElementById('wt-next').onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
+
+            if (target) {
+                target.classList.add('walkthrough-highlight');
+                target.style.position = 'relative';
+                target.style.zIndex = '99999';
+                target.style.background = 'white'; // Make it pop
+                target.style.pointerEvents = 'none';
+
+                const rect = target.getBoundingClientRect();
+                // Position bubble below target if space permits, else above
+                if (rect.bottom + 200 < window.innerHeight) {
+                    bubble.style.top = (rect.bottom + 10) + 'px';
+                } else {
+                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                }
+                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+            } else {
+                // Center if no target
+                bubble.style.top = '50%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function closeWalkthrough() {
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+                el.style.pointerEvents = '';
+            });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+        }
+
+        renderStep();
+    };
+}
+initWalkthrough();
+</script>
+
+<script src="help-widget.mjs"></script>
 </body>
 </html>
 
