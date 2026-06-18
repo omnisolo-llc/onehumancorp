@@ -379,7 +379,8 @@ pub async fn sync_offline_transactions_handler(
 
             let insert_res = sqlx::query(
                 "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', 'pending')"
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', 'pending')
+                 ON CONFLICT (id) DO NOTHING"
             )
             .bind(&tx_id)
             .bind(&tenant_id_clone)
@@ -390,9 +391,17 @@ pub async fn sync_offline_transactions_handler(
             .execute(&mut *db_tx)
             .await;
 
-            if let Err(e) = insert_res {
-                tracing::error!("Failed to insert offline transaction: {}", e);
-                return Err(tx_id);
+            match insert_res {
+                Err(e) => {
+                    tracing::error!("Failed to insert offline transaction: {}", e);
+                    return Err(tx_id);
+                }
+                Ok(result) if result.rows_affected() == 0 => {
+                    // Already exists, just skip scheduling the job and commit
+                    let _ = db_tx.commit().await;
+                    return Ok(());
+                }
+                _ => {}
             }
 
             let job_id = uuid::Uuid::new_v4().to_string();

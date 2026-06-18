@@ -38,6 +38,20 @@ export default function POSTerminal() {
     }
   }, []);
 
+  useEffect(() => {
+    const updateSyncStatus = async () => {
+      const queueLen = await SyncManager.getInstance().getQueueLength();
+      setSyncing(queueLen > 0);
+    };
+
+    updateSyncStatus();
+
+    if (typeof window !== 'undefined') {
+       window.addEventListener('ohc_queue_updated', updateSyncStatus);
+       return () => window.removeEventListener('ohc_queue_updated', updateSyncStatus);
+    }
+  }, []);
+
   const handlePinEntry = async (digit: string) => {
     if (pin.length < 4) {
       const newPin = pin + digit;
