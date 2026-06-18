@@ -1056,7 +1056,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1131,7 +1131,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         <div className="flex flex-col gap-1">
                           <label className="text-xs text-gray-500 font-semibold">Scope of Work</label>
                           <textarea
-                            className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                            className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                             rows={3}
                             value={editQuoteScope}
                             onChange={(e) => setEditQuoteScope(e.target.value)}
@@ -1271,7 +1271,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
