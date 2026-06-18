@@ -38,10 +38,10 @@ _NEXT_UI_E2E_SPECS = [
 
     "//src/ui/next:src/e2e/videos.spec.ts",
     "//src/ui/next:src/e2e/pos-inventory-sync.spec.ts",
+
     "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
 
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
-
 
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
     "//src/ui/next:src/e2e/regression_audit_mock_fixes.spec.ts",
@@ -56,6 +56,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "playwright/documentation_features.spec.ts",
     "playwright/mock_agent_feed_end_to_end.spec.ts",
+    "//src/ui/next:e2e/social_share_widget.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",
     "//src/ui/next:e2e/storefront_v2.spec.ts",
@@ -65,8 +66,6 @@ _ROOT_E2E_SPECS = [
     "quote_deposit_pipeline.spec.ts",
     "miser_cost_features.spec.ts",
 ]
-
-
 
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)

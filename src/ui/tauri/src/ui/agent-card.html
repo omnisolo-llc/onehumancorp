@@ -379,7 +379,7 @@
           <a href="assistant.html" class="preview-btn">Chat with me</a>
         </div>
         <div class="preview-footer" id="preview-footer-el">
-          <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" id="branding-link" target="_blank">
+          <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=default-team" id="branding-link" target="_blank">
             <span>⚡</span> Powered by OHC
           </a>
         </div>
@@ -403,7 +403,7 @@
 
       // Update tenant ID in link if available
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-      brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+      brandingLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}`;
 
       function updatePreview() {
         nameEl.textContent = nameInput.value || 'Agent Name';

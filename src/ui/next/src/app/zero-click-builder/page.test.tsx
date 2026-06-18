@@ -43,6 +43,8 @@ describe('ZeroClickBuilderPage', () => {
         name: 'Custom Sneakers Store',
         url: 'https://custom-sneakers-store.ohc.app',
         products_count: 5,
+        organization_id: 'org_123',
+        user_id: 'user_123'
       }),
     });
 
@@ -62,8 +64,8 @@ describe('ZeroClickBuilderPage', () => {
       expect(screen.getByText('Your business is live!')).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    expect(screen.getByText('Custom Sneakers Store')).toBeInTheDocument();
-    expect(screen.getByText('https://custom-sneakers-store.ohc.app')).toBeInTheDocument();
+    expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch My Store/i })).toBeInTheDocument();
   });
 
   it('renders Powered by OHC branding', () => {
