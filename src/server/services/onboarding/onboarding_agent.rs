@@ -625,6 +625,19 @@ Your response:",
         .await
         .map_err(|e| e.to_string())?;
 
+        // Insert an initial triage item (Unified Agent Feed MVP)
+        let triage_id = format!("triage-{}", uuid::Uuid::new_v4());
+        sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)")
+            .bind(&triage_id)
+            .bind(&org_id)
+            .bind("system")
+            .bind("high")
+            .bind("Your store is ready. Review and Publish.")
+            .bind("pending")
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
         crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
         Ok(StartOnboardingResponse {
             success: true,

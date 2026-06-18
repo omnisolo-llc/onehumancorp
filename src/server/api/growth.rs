@@ -2805,7 +2805,12 @@ pub async fn handle_zero_click_generate(
         price_type: "fixed".to_string(),
         location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
         target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
-        initial_products: vec![],
+        initial_products: intake_data.initial_products.iter().map(|p| ::server_ohc::orchestration::IntakeProductProto {
+            name: p.name.clone(),
+            price: p.price.clone(),
+            description: p.description.clone().unwrap_or_default(),
+            variants: vec![],
+        }).collect(),
         ai_agents: vec![],
         ai_auto_respond: false,
     };

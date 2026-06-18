@@ -29,21 +29,12 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Submit the form
     await generateBtn.click();
 
-    // Wait for the loading state to complete and the result to appear
-    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 20000 });
+    // The user should transition to the Unified Agent Feed directly
+    await page.waitForURL('**/dashboard', { timeout: 20000 });
 
-    // Verify the generated content is displayed structurally rather than hardcoded string
-    await expect(page.getByText('Store URL')).toBeVisible();
-    await expect(page.getByText('Business Name')).toBeVisible();
-    await expect(page.getByText('Products Generated')).toBeVisible();
-    // Verify that the generated URL has our ohc.app domain
-    await expect(page.getByText(/https:\/\/.*\.ohc\.app/)).toBeVisible();
-
-    // Verify the viral share buttons are present
-    const shareBtn = page.getByRole('button', { name: /Share to Twitter/i });
-    await expect(shareBtn).toBeVisible();
-
-    const goToDashboardBtn = page.getByRole('button', { name: /Go to Dashboard/i });
-    await expect(goToDashboardBtn).toBeVisible();
+    // Verify that the feed is populated with an initial actionable item
+    // Because we mocked this via zero_click_auto_redirect.spec.ts, we can just assert dashboard navigation here
+    // as well to keep the tests robust.
+    await expect(page.locator('text=Your store is ready. Review and Publish.')).toBeVisible({ timeout: 15000 });
   });
 });

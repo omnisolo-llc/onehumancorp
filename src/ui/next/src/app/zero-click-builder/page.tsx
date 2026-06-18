@@ -57,6 +57,8 @@ export default function ZeroClickBuilderPage() {
       setTimeout(() => {
         setIsGenerating(false);
         setGeneratedStore(data);
+        // Requirement: Skip complex dashboards and transition user immediately to the Unified Agent Feed
+        router.push('/dashboard');
       }, 1000);
     } catch (error) {
       console.error("Error generating store:", error);
