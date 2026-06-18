@@ -231,6 +231,7 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
+            "tenant.product.updated".to_string(),
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
@@ -240,7 +241,7 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" || event.event_type == "tenant.inventory.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,

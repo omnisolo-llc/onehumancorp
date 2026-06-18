@@ -48,7 +48,7 @@ async fn execute_publish_site_job(
             .await
             .map_err(|e| e.to_string())?;
 
-        let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
+        let should_generate_seo = true; // Always regenerate SEO during SEO pre-rendering
 
         if should_generate_seo {
             info!("Generating SEO metadata for page {}...", page.id);
