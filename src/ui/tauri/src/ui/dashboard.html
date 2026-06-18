@@ -27,6 +27,8 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.4);
+        display: flex;
+        flex-direction: column;
       }
       h1 {
         color: #1d1d1f;
@@ -224,11 +226,12 @@
         -webkit-backdrop-filter: blur(30px) saturate(2.1);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
-        border-radius: 16px;
+        border-radius: 20px;
         padding: 24px;
         margin-top: 20px;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
       @media (prefers-color-scheme: dark) {
         .container {
@@ -877,13 +880,13 @@
 
 
 
-      <section aria-label="Unified Agent Feed">
-        <div class="ohc-growth-card app-panel" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
-          <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Action Required</h2>
-          <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
-          <div class="triage-tab-container">
-            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')">Proposals</button>
-            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')">Activity Feed</button>
+      <section aria-label="Unified Agent Feed" id="unified-agent-feed-section" style="order: -1;">
+        <div class="ohc-growth-card app-panel" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%);">
+          <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">Command Center</h2>
+          <p style="color: #555; margin-bottom: 20px; font-size: 14px; font-weight: 500;">AI-prepared actions and drafts that need your approval.</p>
+          <div class="triage-tab-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 12px;">
+            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="flex: 1; border-radius: 8px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s;">Proposals</button>
+            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="flex: 1; border-radius: 8px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s;">Activity</button>
           </div>
           <div id="triage-queue">
             <div class="triage-card empty">Loading agent feed...</div>
@@ -1693,8 +1696,23 @@
             const actionType = item.action_type || item.proposed_action?.action_type;
             const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
-            const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
+
+            if (item.feature_type === 'onboarding_welcome' || item.context_payload?.feature_type === 'onboarding_welcome') {
+                return `
+                <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px;">Welcome</div>
+                    <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #0066FF;">Action Required</div>
+                  </div>
+                  <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${description}</div>
+                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 16px;">
+                    <button class="triage-btn-approve" onclick="window.location.href='/storefront'" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px;">Review Storefront</button>
+                    <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="width: auto; background: rgba(0,0,0,0.05); border-radius: 12px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px;">Dismiss</button>
+                  </div>
+                </div>
+              `;
+            }
 
             if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
               let payload = item.proposed_action || item.context_payload || {};
@@ -1716,9 +1734,9 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px;">Approve & Send</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 12px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 12px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1744,8 +1762,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 12px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1925,8 +1943,8 @@
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
               <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(2.1); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(0,0,0,0.05); border-radius: 12px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
               </div>
             </div>
             `;

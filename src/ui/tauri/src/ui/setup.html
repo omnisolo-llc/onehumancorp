@@ -947,9 +947,23 @@
 
 
       <div class="step" id="step-loading">
-        <h1>Building Your Business...</h1>
-        <p>Please wait while we set up your workspace.</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+        <h1 id="loading-title">Building Your Business...</h1>
+        <p id="loading-msg">Please wait while we set up your workspace.</p>
+        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px; border-width: 4px; border-top-color: #0066FF;"></div>
+        <div id="loading-steps" style="margin-top: 32px; text-align: left; font-size: 14px; color: #555; display: flex; flex-direction: column; gap: 12px;">
+            <div class="loading-step" id="step-provisioning" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Hiring your AI Workforce...
+            </div>
+            <div class="loading-step" id="step-catalog" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Generating your product catalog...
+            </div>
+            <div class="loading-step" id="step-storefront" style="display: flex; align-items: center; gap: 8px; opacity: 0.5;">
+                <div class="loading-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ccc;"></div>
+                Setting up your Command Center...
+            </div>
+        </div>
       </div>
 
       <!-- Step Chat: Conversational Build -->
@@ -1930,16 +1944,29 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
+
+                      const provisioningEl = document.getElementById('step-provisioning');
+                      const catalogEl = document.getElementById('step-catalog');
+                      const storefrontEl = document.getElementById('step-storefront');
+
+                      if (provisioningEl) { provisioningEl.style.opacity = '1'; provisioningEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+
                       const startData = await window.__TAURI__.core.invoke("start_onboarding", { req });
+
+                      if (catalogEl) { catalogEl.style.opacity = '1'; catalogEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+                      await new Promise(r => setTimeout(r, 1000));
+                      if (storefrontEl) { storefrontEl.style.opacity = '1'; storefrontEl.querySelector('.loading-dot').style.background = '#0066FF'; }
+                      await new Promise(r => setTimeout(r, 1000));
+
                       if (startData && startData.organization_id) {
                           localStorage.setItem('tenant_id', startData.organization_id);
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                       return;
                   }
 
@@ -1976,10 +2003,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   } else {
                       const errData = await response.json().catch(()=>({}));
                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
@@ -2072,10 +2099,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   } else {
                       const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                           method: 'POST',
@@ -2117,10 +2144,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                           localStorage.setItem('tenant', startData.organization_id);
                       }
 
-                   localStorage.removeItem('onboardingState');
-                   localStorage.setItem('has_onboarded', 'true');
+                      localStorage.removeItem('onboardingState');
+                      localStorage.setItem('has_onboarded', 'true');
 
-                      window.location.href = "success.html";
+                      window.location.href = "dashboard.html";
                   }
 
               } catch (err) {
@@ -2245,7 +2272,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    localStorage.removeItem('onboardingState');
                    localStorage.setItem('has_onboarded', 'true');
 
-                   window.location.href = "success.html";
+                   window.location.href = "dashboard.html";
                  }).catch((err) => {
                    console.error(err);
                    const submitError = document.getElementById('submit-error');
@@ -2276,7 +2303,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                          }
                          localStorage.removeItem('onboardingState');
                          localStorage.setItem('has_onboarded', 'true');
-                         window.location.href = "success.html";
+                         window.location.href = "dashboard.html";
                      } else {
                          const errData = await response.json().catch(()=>({}));
                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
