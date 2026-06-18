@@ -404,28 +404,32 @@ pub async fn sync_offline_transactions_handler(
                 _ => {}
             }
 
-            let job_id = uuid::Uuid::new_v4().to_string();
-            let job_payload = serde_json::json!({
-                "pos_transaction_id": tx_id,
-                "client_id": client_id_clone,
-                "amount_cents": amount_cents,
-                "currency": currency,
-                "payload": payload_str,
-            }).to_string();
+            let rows_affected = insert_res.unwrap().rows_affected();
 
-            let job_res = sqlx::query(
-                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
-            )
-            .bind(&job_id)
-            .bind(&tenant_id_clone)
-            .bind(&job_payload)
-            .execute(&mut *db_tx)
-            .await;
+            if rows_affected > 0 {
+                let job_id = uuid::Uuid::new_v4().to_string();
+                let job_payload = serde_json::json!({
+                    "pos_transaction_id": tx_id,
+                    "client_id": client_id_clone,
+                    "amount_cents": amount_cents,
+                    "currency": currency,
+                    "payload": payload_str,
+                }).to_string();
 
-            if let Err(e) = job_res {
-                tracing::error!("Failed to enqueue job: {}", e);
-                return Err(tx_id);
+                let job_res = sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                     VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(&job_payload)
+                .execute(&mut *db_tx)
+                .await;
+
+                if let Err(e) = job_res {
+                    tracing::error!("Failed to enqueue job: {}", e);
+                    return Err(tx_id);
+                }
             }
 
             if let Err(e) = db_tx.commit().await {
