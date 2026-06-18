@@ -1,0 +1,10 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -2888,6 +2888,7 @@
+             std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+             std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+         )),
++        orchestrator: dept_orchestrator.clone(),
+     };
+     let twilio_voice_webhook_router = axum::Router::new()
+         .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_voice_webhook::twilio_voice_webhook_post_handler))

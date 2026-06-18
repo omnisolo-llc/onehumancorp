@@ -2881,6 +2881,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .with_state(twilio_webhook_state);
 
+    let twilio_voice_webhook_state = api::twilio_voice_webhook::TwilioVoiceWebhookState {
+        db: db.clone(),
+        voice_engine: Arc::new(crate::voice::VoiceAIEdgeEngine::new()),
+        twilio_provider: Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+            std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+            std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+        )),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_voice_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_voice_webhook::twilio_voice_webhook_post_handler))
+        .with_state(twilio_voice_webhook_state);
+
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -6352,6 +6366,7 @@ async fn create_ui_bom_item_handler(
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
         .merge(twilio_webhook_router)
+        .merge(twilio_voice_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
