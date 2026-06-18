@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use crate::db::DB;
 use serde_json::json;
-use std::time::Duration;
 use uuid::Uuid;
 
 pub struct LifecycleEngagementWorker {
@@ -27,22 +26,23 @@ impl LifecycleEngagementWorker {
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
         let pool = db.pool.clone();
 
-        let customers: Vec<(Uuid, String, String, Option<String>, Option<String>)> = match &db.store {
+        let mut customers: Vec<(Uuid, String, String, Option<String>, Option<String>)> = Vec::new();
+        match &db.store {
             crate::db::DbStore::Postgres => {
-                sqlx::query_as(
+                customers = sqlx::query_as(
                     "SELECT id, tenant_id, name, email, phone FROM customers WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '90 days'"
                 )
                 .fetch_all(&pool)
                 .await
-                .unwrap_or_default()
+                .unwrap_or_default();
             },
-            crate::db::DbStore::Sqlite(_) => {
-                sqlx::query_as(
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                customers = sqlx::query_as(
                     "SELECT id, tenant_id, name, email, phone FROM customers WHERE updated_at < datetime('now', '-90 days')"
                 )
-                .fetch_all(&pool)
+                .fetch_all(sqlite_pool)
                 .await
-                .unwrap_or_default()
+                .unwrap_or_default();
             }
         };
 
@@ -53,25 +53,51 @@ impl LifecycleEngagementWorker {
         let mut processed_any = false;
 
         for (_customer_id, tenant_id, name, email, phone) in customers {
-            let pending_count: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND title LIKE 'Lifecycle Engagement:%' AND approval_status = 'PENDING'"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0);
+            let pending_count: i64 = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar(
+                        "SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND title LIKE 'Lifecycle Engagement:%' AND approval_status = 'PENDING'"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap_or(0)
+                },
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query_scalar(
+                        "SELECT COUNT(*) FROM shared_tasks WHERE organization_id = ? AND title LIKE 'Lifecycle Engagement:%' AND approval_status = 'PENDING'"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_one(sqlite_pool)
+                    .await
+                    .unwrap_or(0)
+                }
+            };
 
             if pending_count > 0 {
                 continue;
             }
 
-            let ledger_entries: Vec<(String, serde_json::Value)> = sqlx::query_as(
-                "SELECT action_type, state_change FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5"
-            )
-            .bind(&tenant_id)
-            .fetch_all(&pool)
-            .await
-            .unwrap_or_default();
+            let ledger_entries: Vec<(String, serde_json::Value)> = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_as(
+                        "SELECT action_type, state_change FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_all(&pool)
+                    .await
+                    .unwrap_or_default()
+                },
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query_as(
+                        "SELECT action_type, state_change FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .unwrap_or_default()
+                }
+            };
 
             let context = json!({
                 "customer_name": name,
@@ -99,18 +125,36 @@ impl LifecycleEngagementWorker {
             let title = format!("Lifecycle Engagement: Check-in with {}", name);
             let description = "Drafted check-in message for dormant customer.".to_string();
 
-            sqlx::query(
-                "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                 VALUES ($1, $2, $3, $4, 'OPEN', 'MEDIUM', 'LOW', 'PENDING', $5)"
-            )
-            .bind(task_id)
-            .bind(&tenant_id)
-            .bind(title)
-            .bind(description)
-            .bind(draft)
-            .execute(&pool)
-            .await
-            .unwrap_or_default();
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query(
+                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                         VALUES ($1, $2, $3, $4, 'OPEN', 'MEDIUM', 'LOW', 'PENDING', $5)"
+                    )
+                    .bind(task_id)
+                    .bind(&tenant_id)
+                    .bind(title)
+                    .bind(description)
+                    .bind(draft)
+                    .execute(&pool)
+                    .await
+                    .unwrap_or_default();
+                },
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query(
+                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                         VALUES (?, ?, ?, ?, 'OPEN', 'MEDIUM', 'LOW', 'PENDING', ?)"
+                    )
+                    .bind(task_id)
+                    .bind(&tenant_id)
+                    .bind(title)
+                    .bind(description)
+                    .bind(draft)
+                    .execute(sqlite_pool)
+                    .await
+                    .unwrap_or_default();
+                }
+            };
 
             processed_any = true;
         }
@@ -126,16 +170,17 @@ mod tests {
     use crate::db::DbStore;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let db = match DB::new().await {
-            Ok(db) => db,
-            Err(_) => return None,
+        let sqlite_pool = crate::db::create_sqlite_pool_for_test().await;
+        let pool = crate::db::create_dummy_pg_pool().await;
+        let db = DB {
+            pool,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
         };
-        let pool = db.pool.clone();
 
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id UUID PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id UUID PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&sqlite_pool).await;
 
         Some(Arc::new(db))
     }
@@ -146,7 +191,11 @@ mod tests {
             Some(db) => db,
             None => return,
         };
-        let pool = db.pool.clone();
+
+        let pool = match &db.store {
+            DbStore::Sqlite(p) => p.clone(),
+            _ => panic!("Expected Sqlite store"),
+        };
 
         let _ = sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant-1', 'Music Tutor', 'Education')")
             .execute(&pool).await;
