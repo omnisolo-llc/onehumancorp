@@ -54,7 +54,7 @@ describe('HelpCenterPage', () => {
   it('renders articles loaded from API', async () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
-    expect(screen.getByText('In-App Help Center')).toBeInTheDocument();
+    expect(screen.getByText('Help Center')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();

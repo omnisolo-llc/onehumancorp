@@ -20,7 +20,7 @@ test.describe('Help Chat Flow', () => {
     await expect(page.getByText("Hi! I'm your AI Help Agent")).toBeVisible();
 
     // Type a message
-    const input = page.getByPlaceholder('Ask me anything...');
+    const input = page.getByPlaceholder('Ask anything...');
     await input.fill('What is Operations?');
 
     // Submit
@@ -28,7 +28,7 @@ test.describe('Help Chat Flow', () => {
     await sendButton.click({ force: true });
 
     // Wait for the backend mocked response to appear
-    await expect(page.locator('text=I have routed your request to the')).toBeVisible();
+    await expect(page.locator('text=I have routed your request to the Operations department.')).toBeVisible();
 
     // Verify link exists
     await expect(page.getByRole('link', { name: 'Check your inbox for updates →' })).toBeVisible();
@@ -45,11 +45,11 @@ test.describe('Help Center Complete UI Flow', () => {
     await searchBox.fill('payment');
 
     // Wait for UI to filter. We use exact matching because there are multiple elements matching "Accept your first payment"
-    await expect(page.getByText('Accept your first payment', { exact: true })).toBeVisible();
+    await expect(page.getByText('Connecting a bank account to accept payments', { exact: true })).toBeVisible();
 
     // Click the video (we specifically click the title paragraph/div)
     // In our mobile view, the element might be outside the viewport or need forceful click
-    await page.getByText('Accept your first payment', { exact: true }).click({ force: true });
+    await page.getByText('Connecting a bank account to accept payments', { exact: true }).click({ force: true });
 
     // Expect the video player modal
     const videoModal = page.locator('video');
