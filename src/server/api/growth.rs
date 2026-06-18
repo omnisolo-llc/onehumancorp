@@ -1091,6 +1091,8 @@ pub struct ZeroClickGenerateResponse {
     pub name: String,
     pub url: String,
     pub products_count: usize,
+    pub organization_id: String,
+    pub user_id: String,
 }
 
 async fn handle_track_visitor(
@@ -2835,6 +2837,8 @@ pub async fn handle_zero_click_generate(
         name: intake_data.business_name,
         url,
         products_count: intake_data.initial_products.len(),
+        organization_id: _start_res.organization_id,
+        user_id: _start_res.user_id,
     }))
 }
 
