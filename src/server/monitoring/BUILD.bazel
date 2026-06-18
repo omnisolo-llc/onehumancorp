@@ -1,8 +1,13 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
+filegroup(
+    name = "dashboards",
+    srcs = glob(["dashboards/*.json"]),
+    visibility = ["//visibility:public"],
+)
+
 exports_files(
     [
-        "dashboards/ohc-hybrid-telemetry.json",
         "dummy.rs",
     ],
     visibility = ["//visibility:public"],

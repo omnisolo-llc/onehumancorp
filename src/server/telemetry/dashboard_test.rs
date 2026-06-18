@@ -8,21 +8,31 @@ fn test_hybrid_telemetry_drift() {
         root = root.parent().unwrap().to_path_buf();
     }
 
-    let source_path = root.join("src/server/monitoring/dashboards/ohc-hybrid-telemetry.json");
-    let mirror_paths = vec![
-        root.join("deploy/grafana/dashboards/ohc-hybrid-telemetry.json"),
-        root.join("deploy/docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json"),
-        root.join("deploy/helm/ohc/dashboards/ohc-hybrid-telemetry.json")
-    ];
+    let dashboards_dir = root.join("src/server/monitoring/dashboards");
+    let entries = fs::read_dir(&dashboards_dir).expect("Failed to read dashboards directory");
 
-    let canonical_content = fs::read_to_string(&source_path).expect(&format!("Failed to read canonical {:?}", source_path));
+    for entry in entries {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+            let filename = path.file_name().unwrap().to_str().unwrap();
 
-    for mirror in mirror_paths {
-        let mirror_content = fs::read_to_string(&mirror).unwrap_or_else(|_| "".to_string());
-        assert_eq!(
-            canonical_content, mirror_content,
-            "Drift detected in {:?}. Please synchronize it with the canonical source.",
-            mirror
-        );
+            let canonical_content = fs::read_to_string(&path).expect(&format!("Failed to read canonical {:?}", path));
+
+            let mirror_paths = vec![
+                root.join(format!("deploy/grafana/dashboards/{}", filename)),
+                root.join(format!("deploy/docker/grafana/provisioning/dashboards/{}", filename)),
+                root.join(format!("deploy/helm/ohc/dashboards/{}", filename)),
+            ];
+
+            for mirror in mirror_paths {
+                let mirror_content = fs::read_to_string(&mirror).unwrap_or_else(|_| "".to_string());
+                assert_eq!(
+                    canonical_content, mirror_content,
+                    "Drift detected in {:?}. Please synchronize it with the canonical source {:?}",
+                    mirror, path
+                );
+            }
+        }
     }
 }
