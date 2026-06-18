@@ -331,6 +331,7 @@ message StartOnboardingResponse {
   bool success = 1;
   string message = 2;
   string organization_id = 3;
+  string user_id = 4;
 }
 
 message AgentConfig {
