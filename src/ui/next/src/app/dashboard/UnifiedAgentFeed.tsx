@@ -667,7 +667,31 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </div>
                         </div>
                       )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'newsletter_draft' ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400 font-semibold">Weekly Newsletter Draft Ready!</span>
+                            <span className="text-indigo-500 font-bold text-xs">Review and send</span>
+                          </div>
+
+                          <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug">
+                              {(approval.proposed_action || approval.context_payload).subject}
+                            </p>
+                          </div>
+                          <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</span>
+                            </div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 italic line-clamp-3 leading-snug">
+                              "{(approval.proposed_action || approval.context_payload).content_preview}"
+                            </p>
+                          </div>
+                        </div>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                         <div className="flex flex-col gap-3">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
@@ -933,6 +957,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </div>
                     </>
 
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'newsletter_draft' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send"
+                      >
+                        Approve & Send
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Skip this week"
+                      >
+                        Skip this week
+                      </button>
+                    </div>
                   ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
