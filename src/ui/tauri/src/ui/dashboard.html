@@ -1655,7 +1655,7 @@
         renderTriageItems(agentFeedItems);
       };
 
-      async function loadTriage() {
+      async function loadUnifiedFeed() {
         if (window.innerWidth <= 768) {
           triageSection.style.display = 'block';
           // Ensure we scroll to it or prioritize it
@@ -1665,17 +1665,17 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = Array.isArray(data) ? data : (data.items || []);
+          agentFeedItems = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
           renderTriageItems(agentFeedItems);
         } catch (err) {
-          console.error("Agent Feed load error:", err);
+          console.error("Unified Feed load error:", err);
           triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading agent feed items.</div>';
         }
       }
@@ -2016,7 +2016,7 @@
 
           window.showStatus('Approving...', true);
           window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
-          loadTriage();
+          loadUnifiedFeed();
         } catch (err) {
           console.error(err);
           if (itemEl) itemEl.style.opacity = '1';
@@ -2030,7 +2030,7 @@
         checkMilestones(),
         loadReferralTierWidget(),
         checkWrapped(),
-        loadTriage()
+        loadUnifiedFeed()
       ]).catch(e => console.error("Parallel loading failed", e));
 
       // Omnibox logic

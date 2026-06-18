@@ -74,9 +74,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
@@ -114,9 +111,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
@@ -154,9 +148,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
@@ -194,9 +185,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
@@ -234,9 +222,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -274,9 +259,6 @@ impl UserRepository for SqliteUserRepository {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
 
         let query = if should_bypass {
             r#"
@@ -331,9 +313,6 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
-            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        }
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {

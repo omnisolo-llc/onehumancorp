@@ -58,6 +58,9 @@ describe('SuccessMilestoneWidget', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('https://ohc.app/onboarding?ref=test-tenant&source=milestone_share')
     );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('Powered by OHC')
+    );
 
     expect(await screen.findByText(/Copied to Clipboard!/i)).toBeDefined();
   });
@@ -69,5 +72,6 @@ describe('SuccessMilestoneWidget', () => {
     const twitterLink = screen.getByRole('link', { name: /Share on X/i });
     expect(twitterLink.getAttribute('href')).toContain('https://twitter.com/intent/tweet?text=');
     expect(twitterLink.getAttribute('href')).toContain('test-tenant');
+    expect(twitterLink.getAttribute('href')).toContain('Powered%20by%20OHC');
   });
 });

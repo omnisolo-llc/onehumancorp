@@ -23,33 +23,41 @@ describe('DashboardViralInviteWidget', () => {
     });
   });
 
-  it('renders correctly with tenant link', async () => {
+  it('renders correctly', async () => {
     render(<DashboardViralInviteWidget />);
 
-    expect(screen.getByText('Refer & Earn $50')).toBeDefined();
-    expect(screen.getByText(/Invite another business owner to OHC/)).toBeDefined();
+    expect(screen.getByText('Invite & Earn')).toBeDefined();
+    expect(screen.getByText(/Invite a fellow business owner to OHC/)).toBeDefined();
 
-    const input = screen.getByDisplayValue(/test-tenant-123/);
-    expect(input).toBeDefined();
+    const generateBtn = screen.getByRole('button', { name: 'Get My Invite Link' });
+    expect(generateBtn).toBeDefined();
   });
 
-  it('copies link to clipboard and shows Copied! text', async () => {
+  it('generates link, copies to clipboard, and shares to X', async () => {
     render(<DashboardViralInviteWidget />);
 
-    const copyButton = screen.getByRole('button', { name: 'Copy Link' });
+    const generateBtn = screen.getByRole('button', { name: 'Get My Invite Link' });
+    fireEvent.click(generateBtn);
+
+    // Wait for the input and buttons to appear
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(/test-tenant-123/)).toBeDefined();
+    });
+
+    const copyButton = screen.getByRole('button', { name: 'Copy' });
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('test-tenant-123')
     );
     expect(screen.getByText('Copied!')).toBeDefined();
-  });
 
-  it('contains a valid WhatsApp share link', async () => {
-    render(<DashboardViralInviteWidget />);
+    // Verify Share on X button exists and its function
+    const xButton = screen.getByRole('button', { name: 'Share on X' });
+    expect(xButton).toBeDefined();
 
-    const whatsappLink = screen.getByRole('link', { name: /Share on WhatsApp/i });
-    expect(whatsappLink.getAttribute('href')).toContain('wa.me');
-    expect(whatsappLink.getAttribute('href')).toContain('test-tenant-123');
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
+    fireEvent.click(xButton);
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
   });
 });
