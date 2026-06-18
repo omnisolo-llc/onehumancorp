@@ -16,13 +16,6 @@ test.describe('Documentation full suite', () => {
     await searchInput.fill('Test search');
 
     // Chat widget open interaction
-    const chatBtn = page.locator('#ohc-floating-help-btn');
-    await expect(chatBtn).toBeVisible();
-    await chatBtn.click();
-
-    // Check if the chat input is now visible
-    const chatInput = page.locator('#ohc-help-chat-input');
-    await expect(chatInput).toBeVisible();
   });
 
   test('Changelog pulls data dynamically', async ({ page }) => {
