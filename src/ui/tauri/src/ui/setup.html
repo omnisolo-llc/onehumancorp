@@ -1757,6 +1757,14 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           if (stepId === 'step-categories') {
               populateCategories();
           }
+          if (stepId === 'step-instant') {
+              const bioInput = document.getElementById('instant-bio');
+              if (bioInput) {
+                  bioInput.value = '';
+                  const btn = document.getElementById('generate-storefront-btn');
+                  if (btn) btn.disabled = true;
+              }
+          }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
