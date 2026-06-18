@@ -22,6 +22,7 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
     for (let i = 0; i < buttonCount; i++) {
         const box = await buttons.nth(i).boundingBox();
         if (box) {
+           expect(box.width).toBeGreaterThanOrEqual(44);
            expect(box.height).toBeGreaterThanOrEqual(44);
         }
     }
