@@ -174,7 +174,7 @@ impl RedisRateLimiter {
             }
 
         match tier {
-            Some(t) => t.parse::<PlanTier>().or_else(|_| Ok(PlanTier::Free)),
+            Some(t) => t.parse::<PlanTier>().or(Ok(PlanTier::Free)),
             None => Ok(PlanTier::Free),
         }
     }

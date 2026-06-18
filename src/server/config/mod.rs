@@ -198,6 +198,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                     .read(true)
                     .write(true)
                     .create(true)
+                    .truncate(false)
                     .mode(0o600)
                     .open(db_path)
                 {
