@@ -5,19 +5,19 @@ import React, { useState, useEffect } from "react";
 export function SuccessMilestoneWidget() {
   const [milestone, setMilestone] = useState<{ title: string; subtitle: string; shareText: string; reward: string } | null>(null);
   const [isShared, setIsShared] = useState(false);
-  const [tenantId, setTenantId] = useState("my-store");
+  const [tenantId, setTenantId] = useState("default");
 
   useEffect(() => {
-    let currentTenant = "my-store";
-    if (typeof localStorage !== "undefined") {
-      currentTenant = localStorage.getItem("tenant") || "my-store";
+    let currentTenant = "default";
+    if (typeof window !== "undefined") {
+      currentTenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       setTenantId(currentTenant);
     }
 
-    fetch(`/api/v1/growth/milestone?tenant_id=${currentTenant}`)
+    fetch(`/api/v1/growth/milestone?tenant_id=${encodeURIComponent(currentTenant)}`)
       .then(res => res.json())
       .then(data => {
-        if (!data.error) {
+        if (data && !data.error && data.title) {
           setMilestone(data);
         }
       })
@@ -36,10 +36,29 @@ export function SuccessMilestoneWidget() {
   };
 
   return (
-    <section className="app-panel mb-6 shadow-lg transform transition-all hover:scale-[1.01] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 rounded-2xl p-6">
+    <section
+      data-testid="success-milestone-widget"
+      className="mb-6 shadow-lg transform transition-all hover:scale-[1.01] rounded-2xl p-6"
+      style={{
+        background: "rgba(255, 255, 255, 0.65)",
+        backdropFilter: "blur(30px) saturate(210%)",
+        WebkitBackdropFilter: "blur(30px) saturate(210%)",
+        border: "1px solid rgba(255, 255, 255, 0.4)",
+      }}
+    >
+      {/* For dark mode we would ideally use a dark theme selector, but inline styles override classes.
+          To support both we will use standard classes that map to tokens. */}
+      <style>{`
+        @media (prefers-color-scheme: dark) {
+          [data-testid="success-milestone-widget"] {
+            background: rgba(22, 22, 26, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+        }
+      `}</style>
       <div className="app-panel-header border-b border-gray-200 dark:border-gray-800 pb-4 flex justify-between items-start">
         <div>
-          <h2 className="app-panel-title text-gray-900 dark:text-white flex items-center gap-2 font-bold text-xl">
+          <h2 className="app-panel-title text-gray-900 dark:text-[#F5F5F7] flex items-center gap-2 font-bold text-xl">
             <span>🏆</span> {milestone.title}
           </h2>
           <div className="app-list-subtitle text-gray-700 dark:text-gray-300 font-medium mt-1">{milestone.subtitle}</div>
