@@ -64,7 +64,7 @@ pub struct Runner {
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
-        let core = Arc::new(CodexCore::new(agent, AgentRunConfig::default()));
+        let core = Arc::new(CodexCore::new(agent.clone(), AgentRunConfig::default()));
         Self {
             core,
             session_id: uuid::Uuid::new_v4().to_string(),
@@ -576,7 +576,6 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let _cfg = AgentRunConfig::default();
 
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
@@ -855,7 +854,7 @@ impl AppServer {
                     &self,
                     chunk: crate::scalable_multi_agent::TaskChunk,
                 ) -> Result<crate::scalable_multi_agent::TaskResult, String> {
-                    let _cfg = AgentRunConfig::default();
+
                     match self.runner.run_async(&chunk.payload).await {
                         Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
                             chunk_id: chunk.id,
@@ -969,7 +968,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let result = runner.run_async("test").await.unwrap();
         assert_eq!(result, "async success");
     }
@@ -986,7 +985,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let result = runner.run_sync_blocking("test").unwrap();
         assert_eq!(result, "sync success");
     }
@@ -1003,7 +1002,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+
         let mut rx = runner.run_streamed("test");
 
         let mut events = vec![];
