@@ -19,7 +19,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
 
     // Make sure we are prompted for a PIN
     await expect(page.getByText('Terminal Locked')).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await page.getByPlaceholder('Password').fill('admin');
      await page.getByRole('button', { name: 'Sign In' }).click();
 
-     await page.goto('/pos/terminal');
+     await page.goto('/pos.html');
 
      // Make sure we are prompted for a PIN
      await expect(page.getByText('Terminal Locked')).toBeVisible();

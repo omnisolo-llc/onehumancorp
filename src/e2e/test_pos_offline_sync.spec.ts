@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Offline-Tolerant POS Terminal Checkout', () => {
   test('POS terminal queues transaction when offline and syncs when online', async ({ memberPage, context }) => {
     // Navigate to the POS Terminal page
-    await memberPage.goto('/pos/terminal');
+    await memberPage.goto('/pos.html');
 
     // Enter PIN (1234 is commonly used, we just tap 4 digits)
     await memberPage.getByRole('button', { name: '1' }).click();
