@@ -47,29 +47,17 @@ impl MyDashboardService {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some((agents, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(agents);
+        let s = self.clone();
+        let org_id_clone = org_id.to_string();
+
+        let agents = cache.get_or_fetch_with_swr_result(&cache_key, std::time::Duration::from_secs(30), move || {
+            let s = s;
+            let org_id = org_id_clone;
+            async move {
+                s.fetch_agents_impl(&org_id, mobile_optimized).await
             }
+        }).await?;
 
-            // Prevent thundering herd by extending the TTL briefly before spawning
-            cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
-
-            let s = self.clone();
-            let org_id_clone = org_id.to_string();
-            let cache_key_bg = cache_key.clone();
-            tokio::spawn(async move {
-                if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
-                    if let Some(c) = AGENTS_CACHE.get() {
-                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(30)).await;
-                    }
-                }
-            });
-            return Ok(agents);
-        }
-
-        let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(30)).await;
         Ok(agents)
     }
 
@@ -98,29 +86,17 @@ impl MyDashboardService {
         let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some((meetings, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(meetings);
+        let s = self.clone();
+        let org_id_clone = org_id.to_string();
+
+        let meetings = cache.get_or_fetch_with_swr_result(&cache_key, std::time::Duration::from_secs(15), move || {
+            let s = s;
+            let org_id = org_id_clone;
+            async move {
+                s.fetch_meetings_impl(&org_id, mobile_optimized).await
             }
+        }).await?;
 
-            // Prevent thundering herd by extending the TTL briefly before spawning
-            cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
-
-            let s = self.clone();
-            let org_id_clone = org_id.to_string();
-            let cache_key_bg = cache_key.clone();
-            tokio::spawn(async move {
-                if let Ok(meetings) = s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await {
-                    if let Some(c) = MEETINGS_CACHE.get() {
-                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(15)).await;
-                    }
-                }
-            });
-            return Ok(meetings);
-        }
-
-        let meetings = self.fetch_meetings_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(15)).await;
         Ok(meetings)
     }
 

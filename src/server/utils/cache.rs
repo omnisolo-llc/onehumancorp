@@ -22,7 +22,7 @@ struct CacheValue<T> {
     access_count: std::sync::atomic::AtomicU64,
 }
 
-pub struct HybridCache<T> {
+pub struct HybridCacheInner<T> {
     local: OnceLock<DashMap<String, CacheValue<T>>>,
     local_tags: OnceLock<DashMap<String, DashSet<String>>>,
     flight_group: OnceLock<DashMap<String, broadcast::Sender<T>>>,
@@ -31,35 +31,44 @@ pub struct HybridCache<T> {
     max_local_capacity: usize,
 }
 
+#[derive(Clone)]
+pub struct HybridCache<T> {
+    inner: std::sync::Arc<HybridCacheInner<T>>,
+}
+
 impl<T> HybridCache<T>
 where
     T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self {
-            local: OnceLock::new(),
-            local_tags: OnceLock::new(),
-            flight_group: OnceLock::new(),
-            redis_client,
-            redis_conn: tokio::sync::OnceCell::new(),
-            max_local_capacity: 1000,
+            inner: std::sync::Arc::new(HybridCacheInner {
+                local: OnceLock::new(),
+                local_tags: OnceLock::new(),
+                flight_group: OnceLock::new(),
+                redis_client,
+                redis_conn: tokio::sync::OnceCell::new(),
+                max_local_capacity: 1000,
+            })
         }
     }
 
     pub fn with_capacity(redis_client: Option<redis::Client>, capacity: usize) -> Self {
         Self {
-            local: OnceLock::new(),
-            local_tags: OnceLock::new(),
-            flight_group: OnceLock::new(),
-            redis_client,
-            redis_conn: tokio::sync::OnceCell::new(),
-            max_local_capacity: capacity,
+            inner: std::sync::Arc::new(HybridCacheInner {
+                local: OnceLock::new(),
+                local_tags: OnceLock::new(),
+                flight_group: OnceLock::new(),
+                redis_client,
+                redis_conn: tokio::sync::OnceCell::new(),
+                max_local_capacity: capacity,
+            })
         }
     }
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
-        if let Some(client) = &self.redis_client {
-            let conn = self.redis_conn.get_or_try_init(|| async {
+        if let Some(client) = &self.inner.redis_client {
+            let conn = self.inner.redis_conn.get_or_try_init(|| async {
                 client.get_multiplexed_tokio_connection().await
             }).await.ok()?;
             Some(conn.clone())
@@ -69,15 +78,15 @@ where
     }
 
     fn get_local(&self) -> &DashMap<String, CacheValue<T>> {
-        self.local.get_or_init(|| DashMap::new())
+        self.inner.local.get_or_init(|| DashMap::new())
     }
 
     fn get_local_tags(&self) -> &DashMap<String, DashSet<String>> {
-        self.local_tags.get_or_init(|| DashMap::new())
+        self.inner.local_tags.get_or_init(|| DashMap::new())
     }
 
     fn get_flight_group(&self) -> &DashMap<String, broadcast::Sender<T>> {
-        self.flight_group.get_or_init(|| DashMap::new())
+        self.inner.flight_group.get_or_init(|| DashMap::new())
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
@@ -88,7 +97,7 @@ where
     /// Ensures that only one fetch happens concurrently for a given key.
     pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
     where
-        F: FnOnce() -> Fut,
+        F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
         let res = self.get_with_swr(key).await;
@@ -109,18 +118,20 @@ where
 
                 if let Some((v, true)) = res {
                     // Stale hit: return immediately but fetch in background
-                    // To do this we must clone self, which isn't possible because self is a reference.
-                    // Wait, HybridCache doesn't have an Arc wrapper internally.
-                    // Instead, we will just block and fetch for now since we can't easily spawn a task
-                    // without an Arc<HybridCache>. We will return the result.
+                    let self_clone = self.clone();
+                    let key_clone = key.to_string();
 
-                    if let Some(val) = fetch().await {
-                        self.set(key, val.clone(), ttl).await;
-                        let _ = tx.send(val.clone());
-                        flight_group.remove(key);
-                        return Some(val);
-                    }
-                    flight_group.remove(key);
+                    // Immediately mark it fresh locally for a short time to prevent thundering herd
+                    self.set_local(&key_clone, v.clone(), &[], std::time::Duration::from_secs(5));
+
+                    tokio::spawn(async move {
+                        if let Some(val) = fetch().await {
+                            self_clone.set(&key_clone, val.clone(), ttl).await;
+                            let _ = tx.send(val.clone());
+                        }
+                        self_clone.get_flight_group().remove(&key_clone);
+                    });
+
                     return Some(v);
                 } else {
                     // Miss
@@ -137,6 +148,69 @@ where
         };
 
         rx.recv().await.ok()
+    }
+
+
+    pub async fn get_or_fetch_with_swr_result<F, Fut, E>(&self, key: &str, ttl: std::time::Duration, fetch: F) -> Result<T, E>
+    where
+        F: FnOnce() -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = Result<T, E>> + Send + 'static,
+        E: Send + 'static,
+    {
+        let res = self.get_with_swr(key).await;
+        if let Some((v, is_stale)) = res.clone() {
+            if !is_stale {
+                return Ok(v);
+            }
+        }
+
+        let flight_group = self.get_flight_group();
+
+        let mut rx = {
+            if let Some(tx) = flight_group.get(key) {
+                tx.subscribe()
+            } else {
+                let (tx, _rx) = broadcast::channel(1);
+                flight_group.insert(key.to_string(), tx.clone());
+
+                if let Some((v, true)) = res {
+                    let self_clone = self.clone();
+                    let key_clone = key.to_string();
+
+                    self.set_local(&key_clone, v.clone(), &[], std::time::Duration::from_secs(5));
+
+                    tokio::spawn(async move {
+                        if let Ok(val) = fetch().await {
+                            self_clone.set(&key_clone, val.clone(), ttl).await;
+                            let _ = tx.send(val.clone());
+                        }
+                        self_clone.get_flight_group().remove(&key_clone);
+                    });
+
+                    return Ok(v);
+                } else {
+                    match fetch().await {
+                        Ok(val) => {
+                            self.set(key, val.clone(), ttl).await;
+                            let _ = tx.send(val.clone());
+                            flight_group.remove(key);
+                            return Ok(val);
+                        }
+                        Err(e) => {
+                            flight_group.remove(key);
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+        };
+
+        if let Ok(v) = rx.recv().await {
+            Ok(v)
+        } else {
+            // The background task failed to fetch. Try one more time locally.
+            fetch().await
+        }
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
@@ -198,7 +272,7 @@ where
         let local = self.get_local();
         let now = std::time::Instant::now();
 
-        if local.len() >= self.max_local_capacity && !local.contains_key(key) {
+        if local.len() >= self.inner.max_local_capacity && !local.contains_key(key) {
             let mut removed_keys = Vec::new();
             let mut sampled_keys = Vec::new();
             let mut has_expired = false;
@@ -218,7 +292,7 @@ where
                     local.remove(k);
                 }
             } else {
-                if local.len() >= self.max_local_capacity {
+                if local.len() >= self.inner.max_local_capacity {
                     if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
                         local.remove(&least_accessed_key);
                         removed_keys.push(least_accessed_key);
