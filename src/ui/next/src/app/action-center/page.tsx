@@ -31,7 +31,7 @@ export default function ActionCenterPage() {
         const data = await response.json();
         // Filter for Business Advisory ("The Advisor") recommendations
         const advisoryApprovals = (data.pending_approvals || []).filter(
-          (a: ApprovalRequest) => a.department === 'business_advisory' || a.department === 'The Advisor'
+          (a: ApprovalRequest) => a.department === 'business_advisory' || a.department === 'The Advisor' || a.department === 'operations' || a.department === 'Operations'
         );
         setApprovals(advisoryApprovals);
       }
