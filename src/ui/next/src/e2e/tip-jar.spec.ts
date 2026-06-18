@@ -7,17 +7,15 @@ test.describe('Tip Jar Widget Growth Loop', () => {
         // Verify the Builder UI loads
         await expect(page.locator('h1', { hasText: 'Tip Jar Builder' })).toBeVisible();
 
-        // 1. Verify "Powered by OHC" watermark is visible in the preview iframe
-        // Since the preview iframe uses `src`, we need to wait for it to load
-        const iframe = page.frameLocator('iframe');
-        const watermark = iframe.locator('a', { hasText: '⚡ Powered by OHC' });
+        // 1. Verify "Powered by OHC" watermark is visible in the preview
+        const watermark = page.locator('a', { hasText: '⚡ Powered by OHC' });
         await expect(watermark).toBeVisible();
         await expect(watermark).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click\?target=\/onboarding/);
 
         // 2. Interact with the configuration
         const nameInput = page.locator('input[placeholder="e.g. Creator Name"]');
         await nameInput.fill('Awesome Creator');
-        await expect(iframe.locator('h3', { hasText: 'Awesome Creator' })).toBeVisible();
+        await expect(page.locator('h3', { hasText: 'Awesome Creator' })).toBeVisible();
 
         // 3. Test the "Remove Branding" toggle triggering the soft paywall
         const checkboxLabel = page.locator('text=Remove "Powered by OHC" Badge');
