@@ -1,4 +1,3 @@
-
 use super::server::ConfigSyncServer;
 use crate::ohc::orchestration::McpInvokeRequest;
 use serde_json::json;
@@ -12,7 +11,7 @@ async fn test_config_sync_unauthenticated() {
     let req = McpInvokeRequest {
         tool_id: "mcp_config_sync".to_string(),
         action: "".to_string(),
-        agent_id: "".to_string(),
+        agent_id: "test-agent-123".to_string(),
         spiffe_id: "".to_string(), // Empty means unauthenticated
         params: json!({"action": "get_hash"}).to_string(),
     };
@@ -31,7 +30,7 @@ async fn test_config_sync_invalid_tool_id() {
     let req = McpInvokeRequest {
         tool_id: "wrong_tool_id".to_string(),
         action: "".to_string(),
-        agent_id: "".to_string(),
+        agent_id: "test-agent-123".to_string(),
         spiffe_id: "spiffe://test".to_string(),
         params: json!({"action": "get_hash"}).to_string(),
     };
@@ -54,8 +53,8 @@ fn test_config_sync_push_too_large() {
             let req = McpInvokeRequest {
                 tool_id: "mcp_config_sync".to_string(),
                 action: "".to_string(),
-                agent_id: "".to_string(),
-                spiffe_id: "spiffe://test".to_string(),
+                agent_id: "test-agent-123".to_string(),
+                spiffe_id: "spiffe://test/tenant/test-tenant".to_string(),
                 params: json!({
                     "action": "push_config",
                     "payload": {
@@ -76,24 +75,16 @@ async fn test_config_sync_push_and_get() {
     if std::env::var("OHC_DATABASE_URL").is_err() { return; }
     let pool = crate::db::get_pool();
 
-    // Migrate db to have the user_configs table
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS user_configs (
-            spiffe_id VARCHAR PRIMARY KEY,
-            config_json TEXT NOT NULL,
-            updated_at TIMESTAMP NOT NULL,
-            hash VARCHAR NOT NULL
-        )"
-    ).execute(&pool).await.unwrap();
+    // The table mcp_config_sync_log is created by migrations in DB setup for tests.
 
     let server = ConfigSyncServer::new(pool.clone());
-    let spiffe_id = "spiffe://local_test";
+    let spiffe_id = "spiffe://local_test/tenant/test-tenant-123";
 
     // Push Config
     let push_req = McpInvokeRequest {
         tool_id: "mcp_config_sync".to_string(),
         action: "".to_string(),
-        agent_id: "".to_string(),
+        agent_id: "agent-123".to_string(),
         spiffe_id: spiffe_id.to_string(),
         params: json!({
             "action": "push_config",
@@ -113,7 +104,7 @@ async fn test_config_sync_push_and_get() {
     let get_req = McpInvokeRequest {
         tool_id: "mcp_config_sync".to_string(),
         action: "".to_string(),
-        agent_id: "".to_string(),
+        agent_id: "agent-123".to_string(),
         spiffe_id: spiffe_id.to_string(),
         params: json!({
             "action": "get_hash"
