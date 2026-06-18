@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function SeasonalPromoPage() {
   const router = useRouter();
@@ -11,10 +12,12 @@ export default function SeasonalPromoPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [tenantId, setTenantId] = useState('DEFAULT');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
+      setTenantId(localStorage.getItem('tenant_id') || 'DEFAULT');
     }
   }, []);
 
@@ -109,6 +112,7 @@ export default function SeasonalPromoPage() {
             <p className="text-lg whitespace-pre-wrap font-semibold">{result}</p>
           </section>
         )}
+        <PoweredByOHC tenantId={tenantId} />
       </main>
 
       {/* Soft Paywall Modal */}
