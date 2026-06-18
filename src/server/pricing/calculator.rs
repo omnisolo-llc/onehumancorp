@@ -431,5 +431,14 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
     }
+    #[test]
+    fn test_calculate_storage_cost_negative() {
+        let config = CostConfig {
+            cost_per_gb_month: 0.10,
+            ..Default::default()
+        };
+        assert_eq!(calculate_storage_cost_cents(-1000, &config), 0);
+        assert_eq!(calculate_storage_cost(-1000, &config), 0.0);
+    }
 }
 // Optimizations handled: Cost savings functionality verified and intact
