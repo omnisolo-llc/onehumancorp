@@ -47,3 +47,4 @@ pub mod sync_gateway;
 pub mod assistant;
 
 pub mod field_ops;
+pub mod storefront_delivery;

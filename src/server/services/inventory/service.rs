@@ -172,6 +172,20 @@ impl InventoryService {
                     tracing::error!("Redis publish error: {}", e);
                     e
                 }).unwrap_or(());
+
+                // Also emit cache invalidation event for storefront
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.updated",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id),
+                        format!("entity:product:{}", product_id)
+                    ]
+                }).to_string();
+                let _: () = redis::cmd("PUBLISH").arg(invalidation_topic).arg(&invalidation_payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
                     }
                 } else {
             let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
@@ -448,6 +462,20 @@ impl InventoryService {
                     "quantity": quantity
                 }).to_string();
                 let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
+
+                // Also emit cache invalidation event for storefront
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.updated",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id),
+                        format!("entity:product:{}", product_id)
+                    ]
+                }).to_string();
+                let _: () = redis::cmd("PUBLISH").arg(invalidation_topic).arg(&invalidation_payload).query_async(&mut conn).await.map_err(|e| {
                     tracing::error!("Redis publish error: {}", e);
                     e
                 }).unwrap_or(());

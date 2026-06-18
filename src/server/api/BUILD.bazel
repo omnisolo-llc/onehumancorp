@@ -1,5 +1,7 @@
+
 exports_files(["chaos.rs", "sync_gateway.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
 
 exports_files(
     [
@@ -22,6 +24,7 @@ exports_files(
         "twilio_voice.rs",
         "docs.rs",
     "field_ops.rs",
+        "storefront_delivery.rs",
         "subscription.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
@@ -70,6 +73,7 @@ rust_library(
         "twilio_voice.rs",
         "docs.rs",
     "field_ops.rs",
+        "storefront_delivery.rs",
         "subscription.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
