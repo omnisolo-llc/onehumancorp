@@ -26,7 +26,7 @@ impl LifecycleEngagementWorker {
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
         let pool = db.pool.clone();
 
-        let mut customers: Vec<(Uuid, String, String, Option<String>, Option<String>)> = Vec::new();
+        let customers: Vec<(Uuid, String, String, Option<String>, Option<String>)>;
         match &db.store {
             crate::db::DbStore::Postgres => {
                 customers = sqlx::query_as(

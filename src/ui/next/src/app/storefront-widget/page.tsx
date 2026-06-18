@@ -129,35 +129,11 @@ export default function StorefrontWidgetPage() {
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    {/* Mock Widget Content for Preview (matches the real iframe output loosely) */}
-                    <div className="w-full h-48 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-t-[16px] relative flex items-center justify-center">
-                        <span className="text-4xl">🛍️</span>
-                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
-                            Featured
-                        </div>
-                    </div>
-                    <div className="p-5 flex flex-col h-[208px]">
-                        <h4 className="font-bold text-lg font-outfit mb-1" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>Premium Collection</h4>
-                        <p className="text-sm mb-4 line-clamp-2" style={{ color: theme === 'dark' ? '#d1d5db' : '#4b5563' }}>Discover our exclusive, high-quality products curated just for you. Buy directly from this widget!</p>
-
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="font-bold text-2xl font-outfit" style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>$49.99</span>
-                            <span className={`text-xs font-semibold px-2 py-1 rounded ${theme === 'dark' ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'}`}>In Stock</span>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPreviewStatus('Preview product added to checkout.');
-                                router.push('/checkout');
-                            }}
-                            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            Buy Now
-                        </button>
-                        {previewStatus && <p className="mt-2 text-xs font-semibold text-blue-600" role="status">{previewStatus}</p>}
-                    </div>
+                    <iframe
+                        src={`/api/v1/growth/storefront/embed?tenant=${encodeURIComponent(tenant)}&theme=${encodeURIComponent(theme)}`}
+                        className="w-full h-full border-none"
+                        title="Storefront Preview"
+                    />
                 </div>
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
