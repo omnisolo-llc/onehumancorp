@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Offline-Tolerant POS Terminal Checkout', () => {
   test('POS terminal queues transaction when offline and syncs when online', async ({ memberPage, context }) => {
     // Navigate to the POS Terminal page
-    await memberPage.goto('/pos/terminal');
+    await memberPage.goto('/pos.html');
 
     // Enter PIN (1234 is commonly used, we just tap 4 digits)
     await memberPage.getByRole('button', { name: '1' }).click();
@@ -29,7 +29,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Click "New Order" while offline
-    await memberPage.getByRole('button', { name: 'New Order' }).click();
+    await memberPage.getByRole('button', { name: 'Accept Contactless Payment' }).click();
 
     // Verify it queues the order
     await expect(memberPage.getByRole('status')).toContainText('Offline Quick Charge Saved.', { timeout: 1000 }).catch(() => {});

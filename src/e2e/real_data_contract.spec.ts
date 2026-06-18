@@ -68,8 +68,6 @@ const knownLegacyRealDataDebt = new Set<string>([
   'src/ui/next/src/app/diagnostics/page.tsx',
   'src/ui/next/src/app/inventory/page.tsx',
   'src/ui/next/src/app/link-in-bio-generator/page.tsx',
-  'src/ui/next/src/app/pos/terminal/StripeTerminalClient.tsx',
-  'src/ui/next/src/app/pos/terminal/page.tsx',
   'src/ui/next/src/app/review-campaigns/page.tsx',
   'src/ui/next/src/app/storefront-widget/page.tsx',
   'src/server/api/agents/webhook.rs',

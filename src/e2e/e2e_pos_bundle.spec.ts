@@ -24,8 +24,8 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     });
 
     // Navigate to the POS terminal page
-    await page.goto('/pos/terminal');
-    await expect(page.locator('text=Terminal Locked')).toBeVisible({ timeout: 15000 });
+    await page.goto('/pos.html');
+    await expect(page.locator('text=OHC - Quick Charge')).toBeVisible({ timeout: 15000 });
 
     // Enter PIN: 1234
     await page.waitForSelector('button:has-text("1")');

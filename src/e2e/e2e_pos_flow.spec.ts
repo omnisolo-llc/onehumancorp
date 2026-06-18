@@ -22,12 +22,12 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
 
     // Navigate to the POS terminal page
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
 
     // Wait for the UI to load and auto-fetch the staff data
     await page.waitForTimeout(2000);
 
-    await expect(page.locator('h1', { hasText: 'Terminal Locked' })).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1', { hasText: 'OHC - Quick Charge' })).toBeVisible({ timeout: 25000 });
 
     // Click inside the body to ensure interaction context
     await page.mouse.click(10, 10);
