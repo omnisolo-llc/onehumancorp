@@ -53,7 +53,7 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
@@ -99,9 +99,9 @@ impl StripeClient {
         let mut form = std::collections::HashMap::new();
         form.insert("success_url".to_string(), "https://example.com/success".to_string());
         form.insert("cancel_url".to_string(), "https://example.com/cancel".to_string());
-        if is_subscription {
+        if let Some(interval) = subscription_interval {
             form.insert("mode".to_string(), "subscription".to_string());
-            form.insert("line_items[0][price_data][recurring][interval]".to_string(), "month".to_string());
+            form.insert("line_items[0][price_data][recurring][interval]".to_string(), interval);
         } else {
             form.insert("mode".to_string(), "payment".to_string());
         }

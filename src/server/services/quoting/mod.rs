@@ -201,7 +201,7 @@ async fn approve_quote(
                 &format!("Quote #{}", q.id),
                 &q.customer_id.to_string(),
                 amount_usd,
-                false
+                None
             ).await {
                 Ok(url) => {
                     q.stripe_payment_link = Some(url.clone());
