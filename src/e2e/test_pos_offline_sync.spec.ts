@@ -42,7 +42,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     const queuedTxs = await memberPage.evaluate(async () => {
         return new Promise((resolve) => {
             const request = window.indexedDB.open("OHC_Offline_Queue", 1);
-            request.onsuccess = (e) => {
+            request.onsuccess = (e: any) => {
                 const db = e.target.result;
                 const tx = db.transaction("actions", "readonly");
                 const store = tx.objectStore("actions");
@@ -53,8 +53,8 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
         });
     });
 
-    expect(queuedTxs.length).toBeGreaterThan(0);
-    expect(queuedTxs[0].amount).toBe(5000);
+    expect((queuedTxs as any[]).length).toBeGreaterThan(0);
+    expect((queuedTxs as any[])[0].amount).toBe(5000);
 
     // Click new sale to reset view
     await memberPage.getByRole('button', { name: 'New Sale' }).click();
@@ -67,7 +67,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.waitForFunction(() => {
         return new Promise((resolve) => {
             const request = window.indexedDB.open("OHC_Offline_Queue", 1);
-            request.onsuccess = (e) => {
+            request.onsuccess = (e: any) => {
                 const db = e.target.result;
                 const tx = db.transaction("actions", "readonly");
                 const store = tx.objectStore("actions");
