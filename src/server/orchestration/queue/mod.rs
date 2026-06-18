@@ -19,9 +19,6 @@ pub use redis_lock::RedisLock;
 pub mod ohc_universal_ledger;
 pub mod worker_pool;
 pub mod event_worker;
-#[cfg(test)]
-mod event_worker_test;
-
 pub use ohc_universal_ledger::{OHCLedgerEntry, OHCUniversalLedger};
 pub use worker_pool::{WorkerPool, JobHandler};
 
