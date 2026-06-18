@@ -2872,13 +2872,23 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
 
+    let voice_engine = std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+    let twilio_client = std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(
+        std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+        std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+    ));
+    let voice_router = std::sync::Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
+
     let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
         hub: hub.clone(),
         db: db.clone(),
         orchestrator: dept_orchestrator.clone(),
+        voice_engine: Some(voice_engine.clone()),
+        voice_router: Some(voice_router.clone()),
     };
     let twilio_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_webhook::twilio_voice_post_handler))
         .with_state(twilio_webhook_state);
 
     let health_router = axum::Router::new()
@@ -5800,12 +5810,8 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/voice/incoming", axum::routing::post({
             let settings_store = settings_store.clone();
-            let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
-            let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
-                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
-                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
-            ));
-            let voice_router = Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
+            let voice_engine = voice_engine.clone();
+            let voice_router = voice_router.clone();
 
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let caller_phone = req.get("caller_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -5817,7 +5823,7 @@ async fn create_ui_bom_item_handler(
                 }
 
                 let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
-                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
+                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone, None).await;
 
                 let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
 

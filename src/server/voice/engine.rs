@@ -56,8 +56,8 @@ impl VoiceAIEdgeEngine {
         }
     }
 
-    pub async fn handle_incoming_call(&self, merchant_id: &str, caller_phone: &str) -> String {
-        let session_id = uuid::Uuid::new_v4().to_string();
+    pub async fn handle_incoming_call(&self, merchant_id: &str, caller_phone: &str, provided_session_id: Option<String>) -> String {
+        let session_id = provided_session_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let session = CallSession {
             session_id: session_id.clone(),
             merchant_id: merchant_id.to_string(),
@@ -100,6 +100,15 @@ impl VoiceAIEdgeEngine {
         actions_guard.push(action);
     }
 
+    pub async fn get_call_transcript(&self, session_id: &str) -> String {
+        let logs = self.transcripts.lock().await;
+        let mut result = String::new();
+        for log in logs.iter().filter(|l| l.session_id == session_id) {
+            result.push_str(&format!("{}: {}\n", log.role, log.text));
+        }
+        result
+    }
+
     pub async fn end_call(&self, session_id: &str) {
         let mut calls = self.active_calls.lock().await;
         if let Some(call) = calls.iter_mut().find(|c| c.session_id == session_id) {
@@ -116,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn test_voice_engine_call_flow() {
         let engine = VoiceAIEdgeEngine::new();
-        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
+        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890", None).await;
 
         {
             let calls = engine.active_calls.lock().await;

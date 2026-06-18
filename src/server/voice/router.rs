@@ -213,7 +213,7 @@ mod tests {
 
         let router = VoiceContextRouter::with_planner(engine.clone(), mock_twilio, planner);
 
-        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
+        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890", None).await;
 
         let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321").await;
         assert!(response1.contains("check availability"));
