@@ -34,7 +34,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await productButton.click();
 
       // Click the "Charge" button
-      await page.getByRole('button', { name: /Charge \$/ }).click();
+      await page.getByRole('button', { name: /Collect Payment \$/ }).click();
 
       // Immediately verify the stock decreased by 1 without waiting for API
       // Since it's optimistic, it should happen instantly.
@@ -72,7 +72,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await productButton.click();
 
       // Click the "Charge" button to queue the mutation offline
-      await page.getByRole('button', { name: /Charge \$/ }).click();
+      await page.getByRole('button', { name: /Collect Payment \$/ }).click();
 
       // Go back online
       await page.context().setOffline(false);
