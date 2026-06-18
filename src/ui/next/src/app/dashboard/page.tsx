@@ -206,24 +206,35 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes, ledgerRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
-          fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
-          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }),
-          fetch("/api/ledger/accounts").catch(() => null),
-        ]);
 
-        if (!unifiedRes.ok) {
-          throw new Error("Unified UI feed endpoint failed");
-        }
+        const unifiedPromise = fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`)
+          .then(res => {
+            if (!res.ok) throw new Error("Unified UI feed endpoint failed");
+            return res.json();
+          });
+
+        const onboardingPromise = fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        const approvalsPromise = fetch(`/api/agents/approvals?tenant_id=${tenant}`)
+          .then(res => res.ok ? res.json() : [])
+          .catch(() => []);
+
+        const agentFeedPromise = fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } })
+          .then(res => res.ok ? res.json() : { items: [] })
+          .catch(() => ({ items: [] }));
+
+        const ledgerPromise = fetch("/api/ledger/accounts")
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
 
         const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData] = await Promise.all([
-          unifiedRes.json(),
-          onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
-          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
-          ledgerRes && ledgerRes.ok ? ledgerRes.json().catch(() => null) : Promise.resolve(null),
+          unifiedPromise,
+          onboardingPromise,
+          approvalsPromise,
+          agentFeedPromise,
+          ledgerPromise,
         ]);
 
         if (ledgerData && ledgerData.accounts) {
