@@ -233,7 +233,7 @@ export default function FeedPage() {
                     <textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
+                      className="w-full min-h-[44px] text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
                       rows={3}
                       data-testid="feed-edit-input"
                     />
@@ -360,7 +360,7 @@ export default function FeedPage() {
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
-             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px]"
+             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Ambassador Draft
           </button>
