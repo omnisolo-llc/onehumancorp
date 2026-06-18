@@ -1,4 +1,4 @@
-import { proxyBackendPost } from "../../backendProxy";
+import { proxyBackendPost } from "../../../backendProxy";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
