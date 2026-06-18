@@ -27,7 +27,7 @@ export function SuccessMilestoneWidget() {
   if (!milestone) return null;
 
   const referralLink = `/onboarding?ref=${tenantId}&source=milestone_share`;
-  const fullShareText = `${milestone.shareText} https://ohc.app${referralLink}`;
+  const fullShareText = `${milestone.shareText} https://ohc.app${referralLink}\n\n⚡ Powered by OHC`;
 
   const handleShare = () => {
     navigator.clipboard.writeText(fullShareText);
