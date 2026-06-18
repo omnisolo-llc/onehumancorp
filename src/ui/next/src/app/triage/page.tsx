@@ -33,6 +33,17 @@ function badgeTone(priority?: string) {
   return "neutral";
 }
 
+// Helper to determine the visual icon based on the source
+const getSourceIcon = (source: string) => {
+  const s = source.toLowerCase();
+  if (s.includes("instagram")) return "📸";
+  if (s.includes("email")) return "📧";
+  if (s.includes("booking") || s.includes("calendar")) return "📅";
+  if (s.includes("payment") || s.includes("stripe")) return "💳";
+  if (s.includes("alert") || s.includes("inventory")) return "⚠️";
+  return "✉️";
+};
+
 export default function TriagePage() {
   const [items, setItems] = useState<TriageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -159,13 +170,13 @@ export default function TriagePage() {
             ) : !error && items.length === 0 ? (
               <div className="app-empty flex flex-col items-center justify-center py-12">
                 <div className="text-4xl mb-4">✨</div>
-                <div className="text-lg font-medium text-gray-900 dark:text-white">
-                  All caught up!
+                <div className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  All caught up! You're a hero.
                 </div>
                 <div className="text-sm text-gray-500 mt-2">
                   {loading
                     ? "Loading triage items..."
-                    : "No triage items need your attention right now. Great job!"}
+                    : "Your AI assistant has handled all outstanding items. Great job!"}
                 </div>
               </div>
             ) : (
@@ -183,12 +194,17 @@ export default function TriagePage() {
                         : "transparent",
                   }}
                 >
-                  <div className="min-w-0">
-                    <div className="app-list-title font-inter text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {item.source || "Unknown Source"}
+                  <div className="min-w-0 flex items-center gap-3">
+                    <div className="text-2xl">
+                      {getSourceIcon(item.source || "")}
                     </div>
-                    <div className="app-list-subtitle truncate font-inter text-gray-600 dark:text-gray-400">
-                      {item.context || "No context provided"}
+                    <div>
+                      <div className="app-list-title font-inter text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {item.source || "Unknown Source"}
+                      </div>
+                      <div className="app-list-subtitle truncate font-inter text-gray-600 dark:text-gray-400">
+                        {item.context || "No context provided"}
+                      </div>
                     </div>
                   </div>
                   <span className={`app-badge ${badgeTone(item.priority)}`}>
@@ -250,10 +266,11 @@ export default function TriagePage() {
 
                 {/* Meta details */}
                 <div className="px-4 py-3 grid grid-cols-2 gap-3 bg-white/20 dark:bg-black/5 text-xs text-gray-500 dark:text-gray-400">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-600 dark:text-gray-300">
                       Source:
                     </span>{" "}
+                    {getSourceIcon(selected.source || "")}{" "}
                     {selected.source || "Unknown source"}
                   </div>
                   <div className="text-right">
