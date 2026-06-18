@@ -103,7 +103,7 @@ export default function AgentProtocolPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white shadow p-6 rounded-lg border border-gray-200">
+        <div className="glass-card p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
 
           <div className="flex space-x-2 mb-6">
@@ -112,7 +112,7 @@ export default function AgentProtocolPage() {
               placeholder="New Task Input..."
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-sm"
             />
             <button
               onClick={createTask}
@@ -138,7 +138,7 @@ export default function AgentProtocolPage() {
           </ul>
         </div>
 
-        <div className="bg-white shadow p-6 rounded-lg border border-gray-200">
+        <div className="glass-card p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Steps</h2>
           {!selectedTaskId ? (
             <div className="text-gray-500 text-sm italic">Select a task to view its steps.</div>
@@ -150,7 +150,7 @@ export default function AgentProtocolPage() {
                   placeholder="Optional Step Input..."
                   value={stepInput}
                   onChange={(e) => setStepInput(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-sm"
                 />
                 <button
                   onClick={executeStep}

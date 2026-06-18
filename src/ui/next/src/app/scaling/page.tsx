@@ -52,7 +52,7 @@ export default function ScalingPage() {
         { label: 'Mode', value: instances > 10 ? 'Cloud Distributed' : 'Local CLI', tone: 'neutral' },
       ]}
     >
-      <section id="scaling-screen" className="app-panel">
+      <section id="scaling-screen" className="">
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Instance Range</div>
@@ -61,8 +61,8 @@ export default function ScalingPage() {
           <span className="app-badge good">Autoscale Ready</span>
         </div>
 
-        <div className="app-panel-body">
-          <div className="app-card mb-6">
+        <div className="glass-panel p-6 mt-4">
+          <div className="glass-card p-6 mb-6">
             <div className="app-metric-label">Current Scale</div>
             <div className="mt-2 text-4xl font-bold text-gray-900">{instances} agents</div>
             <p className="mt-2 text-sm text-gray-600" role="status">{message}</p>
@@ -125,9 +125,9 @@ export default function ScalingPage() {
           </button>
 
           {results.length > 0 && (
-            <div className="app-card">
+            <div className="glass-card p-6">
               <h3 className="font-bold text-lg mb-4">Results ({results.length} outputs)</h3>
-              <div className="max-h-60 overflow-y-auto bg-gray-50 p-4 rounded-md border border-gray-200">
+              <div className="max-h-60 overflow-y-auto bg-transparent p-4 rounded-md border border-gray-200">
                 {results.slice(0, 20).map((r, i) => (
                   <div key={i} className="text-sm mb-2 pb-2 border-b border-gray-200 last:border-0 last:mb-0 last:pb-0">
                     <span className="font-semibold text-blue-600">Agent {i + 1}: </span>
