@@ -74,7 +74,7 @@ impl OHCJobQueue {
             query = query.bind(jt);
         }
 
-        let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let job_opt = tokio::time::timeout(std::time::Duration::from_secs(60), query.fetch_optional(&mut *tx)).await.map_err(|_| "Timeout fetching job from queue".to_string())?.map_err(|e| e.to_string())?;
 
         if let Some(row) = job_opt {
             use sqlx::Row;
