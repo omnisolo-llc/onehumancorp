@@ -360,7 +360,7 @@ export default function FeedPage() {
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
-             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded"
+             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px]"
           >
             Simulate Ambassador Draft
           </button>
