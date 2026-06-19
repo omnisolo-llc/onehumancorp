@@ -26,7 +26,7 @@ impl LifecycleEngagementWorker {
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
         let pool = db.pool.clone();
 
-        let mut customers: Vec<(Uuid, String, String, Option<String>, Option<String>)> = Vec::new();
+        let customers: Vec<(Uuid, String, String, Option<String>, Option<String>)>;
         match &db.store {
             crate::db::DbStore::Postgres => {
                 customers = sqlx::query_as(
@@ -215,7 +215,7 @@ mod tests {
             .bind(state_change)
             .execute(&pool).await;
 
-        let processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
+        let _processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
         // Since we are mocking/ignoring DB errors, let's just make sure it runs without panicking.
         // If it successfully processed, great. If not, it means the inserts above didn't take because of locking.
 
