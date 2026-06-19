@@ -59,23 +59,43 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
 
     // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
     // Assume sender_id might be a phone number or email depending on channel
-    let potential_customer_id: Option<String> = match &db.store {
+    let mut potential_customer_id: Option<String> = match &db.store {
         crate::db::DbStore::Postgres => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR preferences->>'social_handle' = $2) LIMIT 1")
                 .bind(tenant_id)
                 .bind(sender_id)
                 .fetch_optional(pool)
                 .await.ok().flatten()
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ? OR json_extract(preferences, '$.social_handle') = ?) LIMIT 1")
                 .bind(tenant_id)
+                .bind(sender_id)
                 .bind(sender_id)
                 .bind(sender_id)
                 .fetch_optional(sqlite_pool)
                 .await.ok().flatten()
         }
     };
+
+    if potential_customer_id.is_none() {
+        let new_id = Uuid::new_v4().to_string();
+        let preferences = serde_json::json!({"social_handle": sender_id});
+        let name = format!("Lead: {}", sender_id);
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences, created_at, updated_at) VALUES ($1, $2, $3, NULL, NULL, $4, NOW(), NOW())")
+                    .bind(&new_id).bind(tenant_id).bind(&name).bind(preferences)
+                    .execute(pool).await;
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences, created_at, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&new_id).bind(tenant_id).bind(&name).bind(preferences.to_string())
+                    .execute(sqlite_pool).await;
+            }
+        };
+        potential_customer_id = Some(new_id);
+    }
 
     if let Some(id) = potential_customer_id {
         // Cache this new identity link
@@ -269,7 +289,8 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 email TEXT,
-                phone TEXT
+                phone TEXT,
+                preferences TEXT DEFAULT '{}'
             );
             CREATE TABLE customer_identities (
                 id TEXT PRIMARY KEY,
@@ -288,7 +309,7 @@ mod tests {
         };
 
         // 1. Insert a test customer
-        sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ('cust-1', 'tenant-1', 'Test User', 'test@example.com', '+1234567890')")
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences) VALUES ('cust-1', 'tenant-1', 'Test User', 'test@example.com', '+1234567890', '{}')")
             .execute(&pool)
             .await
             .unwrap();
@@ -312,8 +333,8 @@ mod tests {
         let resolved_id3 = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
         assert_eq!(resolved_id3, Some("cust-1".to_string()));
 
-        // 6. Test unknown identity
+        // 6. Test unknown identity will now create a lead, so it will return a Some(uuid) instead of None!
         let resolved_id4 = resolve_identity(&db, "tenant-1", "instagram", "unknown_handle").await;
-        assert_eq!(resolved_id4, None);
+        assert!(resolved_id4.is_some() && resolved_id4.unwrap() != "cust-1");
     }
 }

@@ -1,0 +1,11 @@
+--- InstagramDMCard.tsx
++++ InstagramDMCard.tsx
+@@ -2,6 +2,7 @@
+
+ type InstagramDMCardProps = {
+   approval: any;
++  onApprove?: (id: string, actionType: string) => void;
+ };
+
+-export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval }) => {
++export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onApprove }) => {

@@ -109,12 +109,72 @@ impl MessageTriageWorker {
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
+            // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
+            let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+
+            let mut customer_history = String::new();
+            if let Some(c_id) = customer_id_val {
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let orders: Vec<(i64, String, String)> = sqlx::query_as("SELECT total_amount_cents, status, CAST(created_at AS TEXT) FROM orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(&self.db.pool).await.unwrap_or_default();
+                        for order in orders {
+                            customer_history.push_str(&format!("Past Order: {} cents, Status: {}, Date: {}\n", order.0, order.1, order.2));
+                        }
+
+                        let bookings: Vec<(String, String)> = sqlx::query_as("SELECT CAST(start_time AS TEXT), status FROM bookings WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(&self.db.pool).await.unwrap_or_default();
+                        for booking in bookings {
+                            customer_history.push_str(&format!("Past Booking: {}, Status: {}\n", booking.0, booking.1));
+                        }
+
+                        let messages: Vec<(String, String, String)> = sqlx::query_as("SELECT source, original_content, CAST(created_at AS TEXT) FROM omni_inbox_messages WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(&self.db.pool).await.unwrap_or_default();
+                        for msg in messages {
+                            customer_history.push_str(&format!("Past Message ({}, {}): {}\n", msg.0, msg.2, msg.1));
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let orders: Vec<(i64, String, String)> = sqlx::query_as("SELECT total_amount_cents, status, CAST(created_at AS TEXT) FROM orders WHERE customer_id = ? ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(sqlite_pool).await.unwrap_or_default();
+                        for order in orders {
+                            customer_history.push_str(&format!("Past Order: {} cents, Status: {}, Date: {}\n", order.0, order.1, order.2));
+                        }
+
+                        let bookings: Vec<(String, String)> = sqlx::query_as("SELECT CAST(start_time AS TEXT), status FROM bookings WHERE customer_id = ? ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(sqlite_pool).await.unwrap_or_default();
+                        for booking in bookings {
+                            customer_history.push_str(&format!("Past Booking: {}, Status: {}\n", booking.0, booking.1));
+                        }
+
+                        let messages: Vec<(String, String, String)> = sqlx::query_as("SELECT source, original_content, CAST(created_at AS TEXT) FROM omni_inbox_messages WHERE customer_id = ? ORDER BY created_at DESC LIMIT 3")
+                            .bind(c_id)
+                            .fetch_all(sqlite_pool).await.unwrap_or_default();
+                        for msg in messages {
+                            customer_history.push_str(&format!("Past Message ({}, {}): {}\n", msg.0, msg.2, msg.1));
+                        }
+                    }
+                };
+            }
+
+            if customer_history.is_empty() {
+                customer_history.push_str("No past history.");
+            }
+
             // Extract intent & context using LLM
             let prompt = format!(
                 "You are an AI order and task triage assistant for a business.
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
+
+Customer History:
+{}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
@@ -126,7 +186,7 @@ Output JSON format:
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote JSON string, or booking details.\"
 }}",
-                sender_id, customer_message, source
+                sender_id, customer_message, source, customer_history
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
@@ -204,10 +264,8 @@ Output JSON format:
                 event_source = "instagram_dm".to_string();
             }
 
-            // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
-            let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
-            let mut quote_id_opt: Option<String> = None;
             let mut quote_total_amount_cents: Option<i64> = None;
+            let mut quote_id_opt: Option<String> = None;
 
             if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
