@@ -1,54 +1,47 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
-  try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request.headers.get('x-tenant-id') || 'storefront';
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-      'Content-Type': 'application/json',
-    };
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader) headers['Authorization'] = authHeader;
+function backendUrl() {
+  return process.env.BACKEND_URL || 'http://localhost:8080';
+}
 
-    const res = await fetch(`${backendUrl}/api/assistant/memory`, { headers });
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-  } catch (error) {
-    console.error('Failed to fetch memory from backend:', error);
+function backendHeaders(request?: Request) {
+  const headers: Record<string, string> = {
+    'x-tenant-id': request?.headers?.get('x-tenant-id') || 'storefront',
+  };
+  const authHeader = request?.headers?.get('Authorization');
+  if (authHeader) headers.Authorization = authHeader;
+  return headers;
+}
+
+async function upstreamJson(response: Response, fallbackMessage: string) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
   }
+  return NextResponse.json(data);
+}
 
-  return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
+export async function GET(request?: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/memory`, {
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant memory unavailable');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'memory request failed'}` }, { status: 502 });
+  }
 }
 
 export async function PATCH(request: Request) {
   const payload = await request.json().catch(() => null);
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request.headers.get('x-tenant-id') || 'storefront';
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-      'Content-Type': 'application/json',
-    };
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader) headers['Authorization'] = authHeader;
-
-    const res = await fetch(`${backendUrl}/api/assistant/memory`, {
+    const response = await fetch(`${backendUrl()}/api/assistant/memory`, {
       method: 'PATCH',
-      headers,
-      body: JSON.stringify(payload),
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
     });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    } else {
-       return NextResponse.json({ error: 'Failed to update memory' }, { status: res.status });
-    }
-  } catch (error) {
-    console.error('Failed to update memory in backend:', error);
-    return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
+    return upstreamJson(response, 'Assistant memory could not be updated');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'memory update failed'}` }, { status: 502 });
   }
 }
