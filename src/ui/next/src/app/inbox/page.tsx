@@ -155,7 +155,7 @@ function InboxWorkspace({
                     setSelectedId(message.id);
                     setShowOriginal(false);
                   }}
-                  className={`app-list-item w-full text-left p-3 mb-2 rounded-[12px] transition-all ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5"}`}
+                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[12px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
@@ -250,7 +250,7 @@ function InboxWorkspace({
                       }
                       return (
                         <button
-                          className="app-button primary w-full"
+                          className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10"
                           onClick={() => handleApproveAndSend(selected.id)}
                         >
                           {buttonText}
