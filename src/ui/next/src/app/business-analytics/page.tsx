@@ -9,6 +9,7 @@ export default function BusinessAnalytics() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
+  const [metrics, setMetrics] = useState<any>(null);
 
   useEffect(() => {
     const isPro = localStorage.getItem('pro_plan') === 'true';
@@ -16,6 +17,11 @@ export default function BusinessAnalytics() {
     if (isPro || trialActive) {
       setHasPro(true);
     }
+
+    fetch('/api/ui/dashboard/metrics')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => data && setMetrics(data))
+      .catch(console.error);
   }, []);
 
   const claimTrialExtension = () => {
@@ -40,7 +46,7 @@ export default function BusinessAnalytics() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">$8,450.00</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{metrics ? `$${metrics.total_sales?.toFixed(2) || "0.00"}` : "..."}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  15% from last month
@@ -49,7 +55,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Average Order Value</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">$45.50</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{metrics ? `$${(metrics.total_sales / Math.max(1, metrics.total_orders || 1))?.toFixed(2) || "0.00"}` : "..."}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  2% from last month
@@ -58,7 +64,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Orders</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">185</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{metrics ? (metrics.total_orders || 0) : "..."}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  10% from last month
@@ -67,7 +73,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">4.2%</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{metrics && metrics.active_customers ? ((metrics.total_orders / Math.max(1, metrics.active_customers)) * 100).toFixed(1) + "%" : "0.0%"}</div>
               <div className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                  -1.5% from last month
@@ -87,7 +93,7 @@ export default function BusinessAnalytics() {
                <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Revenue Forecast</h3>
                    <div className="flex-1 flex flex-col justify-end gap-2 pb-4 border-b border-gray-100 dark:border-gray-850 relative">
-                        {/* Mock area chart */}
+                        {/* Area chart */}
                        <div className="w-full h-full absolute inset-0 flex items-end">
                            <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
                                <path d="M0,50 L0,30 Q10,20 20,25 T40,15 T60,20 T80,5 Q90,10 100,0 L100,50 Z" fill="rgba(15, 118, 110, 0.2)" stroke="#0f766e" strokeWidth="1"></path>

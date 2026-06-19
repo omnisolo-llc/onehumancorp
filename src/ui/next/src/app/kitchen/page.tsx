@@ -19,7 +19,7 @@ export default function KitchenView() {
 
         // Fetch active orders (simulate using pos orders or ui orders if backend supports it)
         // Here we try to fetch orders via POS endpoint which might exist.
-        // We'll just try to get anything, if fails, we show empty state correctly without mock.
+        // We'll just try to get anything, if fails, we show empty state correctly.
         const ordersRes = await fetch("/api/pos/orders", {
           headers: { "x-tenant-id": tenantId }
         });
@@ -51,16 +51,10 @@ export default function KitchenView() {
     updateCount();
     window.addEventListener("ohc_queue_updated", updateCount);
 
-    // Seed test data for E2E missing db data scenarios
-    const seedMock = (e: any) => {
-        if(e.detail.orders && orders.length === 0) setOrders(e.detail.orders);
-        if(e.detail.menu && menu.length === 0) setMenu(e.detail.menu);
-    };
-    window.addEventListener('seed_mock', seedMock);
+
 
     return () => {
       window.removeEventListener("ohc_queue_updated", updateCount);
-      window.removeEventListener('seed_mock', seedMock);
     };
   }, []);
 

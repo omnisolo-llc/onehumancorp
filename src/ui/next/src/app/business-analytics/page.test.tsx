@@ -23,6 +23,16 @@ beforeEach(() => {
   global.window.open = vi.fn();
   // Mock alert
   global.alert = vi.fn();
+  global.fetch = vi.fn().mockResolvedValue({
+    json: () => Promise.resolve({
+      total_sales: 1000,
+      pending_orders: 10,
+      total_orders: 20,
+      active_customers: 50,
+      total_campaigns_sent: 5,
+      auto_replied: 2
+    })
+  });
 });
 
 afterEach(() => {

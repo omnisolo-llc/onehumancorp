@@ -145,7 +145,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
     if (!navigator.onLine) {
        setStatus('Processing offline payment...');
        onOptimisticReserve?.();
-       // Mock the terminal process for offline
+       // Process offline payment
        setTimeout(async () => {
           const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const tx = {

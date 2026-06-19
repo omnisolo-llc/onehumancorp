@@ -632,6 +632,7 @@ struct HttpMetricsRequest {
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
+    total_orders: i64,
     total_sales: f64,
     total_campaigns_sent: i64,
     top_product: Option<String>,
@@ -719,7 +720,7 @@ async fn http_metrics_handler(
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
     let top_product = top_product_res.unwrap_or_default();
 
-    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, top_product };
+    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_orders: pending_orders, total_sales, total_campaigns_sent, top_product };
     cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
@@ -3802,10 +3803,11 @@ pub async fn update_ui_triage_action_handler(
 }
 
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct UiDashboardMetrics {
     active_customers: i64,
     pending_orders: i64,
+    total_orders: i64,
     total_sales: f64,
     total_campaigns_sent: i64,
     auto_replied: i64,
@@ -3822,7 +3824,8 @@ pub(crate) async fn load_ui_dashboard_metrics(
     let db4 = db.clone(); let t4 = tenant_id.to_string();
     let db5 = db.clone(); let t5 = tenant_id.to_string();
 
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
+    let db6 = db.clone(); let t6 = tenant_id.to_string();
+    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res, total_orders_res) = tokio::join!(
         tokio::spawn(async move {
             match &db1.store {
                 crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&db1.pool).await,
@@ -3852,6 +3855,12 @@ pub(crate) async fn load_ui_dashboard_metrics(
                 crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t5).fetch_one(&db5.pool).await,
                 crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t5).fetch_one(pool).await,
             }
+        }),
+        tokio::spawn(async move {
+            match &db6.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(&t6).fetch_one(&db6.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ?").bind(&t6).fetch_one(pool).await,
+            }
         })
     );
 
@@ -3860,10 +3869,12 @@ pub(crate) async fn load_ui_dashboard_metrics(
     let total_sales = sales_res.unwrap_or(Ok(Some(0.0))).unwrap_or(Some(0.0)).unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
     let auto_replied = auto_replied_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let total_orders = total_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
 
     Ok(UiDashboardMetrics {
         active_customers,
         pending_orders,
+        total_orders,
         total_sales,
         total_campaigns_sent,
         auto_replied,
@@ -3963,6 +3974,7 @@ async fn ui_dashboard_analytics_briefing_handler(
             let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
             let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
+                total_orders: 0,
                 active_customers: 0,
                 pending_orders: 0,
                 total_sales: 0.0,
@@ -3997,6 +4009,7 @@ async fn ui_dashboard_analytics_briefing_handler(
     let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
+        total_orders: 0,
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
@@ -4070,7 +4083,7 @@ async fn ui_dashboard_analytics_chat_handler(
                     format!("Your latest messages are from: {}.", senders.join(", "))
                 }
             } else if text_bg.contains("order") || text_bg.contains("booking") || text_bg.contains("revenue") || text_bg.contains("sale") {
-                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { total_orders: 0, active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
                 format!("You have {} pending orders. Total sales are ${:.2}.", metrics.pending_orders, metrics.total_sales)
             } else {
                 "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
@@ -4106,7 +4119,7 @@ async fn ui_dashboard_analytics_chat_handler(
             format!("Your latest messages are from: {}.", senders.join(", "))
         }
     } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+        let metrics = metrics_res.unwrap_or(UiDashboardMetrics { total_orders: 0, active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
         format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
     } else {
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()

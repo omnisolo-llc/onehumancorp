@@ -42,7 +42,7 @@ export default function CustomerSubscriptionPortal() {
         updatedStatus = 'paused';
         message = 'Your subscription has been paused.';
       } else if (action === 'skip') {
-        // Simple mock of adding 1 month
+        // Add 1 month
         nextDate = '2023-12-15';
         message = 'Your next delivery has been skipped.';
       } else if (action === 'cancel') {

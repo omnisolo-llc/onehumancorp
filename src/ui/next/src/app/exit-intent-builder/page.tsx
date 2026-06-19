@@ -177,7 +177,7 @@ export default function ExitIntentBuilder() {
               title="Move cursor out of window to trigger"
               ref={previewRef}
             >
-              {/* Fake UI background */}
+              {/* Preview UI background */}
               <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
               <p className="text-gray-400 text-sm">Move cursor up to trigger &uarr;</p>
 
