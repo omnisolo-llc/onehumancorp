@@ -16,6 +16,7 @@ impl PosSyncWorker {
         let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
             .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
             .unwrap_or("");
+        let client_id = payload.get("client_id").and_then(|v| v.as_str()).unwrap_or("");
 
         let mut tx = match self.db.pool.begin().await {
             Ok(tx) => tx,
@@ -157,6 +158,32 @@ impl PosSyncWorker {
                     .bind(&notification_payload)
                     .execute(&mut *tx)
                     .await;
+
+                    let conflict_payload = serde_json::json!([{
+                        "transaction_id": transaction_id,
+                        "product_id": product_id,
+                        "shortage": quantity_deducted - stock as i64,
+                        "timestamp": chrono::Utc::now().to_rfc3339()
+                    }]);
+
+                    if client_id.is_empty() {
+                        tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
+                    } else {
+                        if let Err(e) = sqlx::query(
+                            "UPDATE pos_terminal_sessions
+                             SET sync_status = 'CONFLICTS_PENDING',
+                                 pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
+                             WHERE tenant_id = $2
+                             AND device_id = $3"
+                        )
+                        .bind(conflict_payload)
+                        .bind(&job.tenant_id)
+                        .bind(client_id)
+                        .execute(&mut *tx)
+                        .await {
+                            tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                        }
+                    }
                 }
 
                 let cache = crate::builder::edge::get_edge_cache();
@@ -318,6 +345,32 @@ impl PosSyncWorker {
                                 .bind(&notification_payload)
                                 .execute(&mut *tx)
                                 .await;
+
+                                let conflict_payload = serde_json::json!([{
+                                    "transaction_id": transaction_id,
+                                    "product_id": product_id,
+                                    "shortage": (qty as i32) - stock,
+                                    "timestamp": chrono::Utc::now().to_rfc3339()
+                                }]);
+
+                                if client_id.is_empty() {
+                                    tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
+                                } else {
+                                    if let Err(e) = sqlx::query(
+                                        "UPDATE pos_terminal_sessions
+                                         SET sync_status = 'CONFLICTS_PENDING',
+                                             pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
+                                         WHERE tenant_id = $2
+                                         AND device_id = $3"
+                                    )
+                                    .bind(conflict_payload)
+                                    .bind(&job.tenant_id)
+                                    .bind(client_id)
+                                    .execute(&mut *tx)
+                                    .await {
+                                        tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                                    }
+                                }
                             }
 
                             let cache = crate::builder::edge::get_edge_cache();
@@ -422,6 +475,80 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(conflict_jobs.0, 0); // No conflict for this test
         // Verify agent_action_requests created for low stock (10 - 2 = 8, not low. Wait, I should deduct 6 instead)
+    }
+
+    #[tokio::test]
+    async fn test_pos_sync_worker_conflict() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let worker = PosSyncWorker::new(db.clone());
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test-conflict', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity) VALUES ('prod-worker-test-conflict', 'tenant-worker-test-conflict', 'Test Prod Conflict', 1, 1) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count) VALUES ('session-conflict', 'tenant-worker-test-conflict', 'client-conflict', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker-conflict', 'tenant-worker-test-conflict', 'client-conflict', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let job_payload = serde_json::json!({
+            "pos_transaction_id": "tx-test-worker-conflict",
+            "client_id": "client-conflict",
+            "amount_cents": 5000,
+            "currency": "usd",
+            "mutation": {
+                "product_id": "prod-worker-test-conflict",
+                "quantity_deducted": 5
+            }
+        });
+
+        let job = crate::queue::Job {
+            id: "job-conflict".to_string(),
+            tenant_id: "tenant-worker-test-conflict".to_string(),
+            job_type: "offline_pos_sync".to_string(),
+            payload: job_payload.to_string(),
+            status: "PROCESSING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: Utc::now(),
+            locked_until: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            parent_task_id: "".to_string(),
+        };
+
+        let handle = worker.handle(job);
+        let res = handle.await.unwrap();
+        assert!(res.is_ok());
+
+        let count: (i32,) = sqlx::query_as("SELECT available_quantity FROM products WHERE id = 'prod-worker-test-conflict'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 0);
+
+        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker-conflict'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(tx_status.0, "RESOLVED");
+
+        let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION' AND tenant_id = 'tenant-worker-test-conflict'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(conflict_jobs.0, 1);
+
+        let sync_status: (String, serde_json::Value) = sqlx::query_as("SELECT sync_status, pending_reconciliation FROM pos_terminal_sessions WHERE tenant_id = 'tenant-worker-test-conflict' AND device_id = 'client-conflict'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(sync_status.0, "CONFLICTS_PENDING");
+
+        let pending = sync_status.1.as_array().unwrap();
+        assert_eq!(pending.len(), 1);
+        let conflict_obj = pending[0].as_object().unwrap();
+        assert_eq!(conflict_obj.get("transaction_id").unwrap().as_str().unwrap(), "tx-test-worker-conflict");
+        assert_eq!(conflict_obj.get("product_id").unwrap().as_str().unwrap(), "prod-worker-test-conflict");
+        assert_eq!(conflict_obj.get("shortage").unwrap().as_i64().unwrap(), 4); // 5 requested - 1 stock
     }
 
     #[tokio::test]
