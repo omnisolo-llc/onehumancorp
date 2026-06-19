@@ -3138,7 +3138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
     // Offline Sync Logic (IndexedDB CRDT)
 
-    const DB_NAME = "OHC_Offline_Queue";
+        const DB_NAME = "OHC_Offline_Queue";
     const STORE_NAME = "actions";
     const DB_VERSION = 1;
 
@@ -3157,6 +3157,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function getQueue() {
+        if (window.powerSyncDb && window.powerSyncDb.database) {
+            try {
+                const result = await window.powerSyncDb.execute('SELECT * FROM pending_actions');
+                const actions = [];
+                for (let i = 0; i < result.rows?.length; i++) {
+                    const row = result.rows.item(i);
+                    let payload = row.payload;
+                    try { payload = JSON.parse(row.payload); } catch(e) {}
+                    actions.push({ id: row.id, type: row.type, payload: payload, timestamp: parseInt(row.timestamp, 10) });
+                }
+                return actions;
+            } catch(e) {
+                console.error("PowerSync getQueue error", e);
+            }
+        }
         if (!window.indexedDB) return [];
         try {
             const db = await getDB();
@@ -3178,6 +3193,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!mutation.timestamp) {
             mutation.timestamp = Date.now();
+        }
+
+        if (window.powerSyncDb && window.powerSyncDb.database) {
+            try {
+                const payloadStr = typeof mutation.payload === 'string' ? mutation.payload : JSON.stringify(mutation.payload);
+                await window.powerSyncDb.execute(
+                    'INSERT INTO pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+                    [mutation.id, mutation.type, payloadStr, mutation.timestamp.toString()]
+                );
+                window.dispatchEvent(new Event("ohc_queue_updated"));
+                if (navigator.onLine) syncOfflineQueue();
+                return;
+            } catch(e) {
+                console.error("PowerSync enqueue error", e);
+            }
         }
 
         try {
@@ -3297,17 +3327,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (allOk) {
-            try {
-                const db = await getDB();
-                await new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORE_NAME], "readwrite");
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.clear();
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-            } catch(e) {
-                console.error("Failed to clear IndexedDB", e);
+            if (window.powerSyncDb && window.powerSyncDb.database) {
+                try {
+                    await window.powerSyncDb.execute('DELETE FROM pending_actions');
+                } catch(e) { console.error("PowerSync clear error", e); }
+            } else {
+                try {
+                    const db = await getDB();
+                    await new Promise((resolve, reject) => {
+                        const transaction = db.transaction([STORE_NAME], "readwrite");
+                        const store = transaction.objectStore(STORE_NAME);
+                        const request = store.clear();
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                } catch(e) {
+                    console.error("Failed to clear IndexedDB", e);
+                }
             }
             updateOfflineStatus();
         }

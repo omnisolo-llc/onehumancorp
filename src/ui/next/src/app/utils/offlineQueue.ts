@@ -1,3 +1,4 @@
+import { powerSyncDb } from '../../lib/powersync/db';
 /// <reference types="node" />
 export interface OfflineAction {
   id: string; // The action request ID or a UUID
@@ -37,7 +38,24 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export async function enqueueAction(action: OfflineAction): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
+
+  if (powerSyncDb && powerSyncDb.database) {
+    try {
+      const payloadStr = typeof action.payload === 'string' ? action.payload : JSON.stringify(action.payload);
+      await powerSyncDb.execute(
+        'INSERT INTO pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+        [action.id, action.type, payloadStr, action.timestamp.toString()]
+      );
+      return;
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.error("Failed to enqueue action to PowerSync", err);
+      }
+    }
+  }
+
+  if (!window.indexedDB) return;
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -56,7 +74,34 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
 }
 
 export async function getActions(): Promise<OfflineAction[]> {
-  if (typeof window === "undefined" || !window.indexedDB) return [];
+  if (typeof window === "undefined") return [];
+
+  if (powerSyncDb && powerSyncDb.database) {
+    try {
+      const result = await powerSyncDb.execute('SELECT * FROM pending_actions');
+      const actions: OfflineAction[] = [];
+      for (let i = 0; i < result.rows?.length; i++) {
+        const row = result.rows?.item(i);
+        let payload = row.payload;
+        try {
+           payload = JSON.parse(row.payload);
+        } catch (e) {}
+        actions.push({
+          id: row.id,
+          type: row.type,
+          payload: payload,
+          timestamp: parseInt(row.timestamp, 10)
+        });
+      }
+      return actions;
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.error("Failed to get actions from PowerSync", err);
+      }
+    }
+  }
+
+  if (!window.indexedDB) return [];
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -78,7 +123,23 @@ export async function getActions(): Promise<OfflineAction[]> {
 }
 
 export async function removeAction(id: string): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
+
+  if (powerSyncDb && powerSyncDb.database) {
+    try {
+      await powerSyncDb.execute(
+        'DELETE FROM pending_actions WHERE id = ?',
+        [id]
+      );
+      return;
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.error("Failed to remove action from PowerSync", err);
+      }
+    }
+  }
+
+  if (!window.indexedDB) return;
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {

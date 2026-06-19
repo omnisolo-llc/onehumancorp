@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PowerSyncDatabase } from '@powersync/web';
 import { PowerSyncContext } from '@powersync/react';
 import { AppSchema } from './AppSchema';
+import { powerSyncDb } from './db';
 
 class BackendConnector {
   async fetchCredentials() {
@@ -46,15 +47,8 @@ export const PowerSyncProvider = ({
 
   useEffect(() => {
     if (!supported) return;
-    let _powerSync: PowerSyncDatabase;
+    let _powerSync: PowerSyncDatabase = powerSyncDb;
     const init = async () => {
-      _powerSync = new PowerSyncDatabase({
-        database: {
-          dbFilename: 'ohc-offline.db'
-        },
-        schema: AppSchema,
-      });
-
       await _powerSync.init();
 
       const connector = new BackendConnector();
