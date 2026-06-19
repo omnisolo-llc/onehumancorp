@@ -153,6 +153,79 @@
         cursor: not-allowed;
         transform: none;
       }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .product-btn {
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 80px;
+      }
+      .product-btn:active {
+        transform: scale(0.95);
+      }
+      .product-btn.selected {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid #0066FF;
+        box-shadow: 0 0 0 1px #0066FF;
+      }
+      .product-btn-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+        margin-bottom: 4px;
+      }
+      .product-btn-price {
+        font-weight: 700;
+        font-size: 14px;
+        color: #0066FF;
+      }
+      .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+        width: 100%;
+      }
+      .quick-charge-btn {
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
+        padding: 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+      }
+      .quick-charge-btn:active {
+        transform: scale(0.95);
+      }
+      .quick-charge-icon {
+        color: #0066FF;
+        margin-bottom: 8px;
+      }
+      .quick-charge-text {
+        font-weight: 500;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
 
       /* Tap to Pay Overlay */
       .tap-overlay {
@@ -290,6 +363,28 @@
             <div style="flex-grow: 1;"></div>
             <button id="pos-walkthrough-btn" data-tooltip="pos-walkthrough-btn" style="background: none; border: none; font-size: 14px; font-weight: 600; color: #0066FF; cursor: pointer; padding: 0 8px;" onclick="window.startWalkthrough([{selector: '#charge-btn', title: 'Accept Payment', text: 'Enter an amount and tap here to charge.'}])">Walkthrough</button>
             <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
+          </div>
+
+          <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0; align-self: flex-start; padding: 0 4px;">Quick Actions</h3>
+          <div class="quick-actions-grid">
+             <button class="quick-charge-btn" onclick="selectProduct('quick_charge', 5000, 'Quick Charge')">
+               <div class="quick-charge-icon">
+                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+               </div>
+               <span class="quick-charge-text">Quick Charge $50</span>
+             </button>
+
+             <button class="quick-charge-btn">
+               <div class="quick-charge-icon" style="color: #FF9F0A;">
+                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"/></svg>
+               </div>
+               <span class="quick-charge-text">Refunds</span>
+             </button>
+          </div>
+
+          <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 8px 0; align-self: flex-start; padding: 0 4px;">Product Catalog</h3>
+          <div id="product-grid" class="grid">
+            <p style="color: #86868b; font-size: 14px; grid-column: span 2; text-align: center; padding: 16px 0;">Loading catalog...</p>
           </div>
 
           <div class="amount-display" id="amount-display">$0.00</div>
