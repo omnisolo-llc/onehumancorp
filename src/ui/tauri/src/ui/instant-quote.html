@@ -371,17 +371,14 @@
                         }
                     }
                 } catch (e) {
-                    console.warn("Falling back to local cache/mock rules", e);
+                    console.warn("Failed to load pricing rules", e);
                 }
 
-                // Fallback rules if empty
+                // Truthful empty state if no rules from backend
                 if (!rules || rules.length === 0) {
-                    basePrice = 5000; // $50 base
-                    rules = [
-                        { id: 'rush', name: 'Rush Delivery (Next Day)', adjustment_percent: 20, description: 'Get it faster' },
-                        { id: 'vegan', name: 'Vegan Ingredients', adjustment_cents: 1500, description: 'Special dietary preparation' },
-                        { id: 'weekend', name: 'Weekend Service', adjustment_cents: 2500, description: 'Saturday/Sunday' }
-                    ];
+                    basePrice = 0;
+                    rules = [];
+                    document.getElementById('loading-rules').innerText = "No options available right now.";
                 }
 
                 pricingRules = rules;

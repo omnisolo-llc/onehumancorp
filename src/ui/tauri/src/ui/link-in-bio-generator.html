@@ -393,13 +393,10 @@
         let tenant = window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'my-store';
 
         let currentState = {
-            store_name: 'My Store',
-            bio: 'Welcome to my storefront!',
+            store_name: '',
+            bio: '',
             theme: 'gradient',
-            links: [
-                { id: '1', title: 'Visit My Store', url: '/website-builder' },
-                { id: '2', title: 'Book an Appointment', url: '/booking' }
-            ]
+            links: []
         };
 
         // Try load from API
