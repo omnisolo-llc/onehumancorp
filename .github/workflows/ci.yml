@@ -110,12 +110,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/google
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/vcpkg
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -265,12 +259,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/google
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/vcpkg
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -344,12 +332,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/google
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/vcpkg
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -429,12 +411,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/google
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/vcpkg
 
       - name: Install Kubernetes tools
         run: |
@@ -563,12 +539,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/google
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/vcpkg
 
       - name: Verify Docker is available
         run: |
