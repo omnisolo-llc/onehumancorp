@@ -41,4 +41,43 @@ test.describe('Tooltips', () => {
         // Move mouse away
         await page.mouse.move(0, 0);
     });
+
+    test('handles mobile long-press and cancels on touchmove', async ({ page }) => {
+        await page.goto('/api-docs');
+
+        const tooltipTarget = page.locator('span', { hasText: 'Advanced:' });
+        await expect(tooltipTarget).toBeVisible();
+
+        // Dispatch a touchstart event
+        await tooltipTarget.dispatchEvent('touchstart');
+
+        // Wait a bit to simulate holding (less than 500ms)
+        await page.waitForTimeout(200);
+
+        // Dispatch a touchmove event to simulate scrolling
+        await tooltipTarget.dispatchEvent('touchmove');
+
+        // Wait past the 500ms threshold
+        await page.waitForTimeout(400);
+
+        // The tooltip should NOT appear because touchmove cancelled it
+        const tooltipText = page.locator('div', { hasText: 'Direct API access is only for custom integrations.' }).last();
+        await expect(tooltipText).not.toBeVisible();
+
+        // Now test successful long press
+        await tooltipTarget.dispatchEvent('touchstart');
+
+        // Wait past the 500ms threshold
+        await page.waitForTimeout(600);
+
+        // The tooltip should appear
+        await expect(tooltipText).toBeVisible();
+
+        // End the touch
+        await tooltipTarget.dispatchEvent('touchend');
+
+        // After 2 seconds, it should disappear
+        await page.waitForTimeout(2100);
+        await expect(tooltipText).not.toBeVisible();
+    });
 });
