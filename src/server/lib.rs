@@ -5789,7 +5789,6 @@ async fn create_ui_bom_item_handler(
                     "voice_receptionist_enabled": settings.voice_receptionist_enabled,
                     "voice_receptionist_number": settings.voice_receptionist_number,
                     "voice_receptionist_persona": settings.voice_receptionist_persona,
-                    settings.voice_receptionist_instructions,
                     "voice_receptionist_instructions": settings.voice_receptionist_instructions,
                 }))
             }
