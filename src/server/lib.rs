@@ -5869,6 +5869,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/voice/incoming", axum::routing::post({
             let settings_store = settings_store.clone();
             let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+            let db_clone = db.clone();
             let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
                 std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
                 std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
@@ -5888,6 +5889,33 @@ async fn create_ui_bom_item_handler(
                 let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
 
                 let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
+
+                let transcripts = voice_engine.transcripts.lock().await;
+                let session_transcripts: Vec<_> = transcripts.iter().filter(|t| t.session_id == session_id).collect();
+                if !session_transcripts.is_empty() {
+                    let mut summary = String::new();
+                    summary.push_str("Call Summary\n\n");
+                    for t in session_transcripts {
+                        summary.push_str(&format!("{}: {}\n", t.role, t.text));
+                    }
+
+                    let feed_id = uuid::Uuid::new_v4().to_string();
+                    let context_json = serde_json::json!({
+                        "summary": summary,
+                        "caller_phone": caller_phone
+                    });
+
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_feed (id, tenant_id, source_id, source_type, action_type, context, status, created_at, updated_at) VALUES ($1, $2, $3, 'omni_inbox_message', 'voice_call_summary', $4, 'pending', NOW(), NOW())"
+                    )
+                    .bind(&feed_id)
+                    .bind("test_tenant")
+                    .bind(&session_id)
+                    .bind(&context_json)
+                    .execute(&db_clone.pool)
+                    .await;
+                }
+                drop(transcripts);
 
                 voice_engine.end_call(&session_id).await;
 

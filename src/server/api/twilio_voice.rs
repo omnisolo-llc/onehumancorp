@@ -141,6 +141,7 @@ pub async fn twilio_voice_status_handler(
 
         if !session_transcripts.is_empty() {
             let mut summary = String::new();
+            summary.push_str("Call Summary\n\n");
             for t in session_transcripts {
                 summary.push_str(&format!("{}: {}\n", t.role, t.text));
             }
@@ -210,6 +211,36 @@ pub async fn twilio_voice_status_handler(
             if let Err(e) = insert_result {
                 tracing::error!("Failed to insert voice call transcript into omni_inbox_messages: {}", e);
             }
+
+            let feed_id = Uuid::new_v4().to_string();
+            let context_json = serde_json::json!({
+                "summary": summary,
+                "caller_phone": clean_caller
+            });
+            let _feed_insert_result = match &state.db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query(
+                        "INSERT INTO agent_feed (id, tenant_id, source_id, source_type, action_type, context, status, created_at, updated_at) VALUES ($1, $2, $3, 'omni_inbox_message', 'voice_call_summary', $4, 'pending', NOW(), NOW())"
+                    )
+                    .bind(&feed_id)
+                    .bind(&tenant_id)
+                    .bind(&inbox_id)
+                    .bind(&context_json)
+                    .execute(pool)
+                    .await.map(|_| ())
+                },
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query(
+                        "INSERT INTO agent_feed (id, tenant_id, source_id, source_type, action_type, context, status, created_at, updated_at) VALUES (?, ?, ?, 'omni_inbox_message', 'voice_call_summary', ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&feed_id)
+                    .bind(&tenant_id)
+                    .bind(&inbox_id)
+                    .bind(context_json.to_string())
+                    .execute(sqlite_pool)
+                    .await.map(|_| ())
+                }
+            };
         }
     }
 
