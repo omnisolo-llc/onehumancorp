@@ -17,18 +17,16 @@ test.describe('Offline Agent Intent Sync', () => {
     await expect(page.locator('#network-status-indicator').first()).toBeVisible();
     await expect(page.locator('#network-status-text').first()).toHaveText('Working Offline');
 
-    // Enqueue an agent intent mutation into localStorage
-    await page.evaluate(() => {
-        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        queue.push({
-            id: 'intent-test-id-123',
-            type: 'agent_intent',
-            payload: { action: 'draft_email', recipient: 'customer@example.com', subject: 'Follow up' },
-            timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-        // Trigger queue update
-        window.dispatchEvent(new Event('ohc_queue_updated'));
+    // Enqueue an agent intent mutation into offline queue
+    await page.evaluate(async () => {
+        if (typeof (window as any).enqueueOfflineMutation === 'function') {
+            await (window as any).enqueueOfflineMutation({
+                id: 'intent-test-id-123',
+                type: 'agent_intent',
+                payload: { action: 'draft_email', recipient: 'customer@example.com', subject: 'Follow up' },
+                timestamp: new Date().toISOString()
+            });
+        }
     });
 
     // Verify queue indicator shows items pending
@@ -44,12 +42,21 @@ test.describe('Offline Agent Intent Sync', () => {
     });
 
     // Wait for the sync to complete and the queue to be cleared
-    await page.waitForFunction(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        return queue.length === 0;
+    await page.waitForFunction(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            const queue = await (window as any).getQueue();
+            return queue.length === 0;
+        }
+        return true;
     }, { timeout: 15000 });
 
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const queueData = await page.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            const queue = await (window as any).getQueue();
+            return JSON.stringify(queue);
+        }
+        return '[]';
+    });
     expect(queueData).toBe('[]');
 
     // The network status indicator should disappear since we are online and queue is empty

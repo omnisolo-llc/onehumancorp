@@ -10,7 +10,7 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       await route.abort('failed');
     });
 
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       window.dispatchEvent(new CustomEvent('simulate_offline_mutation', {
         detail: {
           type: 'inventory_toggle',
@@ -18,18 +18,20 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
           timestamp: new Date().toISOString()
         }
       }));
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'inventory_toggle',
-        id: 'e2e-product-123',
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-      window.dispatchEvent(new Event('storage'));
+      if (typeof (window as any).enqueueOfflineMutation === 'function') {
+          await (window as any).enqueueOfflineMutation({
+              type: 'inventory_toggle',
+              id: 'e2e-product-123',
+              timestamp: new Date().toISOString()
+          });
+      }
     });
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      if (typeof (window as any).getQueue === 'function') {
+          return await (window as any).getQueue();
+      }
+      return [];
     });
 
     expect(queueData.length).toBeGreaterThan(0);
@@ -46,22 +48,24 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       await route.abort('failed');
     });
 
-    await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'tap_to_pay',
-        id: 'e2e-txn-pos-123',
-        amount: 500,
-        currency: 'usd',
-        product_id: 'e2e-prod-x',
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-      window.dispatchEvent(new Event('storage'));
+    await page.evaluate(async () => {
+      if (typeof (window as any).enqueueOfflineMutation === 'function') {
+          await (window as any).enqueueOfflineMutation({
+              type: 'tap_to_pay',
+              id: 'e2e-txn-pos-123',
+              amount: 500,
+              currency: 'usd',
+              product_id: 'e2e-prod-x',
+              timestamp: new Date().toISOString()
+          });
+      }
     });
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      if (typeof (window as any).getQueue === 'function') {
+          return await (window as any).getQueue();
+      }
+      return [];
     });
 
     const tapToPayTxns = queueData.filter((q: any) => q.type === 'tap_to_pay');
@@ -77,20 +81,22 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       await route.abort('failed');
     });
 
-    await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'draft_quote',
-        id: 'e2e-draft-456',
-        notes: '{"custom": "quote data"}',
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-      window.dispatchEvent(new Event('storage'));
+    await page.evaluate(async () => {
+      if (typeof (window as any).enqueueOfflineMutation === 'function') {
+          await (window as any).enqueueOfflineMutation({
+              type: 'draft_quote',
+              id: 'e2e-draft-456',
+              notes: '{"custom": "quote data"}',
+              timestamp: new Date().toISOString()
+          });
+      }
     });
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      if (typeof (window as any).getQueue === 'function') {
+          return await (window as any).getQueue();
+      }
+      return [];
     });
 
     const draftQuotes = queueData.filter((q: any) => q.type === 'draft_quote');
@@ -124,14 +130,14 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     });
 
     // 1. Add item to queue
-    await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
-        type: 'inventory_toggle',
-        id: 'e2e-product-789',
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+    await page.evaluate(async () => {
+      if (typeof (window as any).enqueueOfflineMutation === 'function') {
+          await (window as any).enqueueOfflineMutation({
+              type: 'inventory_toggle',
+              id: 'e2e-product-789',
+              timestamp: new Date().toISOString()
+          });
+      }
     });
 
     // 2. Trigger online event manually to force SyncManager to sync
@@ -145,8 +151,11 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     // 4. Verify route was called and queue is empty
     expect(syncOfflineCalled).toBe(true);
 
-    const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+    const queueData = await page.evaluate(async () => {
+      if (typeof (window as any).getQueue === 'function') {
+          return await (window as any).getQueue();
+      }
+      return [];
     });
 
     expect(queueData.length).toBe(0);

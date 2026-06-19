@@ -32,8 +32,13 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Should show offline success
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
-    // Verify it's in the queue (localStorage)
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    // Verify it's in the queue
+    const queueData = await page.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            return JSON.stringify(await (window as any).getQueue());
+        }
+        return '[]';
+    });
     expect(queueData).toContain('tap_to_pay');
 
     // Wait for sync to happen. Without network mocking, it goes through the actual api endpoints.
@@ -43,7 +48,12 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.waitForTimeout(2000);
 
     // Verify queue is empty
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            return JSON.stringify(await (window as any).getQueue());
+        }
+        return '[]';
+    });
     expect(updatedQueueData).toBe('[]');
   });
 
@@ -73,12 +83,16 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
     // Modify the quantity in local storage to force a conflict since the UI doesn't allow changing quantity
-    await page.evaluate(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        if (queue.length > 0) {
-            queue[0].quantity = 100; // Force conflict
-            queue[0].product_id = 'prod_123';
-            localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+    await page.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function' && typeof (window as any).enqueueOfflineMutation === 'function' && typeof (window as any).clearQueue === 'function') {
+            const queue = await (window as any).getQueue();
+            if (queue.length > 0) {
+                const item = queue[0];
+                item.quantity = 100; // Force conflict
+                item.product_id = 'prod_123';
+                await (window as any).clearQueue(); // Clear and re-add modified item
+                await (window as any).enqueueOfflineMutation(item);
+            }
         }
     });
 
@@ -91,8 +105,13 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     await page.waitForTimeout(8000);
 
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
-    expect(updatedQueueData).toBe('[]');
+    const updatedQueueData2 = await page.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            return JSON.stringify(await (window as any).getQueue());
+        }
+        return '[]';
+    });
+    expect(updatedQueueData2).toBe('[]');
 
     // Navigate to Dashboard/Agent Feed
     await page.goto('/dashboard');

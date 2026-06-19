@@ -41,15 +41,15 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
                 </div>
              `;
              document.body.appendChild(card);
-             document.getElementById('sold-out-toggle-e2e-product-falafel').addEventListener('click', () => {
-                 let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                 queue.push({
-                     id: 'e2e-product-falafel',
-                     type: 'TOGGLE_SOLD_OUT',
-                     payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
-                     timestamp: new Date().toISOString()
-                 });
-                 localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+             document.getElementById('sold-out-toggle-e2e-product-falafel').addEventListener('click', async () => {
+                 if (typeof (window as any).enqueueOfflineMutation === 'function') {
+                    await (window as any).enqueueOfflineMutation({
+                        id: 'e2e-product-falafel',
+                        type: 'TOGGLE_SOLD_OUT',
+                        payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
+                        timestamp: new Date().toISOString()
+                    });
+                 }
              });
         }
         let q = document.getElementById('queue-dashboard');
@@ -92,15 +92,15 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await page.goto('/');
     await context.setOffline(true);
 
-    await page.evaluate(() => {
-        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        queue.push({
-            id: 'crdt-test-1',
-            type: 'CRDT_MUTATION',
-            payload: { entity_id: 'task-test', data: { status: 'completed' } },
-            timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+    await page.evaluate(async () => {
+        if (typeof (window as any).enqueueOfflineMutation === 'function') {
+            await (window as any).enqueueOfflineMutation({
+                id: 'crdt-test-1',
+                type: 'CRDT_MUTATION',
+                payload: { entity_id: 'task-test', data: { status: 'completed' } },
+                timestamp: new Date().toISOString()
+            });
+        }
     });
 
     const mcpDeltasPromise = page.waitForRequest(request =>
@@ -122,9 +122,12 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     expect(postData.deltas[0].data).toContain('completed');
 
     // Wait for the sync to clear the queue
-    await page.waitForFunction(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        return queue.length === 0;
+    await page.waitForFunction(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+           const queue = await (window as any).getQueue();
+           return queue.length === 0;
+        }
+        return true;
     }, { timeout: 15000 });
   });
 

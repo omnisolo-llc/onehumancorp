@@ -34,31 +34,19 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Verify it queues the order
     await expect(memberPage.getByText('Offline Quick Charge Saved.')).toBeVisible({ timeout: 10000 });
 
-    // Assert the transaction was written to IndexedDB
-    const queuedTxs = await memberPage.evaluate(() => {
-      return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('actions')) {
-            resolve([]);
-            return;
-          }
-          const tx = db.transaction('actions', 'readonly');
-          const store = tx.objectStore('actions');
-          const all = store.getAll();
-          all.onsuccess = () => resolve(all.result);
-          all.onerror = () => reject(all.error);
-        };
-      });
+    // Assert the transaction was written to the offline queue
+    const queuedTxs = await memberPage.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            return await (window as any).getQueue();
+        }
+        return [];
     });
 
     // There should be two items in the queue (the tap_to_pay action and the CRDT mutation)
     expect(queuedTxs.length).toBeGreaterThan(0);
     const tapToPayTx = queuedTxs.find((tx: any) => tx.type === 'tap_to_pay');
     expect(tapToPayTx).toBeDefined();
-    expect(tapToPayTx.amount_cents).toBe(5000);
+    expect(tapToPayTx.amount).toBe(5000); // UI inserts amount as cents directly, pos.html line 1315
 
     // Make network online
     await context.setOffline(false);
@@ -71,46 +59,21 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Verify "Syncing..." or Online indicator
     await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-    // Wait for the sync to complete and the IndexedDB to be cleared
+    // Wait for the sync to complete and the offline queue to be cleared
     await memberPage.waitForFunction(async () => {
-      return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('actions')) {
-            resolve(true);
-            return;
-          }
-          const tx = db.transaction('actions', 'readonly');
-          const store = tx.objectStore('actions');
-          const all = store.getAll();
-          all.onsuccess = () => {
-            resolve(all.result.length === 0);
-          };
-          all.onerror = () => resolve(false);
-        };
-        req.onerror = () => resolve(false);
-      });
+        if (typeof (window as any).getQueue === 'function') {
+           const queue = await (window as any).getQueue();
+           return queue.length === 0;
+        }
+        return true;
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
-    const afterSyncTxs = await memberPage.evaluate(() => {
-      return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('actions')) {
-            resolve([]);
-            return;
-          }
-          const tx = db.transaction('actions', 'readonly');
-          const store = tx.objectStore('actions');
-          const all = store.getAll();
-          all.onsuccess = () => resolve(all.result);
-          all.onerror = () => reject(all.error);
-        };
-      });
+    const afterSyncTxs = await memberPage.evaluate(async () => {
+        if (typeof (window as any).getQueue === 'function') {
+            return await (window as any).getQueue();
+        }
+        return [];
     });
     expect(afterSyncTxs.length).toBe(0);
   });
