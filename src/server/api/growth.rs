@@ -2053,9 +2053,9 @@ async fn handle_team_invite_accept(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
 
     // Before accepting, fetch the invite to get the team_id to invalidate cache
-    let (team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
-        Ok(Some(invite)) => (Some(invite.team_id), Some(invite.invitee_id)),
-        _ => (None, None),
+    let (tenant_id_opt, team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
+        Ok(Some(invite)) => (Some(invite.tenant_id), Some(invite.team_id), Some(invite.invitee_id)),
+        _ => (None, None, None),
     };
 
     match tracker.accept_invite(&req.id).await {
@@ -2068,9 +2068,10 @@ async fn handle_team_invite_accept(
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
                 let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
-
+            }
+            if let Some(tenant_id) = tenant_id_opt {
                 let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-                metrics_cache.invalidate(&format!("aggregated_metrics_{}", team_id)).await;
+                metrics_cache.invalidate(&format!("aggregated_metrics_{}", tenant_id)).await;
             }
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
@@ -2084,12 +2085,13 @@ async fn handle_team_invite_accept(
 
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -2097,9 +2099,9 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
@@ -2169,8 +2171,14 @@ mod tests {
             invitee_id: "user-abc".to_string(),
         };
 
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            agent_id: "agent-xyz".to_string(),
+            org_id: "org-123".to_string(),
+        };
+
         // Call create handler directly
-        let res = handle_create_team_invite(Extension(state.clone()), Json(req)).await;
+        let res = handle_create_team_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
         let create_res_json = res.unwrap().0;
         assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
@@ -2709,12 +2717,13 @@ pub struct CloudBridgeInviteResponse {
 
 async fn handle_cloud_bridge_invite(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CloudBridgeInviteRequest>,
 ) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -2723,9 +2732,9 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
@@ -2783,7 +2792,13 @@ mod cloud_bridge_tests {
             invitee_id: "invitee-xyz".to_string(),
         };
 
-        let res = handle_cloud_bridge_invite(Extension(state.clone()), Json(req)).await;
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            agent_id: "agent-xyz".to_string(),
+            org_id: "org-123".to_string(),
+        };
+
+        let res = handle_cloud_bridge_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
