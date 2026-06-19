@@ -1,68 +1,42 @@
 import { test, expect } from './fixtures';
+
 test.describe('Help Center', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+  test.beforeEach(async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
   });
-  test('should display dashboard with nav', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
-  });
-  test('should show dashboard link in nav', async ({ page }) => {
-    const dashLink = page.getByRole('link', { name: 'Dashboard', exact: true });
-    await expect(dashLink).toBeVisible();
-  });
-  test('should show agents link in nav', async ({ page }) => {
-    const agentsLink = page.getByRole('link', { name: 'AI Departments' });
-    await expect(agentsLink).toBeVisible();
-  });
-  test('should show setup link in nav', async ({ page }) => {
-    const setupLink = page.getByRole('link', { name: 'Setup', exact: true });
-    await expect(setupLink).toBeVisible();
-  });
-  test('should display welcome message', async ({ page }) => {
-    await expect(page.locator('text=Welcome back')).toBeVisible();
-  });
-  test('should display agents working message', async ({ page }) => {
-    await expect(page.locator('text=Your agents are working on your behalf')).toBeVisible();
-  });
-});
-test.describe('Agents Page', () => {
-  test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('h1', { hasText: 'AI Departments' })).toBeVisible();
-  });
-});
-test.describe('Business Setup Page', () => {
-  test('should display setup page', async ({ page }) => {
-    await page.goto('/website-builder');
-    await expect(page.locator('h1', { hasText: '10-Minute Setup Wizard' })).toBeVisible();
-  });
-  test('should show setup wizard text', async ({ page }) => {
-    await page.goto('/website-builder');
-    await expect(page.locator('text=Setup Assistant')).toBeVisible();
-  });
-});
-test.describe('Dashboard', () => {
-  test('should have working nav links', async ({ page }) => {
-    await page.goto('/dashboard');
-    // wait and click
-    await page.goto('/agents');
-    await expect(page.locator('h1', { hasText: 'AI Departments' })).toBeVisible({ timeout: 30000 });
-  });
-});
 
-test.describe('Documentation Pages', () => {
-  test('should display Help Center main page', async ({ page }) => {
-    await page.goto('/help');
+  test('should allow user to navigate to help center from dashboard', async ({ page }) => {
+    await page.goto('/api/ui/dashboard.html');
+
+    // Should see help button in the main navigation or shell
+    const helpButton = page.locator('nav').locator('a', { hasText: 'Help' });
+    await expect(helpButton).toBeVisible();
+    await helpButton.click();
+    await expect(page).toHaveURL(/\/api\/ui\/help\.html/);
+  });
+
+  test('should provide help resources and allow searching', async ({ page }) => {
+    await page.goto('/api/ui/help.html');
+
+    // Help center title should be visible
     await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
+
+    // Search bar should be functional
+    const searchInput = page.locator('input[placeholder*="Search"]');
+    await expect(searchInput).toBeVisible();
+
+    await searchInput.fill('payments');
+
+    // There should be search results
+    await page.waitForTimeout(500); // Wait for debounce
+    const results = page.locator('.help-search-result');
+    await expect(results.first()).toBeVisible();
   });
 
+  test('should display contact support option', async ({ page }) => {
+    await page.goto('/api/ui/help.html');
 
-
-
-
-  test('should display Video Tutorials page', async ({ page }) => {
-    await page.goto('/help/videos');
-    await expect(page.locator('h1', { hasText: 'Video Guides' })).toBeVisible();
+    // Should see contact options
+    await expect(page.locator('text=Contact Support').or(page.locator('text=Ask AI Agent'))).toBeVisible();
   });
 });
