@@ -46,6 +46,31 @@ export default function MyPlanPage() {
       return parseFloat(mb.toFixed(1)) + " MB";
   };
 
+  const handleManageBilling = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/billing/create-billing-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create billing portal session');
+      }
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Billing portal error:', error);
+      alert('Failed to initiate billing portal. Please try again.');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -97,6 +122,11 @@ export default function MyPlanPage() {
                     onClick={() => router.push('/pricing')}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
                     Upgrade
+                </button>
+                <button
+                    onClick={handleManageBilling}
+                    className="w-full sm:w-auto px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition-all shadow-sm text-center">
+                    Manage Billing
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}

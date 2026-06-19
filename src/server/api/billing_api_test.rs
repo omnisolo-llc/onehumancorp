@@ -38,6 +38,25 @@ async fn test_my_plan_unauthenticated() {
 }
 
 #[tokio::test]
+async fn test_create_billing_portal_session_unauthenticated() {
+    let hub = create_mock_hub().await;
+    let app = crate::api::billing_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/create-billing-portal-session")
+                .method("POST")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn test_download_invoice_unauthenticated() {
     let hub = create_mock_hub().await;
     let app = crate::api::billing_api::router(hub);

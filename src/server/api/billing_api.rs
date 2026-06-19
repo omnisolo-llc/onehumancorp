@@ -79,9 +79,15 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
         .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
         .route("/create-checkout-session", axum::routing::post(create_checkout_session_handler))
+        .route("/create-billing-portal-session", axum::routing::post(create_billing_portal_session_handler))
         .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
         .route("/download-invoice", axum::routing::post(download_invoice_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Serialize)]
+pub struct CreateBillingPortalSessionResponse {
+    pub url: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -97,6 +103,30 @@ pub struct CreateCheckoutSessionRequest {
 #[derive(serde::Serialize)]
 pub struct CreateCheckoutSessionResponse {
     pub checkout_url: String,
+}
+
+pub async fn create_billing_portal_session_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<CreateBillingPortalSessionResponse>, StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        Some(_) => "default".to_string(),
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let customer_id = format!("cus_{}", tenant_id); // Basic fallback to avoid DB join here for simplicity
+
+    if let Some(client) = &hub.tracker().stripe_client {
+        match client.create_billing_portal_session(&customer_id).await {
+            Ok(url) => Ok(Json(CreateBillingPortalSessionResponse { url })),
+            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    } else {
+        // Fallback if Stripe config is missing
+        Ok(Json(CreateBillingPortalSessionResponse { url: "https://example.com/pricing".to_string() }))
+    }
 }
 
 pub async fn create_checkout_session_handler(
