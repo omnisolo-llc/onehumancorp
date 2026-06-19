@@ -15,7 +15,7 @@ export default function GrowthReferralWidget() {
       const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
-      const res = await fetch('/api/v1/growth/team-invites', {
+      const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
