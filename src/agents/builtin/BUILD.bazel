@@ -57,6 +57,7 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
+        "durable_execution.rs",
         "claude_subagents.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
@@ -341,7 +342,7 @@ exports_files([
 
 rust_test(
     name = "tool_executor_engine_tests",
-    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs"],
+    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs", "durable_execution.rs"],
     deps = [
         "//src/agents/builtin:core",
         "//src/agents/builtin/tools:tools",

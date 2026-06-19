@@ -54,6 +54,7 @@ pub mod proto;
 pub use service::start_builtin_agent;
 
 pub mod checkpointer;
+pub mod durable_execution;
 pub mod codex_runner;
 pub mod consolidation_worker;
 pub mod harness;

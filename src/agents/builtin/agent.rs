@@ -290,6 +290,7 @@ impl AgentProgress {
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
 pub struct Agent {
+    pub durable_engine: std::sync::Arc<crate::durable_execution::DurableExecutionEngine>,
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
@@ -338,6 +339,7 @@ impl Agent {
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
             event_stream: None,
+            durable_engine: std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new()),
             native_env: Arc::new(tokio::sync::RwLock::new(
                 ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new(),
             )),
@@ -1398,6 +1400,7 @@ impl Agent {
         let system = std::sync::Arc::new(crate::actor_model::ActorSystem::new());
 
         let coord_agent = std::sync::Arc::new(Self {
+            durable_engine: std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new()),
             event_stream: self.event_stream.clone(),
             llm: self.llm.clone(),
             tools: session_tools.clone(),
@@ -2684,6 +2687,7 @@ impl Agent {
 
         let temp_agent = Agent {
             event_stream: None,
+            durable_engine: std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new()),
             llm: self.llm.clone(),
             tools: structured_tools,
             progress: self.progress.clone(),
@@ -2904,6 +2908,7 @@ impl Agent {
         if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
                 event_stream: None,
+            durable_engine: std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new()),
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
@@ -4548,6 +4553,10 @@ impl Agent {
         current_messages: &[Message],
         max_retries: usize,
     ) -> Result<String, ToolError> {
+        let durable_workflow_id = &tc.id;
+        self.durable_engine.start_or_resume_workflow(durable_workflow_id).await;
+        let _ = self.durable_engine.update_step(durable_workflow_id, &tc.id, crate::durable_execution::StepStatus::Running).await;
+
         let tool = session_tools
             .iter()
             .find(|t| t.name == tc.name)
@@ -4634,12 +4643,22 @@ impl Agent {
             trace.record_skill(&format!("{}_invoked", tc.name));
         }
 
-        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+        let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
             tool,
             &modified_tc,
             max_retries,
         )
-        .await
+        .await;
+
+        match &res {
+            Ok(output) => {
+                let _ = self.durable_engine.update_step(durable_workflow_id, &tc.id, crate::durable_execution::StepStatus::Completed(output.clone())).await;
+            }
+            Err(e) => {
+                let _ = self.durable_engine.update_step(durable_workflow_id, &tc.id, crate::durable_execution::StepStatus::Failed(e.to_string())).await;
+            }
+        }
+        res
     }
 }
 

@@ -371,17 +371,16 @@
                         }
                     }
                 } catch (e) {
-                    console.warn("Falling back to local cache/mock rules", e);
+                    console.error("Failed to load rules from server", e);
                 }
 
-                // Fallback rules if empty
+                // Show empty state instead of mock data
                 if (!rules || rules.length === 0) {
-                    basePrice = 5000; // $50 base
-                    rules = [
-                        { id: 'rush', name: 'Rush Delivery (Next Day)', adjustment_percent: 20, description: 'Get it faster' },
-                        { id: 'vegan', name: 'Vegan Ingredients', adjustment_cents: 1500, description: 'Special dietary preparation' },
-                        { id: 'weekend', name: 'Weekend Service', adjustment_cents: 2500, description: 'Saturday/Sunday' }
-                    ];
+                    const formContainer = document.getElementById('quote-form');
+                    if (formContainer) {
+                        formContainer.innerHTML = '<div class="notice">No quoting rules available. Please configure rules in the OHC dashboard.</div>';
+                    }
+                    return;
                 }
 
                 pricingRules = rules;
