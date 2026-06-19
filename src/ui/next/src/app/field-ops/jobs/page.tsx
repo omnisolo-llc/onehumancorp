@@ -21,7 +21,11 @@ type Appointment = {
 export default function FieldOpsJobsPage() {
   const [isOffline, setIsOffline] = useState(false);
   const [jobs, setJobs] = useState<Appointment[]>([]);
-  const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
+  const [agentSuggestion, setAgentSuggestion] = useState<{
+    message: string;
+    type: 'optimize' | 'delay';
+    delayJobId?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +54,43 @@ export default function FieldOpsJobsPage() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+
+  const handleRunningLate = (jobId: string) => {
+    // Determine how many clients will be affected
+    const jobIndex = jobs.findIndex(j => j.id === jobId);
+    const affectedCount = jobs.length - 1 - jobIndex;
+
+    if (affectedCount > 0) {
+      setAgentSuggestion({
+        message: `Notify the next ${affectedCount} clients of a 30-minute delay?`,
+        type: 'delay',
+        delayJobId: jobId
+      });
+    } else {
+      // If it's the last job, just hit the API immediately
+      handleConfirmDelay(jobId, 30);
+    }
+  };
+
+  const handleConfirmDelay = (jobId: string, delayMinutes: number) => {
+    setAgentSuggestion(null);
+    fetch('/api/v1/field-ops/appointments/delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appointmentId: jobId,
+        delayMinutes: delayMinutes
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.appointments) {
+        setJobs(data.appointments);
+      }
+    })
+    .catch(err => console.error("Delay calculation failed", err));
+  };
 
   const handleStatusChange = (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
@@ -91,7 +132,7 @@ export default function FieldOpsJobsPage() {
          if (data.success) {
            setJobs(data.optimizedRoute);
            if (data.agentSuggestion) {
-             setAgentSuggestion(data.agentSuggestion);
+             setAgentSuggestion({ message: data.agentSuggestion, type: 'optimize' });
            }
          }
        })
@@ -144,20 +185,39 @@ export default function FieldOpsJobsPage() {
           <div className="flex gap-3">
              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-xl shrink-0">🤖</div>
              <div>
-               <p className="text-sm font-medium text-gray-900 mb-2">{agentSuggestion}</p>
+               <p className="text-sm font-medium text-gray-900 mb-2">{agentSuggestion.message}</p>
                <div className="flex gap-2">
-                 <button
-                   onClick={() => setAgentSuggestion(null)}
-                   className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
-                 >
-                   Yes, text them
-                 </button>
-                 <button
-                   onClick={() => setAgentSuggestion(null)}
-                   className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
-                 >
-                   No, stick to schedule
-                 </button>
+                 {agentSuggestion.type === 'delay' ? (
+                   <>
+                     <button
+                       onClick={() => handleConfirmDelay(agentSuggestion.delayJobId!, 30)}
+                       className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
+                     >
+                       Approve & Send
+                     </button>
+                     <button
+                       onClick={() => setAgentSuggestion(null)}
+                       className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
+                     >
+                       Cancel
+                     </button>
+                   </>
+                 ) : (
+                   <>
+                     <button
+                       onClick={() => setAgentSuggestion(null)}
+                       className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
+                     >
+                       Yes, text them
+                     </button>
+                     <button
+                       onClick={() => setAgentSuggestion(null)}
+                       className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
+                     >
+                       No, stick to schedule
+                     </button>
+                   </>
+                 )}
                </div>
              </div>
           </div>
@@ -198,19 +258,35 @@ export default function FieldOpsJobsPage() {
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
                   {job.status === 'Requested' || job.status === 'Scheduled' ? (
-                     <button
-                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
-                        onClick={() => handleStatusChange(job.id, 'En-Route')}
-                      >
-                        Heading to Job
-                      </button>
+                     <div className="flex flex-col gap-2 sm:flex-row w-full">
+                       <button
+                          className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                          onClick={() => handleStatusChange(job.id, 'En-Route')}
+                        >
+                          Heading to Job
+                        </button>
+                        <button
+                          className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] border border-red-200"
+                          onClick={() => handleRunningLate(job.id)}
+                        >
+                          Running Late
+                        </button>
+                     </div>
                   ) : job.status === 'En-Route' ? (
-                      <button
-                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
-                        onClick={() => handleStatusChange(job.id, 'In-Progress')}
-                      >
-                        Start Work
-                      </button>
+                      <div className="flex flex-col gap-2 sm:flex-row w-full">
+                        <button
+                          className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                          onClick={() => handleStatusChange(job.id, 'In-Progress')}
+                        >
+                          Start Work
+                        </button>
+                        <button
+                          className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] border border-red-200"
+                          onClick={() => handleRunningLate(job.id)}
+                        >
+                          Running Late
+                        </button>
+                      </div>
                   ) : (
                       <button
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"

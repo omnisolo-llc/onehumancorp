@@ -136,10 +136,113 @@ pub async fn update_appointment(
     }))
 }
 
+
+#[derive(Deserialize)]
+pub struct DelayAppointmentRequest {
+    pub appointment_id: String,
+    pub delay_minutes: i64,
+}
+
+pub async fn delay_appointment(
+    State(state): State<Arc<FieldOpsState>>,
+    Json(payload): Json<DelayAppointmentRequest>,
+) -> Result<Json<GetAppointmentsResponse>, (axum::http::StatusCode, String)> {
+    let target = sqlx::query(
+        "SELECT tenant_id, staff_profile_id, scheduled_start_time FROM appointments WHERE id = $1"
+    )
+    .bind(&payload.appointment_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let target = match target {
+        Some(t) => t,
+        None => return Err((axum::http::StatusCode::NOT_FOUND, "Appointment not found".into())),
+    };
+
+    let tenant_id: String = target.get("tenant_id");
+    let staff_id: Option<String> = target.get("staff_profile_id");
+    let start_time: Option<DateTime<Utc>> = target.get("scheduled_start_time");
+
+    if let (Some(staff), Some(start)) = (staff_id, start_time) {
+        let minutes_str = payload.delay_minutes.to_string() + " minutes";
+        sqlx::query(
+            "UPDATE appointments SET scheduled_start_time = scheduled_start_time + $1::interval, scheduled_end_time = scheduled_end_time + $1::interval, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND staff_profile_id = $3 AND scheduled_start_time >= $4"
+        )
+        .bind(&minutes_str)
+        .bind(&tenant_id)
+        .bind(&staff)
+        .bind(start)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    } else {
+        let minutes_str = payload.delay_minutes.to_string() + " minutes";
+        sqlx::query(
+            "UPDATE appointments SET scheduled_start_time = scheduled_start_time + $1::interval, scheduled_end_time = scheduled_end_time + $1::interval, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+        )
+        .bind(&minutes_str)
+        .bind(&payload.appointment_id)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    }
+
+    let rows = sqlx::query(
+        r#"
+        SELECT
+            a.id,
+            a.customer_id,
+            c.name as customer_name,
+            a.job_template_id,
+            jt.name as job_name,
+            a.status,
+            a.scheduled_start_time,
+            a.scheduled_end_time,
+            a.location_address,
+            a.notes
+        FROM appointments a
+        LEFT JOIN customers c ON a.customer_id = c.id
+        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+        WHERE a.tenant_id = $1
+        ORDER BY a.scheduled_start_time ASC
+        "#
+    )
+    .bind(&tenant_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )
+    })?;
+
+    let mut appointments = Vec::new();
+    for row in rows {
+        appointments.push(Appointment {
+            id: row.get("id"),
+            customer_id: row.get("customer_id"),
+            customer_name: row.get::<Option<String>, _>("customer_name").unwrap_or_default(),
+            job_template_id: row.get("job_template_id"),
+            job_name: row.get::<Option<String>, _>("job_name").unwrap_or_default(),
+            status: row.get("status"),
+            scheduled_start_time: row.get("scheduled_start_time"),
+            scheduled_end_time: row.get("scheduled_end_time"),
+            location_address: row.get("location_address"),
+            notes: row.get("notes"),
+        });
+    }
+
+    Ok(Json(GetAppointmentsResponse { appointments }))
+}
+
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> Router<S> {
     let state = Arc::new(FieldOpsState { pool });
     Router::new()
         .route("/appointments", get(get_appointments).post(update_appointment))
+        .route("/appointments/delay", axum::routing::post(delay_appointment))
         .with_state(state)
 }
 
