@@ -252,13 +252,25 @@ pub struct ReserveInventoryRequest {
 }
 
 #[derive(serde::Deserialize)]
-pub struct CommitInventoryRequest {
-    pub tenant_id: String,
+pub struct CartItem {
     pub product_id: String,
     pub quantity: i32,
+    pub amount_cents: i64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct CommitInventoryRequest {
+    pub tenant_id: String,
+    pub product_id: Option<String>, // Legacy single-item support
+    pub quantity: Option<i32>,       // Legacy single-item support
+    pub items: Option<Vec<CartItem>>,
     pub lock_id: String,
     pub customer_id: Option<String>,
     pub amount_cents: Option<i64>,
+    pub terminal_session_id: Option<String>,
+    pub cashier_id: Option<String>,
+    pub device_id: Option<String>,
+    pub payment_method: Option<String>,
 }
 
 pub async fn reserve_inventory_handler(
@@ -538,58 +550,87 @@ pub async fn commit_inventory_handler(
         hub.redis_client.clone()
     );
 
-    match service.commit_inventory(&tenant_id, &req_data.product_id, req_data.quantity, &req_data.lock_id).await {
-        Ok(result) => {
-            if result.success {
-                let pool = crate::db::get_pool();
-                if let Ok(mut tx) = pool.begin().await {
-                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                        let order_id = uuid::Uuid::new_v4().to_string();
-                        let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
-                        let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
-                            .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
+    let items = if let Some(cart_items) = &req_data.items {
+        cart_items.iter().map(|i| (i.product_id.clone(), i.quantity)).collect::<Vec<_>>()
+    } else if let (Some(pid), Some(qty)) = (&req_data.product_id, req_data.quantity) {
+        vec![(pid.clone(), qty)]
+    } else {
+        return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "missing items" }))).into_response();
+    };
 
-                        let item_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
-
-                        let event_payload = serde_json::json!({
-                            "order_id": order_id,
-                            "tenant_id": tenant_id,
-                            "customer_id": req_data.customer_id,
-                            "amount": total_amount,
-                            "source": "in_person_pos",
-                        });
-
-                        let event = crate::orchestration::departments::types::DepartmentEvent {
-                            id: uuid::Uuid::new_v4().to_string(),
-                            tenant_id: tenant_id.clone(),
-                            event_type: "POS_SALE_COMPLETED".to_string(),
-                            payload: event_payload,
-                        };
-                        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                            event_id: uuid::Uuid::new_v4().to_string(),
-                            topic: "pos_sales".to_string(),
-                            payload: serde_json::to_vec(&event).unwrap_or_default(),
-                            timestamp: chrono::Utc::now().timestamp(),
-                        });
-                    }
-                    let _ = tx.commit().await;
-                }
+    for (product_id, quantity) in &items {
+        match service.commit_inventory(&tenant_id, product_id, *quantity, &req_data.lock_id).await {
+            Ok(res) if !res.success => {
+                return (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": false, "error_message": res.error_message }))).into_response();
             }
-
-            (axum::http::StatusCode::OK, Json(serde_json::json!({
-                "success": result.success,
-                "error_message": result.error_message
-            }))).into_response()
-        },
-        Err(e) => {
-            (axum::http::StatusCode::OK, Json(serde_json::json!({
-                "success": false,
-                "error_message": e
-            }))).into_response()
+            Err(e) => {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "success": false, "error_message": e }))).into_response();
+            }
+            _ => {}
         }
     }
+
+    // Single unified order
+    let pool = crate::db::get_pool();
+    if let Ok(mut tx) = pool.begin().await {
+        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+            let order_id = uuid::Uuid::new_v4().to_string();
+            let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+            let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status, payment_source) VALUES ($1, $2, $3, $4, 'completed', 'terminal')")
+                .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
+
+            for (product_id, quantity) in &items {
+                let item_id = uuid::Uuid::new_v4().to_string();
+                let item_price = if let Some(cart_items) = &req_data.items {
+                    cart_items.iter().find(|i| &i.product_id == product_id).map(|i| (i.amount_cents as f64)/100.0).unwrap_or(0.0)
+                } else {
+                    total_amount
+                };
+                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                    .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(product_id).bind(quantity).bind(item_price).execute(&mut *tx).await;
+            }
+
+            let in_person_order_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO in_person_orders (id, tenant_id, order_id, terminal_session_id, device_id, cashier_id, payment_method) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                .bind(&in_person_order_id)
+                .bind(&tenant_id)
+                .bind(&order_id)
+                .bind(&req_data.terminal_session_id)
+                .bind(&req_data.device_id)
+                .bind(&req_data.cashier_id)
+                .bind(req_data.payment_method.as_deref().unwrap_or("TAP_TO_PAY"))
+                .execute(&mut *tx)
+                .await;
+
+            let event_payload = serde_json::json!({
+                "order_id": order_id,
+                "tenant_id": tenant_id,
+                "customer_id": req_data.customer_id,
+                "amount": total_amount,
+                "source": "in_person_pos",
+                "item_count": items.len(),
+            });
+
+            let event = crate::orchestration::departments::types::DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.clone(),
+                event_type: "POS_SALE_COMPLETED".to_string(),
+                payload: event_payload,
+            };
+            let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                event_id: uuid::Uuid::new_v4().to_string(),
+                topic: "pos_sales".to_string(),
+                payload: serde_json::to_vec(&event).unwrap_or_default(),
+                timestamp: chrono::Utc::now().timestamp(),
+            });
+        }
+        let _ = tx.commit().await;
+    }
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "error_message": ""
+    }))).into_response()
 }
 
 pub async fn create_payment_intent_handler(

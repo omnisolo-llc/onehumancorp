@@ -279,6 +279,37 @@ message CommitInventoryResponse {
 }
 
 // POS Engine messages
+message TerminalSession {
+  string id = 1;
+  string tenant_id = 2;
+  string device_id = 3;
+  string status = 4;
+  int64 started_at_unix = 5;
+  int64 last_synced_at_unix = 6;
+  int32 offline_changes_count = 7;
+}
+
+message InPersonOrder {
+  string id = 1;
+  string tenant_id = 2;
+  string order_id = 3;
+  string terminal_session_id = 4;
+  string device_id = 5;
+  string cashier_id = 6;
+  int64 total_amount_cents = 7;
+  string currency = 8;
+  string payment_method = 9; // TAP_TO_PAY, CASH, etc.
+}
+
+message InventoryLedgerEntry {
+  string id = 1;
+  string tenant_id = 2;
+  string product_id = 3;
+  int32 change_amount = 4;
+  string reason = 5;
+  int64 created_at_unix = 6;
+}
+
 message PosOfflineTransaction {
   string id = 1;
   string tenant_id = 2;

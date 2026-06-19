@@ -116,6 +116,15 @@ impl InventoryService {
                                 .bind(tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            let _ = sqlx::query("INSERT INTO inventory_ledger (id, tenant_id, product_id, change_amount, reason) VALUES ($1, $2, $3, $4, $5)")
+                                .bind(Uuid::new_v4().to_string())
+                                .bind(tenant_id)
+                                .bind(product_id)
+                                .bind(-quantity)
+                                .bind("RESERVATION")
+                                .execute(&mut *tx)
+                                .await;
                         }
                     } else {
                         let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -258,6 +267,16 @@ impl InventoryService {
                         .bind(tenant_id)
                         .execute(&mut *tx)
                         .await;
+
+                let _ = sqlx::query("INSERT INTO inventory_ledger (id, tenant_id, product_id, change_amount, reason) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(product_id)
+                    .bind(quantity)
+                    .bind("RELEASE")
+                    .execute(&mut *tx)
+                    .await;
+
                     let _ = tx.commit().await;
                 }
             }
@@ -374,6 +393,15 @@ impl InventoryService {
                 .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(&payload_str)
+                .execute(&mut *tx)
+                .await;
+
+            let _ = sqlx::query("INSERT INTO inventory_ledger (id, tenant_id, product_id, change_amount, reason) VALUES ($1, $2, $3, $4, $5)")
+                .bind(Uuid::new_v4().to_string())
+                .bind(tenant_id)
+                .bind(product_id)
+                .bind(-quantity)
+                .bind("COMMIT")
                 .execute(&mut *tx)
                 .await;
 
