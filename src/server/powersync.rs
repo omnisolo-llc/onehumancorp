@@ -36,7 +36,9 @@ fn get_powersync_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
 
 fn generate_random_keys() -> (SigningKey, ed25519_dalek::VerifyingKey) {
     let mut cspring = rand::rngs::OsRng;
-    let signing_key = SigningKey::generate(&mut cspring);
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut cspring, &mut bytes);
+    let signing_key = SigningKey::from_bytes(&bytes);
     let verifying_key = signing_key.verifying_key();
     (signing_key, verifying_key)
 }

@@ -3,6 +3,7 @@ pub mod rag_sync;
 pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
+pub mod powersync;
 pub mod agents;
 
 use std::collections::HashMap;
@@ -728,6 +729,78 @@ async fn http_metrics_handler(
     )
         .into_response()
 }
+
+
+async fn powersync_token_handler(
+    req: axum::extract::Request,
+) -> axum::response::Response {
+    use axum::http::{StatusCode};
+    use axum::response::IntoResponse;
+
+    let mut claims = req.extensions().get::<::server_common::Claims>().cloned();
+
+    if claims.is_none() {
+        if let Some(auth_header) = req.headers().get(axum::http::header::AUTHORIZATION) {
+            if let Ok(auth_str) = auth_header.to_str() {
+                if auth_str.starts_with("Bearer ") {
+                    let token = &auth_str[7..];
+                    let store = crate::auth::Store::new();
+                    if let Ok(valid_claims) = store.validate_token(token).await {
+                        claims = Some(valid_claims);
+                    }
+                }
+            }
+        }
+    }
+
+    if claims.is_none() {
+        if let Some(cookie_header) = req.headers().get(axum::http::header::COOKIE) {
+            if let Ok(cookie_str) = cookie_header.to_str() {
+                for cookie in cookie_str.split(';') {
+                    let cookie = cookie.trim();
+                    if cookie.starts_with("ohc_session=") {
+                        let token = &cookie[12..];
+                        let store = crate::auth::Store::new();
+                        if let Ok(valid_claims) = store.validate_token(token).await {
+                            claims = Some(valid_claims);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let claims = match claims {
+        Some(c) => c,
+        None => return (StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "unauthorized" }))).into_response(),
+    };
+
+    let org_id = claims.organization_id.unwrap_or_else(|| "e2e-tenant".to_string());
+
+    let token = match crate::powersync::generate_powersync_token(&claims.sub, &org_id) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to generate powersync token: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": "failed to generate token" }))).into_response();
+        }
+    };
+
+    let powersync_url = std::env::var("POWERSYNC_URL").unwrap_or_else(|_| "http://localhost:8081".to_string());
+    let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).to_rfc3339();
+
+    axum::Json(serde_json::json!({
+        "powersync_url": powersync_url,
+        "token": token,
+        "expires_at": expires_at,
+    })).into_response()
+}
+
+async fn powersync_jwks_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    axum::Json(crate::powersync::get_powersync_jwks()).into_response()
+}
+
 
 async fn http_login_handler(
     db: std::sync::Arc<db::DB>,
@@ -6203,6 +6276,14 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
+            "/api/v1/auth/powersync_token",
+            axum::routing::get(powersync_token_handler),
+        )
+        .route(
+            "/api/v1/auth/powersync/jwks.json",
+            axum::routing::get(powersync_jwks_handler),
+        )
+        .route(
             "/api/v1/auth/login",
             axum::routing::post({
                 let store = std::sync::Arc::new(crate::auth::Store::new());
@@ -6646,3 +6727,47 @@ async fn test_api_settings_voice() {
 
 #[cfg(test)]
 mod health_test;
+
+#[cfg(test)]
+mod powersync_tests {
+    use super::*;
+    use axum::http::{Request, StatusCode};
+    use axum::body::Body;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_powersync_jwks_handler() {
+        let app = axum::Router::new().route("/api/v1/auth/powersync/jwks.json", axum::routing::get(powersync_jwks_handler));
+
+        let req = Request::builder()
+            .uri("/api/v1/auth/powersync/jwks.json")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        let keys = json.get("keys").and_then(|k| k.as_array()).expect("expected keys array");
+        assert_eq!(keys.len(), 1);
+        let key = keys[0].as_object().expect("expected key object");
+        assert_eq!(key.get("kid").and_then(|v| v.as_str()), Some("powersync-key-1"));
+    }
+
+    #[tokio::test]
+    async fn test_powersync_token_handler_no_auth() {
+        let app = axum::Router::new().route("/api/v1/auth/powersync_token", axum::routing::get(powersync_token_handler));
+
+        let req = Request::builder()
+            .uri("/api/v1/auth/powersync_token")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    }
+}
