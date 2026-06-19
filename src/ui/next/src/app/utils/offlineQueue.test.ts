@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { enqueueAction, getActions, removeAction } from './offlineQueue';
-import { getPowerSyncInstance } from '../../lib/powersync/db';
+import { getPowerSyncDB } from '../../lib/powersync/db';
 
 vi.mock('../../lib/powersync/db', () => {
   const db = {
@@ -8,16 +8,16 @@ vi.mock('../../lib/powersync/db', () => {
     getAll: vi.fn()
   };
   return {
-    getPowerSyncInstance: vi.fn(() => db)
+    getPowerSyncDB: vi.fn(() => db)
   };
 });
 
 describe('offlineQueue with PowerSync (SQLite)', () => {
   let dbMock: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset mocks before each test
-    dbMock = getPowerSyncInstance();
+    dbMock = await getPowerSyncDB();
     dbMock.execute.mockReset();
     dbMock.getAll.mockReset();
 
@@ -25,18 +25,18 @@ describe('offlineQueue with PowerSync (SQLite)', () => {
     global.window = {} as any;
   });
 
-  it('enqueueAction inserts an action into pending_actions table', async () => {
+  it('enqueueAction inserts an action into local_pending_actions table', async () => {
     const action = { id: 'uuid-123', type: 'test_action', payload: { a: 1 }, timestamp: 12345 };
 
     await enqueueAction(action);
 
     expect(dbMock.execute).toHaveBeenCalledWith(
-      'INSERT OR REPLACE INTO pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO local_pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
       ['uuid-123', 'test_action', '{"a":1}', 12345]
     );
   });
 
-  it('getActions retrieves and parses actions from pending_actions table', async () => {
+  it('getActions retrieves and parses actions from local_pending_actions table', async () => {
     dbMock.getAll.mockResolvedValue([
       { id: 'uuid-1', type: 'action1', payload: '{"foo":"bar"}', timestamp: 100 },
       { id: 'uuid-2', type: 'action2', payload: '{"baz":"qux"}', timestamp: 200 }
@@ -44,7 +44,7 @@ describe('offlineQueue with PowerSync (SQLite)', () => {
 
     const actions = await getActions();
 
-    expect(dbMock.getAll).toHaveBeenCalledWith('SELECT * FROM pending_actions ORDER BY timestamp ASC');
+    expect(dbMock.getAll).toHaveBeenCalledWith('SELECT * FROM local_pending_actions ORDER BY timestamp ASC');
     expect(actions).toEqual([
       { id: 'uuid-1', type: 'action1', payload: { foo: 'bar' }, timestamp: 100 },
       { id: 'uuid-2', type: 'action2', payload: { baz: 'qux' }, timestamp: 200 }
@@ -54,6 +54,6 @@ describe('offlineQueue with PowerSync (SQLite)', () => {
   it('removeAction deletes an action by id', async () => {
     await removeAction('uuid-123');
 
-    expect(dbMock.execute).toHaveBeenCalledWith('DELETE FROM pending_actions WHERE id = ?', ['uuid-123']);
+    expect(dbMock.execute).toHaveBeenCalledWith('DELETE FROM local_pending_actions WHERE id = ?', ['uuid-123']);
   });
 });
