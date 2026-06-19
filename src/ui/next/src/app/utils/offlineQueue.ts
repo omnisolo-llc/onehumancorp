@@ -45,7 +45,12 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put(action);
 
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ohc_queue_updated"));
+        }
+        resolve();
+      };
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
@@ -86,7 +91,12 @@ export async function removeAction(id: string): Promise<void> {
       const store = transaction.objectStore(STORE_NAME);
       const request = store.delete(id);
 
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ohc_queue_updated"));
+        }
+        resolve();
+      };
       request.onerror = () => reject(request.error);
     });
   } catch (err) {

@@ -42,14 +42,19 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
              `;
              document.body.appendChild(card);
              document.getElementById('sold-out-toggle-e2e-product-falafel').addEventListener('click', () => {
-                 let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                 queue.push({
+                 const action = {
                      id: 'e2e-product-falafel',
                      type: 'TOGGLE_SOLD_OUT',
                      payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
-                     timestamp: new Date().toISOString()
-                 });
-                 localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                     timestamp: Date.now()
+                 };
+                 const request = window.indexedDB.open("OHC_Offline_Queue", 1);
+                 request.onsuccess = (e) => {
+                     const db = (e.target as any).result;
+                     const tx = db.transaction("actions", "readwrite");
+                     tx.objectStore("actions").put(action);
+                     tx.oncomplete = () => window.dispatchEvent(new Event("ohc_queue_updated"));
+                 };
              });
         }
         let q = document.getElementById('queue-dashboard');
@@ -93,14 +98,19 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await context.setOffline(true);
 
     await page.evaluate(() => {
-        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        queue.push({
+        const action = {
             id: 'crdt-test-1',
             type: 'CRDT_MUTATION',
             payload: { entity_id: 'task-test', data: { status: 'completed' } },
-            timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+            timestamp: Date.now()
+        };
+        const request = window.indexedDB.open("OHC_Offline_Queue", 1);
+        request.onsuccess = (e) => {
+            const db = (e.target as any).result;
+            const tx = db.transaction("actions", "readwrite");
+            tx.objectStore("actions").put(action);
+            tx.oncomplete = () => window.dispatchEvent(new Event("ohc_queue_updated"));
+        };
     });
 
     const mcpDeltasPromise = page.waitForRequest(request =>
@@ -122,9 +132,20 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     expect(postData.deltas[0].data).toContain('completed');
 
     // Wait for the sync to clear the queue
-    await page.waitForFunction(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        return queue.length === 0;
+    await page.waitForFunction(async () => {
+        return new Promise((resolve) => {
+            const request = window.indexedDB.open("OHC_Offline_Queue", 1);
+            request.onsuccess = (e) => {
+                const db = (e.target as any).result;
+                try {
+                    const tx = db.transaction("actions", "readonly");
+                    const req = tx.objectStore("actions").getAll();
+                    req.onsuccess = () => resolve(req.result.length === 0);
+                    req.onerror = () => resolve(false);
+                } catch { resolve(true); }
+            };
+            request.onerror = () => resolve(true);
+        });
     }, { timeout: 15000 });
   });
 
