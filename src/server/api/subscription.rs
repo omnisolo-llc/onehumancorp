@@ -335,6 +335,101 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     router_with_orchestrator(hub, None)
 }
 
+async fn get_subscription_by_id(
+    Extension(hub): Extension<Arc<Hub>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let result = sqlx::query(
+        "SELECT
+            s.id,
+            p.title as productName,
+            sp.interval as frequency,
+            s.status,
+            s.current_period_end as nextDeliveryDate,
+            p.price_cents as price,
+            sp.discount_percentage
+         FROM subscriptions s
+         JOIN subscription_plans sp ON s.plan_id = sp.id
+         JOIN products p ON sp.product_id = p.id
+         WHERE s.id = $1 AND s.tenant_id = $2"
+    )
+    .bind(&id)
+    .bind(tenant_id)
+    .fetch_optional(&mut *conn)
+    .await;
+
+    match result {
+        Ok(Some(r)) => {
+            use sqlx::Row;
+            let price: i64 = r.try_get("price").unwrap_or(0);
+            let discount_percentage: i32 = r.try_get("discount_percentage").unwrap_or(0);
+            let price_f64 = (price as f64) / 100.0;
+            let discounted_price = price_f64 * (1.0 - (discount_percentage as f64 / 100.0));
+
+            let next_date: chrono::DateTime<chrono::Utc> = r.try_get("nextDeliveryDate").unwrap_or_else(|_| chrono::Utc::now());
+
+            let sub = serde_json::json!({
+                "id": r.try_get::<String, _>("id").unwrap_or_default(),
+                "productName": r.try_get::<String, _>("productName").unwrap_or_default(),
+                "frequency": r.try_get::<String, _>("frequency").unwrap_or_default(),
+                "status": r.try_get::<String, _>("status").unwrap_or_default(),
+                "nextDeliveryDate": next_date.format("%Y-%m-%d").to_string(),
+                "price": price_f64,
+                "discountedPrice": discounted_price,
+            });
+            (StatusCode::OK, Json(sub)).into_response()
+        },
+        Ok(None) => (StatusCode::NOT_FOUND, "Subscription not found").into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch subscription by id: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct SubscriptionActionRequest {
+    pub action: String, // "pause", "skip", "cancel"
+}
+
+async fn subscription_action(
+    Extension(hub): Extension<Arc<Hub>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(payload): Json<SubscriptionActionRequest>,
+) -> impl IntoResponse {
+    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let update = match payload.action.as_str() {
+        "pause" => sqlx::query("UPDATE subscriptions SET status = 'paused' WHERE id = $1 AND tenant_id = $2")
+            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+        "cancel" => sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = $1 AND tenant_id = $2")
+            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+        "skip" => sqlx::query("UPDATE subscriptions SET current_period_end = current_period_end + interval '1 month' WHERE id = $1 AND tenant_id = $2")
+            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+        _ => return (StatusCode::BAD_REQUEST, "Invalid action").into_response(),
+    };
+
+    match update {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to update subscription: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
 pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
     hub: Arc<Hub>,
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
@@ -344,6 +439,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         .route("/subscribers", get(get_subscribers))
         .route("/fulfillment-batches", get(get_fulfillment_batches).post(create_fulfillment_batch))
         .route("/magic-link", post(handle_magic_link))
+        .route("/{id}", get(get_subscription_by_id))
+        .route("/{id}/action", post(subscription_action))
         .layer(Extension(orchestrator))
         .layer(Extension(hub))
 }
