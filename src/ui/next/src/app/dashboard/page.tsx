@@ -1,4 +1,5 @@
 "use client";
+import { AIPaywallWidget } from "../components/AIPaywallWidget";
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
@@ -118,6 +119,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
+  const [remainingActions, setRemainingActions] = useState<number | null>(null);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
@@ -229,13 +231,22 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData] = await Promise.all([
+        const usagePromise = fetch(`/api/user/usage?tenant_id=${tenant}`)
+          .then(res => res.ok ? res.json() : { remainingActions: 9 })
+          .catch(() => ({ remainingActions: 9 }));
+
+        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData, usageData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
           approvalsPromise,
           agentFeedPromise,
           ledgerPromise,
+          usagePromise,
         ]);
+
+        if (usageData && usageData.remainingActions !== undefined) {
+           setRemainingActions(usageData.remainingActions);
+        }
 
         if (ledgerData && ledgerData.accounts) {
           const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
@@ -336,6 +347,8 @@ export default function Dashboard() {
   ];
 
   return (
+    <>
+    <AIPaywallWidget remainingActions={remainingActions} />
     <AppShell
       title="Dashboard"
       subtitle="Network-style command center for database-backed store operations."
@@ -1070,5 +1083,6 @@ export default function Dashboard() {
       </main>
 
     </AppShell>
+    </>
   );
 }
