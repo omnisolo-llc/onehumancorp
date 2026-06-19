@@ -138,7 +138,7 @@ impl InventoryService {
                                     error_message: format!("Insufficient inventory. Available: {}", f_stock)
                                 });
                             } else {
-                                let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
