@@ -216,6 +216,16 @@ export class SyncManager {
           allOk = false;
           throw new Error(`POS Sync failed with status ${resPos.status}`);
         }
+        try {
+          const resPosData = await resPos.json();
+          if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
+             if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
+             }
+          }
+        } catch (e) {
+          console.error("Failed to parse POS Sync response", e);
+        }
       }
 
       // Sync general mutations
