@@ -91,7 +91,7 @@ mod tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
 
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)

@@ -735,7 +735,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         let tenant_id = "tenant-terminal-test-low";
         sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
@@ -775,7 +775,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         let tenant_id = "tenant-pos-test-order";
         sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'POS Test Tenant') ON CONFLICT DO NOTHING")

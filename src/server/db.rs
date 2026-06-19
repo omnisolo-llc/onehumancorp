@@ -12,25 +12,30 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
+
+pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
+    sqlx::postgres::PgPoolOptions::new()
+        .before_acquire(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("SET app.current_tenant = ''").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+}
+
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        crate::db::secure_pg_pool_options()
             .max_connections(100).acquire_timeout(std::time::Duration::from_millis(15000))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
@@ -69,21 +74,7 @@ pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
 }
 
 pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
-    sqlx::postgres::PgPoolOptions::new()
-        .before_acquire(|conn, _meta| {
-            Box::pin(async move {
-                use sqlx::Executor;
-                conn.execute("SET app.current_tenant = ''").await?;
-                Ok(true)
-            })
-        })
-        .after_release(|conn, _meta| {
-            Box::pin(async move {
-                use sqlx::Executor;
-                conn.execute("DISCARD ALL").await?;
-                Ok(true)
-            })
-        })
+    crate::db::secure_pg_pool_options()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .expect("Failed to connect to in-memory test database")
 }
@@ -433,21 +424,7 @@ impl DB {
                 .and_then(|raw| raw.parse::<u32>().ok())
                 .unwrap_or(30);
             let pool = loop {
-                match sqlx::postgres::PgPoolOptions::new()
-                    .before_acquire(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("SET app.current_tenant = ''").await?;
-                            Ok(true)
-                        })
-                    })
-                    .after_release(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("DISCARD ALL").await?;
-                            Ok(true)
-                        })
-                    })
+                match crate::db::secure_pg_pool_options()
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
                     .await
@@ -1910,21 +1887,7 @@ mod autodream_db_tests {
         .await
         .expect("Database URL or operation failed in test");
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .expect("Database URL or operation failed in test");
 
@@ -2217,21 +2180,7 @@ mod e2e_tenant_isolation_tests {
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Create a basic pool using our implementation logic
-        let pool_opts = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            });
+        let pool_opts = crate::db::secure_pg_pool_options();
 
         let pool = pool_opts.connect(&database_url).await.expect("Database URL or operation failed in test");
 

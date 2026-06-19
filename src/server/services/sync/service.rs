@@ -367,7 +367,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
@@ -378,7 +378,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
@@ -399,7 +399,7 @@ mod tests {
         // In the mock we expect error from the query, but we don't have migrations applied.
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
@@ -416,7 +416,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
 
 
             .connect(&database_url).await.unwrap();
@@ -459,7 +459,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
@@ -470,7 +470,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_escalation_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
@@ -480,7 +480,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_vector_sync() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});

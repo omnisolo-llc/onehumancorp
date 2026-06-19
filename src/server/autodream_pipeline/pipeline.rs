@@ -227,7 +227,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect(&database_url)
             .await
             .unwrap();
@@ -350,7 +350,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect(&database_url)
             .await
             .unwrap();
@@ -390,7 +390,7 @@ mod tests {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" { return; }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect(&database_url)
             .await
             .unwrap();

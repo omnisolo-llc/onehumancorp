@@ -516,7 +516,7 @@ mod tests {
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        sqlx::postgres::PgPoolOptions::new()
+        crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap()
@@ -662,7 +662,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_marks_blocked() {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
@@ -682,7 +682,7 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
 
             .max_connections(1)
             .connect(&database_url)
@@ -767,7 +767,7 @@ mod tests {
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // First verify it doesn't crash on execution with an invalid/dummy pool.
-        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        let dummy_pool = crate::db::secure_pg_pool_options()
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
@@ -785,7 +785,7 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
         };
 
-        if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
+        if let Ok(pool) = crate::db::secure_pg_pool_options()
 
             .max_connections(1)
             .connect(&database_url)
@@ -974,7 +974,7 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
 
-        if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
+        if let Ok(pool) = crate::db::secure_pg_pool_options()
 
             .max_connections(1)
             .connect(&database_url)
@@ -1106,7 +1106,7 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
 
             .max_connections(1)
             .connect(&database_url)

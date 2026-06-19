@@ -745,7 +745,7 @@ mod tests {
         .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
@@ -816,7 +816,7 @@ mod tests {
         .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
@@ -894,7 +894,7 @@ mod tests {
         .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
@@ -938,7 +938,7 @@ mod tests {
     #[tokio::test]
     async fn test_kairos_orchestrator_pg_paths() {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .max_connections(1)
             .connect_lazy(database_url)
@@ -1010,7 +1010,7 @@ mod tests {
         .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
 
