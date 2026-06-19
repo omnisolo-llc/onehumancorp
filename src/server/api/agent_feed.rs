@@ -10,6 +10,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use crate::services::agent::work_triage::WorkTriageService;
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
@@ -266,8 +267,6 @@ async fn create_feed_item(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool);
-
     let item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
@@ -277,10 +276,14 @@ async fn create_feed_item(
         lifecycle_state: "PENDING_APPROVAL".to_string(),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
+        correlation_id: None,
+        priority_score: None,
     };
 
-    match repo.create(item.clone()).await {
-        Ok(_) => {
+    let triage_service = WorkTriageService::new(pool);
+
+    match triage_service.ingest(item.clone()).await {
+        Ok(ingested_item) => {
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
@@ -288,7 +291,7 @@ async fn create_feed_item(
             // Publish to Redis Pub/Sub
             let client = get_redis_client();
             let topic = format!("agent_feed:{}", tenant_id);
-            if let Ok(payload_json) = serde_json::to_string(&item) {
+            if let Ok(payload_json) = serde_json::to_string(&ingested_item) {
                 // In background task, to not block response
                 tokio::spawn(async move {
                     if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
@@ -297,10 +300,10 @@ async fn create_feed_item(
                 });
             }
 
-            (StatusCode::CREATED, Json(item)).into_response()
+            (StatusCode::CREATED, Json(ingested_item)).into_response()
         },
         Err(e) => {
-            tracing::error!("Failed to create agent feed item: {}", e);
+            tracing::error!("Failed to ingest agent feed item via triage service: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

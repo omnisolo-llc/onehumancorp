@@ -96,3 +96,34 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await expect(emptyMessage).toBeVisible();
   });
 });
+
+test.describe('Work Triage Engine deduplication and prioritization', () => {
+  const tenantId = 'e2e-triage-engine-tenant';
+
+  test('groups low stock alerts and prioritizes deposit failures via full UI flow', async ({ page }) => {
+    // Navigate to the test login page and use the specific test user credentials
+    await page.goto('/login');
+    await page.fill('input[name="email"]', 'owner@e2e-triage-engine.com');
+    await page.fill('input[name="password"]', 'testpassword123');
+    await page.click('button[type="submit"]');
+
+    // Wait for the dashboard to load indicating successful login
+    // await expect(page.locator('#triage-queue')).toBeVisible({ timeout: 15000 });
+    // Assuming UI lands on dashboard with feed items
+
+    await page.goto('/dashboard');
+    // Verify deposit failed is the first item due to priority
+    const items = page.locator('.bg-\\[rgba\\(255\\,255\\,255\\,0\\.65\\)\\]'); // the card class from UI
+
+    // We expect 2 distinct items based on the SQL seed for this user
+    await expect(items).toHaveCount(2, { timeout: 10000 });
+
+    const firstItem = items.nth(0);
+    await expect(firstItem).toContainText('deposit failed', { ignoreCase: true });
+    await expect(firstItem).toContainText('Urgent Action Required', { ignoreCase: true });
+
+    const secondItem = items.nth(1);
+    await expect(secondItem).toContainText('low stock', { ignoreCase: true });
+    await expect(secondItem).toContainText('3 items'); // Deduplicated count
+  });
+});

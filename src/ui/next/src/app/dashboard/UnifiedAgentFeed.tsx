@@ -30,6 +30,8 @@ type AgentFeedItem = {
   lifecycle_state: string;
   created_at: string;
   updated_at: string;
+  correlation_id?: string;
+  priority_score?: number;
 };
 
 type ApprovalsResponse = {
@@ -613,8 +615,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       {approval.event_source.replace('_', ' ')}
                     </span>
                     {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-[8px]">
-                        Requires Review
+                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-[8px] ${(approval.priority_score && approval.priority_score >= 100) ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'}`}>
+                        {(approval.priority_score && approval.priority_score >= 100) ? 'Urgent Action Required' : 'Requires Review'}
+                      </span>
+                    )}
+                    {approval.context_payload?.grouped_count && approval.context_payload.grouped_count > 1 && (
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2 py-1 rounded-[8px]">
+                        {approval.context_payload.grouped_count} items
                       </span>
                     )}
                     {queuedActionIds.has(approval.id) && (

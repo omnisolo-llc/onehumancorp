@@ -12,6 +12,8 @@ pub struct AgentFeedItem {
     pub lifecycle_state: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub correlation_id: Option<String>,
+    pub priority_score: Option<i32>,
 }
 
 pub struct AgentFeedRepository {
@@ -26,8 +28,8 @@ impl AgentFeedRepository {
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
-            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at, correlation_id, priority_score)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
             "#
         )
@@ -39,7 +41,60 @@ impl AgentFeedRepository {
         .bind(item.lifecycle_state)
         .bind(item.created_at)
         .bind(item.updated_at)
+        .bind(item.correlation_id)
+        .bind(item.priority_score)
         .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rec)
+    }
+
+    pub async fn update(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
+        let rec = sqlx::query_as::<_, AgentFeedItem>(
+            r#"
+            UPDATE agent_feed_items
+            SET event_source = $3, context_payload = $4, proposed_action = $5, lifecycle_state = $6, updated_at = NOW(), correlation_id = $7, priority_score = $8
+            WHERE id = $1 AND tenant_id = $2
+            RETURNING *
+            "#
+        )
+        .bind(item.id)
+        .bind(item.tenant_id)
+        .bind(item.event_source)
+        .bind(item.context_payload)
+        .bind(item.proposed_action)
+        .bind(item.lifecycle_state)
+        .bind(item.correlation_id)
+        .bind(item.priority_score)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rec)
+    }
+
+    pub async fn get_pending_by_correlation_id(&self, tenant_id: &str, correlation_id: &str) -> Result<Option<AgentFeedItem>, sqlx::Error> {
+        let rec = sqlx::query_as::<_, AgentFeedItem>(
+            r#"
+            SELECT
+                id,
+                tenant_id,
+                event_source,
+                context_payload,
+                proposed_action,
+                lifecycle_state,
+                created_at,
+                updated_at,
+                correlation_id,
+                priority_score
+            FROM agent_feed_items
+            WHERE tenant_id = $1 AND correlation_id = $2 AND lifecycle_state = 'PENDING_APPROVAL'
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(tenant_id)
+        .bind(correlation_id)
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(rec)
@@ -56,7 +111,9 @@ impl AgentFeedRepository {
                 proposed_action,
                 lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                correlation_id,
+                priority_score
             FROM agent_feed_items
             WHERE tenant_id = $1 AND id = $2
 
@@ -74,7 +131,9 @@ impl AgentFeedRepository {
                     ELSE status
                 END as lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                NULL as correlation_id,
+                NULL as priority_score
             FROM agent_approvals
             WHERE tenant_id = $1 AND id = $2
             "#
@@ -98,7 +157,9 @@ impl AgentFeedRepository {
                 NULL::jsonb as proposed_action,
                 lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                correlation_id,
+                priority_score
             FROM agent_feed_items
             WHERE tenant_id = $1
 
@@ -116,11 +177,13 @@ impl AgentFeedRepository {
                     ELSE status
                 END as lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                NULL as correlation_id,
+                NULL as priority_score
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
 
-            ORDER BY created_at DESC
+            ORDER BY COALESCE(priority_score, 0) DESC, created_at DESC
             LIMIT $2 OFFSET $3
             "#
         } else {
@@ -133,7 +196,9 @@ impl AgentFeedRepository {
                 proposed_action,
                 lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                correlation_id,
+                priority_score
             FROM agent_feed_items
             WHERE tenant_id = $1
 
@@ -151,11 +216,13 @@ impl AgentFeedRepository {
                     ELSE status
                 END as lifecycle_state,
                 created_at,
-                updated_at
+                updated_at,
+                NULL as correlation_id,
+                NULL as priority_score
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
 
-            ORDER BY created_at DESC
+            ORDER BY COALESCE(priority_score, 0) DESC, created_at DESC
             LIMIT $2 OFFSET $3
             "#
         };
@@ -271,6 +338,8 @@ mod tests {
             lifecycle_state: "PENDING".to_string(),
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
+            correlation_id: Some("test_correlation".to_string()),
+            priority_score: Some(10),
         };
 
         let created = repo.create(new_item.clone()).await.expect("Failed to create feed item");

@@ -115,6 +115,8 @@ async fn create_incident(
         lifecycle_state: "PENDING_APPROVAL".to_string(),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
+        correlation_id: None,
+        priority_score: None,
     };
 
     if let Err(e) = repo.create(feed_item).await {
