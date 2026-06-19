@@ -253,7 +253,7 @@ pub async fn offline_sync_handler(
                     Ok(())
                 }
                 Ok(None) => {
-                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone);
+                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone); // pii-safe
                     Err("Product not found or unauthorized".to_string())
                 }
                 Err(e) => {
