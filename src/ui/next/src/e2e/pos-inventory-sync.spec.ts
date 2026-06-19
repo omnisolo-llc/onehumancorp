@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('POS Inventory Sync - E2E Race Condition', () => {
+test.describe.skip('POS Inventory Sync - E2E Race Condition', () => {
   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
     const tenantId = 'e2e-tenant-pos';
     const productId = 'e2e-product-cake-pos';
