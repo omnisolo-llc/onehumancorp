@@ -25,6 +25,8 @@ const omniInboxMessages = new Table({
   updated_at: column.text
 });
 
+// We remove pending_actions from AppSchema because we don't want it tracked
+// as a syncing table by PowerSync. We will create it manually via SQL.
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages
