@@ -26,6 +26,17 @@ describe('PricingPage', () => {
     (useRouter as any).mockReturnValue({ push: mockPush });
     global.fetch = vi.fn();
 
+    (global.fetch as any).mockImplementation(async (url) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+
     // Mock window.location.href
     originalWindowLocation = window.location;
     delete (window as any).location;
@@ -47,13 +58,25 @@ describe('PricingPage', () => {
 
   it('initiates checkout session when upgrading to Starter', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ checkout_url: mockCheckoutUrl }),
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({ checkout_url: mockCheckoutUrl }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
     });
 
+
     render(<PricingPage />);
-    const upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    const upgradeButton = await screen.findByText('Upgrade to Starter via Stripe');
     fireEvent.click(upgradeButton);
 
     // Wait for the async logic to finish
@@ -70,12 +93,24 @@ describe('PricingPage', () => {
   });
 
   it('handles upgrade errors gracefully', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+        throw new Error('Network error');
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
     const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<PricingPage />);
-    const upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    const upgradeButton = await screen.findByText('Upgrade to Starter via Stripe');
     fireEvent.click(upgradeButton);
 
     await vi.waitFor(() => {
