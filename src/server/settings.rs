@@ -32,6 +32,7 @@ pub struct AppSettings {
     pub voice_receptionist_enabled: bool,
     pub voice_receptionist_number: Option<String>,
     pub voice_receptionist_persona: Option<String>,
+    pub voice_receptionist_instructions: Option<String>,
 }
 
 impl AppSettings {
@@ -55,6 +56,7 @@ impl AppSettings {
             voice_receptionist_enabled: false,
             voice_receptionist_number: None,
             voice_receptionist_persona: Some("Friendly".to_string()),
+            voice_receptionist_instructions: None,
         }
     }
 }
@@ -138,11 +140,12 @@ impl Store {
         self.save()
     }
 
-    pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>) -> Result<(), String> {
+    pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>, instructions: Option<String>) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
         data.voice_receptionist_number = number;
         data.voice_receptionist_persona = persona;
+        data.voice_receptionist_instructions = instructions;
         drop(data);
         self.save()
     }
@@ -166,6 +169,7 @@ mod tests {
         assert_eq!(settings.voice_receptionist_enabled, false);
         assert_eq!(settings.voice_receptionist_number, None);
         assert_eq!(settings.voice_receptionist_persona, Some("Friendly".to_string()));
+        assert_eq!(settings.voice_receptionist_instructions, None);
     }
 
     #[test]
