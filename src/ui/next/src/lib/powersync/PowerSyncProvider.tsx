@@ -1,25 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PowerSyncDatabase } from '@powersync/web';
 import { PowerSyncContext } from '@powersync/react';
-import { AppSchema } from './AppSchema';
-
-class BackendConnector {
-  async fetchCredentials() {
-    const res = await fetch('/api/v1/auth/powersync_token');
-    if (!res.ok) {
-      throw new Error(`Failed to get token: ${res.status}`);
-    }
-    const body = await res.json();
-    return {
-      endpoint: body.powersync_url,
-      token: body.token,
-      expiresAt: body.expires_at || new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    };
-  }
-  async uploadData(database: any) {
-    // Offline mutations handle local changes queue directly
-  }
-}
+import { getSystemPowerSync, BackendConnector } from './db';
 
 export function isPowerSyncSupportedForLocation(isSecureContext: boolean, hostname: string) {
   return isSecureContext || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
@@ -48,14 +30,7 @@ export const PowerSyncProvider = ({
     if (!supported) return;
     let _powerSync: PowerSyncDatabase;
     const init = async () => {
-      _powerSync = new PowerSyncDatabase({
-        database: {
-          dbFilename: 'ohc-offline.db'
-        },
-        schema: AppSchema,
-      });
-
-      await _powerSync.init();
+      _powerSync = await getSystemPowerSync();
 
       const connector = new BackendConnector();
       _powerSync.connect(connector);
@@ -72,7 +47,6 @@ export const PowerSyncProvider = ({
     return () => {
        if (_powerSync) {
          _powerSync.disconnect();
-         _powerSync.close();
        }
     };
   }, [supported]);
