@@ -27,6 +27,7 @@ pub struct PaymentIntentResponse {
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
+        .route("/connection_token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))

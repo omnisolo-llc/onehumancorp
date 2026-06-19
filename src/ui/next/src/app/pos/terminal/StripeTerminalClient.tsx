@@ -30,7 +30,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
 
       const term = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
+          const res = await fetch('/api/v1/payments/terminal/connection_token', { method: 'POST' });
           const data = await res.json();
           return data.secret;
         },
