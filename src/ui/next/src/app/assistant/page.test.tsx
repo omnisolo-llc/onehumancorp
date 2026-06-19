@@ -251,3 +251,96 @@ test('renders new parity gaps elements', async () => {
   const els = await screen.findAllByText(/212/);
   expect(els.length).toBeGreaterThan(0);
 });
+
+test('renders empty Assistant state without seeded demo records', async () => {
+  renderAssistantPage();
+
+  expect(await screen.findByRole('heading', { name: 'Agent Assistant' })).toBeDefined();
+  expect(screen.queryByText("Create this week's operating brief")).toBeDefined();
+});
+
+test('shows resource error instead of connector demo records', async () => {
+  global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+    const urlString = typeof url === 'string' ? url : url.toString();
+    if (urlString.includes('/api/assistant/tasks')) {
+      return new Response(JSON.stringify({
+        tasks: [],
+        capabilities: {
+          outputFormats: ['Document', 'Presentation', 'PDF', 'Code App'],
+          workModes: ['Ask', 'Agent', 'Plan', 'Coding'],
+          modelProviders: ['Auto', 'Agent'],
+        },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/settings')) {
+      return new Response(JSON.stringify({ settings: { agentName: 'Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/connectors')) {
+      return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as any;
+
+  renderAssistantPage();
+  fireEvent.click(await screen.findByRole('button', { name: 'Connectors' }));
+
+  expect(await screen.findByText('Assistant backend unavailable')).toBeDefined();
+  expect(screen.queryByText('GitHub')).toBeNull();
+  expect(screen.queryByText('Slack')).toBeNull();
+});
+
+
+test('renders empty Assistant state without seeded demo records', async () => {
+  global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+    const urlString = typeof url === 'string' ? url : url.toString();
+    if (urlString.includes('/api/assistant/tasks')) {
+      return new Response(JSON.stringify({
+        tasks: [],
+        capabilities: {
+          outputFormats: ['Document', 'Presentation', 'PDF', 'Code App'],
+          workModes: ['Ask', 'Agent', 'Plan', 'Coding'],
+          modelProviders: ['Auto', 'Agent'],
+        },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as any;
+
+  renderAssistantPage();
+
+  expect(await screen.findByRole('heading', { name: 'Agent Assistant' })).toBeDefined();
+  expect(screen.getByText('0 tasks')).toBeDefined();
+  expect(screen.getByText('No matching tasks.')).toBeDefined();
+  expect(screen.queryByText("Create this week's operating brief")).toBeNull();
+  expect(screen.queryByText('Organize Downloads by file type')).toBeNull();
+});
+
+test('shows resource error instead of connector demo records', async () => {
+  global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+    const urlString = typeof url === 'string' ? url : url.toString();
+    if (urlString.includes('/api/assistant/tasks')) {
+      return new Response(JSON.stringify({
+        tasks: [],
+        capabilities: {
+          outputFormats: ['Document', 'Presentation', 'PDF', 'Code App'],
+          workModes: ['Ask', 'Agent', 'Plan', 'Coding'],
+          modelProviders: ['Auto', 'Agent'],
+        },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/settings')) {
+      return new Response(JSON.stringify({ settings: { agentName: 'Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/connectors')) {
+      return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as any;
+
+  renderAssistantPage();
+  fireEvent.click(await screen.findByRole('button', { name: 'Connectors' }));
+
+  expect(await screen.findByText('Assistant backend unavailable')).toBeDefined();
+  expect(screen.queryByText('GitHub')).toBeNull();
+  expect(screen.queryByText('Slack')).toBeNull();
+});
