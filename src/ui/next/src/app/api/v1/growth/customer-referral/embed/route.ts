@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
       background-color: transparent;
     }
     .widget-container {
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 16px;
       padding: 20px;
