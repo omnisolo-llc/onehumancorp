@@ -83,19 +83,19 @@ impl StripeClient {
 
     pub async fn capture_terminal_payment_intent(
         &self,
-        intent_id: &str,
+        payment_intent_id: &str,
     ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
-        if intent_id.trim().is_empty() {
+        if payment_intent_id.trim().is_empty() {
             return Err("intent_id is required".to_string());
         }
 
         let res = reqwest::Client::new()
-            .post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), intent_id))
+            .post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), payment_intent_id))
             .basic_auth(api_key, Some(""))
             .send()
             .await
-            .map_err(|e| format!("Stripe API request failed: {}", e))?;
+            .map_err(|e| format!("Stripe API capture request failed: {}", e))?;
 
         if !res.status().is_success() {
             let status = res.status();
@@ -104,11 +104,11 @@ impl StripeClient {
         }
 
         let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let status_str = json["status"].as_str().ok_or_else(|| "Missing status in response".to_string())?;
-
-        Ok(status_str.to_string())
+        json["status"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Missing status in capture response".to_string())
     }
-
 }
 
 #[cfg(test)]
@@ -124,11 +124,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_terminal_capture_payment_requires_configured_key() {
+    async fn test_capture_terminal_payment_intent_requires_configured_key() {
         let client = StripeClient::new("".to_string());
-        let result = client.capture_terminal_payment_intent("pi_test").await;
-        let err = result.expect_err("Terminal intent capture must fail without key");
+        let result = client.capture_terminal_payment_intent("pi_test_123").await;
+        let err = result.expect_err("Capture intent must not be mocked when Stripe credentials are missing");
         assert!(err.contains("Stripe API key"));
     }
-
 }

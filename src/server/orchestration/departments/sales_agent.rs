@@ -234,10 +234,18 @@ impl Department for SalesAgent {
             "tenant.omnichannel.message.received".to_string(),
             "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
+            "pos_sales".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "POS_SALE_COMPLETED" {
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
+            tracing::info!("Sales Agent: Recorded POS sale of ${} for customer {}", amount, customer_id);
+            return Ok(());
+        }
+
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {

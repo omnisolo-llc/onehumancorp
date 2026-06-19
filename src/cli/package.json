@@ -16,6 +16,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
     "ink": "^7.0.1",
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",

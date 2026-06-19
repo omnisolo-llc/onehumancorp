@@ -1,42 +1,49 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Viral Waitlist Loop', () => {
-  test('should allow user to join waitlist and share', async ({ page }) => {
-    // Navigate to waitlist page
-    await page.goto('/waitlist');
+test.describe('Viral Waitlist Generator E2E', () => {
+    test('should allow member to customize waitlist and generate embed code with branding', async ({ memberPage }) => {
+        test.setTimeout(90000);
 
-    // Fill out the form
-    await page.fill('input[id="email"]', 'test@example.com');
+        // Navigate to the generator page
+        await memberPage.goto('/ui/viral-waitlist-generator.html');
 
-    // Submit the form
-    await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/v1/growth/waitlist') && resp.status() === 200),
-      page.click('button[type="submit"]')
-    ]);
+        // Wait for the page to load
+        await expect(memberPage.locator('h1', { hasText: 'Viral Waitlist Generator' })).toBeVisible({ timeout: 15000 });
 
-    // Verify success message and position
-    // We match by regex to handle dynamic position numbers smoothly
-    await expect(page.locator('h2', { hasText: /You're( #\d+)? on the list!/ })).toBeVisible();
+        // Update product name
+        const productInput = memberPage.locator('#product-name');
+        await productInput.fill('Playwright Test Launch');
 
-    // Verify the viral loop section is present
-    await expect(page.locator("text=Move up the list!")).toBeVisible();
-    await expect(page.locator("text=Invite friends with your unique link.")).toBeVisible();
+        // Verify the preview updates
+        await expect(memberPage.locator('#preview-title')).toHaveText('Join the Playwright Test Launch Waitlist');
 
-    // Verify the referral link input is visible and populated
-    const referralInput = page.locator('input[readonly]');
-    await expect(referralInput).toBeVisible();
-    await expect(referralInput).toHaveValue(/https:\/\/ohc\.app\/waitlist\?ref=/);
+        // Verify that by default, the "Powered by OHC" branding is visible in the preview
+        const previewBranding = memberPage.locator('#preview-branding');
+        await expect(previewBranding).toBeVisible();
+        await expect(previewBranding).toContainText('Powered by OHC');
 
-    // Verify the Copy button
-    await expect(page.locator('button', { hasText: 'Copy' })).toBeVisible();
+        // Click generate widget code
+        await memberPage.locator('#get-code-btn').click();
 
-    // Verify the Share on X button and its viral branding in the text
-    const shareButton = page.locator('a', { hasText: 'Share on X' });
-    await expect(shareButton).toBeVisible();
-    const href = await shareButton.getAttribute('href');
-    expect(href).toContain('Powered%20by%20OHC');
+        // Check the generated embed code
+        const embedModal = memberPage.locator('#embed-modal');
+        await expect(embedModal).toHaveClass(/active/);
 
-    // Verify the footer viral branding
-    await expect(page.locator("text=⚡ Powered by OHC")).toBeVisible();
-  });
+        const embedCode = await memberPage.locator('#embed-code').inputValue();
+        expect(embedCode).toContain('Playwright%20Test%20Launch'); // URL encoded
+        expect(embedCode).toContain('hideBranding=false'); // Default should include branding
+    });
+
+    test('should show paywall when attempting to remove branding', async ({ memberPage }) => {
+        // Navigate to the generator page
+        await memberPage.goto('/ui/viral-waitlist-generator.html');
+
+        // Attempt to remove branding
+        await memberPage.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+
+        // Since the member in E2E isn't a "Pro" by default in local storage, it should pop the paywall
+        const paywallModal = memberPage.locator('#paywall-modal');
+        await expect(paywallModal).toHaveClass(/active/);
+        await expect(paywallModal.locator('h2')).toHaveText('Upgrade to Pro');
+    });
 });

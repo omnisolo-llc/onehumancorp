@@ -50,6 +50,8 @@ impl GatherActVerifyHarness {
 
 
         tokio::spawn(async move {
+            let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+
             if let Some(guardrails) = &config.guardrails {
                 if let Err(e) = guardrails.check_input(&task) {
                     let _ = tx.send(AgentEvent::GuardrailTripped { reason: e.clone() });
@@ -205,32 +207,33 @@ impl GatherActVerifyHarness {
                         for tc in read_only_calls {
                             let current_tools = current_tools.clone();
                             let tx = tx.clone();
+                            let tc_name = tc.name.clone();
                             read_only_futures.push(async move {
                                 let _ = tx.send(AgentEvent::TextChunk {
                                     content: format!("Starting read-only tool call: {}", tc.name),
                                 });
 
                                 let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
-                                let tr = if let Some(tool) = tool_opt {
+                                let (tr, is_recoverable) = if let Some(tool) = tool_opt {
                                     match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2).await {
-                                        Ok(res) => ohc_builtin_agent_core::types::ToolResult {
+                                        Ok(res) => (ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: res.clone(),
                                             error: String::new(),
-                                        },
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg),
-                                        Err(e) => ohc_builtin_agent_core::types::ToolResult {
+                                        }, false),
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => (ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg), true),
+                                        Err(e) => (ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: String::new(),
                                             error: e.to_string(),
-                                        },
+                                        }, false),
                                     }
                                 } else {
-                                    ohc_builtin_agent_core::types::ToolResult {
+                                    (ohc_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
                                         error: format!("Tool {} not found in this phase", tc.name),
-                                    }
+                                    }, false)
                                 };
 
                                 let _ = tx.send(AgentEvent::ToolCall {
@@ -239,12 +242,28 @@ impl GatherActVerifyHarness {
                                     result: tr.content.clone() + &tr.error,
                                     iteration: iteration as i32,
                                 });
-                                tr
+                                (tc_name, tr)
                             });
                         }
 
                         let ro_results = futures::future::join_all(read_only_futures).await;
-                        let mut tool_results = ro_results;
+                        let mut tool_results = Vec::new();
+                        let cfg_max_retries = std::cmp::min(config.max_retries, 2) as u64;
+
+                        for (name, mut tr) in ro_results {
+                            if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
+                                let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
+                                error_counts.insert(name.clone(), count);
+                                if count > cfg_max_retries {
+                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, tr.error);
+                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
+                                    return;
+                                }
+                            } else if tr.error.is_empty() {
+                                error_counts.insert(name.clone(), 0);
+                            }
+                            tool_results.push(tr);
+                        }
 
                         for tc in mutating_calls {
                             let _ = tx.send(AgentEvent::TextChunk {
@@ -273,6 +292,42 @@ impl GatherActVerifyHarness {
                                     error: format!("Tool {} not found in this phase", tc.name),
                                 }
                             };
+
+                            if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
+                                let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
+                                error_counts.insert(tc.name.clone(), count);
+                                if count > cfg_max_retries {
+                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, tr.error);
+                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
+                                    return;
+                                }
+                            } else if tr.error.is_empty() {
+                                error_counts.insert(tc.name.clone(), 0);
+                            }
+
+                            if is_recoverable {
+                                let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
+                                error_counts.insert(tc.name.clone(), count);
+                                if count > cfg_max_retries {
+                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, tr.error);
+                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
+                                    return;
+                                }
+                            } else if tr.error.is_empty() {
+                                error_counts.insert(tc.name.clone(), 0);
+                            }
+
+                            if is_recoverable {
+                                let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
+                                error_counts.insert(tc.name.clone(), count);
+                                if count > cfg_max_retries {
+                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, tr.error);
+                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
+                                    return;
+                                }
+                            } else if tr.error.is_empty() {
+                                error_counts.insert(tc.name.clone(), 0);
+                            }
 
                             let _ = tx.send(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
@@ -310,6 +365,86 @@ impl GatherActVerifyHarness {
         rx
     }
 }
+
+    #[tokio::test]
+    async fn test_gather_act_verify_compounding_error_prevention() {
+        use crate::tools::ToolExecutor;
+        use ohc_builtin_agent_core::types::ToolError;
+
+        struct FailingToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for FailingToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): Bad args".to_string()))
+            }
+        }
+
+        let fail_tool = Tool {
+            name: "fail_tool".to_string(),
+            description: "always fails".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(FailingToolExecutor),
+        };
+
+        struct FailingMockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for FailingMockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                    id: format!("call_{}", count),
+                    name: "fail_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                };
+
+                Ok(ChatResponse {
+                    message: Message {
+                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![tool_call],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some(format!("resp_{}", count)),
+                })
+            }
+        }
+
+        let llm = Arc::new(FailingMockLlm {
+            call_count: tokio::sync::Mutex::new(0),
+        });
+
+        let mut harness = GatherActVerifyHarness::new(
+            llm.clone() as Arc<dyn LlmClient>,
+            vec![fail_tool.clone()],
+            vec![fail_tool.clone()],
+            vec![fail_tool],
+        );
+        let mut config = AgentRunConfig::default();
+        config.max_retries = 2; // Clamp limits to 2
+        let mut rx = harness.query(config, "Do the thing".to_string());
+
+        let mut error_msg = String::new();
+        while let Some(evt) = rx.recv().await {
+            if let AgentEvent::TaskError { error } = evt {
+                error_msg = error;
+                break;
+            }
+        }
+
+        assert!(error_msg.contains("Fatal tool error: Tool 'fail_tool' failed consecutively beyond max_retries limit"));
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -590,4 +725,4 @@ mod tests {
 
         assert!(has_guardrail_err);
     }
-}
+    #[tokio::test]
