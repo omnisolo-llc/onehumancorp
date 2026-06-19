@@ -1,4 +1,5 @@
 "use client";
+import { AIPaywallWidget } from "../components/AIPaywallWidget";
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
@@ -118,6 +119,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
+  const [remainingActions, setRemainingActions] = useState<number | null>(null);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
@@ -229,13 +231,22 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData] = await Promise.all([
+        const usagePromise = fetch(`/api/user/usage?tenant_id=${tenant}`)
+          .then(res => res.ok ? res.json() : { remainingActions: 9 })
+          .catch(() => ({ remainingActions: 9 }));
+
+        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData, usageData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
           approvalsPromise,
           agentFeedPromise,
           ledgerPromise,
+          usagePromise,
         ]);
+
+        if (usageData && usageData.remainingActions !== undefined) {
+           setRemainingActions(usageData.remainingActions);
+        }
 
         if (ledgerData && ledgerData.accounts) {
           const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
@@ -336,6 +347,8 @@ export default function Dashboard() {
   ];
 
   return (
+    <>
+    <AIPaywallWidget remainingActions={remainingActions} />
     <AppShell
       title="Dashboard"
       subtitle="Network-style command center for database-backed store operations."
@@ -689,18 +702,18 @@ export default function Dashboard() {
             </div>
             <div className="app-list">
                             {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
-                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
+                <div key={approval.id} data-testid={`${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm-card`} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
-                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
-                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
+                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || approval.payload?.original_payload?.source || "Instagram DM"}</div>
+                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || approval.payload?.original_payload?.original_message || "Customer message"}"</div>
                     <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
-                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
-                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
+                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">Draft:</span>
+                      {approval.payload?.generated_response || approval.payload?.draft_reply || approval.payload?.original_payload?.generated_response || "Ready to send."}
                     </div>
                   </div>
                   <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
+                    <button type="button" data-testid={`approve-${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm`} className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
                     <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
                   </div>
                 </div>
@@ -1030,13 +1043,13 @@ export default function Dashboard() {
             </Link>
 
 
-            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Want more local jobs this week? [Tap here]</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Discount Code Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create discount code widgets for your customers.</p>
             </Link>
 
             <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -1070,5 +1083,6 @@ export default function Dashboard() {
       </main>
 
     </AppShell>
+    </>
   );
 }

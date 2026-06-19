@@ -11,11 +11,13 @@ const options = [
   "Launch Cloud Start",
   "Seed Database with Mock Data",
   "Check Swarm Status",
+  "Browse Agent Marketplace",
   "Verify Setup",
   "Exit"
 ];
 
-export const MasterMenu: React.FC = () => {
+interface MasterMenuProps { onSelect?: (option: string) => void; }
+export const MasterMenu: React.FC<MasterMenuProps> = ({ onSelect }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useInput((input, key) => {
@@ -29,14 +31,14 @@ export const MasterMenu: React.FC = () => {
       if (options[selectedIndex] === "Exit") {
         process.exit(0);
       } else {
-        // intentionally silence execution logs
+        if (onSelect) onSelect(options[selectedIndex]);
       }
     }
   });
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-      <Text bold color="cyan" marginBottom={1}>Select an action (Use Up/Down arrows):</Text>
+      <Text bold color="cyan" >Select an action (Use Up/Down arrows):</Text>
       {options.map((option, index) => {
         const isSelected = index === selectedIndex;
         return (

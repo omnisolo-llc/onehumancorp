@@ -100,25 +100,36 @@ export default function FeedPage() {
     setEditValue(textToEdit || "");
   };
 
-  const saveEdit = (id: string) => {
-    setItems((prev) => prev.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          proposed_action: {
-            ...item.proposed_action,
-            description: item.proposed_action?.feature_type === 'ambassador_reply' ? item.proposed_action.description : editValue,
-            generated_response: item.proposed_action?.feature_type === 'ambassador_reply' ? editValue : item.proposed_action?.generated_response,
-          },
-          context_payload: {
-            ...item.context_payload,
-            summary: item.context_payload?.feature_type === 'ambassador_reply' ? item.context_payload.summary : editValue,
-            generated_response: item.context_payload?.feature_type === 'ambassador_reply' ? editValue : item.context_payload?.generated_response,
-          }
-        };
+  const saveEdit = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+
+    const updatedProposed = {
+        ...item.proposed_action,
+        description: isAmbassador ? item.proposed_action?.description : editValue,
+        generated_response: isAmbassador ? editValue : item.proposed_action?.generated_response,
+    };
+
+    const updatedContext = {
+        ...item.context_payload,
+        summary: isAmbassador ? item.context_payload?.summary : editValue,
+        generated_response: isAmbassador ? editValue : item.context_payload?.generated_response,
+    };
+
+    setItems((prev) => prev.map((i) => {
+      if (i.id === id) {
+        return { ...i, proposed_action: updatedProposed, context_payload: updatedContext };
       }
-      return item;
+      return i;
     }));
+
+    if (isAmbassador) {
+       await handleAction(id, 'APPROVED', updatedProposed, updatedContext);
+    } else {
+       await handleAction(id, 'PENDING_APPROVAL', updatedProposed, updatedContext);
+    }
     setEditingId(null);
   };
 
@@ -126,24 +137,41 @@ export default function FeedPage() {
     setEditingId(null);
   };
 
-  const handleAction = async (id: string, state: string) => {
+  const handleAction = async (id: string, state: string, updatedProposed?: any, updatedContext?: any) => {
     const item = items.find(i => i.id === id);
-    if (state === 'APPROVED' && item?.proposed_action?.action_type === 'Draft Quote') {
-      router.push(`/quotes/${item.proposed_action.quote_id}`);
-      return;
+    if (state === 'APPROVED') {
+      if (item?.proposed_action?.action_type === 'Draft Quote') {
+        router.push(`/quotes/${item.proposed_action.quote_id}`);
+        return;
+      }
+      if (item?.proposed_action?.action_type === 'Draft Booking') {
+        // Optimistic UI or fetch the status change
+        // For Draft Booking, it confirms it in the backend and maybe we navigate to booking detail or just resolve here.
+        // We'll proceed with normal backend request to approve it so `action_router` handles it.
+      }
     }
 
     try {
       setProcessingId(id);
+
+      const bodyPayload: any = { state };
+      const proposed = updatedProposed || item?.proposed_action;
+      const context = updatedContext || item?.context_payload;
+
+      if (proposed) bodyPayload.proposed_action = proposed;
+      if (context) bodyPayload.context_payload = context;
+
       const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify(bodyPayload),
       });
       if (!res.ok) throw new Error('Action failed');
 
       // Update UI optimistically or refetch
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      if (state === 'APPROVED' || state === 'DISMISSED') {
+          setItems((prev) => prev.filter((item) => item.id !== id));
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -211,7 +239,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.event_source.replace(/_/g, ' ')}
+                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -225,6 +253,8 @@ export default function FeedPage() {
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Follow-up'
                     ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Draft Booking'
+                    ? `Drafted Booking for ${item.context_payload?.customer_name || 'Customer'}`
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
@@ -233,7 +263,7 @@ export default function FeedPage() {
                     <textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
+                      className="w-full min-h-[44px] text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
                       rows={3}
                       data-testid="feed-edit-input"
                     />
@@ -284,6 +314,8 @@ export default function FeedPage() {
                       <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
                         {item.proposed_action?.action_type === 'Draft Quote'
                           ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
+                          : item.proposed_action?.action_type === 'Draft Booking'
+                          ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
                           : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
                       </p>
                     )}
@@ -329,7 +361,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : 'Approve'}
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}
@@ -360,7 +392,7 @@ export default function FeedPage() {
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
-             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px]"
+             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Ambassador Draft
           </button>

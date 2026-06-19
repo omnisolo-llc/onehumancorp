@@ -50,17 +50,17 @@
         body { background-color: #16161a; }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1, h2, h3 { color: #f5f5f7; }
         p { color: #a1a1aa; }
         .ohc-growth-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         color: #1d1d1f;
         border-radius: 16px;
         padding: 24px;
@@ -82,8 +82,8 @@
 
       .ohc-growth-card {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
         border-radius: 16px;
@@ -173,7 +173,7 @@
         border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
-        .metric-box { background: rgba(255, 255, 255, 0.05); }
+        .metric-box { background: rgba(22, 22, 26, 0.7); }
       }
 
       .btn-outline {
@@ -197,7 +197,7 @@
       @media (prefers-color-scheme: dark) {
         .btn-outline {
           color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.2);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .btn-outline:hover {
           background-color: rgba(255,255,255,0.05);
@@ -212,8 +212,8 @@
       @media (prefers-color-scheme: dark) {
         .ohc-growth-card {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
@@ -224,7 +224,7 @@
       <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
     </div>
 
-    <div class="container glassmorphism glassmorphism">
+    <div class="container glassmorphism">
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
         <h1 style="margin: 0;">My Plan</h1>
         <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
@@ -283,21 +283,21 @@
                </div>
                <div class="metric-box">
                   <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</h2>
-                  <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-total-costs" style="font-size: 20px;">$0.00</div>
                </div>
                <div class="metric-box">
                   <div class="stat-title">Projected Monthly Cost</div>
-                  <div class="stat-value" id="projected-monthly-cost" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-projected-cost" style="font-size: 20px;">$0.00</div>
                </div>
             </div>
 
-            <div id="budget-health-alert" style="display: flex; margin-top: 20px; padding: 16px; background: rgba(255, 251, 235, 0.7); border: 1px solid rgba(253, 230, 138, 1); border-radius: 12px; align-items: flex-start; gap: 12px; backdrop-filter: blur(24px) saturate(200%); -webkit-backdrop-filter: blur(24px) saturate(200%);">
+            <div id="budget-health-alert" style="display: flex; margin-top: 20px; padding: 16px; background: rgba(255, 251, 235, 0.7); border: 1px solid rgba(253, 230, 138, 1); border-radius: 12px; align-items: flex-start; gap: 12px; backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
                 <svg style="width: 20px; height: 20px; color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
                     <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Soft Limit Approaching</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Soft Limit Approaching. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
                 </div>
             </div>
 
@@ -446,12 +446,12 @@
             if (costRes.ok) {
                 const costData = await costRes.json();
                 document.getElementById('cost-dashboard-revenue').innerText = formatCents(costData.total_revenue || 0);
-                document.getElementById('cost-dashboard-total').innerText = formatCents(costData.total_costs || 0);
-                document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
+                document.getElementById('cost-dashboard-total-costs').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('cost-dashboard-projected-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
 
                 if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
+                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Soft Limit Approaching. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
                 } else {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
@@ -509,10 +509,10 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
@@ -535,8 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
                 background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
       @media (prefers-color-scheme: dark) {
         .btn-outline {
           color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.2);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .btn-outline:hover {
           background-color: rgba(255,255,255,0.05);
@@ -715,8 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
       @media (prefers-color-scheme: dark) {
         .ohc-growth-card {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(2.1);
-          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
@@ -829,7 +829,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

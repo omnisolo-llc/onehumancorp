@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { ErrorState } from './ErrorState';
+import { ErrorState } from './ErrorState.js';
 
 describe('ErrorState', () => {
   it('renders correctly with error message', () => {

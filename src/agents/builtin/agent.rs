@@ -453,6 +453,7 @@ impl Agent {
                 &phase_cfg,
                 session_tools,
                 agents_md,
+                None,
             )
             .build();
 
@@ -760,7 +761,6 @@ impl Agent {
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
-        let mut messages = vec![crate::types::Message::user(initial_message)];
         let session_id = cfg
             .thread_id
             .clone()
@@ -769,6 +769,16 @@ impl Agent {
             .memory_store
             .as_ref()
             .map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
+
+        let mut processed_initial_message = initial_message.to_string();
+        if let Some(retriever) = &jit_retriever {
+            let temp_msgs = vec![crate::types::Message::user(initial_message)];
+            if let Some(jit_context) = retriever.retrieve_context(&temp_msgs).await {
+                processed_initial_message = format!("{}\n\n{}", jit_context, initial_message);
+            }
+        }
+
+        let mut messages = vec![crate::types::Message::user(processed_initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
         let mut total_session_cost = 0.0;
@@ -784,6 +794,7 @@ impl Agent {
             cfg,
             session_tools,
             agents_md,
+            None,
         )
         .build();
 
@@ -1507,6 +1518,7 @@ impl Agent {
             &cfg_arc,
             &session_tools_arc,
             None,
+            None,
         )
         .build();
 
@@ -2122,6 +2134,7 @@ impl Agent {
             &planner_cfg,
             &[],
             agents_md,
+            None,
         )
         .build();
 
@@ -2508,6 +2521,7 @@ impl Agent {
             &replier_cfg,
             &[],
             agents_md,
+            None,
         )
         .build();
 
@@ -3178,6 +3192,7 @@ impl Agent {
             &final_cfg,
             &session_tools,
             agents_md,
+            None,
         )
         .build();
 
@@ -4837,7 +4852,7 @@ mod tests {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
                     let expected_error = crate::types::format_llm_recoverable_error(
-                        "Validation Error (Pydantic-first tool schema): Failing for test",
+                        "Failing for test",
                     );
                     let has_error = last_msg.tool_results.iter().any(|r| {
                         r.content.contains("LLM-Recoverable Error")
@@ -4899,7 +4914,7 @@ mod tests {
 
         // Verify the ToolCall event has the LlmRecoverable message
         let expected_error = crate::types::format_llm_recoverable_error(
-            "Validation Error (Pydantic-first tool schema): Failing for test",
+            "Failing for test",
         );
         let has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
@@ -7644,7 +7659,7 @@ mod tests {
         };
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
@@ -7660,7 +7675,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7676,7 +7691,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7687,7 +7702,7 @@ mod tests {
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
         let prompt2 =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None, None).build();
         assert_eq!(
             prompt2,
             "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
@@ -7703,7 +7718,7 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
@@ -7725,7 +7740,7 @@ mod tests {
         cfg.user_instructions.push('€');
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
         let user_part = prompt.replace(notice, "");
@@ -9733,7 +9748,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(
@@ -9752,7 +9767,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(

@@ -100,7 +100,7 @@
         margin-bottom: 5px;
         font-size: 14px;
         color: #1d1d1f;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
       }
       .task-item:hover, .task-item.active {
         background: rgba(0, 102, 255, 0.1);
@@ -151,7 +151,7 @@
         margin-left: auto;
       }
       .message.assistant {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
       }
       .composer {
         padding: 20px;
@@ -165,7 +165,7 @@
         font-size: 14px;
         box-sizing: border-box;
         resize: none;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
       }
       .composer-input:focus {
         outline: none;
@@ -199,7 +199,7 @@
       }
       .result-item {
         padding: 10px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.65);
         border-radius: 16px;
         margin-bottom: 10px;
         font-size: 13px;
@@ -227,10 +227,10 @@
           border-color: rgba(255, 255, 255, 0.1);
         }
         .task-item {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(22, 22, 26, 0.7);
         }
         .message.assistant, .composer-input, .result-item {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           color: #F5F5F7;
           border-color: rgba(255, 255, 255, 0.2);
         }
@@ -254,7 +254,7 @@
       <div class="left-rail glass-panel">
         <div class="rail-section">
           <div class="rail-title">Workspace</div>
-          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255,255,255,0.5);" aria-label="Workspace Selector">
+          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255, 255, 255, 0.65);" aria-label="Workspace Selector">
             <option>Personal Workspace</option>
           </select>
         </div>
@@ -315,7 +315,7 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(30px) saturate(210%);
             z-index: 10000;
             pointer-events: auto;
         }
@@ -329,8 +329,8 @@
         }
         .ohc-walkthrough-bubble {
             position: absolute;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px) saturate(210%);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
             padding: 20px;
@@ -395,7 +395,7 @@
                 color: #f5f5f7;
             }
             .ohc-walkthrough-btn-secondary {
-                background: rgba(255, 255, 255, 0.1);
+                background: rgba(22, 22, 26, 0.7);
                 color: #f5f5f7;
             }
         }
@@ -553,10 +553,10 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
@@ -829,7 +829,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

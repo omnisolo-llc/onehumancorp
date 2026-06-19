@@ -113,62 +113,7 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
         // Subagent Orchestration: Claude Code Execution Models: 1) Fork (byte-identical copy of parent context), 2) Teammate (separate terminal pane communicating via file-based mailboxes), 3) Worktree (spawns its own git worktree with an isolated branch). Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
 
-        if mode == "worktree" {
-
-            let task_id = uuid::Uuid::new_v4().to_string();
-            let branch_name = format!("subagent-{}", task_id);
-            let worktree_path = format!(".agent-worktrees/{}", task_id);
-
-            // Create worktree
-
-
-            let wt_output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_path], None, vec![]).await;
-
-            if let Err(e) = wt_output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
-            }
-
-            let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
-            }
-
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--worktree", &worktree_path], None, envs).await;
-
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        Ok(SubAgentResponse {
-                            result: stdout,
-                            error: String::new(),
-                        })
-                    } else {
-                        Err(format!("Process failed: {}", stderr))
-                    }
-                }
-                Err(e) => Err(format!("Runner failed: {}", e)),
-            };
-
-            // Cleanup
-            let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_path], None, vec![]).await;
-            let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
-
-            match res {
-                Ok(inner) => {
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
-                    } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, inner.result));
-                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
-                    }
-                }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
-            }
-        } else if mode == "fork" {
+        if mode == "fork" {
             let parent_context_file = args.parent_context_file.clone().unwrap_or_default();
 
             let mut envs = vec![];
@@ -210,57 +155,6 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
                         Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
-            }
-        } else if mode == "worktree" {
-            let task_id = uuid::Uuid::new_v4().to_string();
-            let branch_name = format!("subagent-{}", task_id);
-            let worktree_dir = format!(".agent-worktrees/{}", branch_name);
-
-            // Create git worktree
-            let output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
-            if let Err(e) = output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", e)));
-            } else if let Ok(out) = output {
-                if !out.status.success() {
-                    return Err(ToolError::LlmRecoverable(format!("git worktree add failed: {}", String::from_utf8_lossy(&out.stderr))));
-                }
-            }
-
-            let worktree_task = format!(
-                "You are a subagent running in an isolated git worktree (branch: {}). Your task is: {}\n\nCRITICAL INSTRUCTION: You MUST return a 1k-2k token condensed summary of your findings and actions. Do not return your full context loop.",
-                branch_name, task
-            );
-
-            let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
-            }
-
-            let pb = std::path::PathBuf::from(&worktree_dir);
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &worktree_task], Some(pb.as_path()), envs).await;
-
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        let mut summary = stdout;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        Ok(format!("[Subagent (Worktree: {})] Completed task. Summary: {}", branch_name, summary))
-                    } else {
-                        Err(format!("Process failed: {}", stderr))
-                    }
-                }
-                Err(e) => Err(format!("Runner failed: {}", e)),
-            };
-
-            // Note: We leave the worktree intact for the user or parent agent to inspect and merge.
-
-            match res {
-                Ok(msg) => Ok(msg),
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "teammate" {

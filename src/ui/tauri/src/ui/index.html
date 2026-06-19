@@ -91,19 +91,19 @@
           color: #A1A1A6;
         }
         input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
         input:focus {
           border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
       }
     </style>
   </head>
   <body>
-    <div class="container glassmorphism glassmorphism">
+    <div class="container glassmorphism">
       <h1>Welcome to OHC</h1>
       <p>Let's get your workspace set up.</p>
       <button id="start-btn">Start Onboarding</button>
@@ -255,7 +255,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

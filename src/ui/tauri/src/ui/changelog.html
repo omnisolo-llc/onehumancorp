@@ -73,7 +73,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border-radius: 16px;
         padding: 40px;
-        border: 1px solid rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
         margin-bottom: 30px;
       }
@@ -125,7 +125,7 @@
     </style>
   </head>
   <body>
-    <div class="container glassmorphism glassmorphism">
+    <div class="container glassmorphism">
       <a href="dashboard.html" class="back-link">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         Back to Dashboard
@@ -376,7 +376,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

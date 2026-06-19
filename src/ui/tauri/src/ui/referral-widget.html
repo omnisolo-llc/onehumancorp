@@ -36,12 +36,32 @@
     }
 
     .glassmorphism {
-      background: var(--card-bg);
-      backdrop-filter: blur(30px) saturate(210%);
-      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--border);
       border-radius: 16px;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    @media (max-width: 375px) {
+      .container {
+        padding: 12px;
+        overflow-x: hidden;
+      }
+      .grid {
+        grid-template-columns: 1fr !important;
+      }
+      .builder-card, .preview-card {
+        padding: 16px;
+      }
+      h1.font-outfit {
+        font-size: 24px;
+      }
+      input[type="text"], input[type="number"], .btn {
+        width: 100%;
+        box-sizing: border-box;
+      }
     }
 
     .container {
@@ -199,7 +219,7 @@
       position: relative;
       overflow: hidden;
       background: linear-gradient(135deg, #eff6ff 0%, #faf5ff 100%);
-      border: 1px solid rgba(255,255,255,0.5);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 16px;
       padding: 32px;
     }
@@ -337,7 +357,7 @@
       right: 0;
       bottom: 0;
       background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(30px) saturate(210%);
       display: none;
       align-items: center;
       justify-content: center;

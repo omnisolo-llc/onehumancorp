@@ -97,7 +97,13 @@ pub struct Product {
     pub locked_quantity: Option<i32>,
     pub available_quantity: Option<i32>,
     pub is_sold_out: Option<bool>,
+    pub is_subscribable: Option<bool>,
+    pub subscription_frequency: Option<String>,
+    pub subscription_discount_percent: Option<i32>,
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -282,6 +288,9 @@ pub struct Service {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

@@ -42,7 +42,7 @@ export default function HelpCenterPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">In-App Help Center</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">Help Center</h1>
 
         <div className="mb-8 sm:mb-10 w-full sm:w-3/4 mx-auto">
           <input
@@ -55,7 +55,7 @@ export default function HelpCenterPage() {
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] rounded-2xl min-h-[300px] w-full max-w-[400px] mx-auto">
+          <div className="flex flex-col items-center justify-center py-16 px-4 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/80 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl min-h-[300px] w-full max-w-[400px] mx-auto">
             <svg className="w-16 h-16 max-w-[64px] max-h-[64px] text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -67,7 +67,7 @@ export default function HelpCenterPage() {
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
-              className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-md transition-all min-h-[44px]"
+              className="mt-6 px-6 py-3 bg-blue-600/90 hover:bg-blue-700/90 text-white font-semibold rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-md saturate-[210%] transition-all min-h-[44px]"
               onClick={() => {
                 const event = new CustomEvent('open-help-chat');
                 window.dispatchEvent(event);

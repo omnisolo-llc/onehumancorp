@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { MasterMenu } from './MasterMenu';
+import { MasterMenu } from './MasterMenu.js';
 import { expect, test, describe, vi } from 'vitest';
 
 describe('MasterMenu', () => {
@@ -9,6 +9,7 @@ describe('MasterMenu', () => {
     const output = lastFrame();
     expect(output).toContain('Select an action (Use Up/Down arrows):');
     expect(output).toContain('1) Run Developer Setup');
+    expect(output).toContain('Browse Agent Marketplace');
     expect(output).toContain('2) Configure Environment (.env)');
     expect(output).toContain('0) Exit');
   });
@@ -39,7 +40,7 @@ describe('MasterMenu', () => {
     const output = lastFrame();
     expect(output).toBeDefined();
     expect(output?.length).toBeGreaterThan(0);
-    expect(output).toContain('10) Verify Setup');
+    expect(output).toContain('11) Verify Setup');
     expect(output).toContain('5) Provision AI Agent');
   });
 

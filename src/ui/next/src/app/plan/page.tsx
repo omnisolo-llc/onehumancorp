@@ -46,6 +46,31 @@ export default function MyPlanPage() {
       return parseFloat(mb.toFixed(1)) + " MB";
   };
 
+  const handleManageBilling = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/billing/create-billing-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create billing portal session');
+      }
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Billing portal error:', error);
+      alert('Failed to initiate billing portal. Please try again.');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -78,7 +103,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg p-6 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 dark:bg-gray-900/70 dark:border-white/10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -99,6 +124,11 @@ export default function MyPlanPage() {
                     Upgrade
                 </button>
                 <button
+                    onClick={handleManageBilling}
+                    className="w-full sm:w-auto px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition-all shadow-sm text-center">
+                    Manage Billing
+                </button>
+                <button
                     onClick={() => router.push('/cost-dashboard')}
                     className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl font-medium transition-all shadow-sm text-center">
                     View Detailed Costs
@@ -107,7 +137,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg mt-4 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 dark:bg-gray-900/70 dark:border-white/10">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>

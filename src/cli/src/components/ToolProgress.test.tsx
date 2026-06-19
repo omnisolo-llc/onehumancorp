@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { ToolProgress } from './ToolProgress';
+import { ToolProgress } from './ToolProgress.js';
 
 describe('ToolProgress', () => {
   it('renders correctly', () => {

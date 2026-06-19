@@ -22,7 +22,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
 
     // Navigate to the POS terminal page
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
 
     // Wait for the UI to load and auto-fetch the staff data
     await page.waitForTimeout(2000);

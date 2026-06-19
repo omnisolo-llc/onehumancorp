@@ -161,7 +161,13 @@ mod tests {
             locked_quantity: None,
             available_quantity: None,
             is_sold_out: None,
+            is_subscribable: None,
+            subscription_frequency: None,
+            subscription_discount_percent: None,
             metadata: None,
+            seo_title: None,
+            seo_description: None,
+            seo_schema_json: None,
             created_at: None,
             updated_at: None,
         };

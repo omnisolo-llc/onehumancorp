@@ -235,7 +235,7 @@ pub async fn handle_conversational_chat(
                 payload: serde_json::json!({"count": abandoned_count}),
             });
         } else {
-            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.".to_string();
+            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.\n\n⚡ Powered by OHC".to_string();
         }
     } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
         let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
@@ -339,10 +339,12 @@ where
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/generate-win-back", post(handle_generate_win_back))
+        .route("/campaign/generate-subscription-offer", post(handle_generate_subscription_offer))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/discount-code/embed", get(handle_discount_code_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
@@ -359,6 +361,7 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/referrals/generate", post(handle_referral_generate))
@@ -947,6 +950,20 @@ pub struct GenerateWinBackResponse {
     pub body: String,
 }
 
+#[derive(Deserialize)]
+pub struct GenerateSubscriptionOfferRequest {
+    pub product_name: Option<String>,
+    pub discount_percentage: Option<String>,
+    pub frequency: Option<String>,
+    pub store_name: Option<String>,
+    pub brand_link: Option<bool>,
+}
+
+#[derive(Serialize)]
+pub struct GenerateSubscriptionOfferResponse {
+    pub message: String,
+}
+
 async fn handle_generate_win_back(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateWinBackRequest>,
@@ -955,6 +972,26 @@ async fn handle_generate_win_back(
     Json(GenerateWinBackResponse {
         subject: format!("We miss you! Here is {}", offer),
         body: format!("Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team", offer),
+    })
+}
+
+async fn handle_generate_subscription_offer(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateSubscriptionOfferRequest>,
+) -> impl IntoResponse {
+    let product_name = req.product_name.unwrap_or_else(|| "your favorite items".to_string());
+    let discount = req.discount_percentage.unwrap_or_else(|| "10".to_string());
+    let freq = req.frequency.unwrap_or_else(|| "monthly".to_string());
+    let store_name = req.store_name.unwrap_or_else(|| "our store".to_string());
+    let branding = if req.brand_link.unwrap_or(false) { "\n\n⚡ Powered by OHC" } else { "" };
+
+    let generated = format!(
+        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe {} Team{}",
+        product_name, product_name, freq, discount, store_name, branding
+    );
+
+    Json(GenerateSubscriptionOfferResponse {
+        message: generated,
     })
 }
 
@@ -1096,9 +1133,21 @@ pub struct ZeroClickGenerateResponse {
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<TrackVisitorRequest>,
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<serde_json::Value>,
 ) -> impl IntoResponse {
+    if let Some(event_type) = req.get("event_type").and_then(|v| v.as_str()) {
+        if event_type == "loyalty_program_generated" {
+            if let Some(metadata) = req.get("metadata") {
+                if let Some(tenant) = metadata.get("tenant").and_then(|v| v.as_str()) {
+                    state.hub.log_event(serde_json::json!({
+                        "tenant_id": tenant,
+                        "type": "growth.loyalty_program_generated"
+                    }));
+                }
+            }
+        }
+    }
     Json(TrackVisitorResponse { tracked: true })
 }
 
@@ -2005,9 +2054,9 @@ async fn handle_team_invite_accept(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
 
     // Before accepting, fetch the invite to get the team_id to invalidate cache
-    let (team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
-        Ok(Some(invite)) => (Some(invite.team_id), Some(invite.invitee_id)),
-        _ => (None, None),
+    let (tenant_id_opt, team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
+        Ok(Some(invite)) => (Some(invite.tenant_id), Some(invite.team_id), Some(invite.invitee_id)),
+        _ => (None, None, None),
     };
 
     match tracker.accept_invite(&req.id).await {
@@ -2020,9 +2069,10 @@ async fn handle_team_invite_accept(
                 // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
                 let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
-
+            }
+            if let Some(tenant_id) = tenant_id_opt {
                 let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-                metrics_cache.invalidate(&format!("aggregated_metrics_{}", team_id)).await;
+                metrics_cache.invalidate(&format!("aggregated_metrics_{}", tenant_id)).await;
             }
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
@@ -2036,12 +2086,13 @@ async fn handle_team_invite_accept(
 
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -2049,9 +2100,9 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
@@ -2121,8 +2172,14 @@ mod tests {
             invitee_id: "user-abc".to_string(),
         };
 
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            agent_id: "agent-xyz".to_string(),
+            org_id: "org-123".to_string(),
+        };
+
         // Call create handler directly
-        let res = handle_create_team_invite(Extension(state.clone()), Json(req)).await;
+        let res = handle_create_team_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
         let create_res_json = res.unwrap().0;
         assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
@@ -2661,12 +2718,13 @@ pub struct CloudBridgeInviteResponse {
 
 async fn handle_cloud_bridge_invite(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CloudBridgeInviteRequest>,
 ) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -2675,9 +2733,9 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache.invalidate(&format!("aggregated_metrics_{}", req.team_id)).await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
@@ -2735,7 +2793,13 @@ mod cloud_bridge_tests {
             invitee_id: "invitee-xyz".to_string(),
         };
 
-        let res = handle_cloud_bridge_invite(Extension(state.clone()), Json(req)).await;
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            agent_id: "agent-xyz".to_string(),
+            org_id: "org-123".to_string(),
+        };
+
+        let res = handle_cloud_bridge_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
@@ -3187,4 +3251,77 @@ pub async fn handle_post_link_in_bio(
 
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::OK)
+}
+
+pub async fn handle_discount_code_embed(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl axum::response::IntoResponse {
+    let tenant = params.get("tenant").map(|s| s.as_str()).unwrap_or("unknown");
+    let discount = params.get("discount").map(|s| s.as_str()).unwrap_or("20%");
+    let code = params.get("code").map(|s| s.as_str()).unwrap_or("DISCOUNT20");
+    let hide_branding = params.get("hideBranding").map(|s| s.as_str()).unwrap_or("false") == "true";
+
+    let branding_html = if hide_branding {
+        "".to_string()
+    } else {
+        format!(
+            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OHC</a></div>",
+            tenant
+        )
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {{ font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: transparent; }}
+.widget {{ background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 12px; padding: 20px; text-align: center; }}
+.discount {{ font-size: 24px; font-weight: bold; color: #111827; margin-bottom: 8px; }}
+.code {{ display: inline-block; background: #fff; border: 2px dashed #1f2937; padding: 8px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 12px; }}
+.desc {{ font-size: 14px; color: #4b5563; margin-bottom: 16px; }}
+</style>
+</head>
+<body>
+    <div class="widget">
+        <div class="discount">{} OFF</div>
+        <div class="desc">Use this code at checkout to claim your discount!</div>
+        <div class="code">{}</div>
+        {}
+    </div>
+</body>
+</html>"#,
+        discount, code, branding_html
+    );
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WaitlistGenerateRequest {
+    pub product_name: String,
+    pub referral_goal: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WaitlistGenerateResponse {
+    pub success: bool,
+}
+
+async fn handle_generate_viral_waitlist(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<WaitlistGenerateRequest>,
+) -> Result<Json<WaitlistGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.waitlist_generated",
+        "tenant_id": auth_info.org_id,
+        "product_name": req.product_name,
+        "referral_goal": req.referral_goal
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(WaitlistGenerateResponse {
+        success: true,
+    }))
 }

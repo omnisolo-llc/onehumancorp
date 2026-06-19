@@ -26,7 +26,7 @@ test.describe('In-App Video Tutorials', () => {
         await expect(firstVideoTitle).toBeVisible();
 
         // Verify some other videos are present
-        await expect(page.locator('p', { hasText: 'Accept your first payment' })).toBeVisible();
+        await expect(page.locator('p', { hasText: 'Connecting a bank account to accept payments' })).toBeVisible();
 
         // Click on the first video to open the modal player
         // The video container is a div parent of the title
@@ -42,6 +42,9 @@ test.describe('In-App Video Tutorials', () => {
 
         // Verify the video title is shown in the modal header
         await expect(modalContainer.locator('h3', { hasText: 'How to set up your first store easily' })).toBeVisible();
+
+        // Verify the video element itself is present
+        await expect(modalContainer.locator('video')).toBeVisible();
 
         // Click the close button
         const closeButton = modalContainer.locator('button[aria-label="Close video"]');

@@ -10,6 +10,7 @@
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100vh;
@@ -23,10 +24,12 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
-        max-width: 100%;
-        width: 480px;
+        width: 100%;
+        max-width: min(480px, calc(100vw - 20px));
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
       }
       .glassmorphism {
         border-radius: 16px;
@@ -52,7 +55,7 @@
         padding: 14px;
         min-height: 44px !important;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
@@ -78,10 +81,10 @@
       input:focus, textarea:focus, select:focus {
         outline: none;
         border-color: #0071E3;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
-      button {
+      button { min-height: 44px; min-width: 44px;
         background-color: #0066FF;
         color: white;
         border: none;
@@ -257,13 +260,13 @@
           color: #A1A1A6;
         }
         input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
         input:focus, textarea:focus, select:focus {
           border-color: #0071E3;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
       }
 
@@ -281,7 +284,7 @@
         left: 0;
         right: 0;
         height: 2px;
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.65);
         z-index: 1;
         transform: translateY(-50%);
       }
@@ -406,10 +409,10 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
         .stepper::before {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
         }
         .step-indicator {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
       }
@@ -433,7 +436,7 @@
         padding: 14px;
         min-height: 44px !important;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
@@ -446,7 +449,7 @@
       input:focus, select:focus, textarea:focus {
         outline: none;
         border-color: #0071E3;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
 
@@ -457,7 +460,7 @@
         margin-bottom: 24px;
         text-align: left;
       }
-      .context-card {
+      .context-card { min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -473,7 +476,7 @@
         min-height: 44px;
       }
       .context-card:hover {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         transform: translateY(-2px);
       }
       .context-card.selected {
@@ -512,7 +515,7 @@
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         min-height: 44px !important;
         border-radius: 16px;
@@ -520,7 +523,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       .radio-option:hover {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.65);
       }
       .radio-option.selected {
         border-color: #0071E3;
@@ -565,7 +568,7 @@
         justify-content: center;
         padding-bottom: 10px;
       }
-      .persona-chip {
+      .persona-chip { min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
         min-height: 44px !important;
@@ -589,7 +592,7 @@
       }
 
       .chat-bubble {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
         border-radius: 18px;
@@ -694,20 +697,20 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
         input, select, textarea {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
         input:focus, select:focus, textarea:focus {
           border-color: #0071E3;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
         .radio-option:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
         .radio-option.selected {
           border-color: #0071E3;
@@ -725,7 +728,7 @@
           color: #F5F5F7;
         }
         .chat-bubble {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           color: #F5F5F7;
           border-color: rgba(255, 255, 255, 0.1);
         }
@@ -738,16 +741,16 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option, .persona-chip {
+        input, select, textarea, button, .radio-option, .persona-chip { min-height: 44px;
           min-height: 44px !important;
         }
       }
 
             @media (max-width: 375px) {
-        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); }
-        .context-card { padding: 12px; }
+        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
+        .context-card { min-height: 44px;  padding: 12px; }
         .work-context-cards { grid-template-columns: 1fr; }
-        .container { box-sizing: border-box; overflow-x: hidden; padding: 20px; }
+
         .stepper {
           gap: 4px;
         }
@@ -758,19 +761,6 @@
         .step-indicator.active {
           transform: scale(1.2);
         }
-        .container {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 20px;
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        text-align: center;
-        max-width: 480px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
-      }
         .radio-option {
           padding: 8px 12px;
           font-size: 14px;
@@ -781,7 +771,7 @@
         p {
           font-size: 13px;
         }
-        .persona-chip {
+        .persona-chip { min-height: 44px;
           padding: 6px 12px;
           font-size: 12px;
         }
@@ -794,9 +784,19 @@
       }
 
 
+
+      /* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+      button, input, select, textarea {
+        min-height: 44px;
+        min-width: 44px;
+      }
       /* OHC Premium Glassmorphism Overrides */
       .glassmorphism {
-        border-radius: 16px !important;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
       button.glassmorphism,
       input.glassmorphism,
@@ -805,7 +805,7 @@
       .glassmorphism input,
       .glassmorphism select,
       .glassmorphism textarea,
-      .glassmorphism button {
+      .glassmorphism button { min-height: 44px; min-width: 44px;
         border-radius: 8px !important;
       }
 </style>
@@ -934,8 +934,8 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
+        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
 
@@ -979,9 +979,9 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." enterkeyhint="send" style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
@@ -1079,10 +1079,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" />
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" enterkeyhint="next" />
 
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-assistant">Next</button>
@@ -1100,7 +1100,7 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" inputmode="text" autocomplete="off" />
+        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" inputmode="text" autocomplete="off" enterkeyhint="done" />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism" style="margin-bottom: 0;">
@@ -1157,11 +1157,11 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
         <div style="position: relative; width: 100%;">
-          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" style="padding-right: 40px;" />
+          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 40px;" />
           <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #555;">
             <svg id="eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -1217,7 +1217,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
@@ -1231,7 +1231,7 @@
         <h1>Where will your business live?</h1>
         <p>Choose a free subdomain for your store.</p>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" style="flex: 1; margin-bottom: 0;" />
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" style="flex: 1; margin-bottom: 0;" />
           <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
         </div>
         <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
@@ -1753,11 +1753,19 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      function goToStep(stepId) {
+      window.goToStep = function goToStep(stepId) {
+          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
+              document.getElementById('instant-bio').value = '';
+              const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = true;
+              }
+          }
           if (stepId === 'step-categories') {
               populateCategories();
           }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+          document.querySelector('.container').scrollTo(0, 0);
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
       }
@@ -2388,10 +2396,10 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(2.1);
-            -webkit-backdrop-filter: blur(20px) saturate(2.1);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
@@ -2764,7 +2772,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
@@ -3847,7 +3855,7 @@ initWalkthrough();
 <!-- Authorized deletion line 997 -->
 <!-- Authorized deletion line 998 -->
 <!-- Authorized deletion line 999 -->
-    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
+    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
       <a href="/setup.html?ref=website-builder" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OHC

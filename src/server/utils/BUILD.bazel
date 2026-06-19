@@ -16,6 +16,7 @@ rust_library(
         "slug.rs",
         "tier_middleware.rs",
         "tenant_middleware.rs",
+        "trie_map.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",

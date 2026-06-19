@@ -61,8 +61,8 @@
 
       .ohc-growth-card {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
         border-radius: 16px;
@@ -75,7 +75,7 @@
 
       .ohc-growth-card.recommended {
         border: 2px solid #0066FF;
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.65);
         transform: scale(1.02);
       }
 
@@ -191,8 +191,8 @@
     }
     .ohc-growth-card {
         background: rgba(22, 22, 26, 0.7) !important;
-        backdrop-filter: blur(30px) saturate(2.1);
-        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
     .ohc-growth-card.recommended {
@@ -205,8 +205,8 @@
 </style>
 </head>
   <body>
-    <div class="container glassmorphism glassmorphism">
-      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    <div class="container glassmorphism">
+      <a href="dashboard.html" class="back-link">Back to Dashboard</a>
 
       <h1>Pricing Plans</h1>
       <div class="subtitle">Plain-language pricing — no hidden fees. Choose the best plan to grow your business.</div>
@@ -222,7 +222,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500MB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Products Limit</li>
           </ul>
-          <button class="btn-secondary" disabled>Current Plan</button>
+          <button id="btn-Free" class="btn-primary" onclick="upgradePlan('Free')">Upgrade to Free via Stripe</button>
         </div>
 
         <!-- Starter Plan -->
@@ -237,7 +237,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 5GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 Products Limit</li>
           </ul>
-          <button class="btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
+          <button id="btn-Starter" class="btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
         </div>
 
         <!-- Pro Plan -->
@@ -250,7 +250,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 50GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
+          <button id="btn-Pro" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
         </div>
 
         <!-- Business Plan -->
@@ -263,7 +263,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
+          <button id="btn-Business" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
         </div>
       </div>
 
@@ -289,6 +289,35 @@
     </div>
 
     <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = {};
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+
+        try {
+            const planRes = await fetch('/api/billing/my-plan', { headers });
+            if (planRes.ok) {
+                const planData = await planRes.json();
+                const currentPlan = planData.current_plan; // e.g. "Free", "Starter", "Pro", "Business"
+
+                const btnId = `btn-${currentPlan}`;
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.className = 'btn-secondary';
+                    btn.disabled = true;
+                    btn.innerText = 'Current Plan';
+                    btn.style.backgroundColor = '';
+                    btn.style.boxShadow = '';
+                    btn.onclick = null;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch current plan', e);
+        }
+      });
+
       async function upgradePlan(tier) {
         const btnId = `btn-${tier}`;
         const errorMsg = document.getElementById('error-message');
@@ -467,7 +496,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

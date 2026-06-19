@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: data?.Err || "Failed to create PaymentIntent" }, { status: res.status });
     }
 
-    return NextResponse.json(data.Ok || data);
+    return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: "Backend connection failed: " + err.message }, { status: 500 });
   }

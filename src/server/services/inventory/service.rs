@@ -83,7 +83,7 @@ impl InventoryService {
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Item is currently being checked out by another customer".to_string(),
+                    error_message: "Item just sold out".to_string(),
                 });
             }
 
@@ -138,7 +138,7 @@ impl InventoryService {
                                     error_message: format!("Insufficient inventory. Available: {}", f_stock)
                                 });
                             } else {
-                                let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
@@ -169,6 +169,20 @@ impl InventoryService {
                             "quantity": quantity
                         }).to_string();
                 let _: () = redis::cmd("PUBLISH").arg(&topic).arg(&payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
+
+                // Also emit cache invalidation event for storefront
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.updated",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id),
+                        format!("entity:product:{}", product_id)
+                    ]
+                }).to_string();
+                let _: () = redis::cmd("PUBLISH").arg(invalidation_topic).arg(&invalidation_payload).query_async(&mut conn).await.map_err(|e| {
                     tracing::error!("Redis publish error: {}", e);
                     e
                 }).unwrap_or(());
@@ -451,6 +465,20 @@ impl InventoryService {
                     tracing::error!("Redis publish error: {}", e);
                     e
                 }).unwrap_or(());
+
+                // Also emit cache invalidation event for storefront
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.updated",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id),
+                        format!("entity:product:{}", product_id)
+                    ]
+                }).to_string();
+                let _: () = redis::cmd("PUBLISH").arg(invalidation_topic).arg(&invalidation_payload).query_async(&mut conn).await.map_err(|e| {
+                    tracing::error!("Redis publish error: {}", e);
+                    e
+                }).unwrap_or(());
             }
         }
 
@@ -518,7 +546,7 @@ mod tests {
         if std::env::var("OHC_REDIS_URL").is_ok() {
             assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
             let failed_res = if res1.success { res2 } else { res1 };
-            assert_eq!(failed_res.error_message, "Item is currently being checked out by another customer");
+            assert_eq!(failed_res.error_message, "Item just sold out");
         }
     }
 }

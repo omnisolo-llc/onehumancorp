@@ -28,6 +28,7 @@ export default function SettingsPage() {
     voice_receptionist_enabled: false,
     voice_receptionist_number: "",
     voice_receptionist_persona: "Friendly",
+    voice_receptionist_instructions: "",
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +65,7 @@ export default function SettingsPage() {
               voice_receptionist_enabled: data.voice_receptionist_enabled || false,
               voice_receptionist_number: data.voice_receptionist_number || "",
               voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
+              voice_receptionist_instructions: data.voice_receptionist_instructions || "",
             });
           }
         })
@@ -373,7 +375,7 @@ export default function SettingsPage() {
                 {voiceSettings.voice_receptionist_enabled && (
                   <div className="space-y-4 border-t border-gray-100 pt-4 animate-fade-in">
                     <div className="grid grid-cols-1 gap-4">
-                      <label className="block">
+                                            <label className="block">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Voice Persona</span>
                         <select
                           value={voiceSettings.voice_receptionist_persona}
@@ -384,6 +386,17 @@ export default function SettingsPage() {
                           <option value="Professional">Professional & Crisp</option>
                           <option value="Efficient">Fast & Efficient</option>
                         </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Custom Instructions</span>
+                        <textarea
+                          value={voiceSettings.voice_receptionist_instructions || ""}
+                          onChange={(e) => handleVoiceSettingChange('voice_receptionist_instructions', e.target.value)}
+                          placeholder="e.g. Always mention today's special: Vegan Chocolate Cake"
+                          rows={3}
+                          className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none resize-none"
+                        />
                       </label>
 
                       <div className="block">

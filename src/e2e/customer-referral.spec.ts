@@ -60,7 +60,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         // Soft paywall should appear
         await expect(page.locator('text=Pro Feature')).toBeVisible();
-        await expect(page.locator('text=Upgrade to Pro')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Upgrade to Pro' }).first()).toBeVisible();
     });
 
     test('should hide branding when pro is enabled and toggle is clicked', async ({ page }) => {

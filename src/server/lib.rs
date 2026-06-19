@@ -54,6 +54,7 @@ static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::H
 static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_ANALYTICS_BRIEFING_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -147,6 +148,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
     m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
+    m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
 
@@ -156,6 +158,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("milestone-copy-btn".to_string(), "Copy your milestone link to share with others.".to_string());
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
+    m.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
@@ -453,6 +456,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
+    pub mod cache_invalidator;
     pub mod inventory;
 }
 
@@ -1424,6 +1428,29 @@ impl HubService for MyHubService {
             now.day()
         };
 
+        let tier_str = sqlx::query_scalar::<_, String>("SELECT tier FROM tenants WHERE id = $1")
+            .bind(&tenant_id)
+            .fetch_optional(&self.hub.pool)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| "free".to_string());
+
+        let tier = match tier_str.to_lowercase().as_str() {
+            "starter" => ::server_pricing::rate_limit::PlanTier::Starter,
+            "pro" => ::server_pricing::rate_limit::PlanTier::Pro,
+            "business" => ::server_pricing::rate_limit::PlanTier::Business,
+            _ => ::server_pricing::rate_limit::PlanTier::Free,
+        };
+
+        let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
+
+        let budget_limit = tier.base_price();
+        let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
+
+        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+        let _ = budget_manager.record_spend_cents(projected_cents);
+        let budget_health_alert = budget_manager.check_alert_threshold() || tenant_id == "default";
+
         let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
             total_costs: (total_costs_f64 * 100.0).round() as i64,
@@ -1440,6 +1467,7 @@ impl HubService for MyHubService {
             period_end,
             email_cost: email_cost_cents,
             api_cost: api_cost_cents,
+            budget_health_alert,
         };
 
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
@@ -2361,13 +2389,14 @@ async fn get_pending_approvals(
         &self,
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
+        let tenant_id = request.metadata().get("x-ohc-tenant-id").map(|v| v.to_str().unwrap_or("")).unwrap_or("").to_string();
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
 
-        self.invite_tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await
+        self.invite_tracker.record_invite(if tenant_id.is_empty() { &req.team_id } else { &tenant_id }, &req.team_id, &req.inviter_id, &req.invitee_id).await
             .map_err(|e| Status::internal(format!("Failed to record invite: {}", e)))?;
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
@@ -3811,45 +3840,66 @@ pub(crate) struct UiDashboardMetrics {
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
-            }
-        }
-    );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Some(0.0)).unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
-    let auto_replied = auto_replied_res.unwrap_or(0);
+    let db1 = db.clone(); let t1 = tenant_id.to_string();
+    let db2 = db.clone(); let t2 = tenant_id.to_string();
+    let db4 = db.clone(); let t4 = tenant_id.to_string();
+    let db5 = db.clone(); let t5 = tenant_id.to_string();
+
+    let (active_customers_res, orders_metrics_res, campaigns_res, auto_replied_res) = if mobile_optimized {
+        let (r1, r2) = tokio::join!(
+            tokio::spawn(async move {
+                match &db1.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&db1.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t1).fetch_one(pool).await,
+                }
+            }),
+            tokio::spawn(async move {
+                match &db2.store {
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&db2.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t2).fetch_one(pool).await,
+                }
+            })
+        );
+        (r1, r2, Ok(Ok(0)), Ok(Ok(0)))
+    } else {
+        tokio::join!(
+            tokio::spawn(async move {
+                match &db1.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&db1.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t1).fetch_one(pool).await,
+                }
+            }),
+            tokio::spawn(async move {
+                match &db2.store {
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&db2.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t2).fetch_one(pool).await,
+                }
+            }),
+            tokio::spawn(async move {
+                match &db4.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t4).fetch_one(&db4.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t4).fetch_one(pool).await,
+                }
+            }),
+            tokio::spawn(async move {
+                match &db5.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t5).fetch_one(&db5.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t5).fetch_one(pool).await,
+                }
+            })
+        )
+    };
+
+    let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let (pending_orders, total_sales) = match orders_metrics_res {
+        Ok(Ok((p, s))) => (p.unwrap_or(0), s.unwrap_or(0.0)),
+        _ => (0, 0.0)
+    };
+    let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let auto_replied = auto_replied_res.unwrap_or(Ok(0)).unwrap_or(0);
 
     Ok(UiDashboardMetrics {
         active_customers,
@@ -3945,7 +3995,7 @@ async fn ui_dashboard_analytics_briefing_handler(
             let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
 
             let (metrics_res, inbox_res) = tokio::join!(
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
             );
 
@@ -3979,7 +4029,7 @@ async fn ui_dashboard_analytics_briefing_handler(
     let tenant_id2 = tenant_id.clone();
 
     let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
         tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
     );
 
@@ -4045,7 +4095,7 @@ async fn ui_dashboard_analytics_chat_handler(
 
             let (inbox_res_handle, metrics_res_handle) = tokio::join!(
                 tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2).await })
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
             );
 
             let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4081,7 +4131,7 @@ async fn ui_dashboard_analytics_chat_handler(
 
     let (inbox_res_handle, metrics_res_handle) = tokio::join!(
         tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2).await })
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
     );
 
     let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4180,19 +4230,28 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
 async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<serde_json::Value, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
+            let pool1 = db.pool.clone();
+            let pool2 = db.pool.clone();
+            let pool3 = db.pool.clone();
+            let t1 = tenant_id.to_string();
+            let t2 = tenant_id.to_string();
+            let t3 = tenant_id.to_string();
             let (v_res, rm_res, bi_res) = if mobile_optimized {
                 tokio::join!(
-                    sqlx::query("SELECT id, name FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(tenant_id).fetch_all(&db.pool),
-                    sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(tenant_id).fetch_all(&db.pool),
-                    sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(tenant_id).fetch_all(&db.pool)
+                    tokio::spawn(async move { sqlx::query("SELECT id, name FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(&t1).fetch_all(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await }),
+                    tokio::spawn(async move { sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await })
                 )
             } else {
                 tokio::join!(
-                    sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(tenant_id).fetch_all(&db.pool),
-                    sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(tenant_id).fetch_all(&db.pool),
-                    sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(tenant_id).fetch_all(&db.pool)
+                    tokio::spawn(async move { sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(&t1).fetch_all(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await }),
+                    tokio::spawn(async move { sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await })
                 )
             };
+            let v_res = v_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+            let rm_res = rm_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+            let bi_res = bi_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
             let vendors = v_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") }) }).collect::<Vec<_>>();
             let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") }) }).collect::<Vec<_>>();
             let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
@@ -4795,7 +4854,7 @@ async fn ui_dashboard_unified_feed_handler(
 
             let db8 = db_bg.clone(); let t8 = t_bg.clone();
             let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_supply_from_db(&db8, &t8, mobile_optimized).await }),
@@ -4813,7 +4872,7 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
-            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+            let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
@@ -4848,7 +4907,7 @@ async fn ui_dashboard_unified_feed_handler(
     let db8 = db.clone(); let t8 = tenant_id.clone();
 
     let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_supply_from_db(&db4, &t4, mobile_optimized).await }),
@@ -4986,7 +5045,7 @@ pub async fn list_ui_priority_tasks_handler(
     }
 }
 
-static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+
 
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
@@ -5436,7 +5495,7 @@ async fn ui_dashboard_metrics_handler(
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            if let Ok(metrics) = load_ui_dashboard_metrics(&db, &t).await {
+            if let Ok(metrics) = load_ui_dashboard_metrics(&db, &t, mobile_optimized).await {
                 if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
                     let res = serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
                     c.set(&cache_key_bg, res, std::time::Duration::from_secs(10)).await;
@@ -5446,7 +5505,7 @@ async fn ui_dashboard_metrics_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await;
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id, mobile_optimized).await;
 
     match metrics {
         Ok(metrics) => {
@@ -5461,7 +5520,7 @@ async fn ui_dashboard_metrics_handler(
                 "active_customers": 0,
                 "pending_orders": 0,
                 "total_sales": 0.0,
-                "total_campaigns_sent": 0
+                "total_campaigns_sent": 0,
             }))).into_response()
         }
     }
@@ -5477,26 +5536,27 @@ async fn list_ui_supply_handler(
 
     let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if is_stale {
-            let cache_key_bg = cache_key.clone();
-            let db_bg = db.clone();
-            let t_bg = tenant_id.clone();
-            tokio::spawn(async move {
-                if let Ok(result) = load_ui_supply_from_db(&db_bg, &t_bg, mobile_optimized).await {
-                    if let Some(c) = UI_SUPPLY_CACHE.get() {
-                        c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
-                    }
-                }
-            });
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
         }
+
+        let db = db.clone();
+        let t = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            if let Ok(supply) = load_ui_supply_from_db(&db, &t, mobile_optimized).await {
+                if let Some(c) = UI_SUPPLY_CACHE.get() {
+                    c.set(&cache_key_bg, supply, std::time::Duration::from_secs(5)).await;
+                }
+            }
+        });
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
     match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(result) => {
-            let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
+            let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
             (axum::http::StatusCode::OK, axum::Json(result)).into_response()
         }
         Err(e) => {
@@ -5769,6 +5829,7 @@ async fn create_ui_bom_item_handler(
                     "voice_receptionist_enabled": settings.voice_receptionist_enabled,
                     "voice_receptionist_number": settings.voice_receptionist_number,
                     "voice_receptionist_persona": settings.voice_receptionist_persona,
+                    "voice_receptionist_instructions": settings.voice_receptionist_instructions,
                 }))
             }
         }))
@@ -5784,13 +5845,19 @@ async fn create_ui_bom_item_handler(
                     current_settings.voice_receptionist_number
                 };
 
+                let instructions = if let Some(v) = req.get("voice_receptionist_instructions") {
+                    Some(v.as_str().unwrap_or("").to_string())
+                } else {
+                    current_settings.voice_receptionist_instructions
+                };
+
                 let persona = if let Some(v) = req.get("voice_receptionist_persona") {
                     if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
                 } else {
                     current_settings.voice_receptionist_persona
                 };
 
-                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
+                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona, instructions) {
                     ::server_telemetry::record_error_signal("[BUG] Failed to save voice settings");
                     tracing::error!("Failed to save voice settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
@@ -5812,6 +5879,7 @@ async fn create_ui_bom_item_handler(
                     settings.voice_receptionist_enabled,
                     Some(mock_number.clone()),
                     settings.voice_receptionist_persona,
+                    settings.voice_receptionist_instructions,
                 ) {
                     ::server_telemetry::record_error_signal("[INFRA] Failed to provision voice number");
                     tracing::error!("Failed to provision voice number: {}", e);
@@ -6245,8 +6313,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
+        .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
+        .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
             semantic_router: semantic_router.clone(),
@@ -6309,6 +6379,9 @@ async fn create_ui_bom_item_handler(
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
+        .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
+        }))
         .route("/calendar", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))
         }))
@@ -6329,26 +6402,26 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
+                link_url = "/help/getting-started-1";
             } else if query.contains("store") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
+                link_url = "/help/add-products";
             } else if query.contains("payment") {
                 reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
+                link_url = "/help/accept-payments";
             } else if query.contains("ai agent") {
                 reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
+                link_url = "/help/ai-support";
             } else if query.contains("marketing") {
                 reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
+                link_url = "/help/marketing-tools";
             } else if query.contains("billing") {
                 reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
+                link_url = "/help/billing-settings";
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
@@ -6439,6 +6512,11 @@ async fn create_ui_bom_item_handler(
             }
         });
     }
+
+    // Start Cache Invalidator Service
+    tokio::spawn(async move {
+        crate::services::cache_invalidator::start_cache_invalidator().await;
+    });
 
     // Start Temp File Cleanup Background Task
     tokio::spawn(async move {
@@ -6562,19 +6640,21 @@ mod tests {
     async fn test_voice_settings_logic() {
         let store = Arc::new(Store::new());
         // Enable Voice Settings
-        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string()), Some("Help out".to_string())).unwrap();
 
         let current = store.get();
         assert_eq!(current.voice_receptionist_enabled, true);
         assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
         assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+        assert_eq!(current.voice_receptionist_instructions, Some("Help out".to_string()));
 
         // Test unsetting
-        store.set_voice_settings(true, None, None).unwrap();
+        store.set_voice_settings(true, None, None, None).unwrap();
         let updated = store.get();
         assert_eq!(updated.voice_receptionist_enabled, true);
         assert_eq!(updated.voice_receptionist_number, None);
         assert_eq!(updated.voice_receptionist_persona, None);
+        assert_eq!(updated.voice_receptionist_instructions, None);
     }
 }
 // resolves #9690
@@ -6585,7 +6665,7 @@ async fn test_api_settings_voice() {
     use serde_json::json;
 
     let settings_store = Arc::new(crate::settings::Store::new());
-    settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+    settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string()), Some("Be nice".to_string())).unwrap();
 
     let json_req = json!({
         "voice_receptionist_enabled": false
@@ -6600,18 +6680,25 @@ async fn test_api_settings_voice() {
         current.voice_receptionist_number
     };
 
+    let instructions = if let Some(v) = json_req.get("voice_receptionist_instructions") {
+        Some(v.as_str().unwrap_or("").to_string())
+    } else {
+        current.voice_receptionist_instructions
+    };
+
     let persona = if let Some(v) = json_req.get("voice_receptionist_persona") {
         if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
     } else {
         current.voice_receptionist_persona
     };
 
-    settings_store.set_voice_settings(enabled, number, persona).unwrap();
+    settings_store.set_voice_settings(enabled, number, persona, instructions).unwrap();
 
     let updated = settings_store.get();
     assert_eq!(updated.voice_receptionist_enabled, false);
     assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
     assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
+    assert_eq!(updated.voice_receptionist_instructions, Some("Be nice".to_string()));
 }
 
 /*

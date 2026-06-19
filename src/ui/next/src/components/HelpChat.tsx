@@ -148,7 +148,6 @@ export function HelpChat() {
   if (isE2E && !forceChat) {
     // We shouldn't hide the HelpChat in E2E unless we specifically want it gone, but tests rely on it.
     // Given the test failures, let's keep it mounted during E2E.
-    // return null;
   }
 
   return (
@@ -173,7 +172,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/50 dark:bg-[#16161a]/50 backdrop-blur-3xl saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/50 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/40 dark:border-white/10 animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -224,8 +223,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 backdrop-blur-xl saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/70 dark:bg-white/10 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
+                      : "bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -265,7 +264,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-white/60 dark:bg-transparent backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2"
+            className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2 items-center"
           >
             <input
               type="text"
@@ -273,12 +272,12 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
+              className="flex-1 bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-xl px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-h-[44px] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (

@@ -46,7 +46,7 @@ export class SyncManager {
     if (typeof window === 'undefined') return;
 
     if (!mutation.id) {
-        mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        mutation.id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
     }
     if (!mutation.timestamp) {
         mutation.timestamp = Date.now();
@@ -215,6 +215,16 @@ export class SyncManager {
         if (!resPos.ok) {
           allOk = false;
           throw new Error(`POS Sync failed with status ${resPos.status}`);
+        }
+        try {
+          const resPosData = await resPos.json();
+          if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
+             if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
+             }
+          }
+        } catch (e) {
+          console.error("Failed to parse POS Sync response", e);
         }
       }
 

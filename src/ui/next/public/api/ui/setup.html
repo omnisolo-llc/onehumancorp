@@ -596,6 +596,13 @@
       }
 
       function goToStep(stepId) {
+          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
+              document.getElementById('instant-bio').value = '';
+              const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = true;
+              }
+          }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);

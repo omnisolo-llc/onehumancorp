@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ToolItem } from '../components/ToolProgress';
+import { ToolItem } from '../components/ToolProgress.js';
 
 export interface OrchestratorState {
   status: string;
@@ -31,7 +31,7 @@ export const useOrchestrator = (): OrchestratorState => {
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Math.random().toString(36).substring(7),
-          method: 'run_agent',
+          method: 'run_async',
           params: { message },
         }),
       });

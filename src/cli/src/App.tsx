@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
-import { Header } from './components/Header';
-import { AgentStatus } from './components/AgentStatus';
-import { ToolProgress } from './components/ToolProgress';
-import { MarkdownText } from './components/MarkdownText';
-import { PromptInput } from './components/PromptInput';
-import { ErrorState } from './components/ErrorState';
-import { MasterMenu } from './components/MasterMenu';
+import { Header } from './components/Header.js';
+import { AgentStatus } from './components/AgentStatus.js';
+import { ToolProgress } from './components/ToolProgress.js';
+import { MarkdownText } from './components/MarkdownText.js';
+import { PromptInput } from './components/PromptInput.js';
+import { ErrorState } from './components/ErrorState.js';
+import { MasterMenu } from './components/MasterMenu.js';
+import { Marketplace } from './components/Marketplace.js';
 
-import { useOrchestrator } from './hooks/useOrchestrator';
+import { useOrchestrator } from './hooks/useOrchestrator.js';
 
 export const App = () => {
   const { status, tools, error, runAgent, output } = useOrchestrator();
   const [inputs, setInputs] = useState<string[]>([]);
+  const [showMarketplace, setShowMarketplace] = useState(false);
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   const handleSubmit = async (val: string) => {
@@ -21,7 +23,7 @@ export const App = () => {
   };
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="blue" padding={2} width={100} dimColor>
+    <Box flexDirection="column" borderStyle="round" borderColor="blue" padding={2} width={100} >
       <Header />
 
       {error ? (
@@ -31,11 +33,11 @@ export const App = () => {
           <AgentStatus status={status} />
           <ToolProgress tools={tools} />
 
-          <Box borderStyle="round" borderColor="gray" padding={1} marginTop={1} marginBottom={1} dimColor>
+          <Box borderStyle="round" borderColor="gray" padding={1} marginTop={1} marginBottom={1} >
             <MarkdownText content={markdown} />
           </Box>
 
-          <MasterMenu />
+          {showMarketplace ? <Marketplace onBack={() => setShowMarketplace(false)} /> : <MasterMenu onSelect={(option) => { if (option === 'Browse Agent Marketplace') { setShowMarketplace(true); } }} />}
 
           <Box flexDirection="column">
             {inputs.map((input, idx) => (

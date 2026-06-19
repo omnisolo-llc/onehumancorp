@@ -1,6 +1,6 @@
 module github.com/onehumancorp/mono
 
-go 1.24.9
+go 1.24.12
 
 require (
 	github.com/alicebob/miniredis/v2 v2.38.0 // indirect

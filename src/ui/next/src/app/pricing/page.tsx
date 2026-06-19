@@ -1,13 +1,62 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
+
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlanData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/billing/my-plan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (response.ok) {
+          const json = await response.json();
+          setCurrentPlan(json.current_plan);
+        }
+      } catch (error) {
+        console.error('Failed to fetch plan data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlanData();
+  }, []);
+
+  const handleManageBilling = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/billing/create-billing-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create billing portal session');
+      }
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      alert('Failed to initiate billing portal. Please try again.');
+    }
+  };
 
   const handleUpgrade = async (tier: string) => {
     try {
@@ -64,9 +113,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Free' || !currentPlan ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Current Plan
+              </button>
+            ) : (
+              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-300 transition-colors">
+                Downgrade to Free
+              </button>
+            )}
           </div>
 
           {/* Starter Tier */}
@@ -83,9 +142,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Starter' ? (
+              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-xl font-medium flex items-center justify-center transition-colors">
+                Manage Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Starter via Stripe
+              </button>
+            )}
           </div>
 
           {/* Pro Tier */}
@@ -100,9 +169,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Pro' ? (
+              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
+                Manage Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Pro via Stripe
+              </button>
+            )}
           </div>
 
           {/* Business Tier */}
@@ -117,9 +196,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Business' ? (
+              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
+                Manage Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Business via Stripe
+              </button>
+            )}
           </div>
         </div>
 
@@ -132,7 +221,8 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                   <h3 className="font-semibold text-gray-800">How do I upgrade, downgrade, or cancel?</h3>
-                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page or by clicking "Manage Plan" above.</p>
+                  <button onClick={handleManageBilling} className="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline">Manage Billing Portal</button>
               </div>
               <div>
                   <h3 className="font-semibold text-gray-800">What is the storage limit?</h3>
