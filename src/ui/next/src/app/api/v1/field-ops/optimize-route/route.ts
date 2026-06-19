@@ -1,10 +1,32 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  // This endpoint simulates the Operations Agent route optimization.
-  // It receives the current list of appointments and the staff's current location,
-  // and returns an optimized order.
+function haversineDistance(coords1, coords2) {
+  function toRad(x) {
+    return x * Math.PI / 180;
+  }
 
+  var lon1 = coords1.lng;
+  var lat1 = coords1.lat;
+
+  var lon2 = coords2.lng;
+  var lat2 = coords2.lat;
+
+  var R = 6371; // km
+
+  var x1 = lat2 - lat1;
+  var dLat = toRad(x1);
+  var x2 = lon2 - lon1;
+  var dLon = toRad(x2)
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c;
+
+  return d;
+}
+
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { appointments, currentLocationLat, currentLocationLng } = body;
@@ -13,19 +35,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing or invalid appointments data' }, { status: 400 });
     }
 
-    // In a real implementation:
-    // 1. Call Google Maps Distance Matrix API or open-source equivalent (OSRM)
-    // 2. Solve Travelling Salesperson Problem (TSP) / Vehicle Routing Problem (VRP)
-    // 3. Output the new optimal sequence and updated estimated start times
+    // Filter pending vs completed
+    const completed = appointments.filter(a => ['Completed', 'Cancelled'].includes(a.status));
+    let pending = appointments.filter(a => !['Completed', 'Cancelled'].includes(a.status));
 
-    // Simulate simple reordering (just reversing for demonstration)
-    // A real algorithm would re-sort by distance from previous node
-    const optimized = [...appointments].sort((a, b) => {
-       // Mock: push completed/cancelled to end
-       if (['Completed', 'Cancelled'].includes(a.status)) return 1;
-       if (['Completed', 'Cancelled'].includes(b.status)) return -1;
-       return 0; // maintain relative order of pending for now
-    });
+    let currentLat = currentLocationLat || 0;
+    let currentLng = currentLocationLng || 0;
+
+    // Simulate Operations Agent Route Optimization using Nearest Neighbor
+    const optimizedPending = [];
+    while (pending.length > 0) {
+       // Find nearest
+       let nearestIndex = 0;
+       let minDistance = Infinity;
+       for (let i=0; i<pending.length; i++) {
+          const apptLat = pending[i].location_lat || 0;
+          const apptLng = pending[i].location_lng || 0;
+          const dist = haversineDistance({lat: currentLat, lng: currentLng}, {lat: apptLat, lng: apptLng});
+          if (dist < minDistance) {
+              minDistance = dist;
+              nearestIndex = i;
+          }
+       }
+
+       const nextJob = pending.splice(nearestIndex, 1)[0];
+       // Estimate travel time: roughly 2 mins per km, plus 5 min buffer
+       const travelTimeMins = Math.round(minDistance * 2) + 5;
+
+       // Update scheduled start time if we are optimizing
+       // In a real app we'd shift the schedule based on travel time from NOW or previous job completion
+       // For mock purposes we just append travel time info to notes
+       if (minDistance > 0) {
+           nextJob.notes = (nextJob.notes ? nextJob.notes + '\n' : '') + `[Travel: ~${travelTimeMins} mins]`;
+       }
+
+       optimizedPending.push(nextJob);
+       currentLat = nextJob.location_lat || 0;
+       currentLng = nextJob.location_lng || 0;
+    }
+
+    const optimized = [...completed, ...optimizedPending];
 
     // Simulate a scenario where completing a job early triggers an agent suggestion
     let agentSuggestion = null;
