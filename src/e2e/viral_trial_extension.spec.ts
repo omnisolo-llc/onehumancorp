@@ -39,6 +39,10 @@ test.describe('Viral Trial Extension Loop', () => {
     await expect(shareButton).toBeVisible();
     await expect(shareButton).toBeEnabled();
 
+    const poweredByLink = page.locator('a', { hasText: /Powered by OHC/i }).first();
+    await expect(poweredByLink).toBeVisible();
+    await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
+
     // We cannot use waitForEvent('popup') because we mock window.open
     await page.evaluate(() => {
       window.open = function() { return null; };
