@@ -8,6 +8,7 @@ import { TooltipProvider } from './TooltipRegistry';
 
 describe('HelpWidget', () => {
   beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === '/api/walkthrough/store-setup') {
         return Promise.resolve({
@@ -43,11 +44,14 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     await act(async () => {
       render(
-        <TooltipProvider>
-          <WalkthroughProvider>
-            <HelpWidget />
-          </WalkthroughProvider>
-        </TooltipProvider>
+        <div>
+          <div id="test-target">Mock Target</div>
+          <TooltipProvider>
+            <WalkthroughProvider>
+              <HelpWidget />
+            </WalkthroughProvider>
+          </TooltipProvider>
+        </div>
       );
     });
 
