@@ -765,6 +765,7 @@ rust_test(
     ],
     deps = [
         "//src/server/common:server_common",
+        "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
         "@crates//:chrono",
         "@crates//:reqwest",

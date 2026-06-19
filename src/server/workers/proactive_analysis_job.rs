@@ -112,7 +112,7 @@ impl ProactiveAnalysisWorker {
                             let ai_op = async {
                                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                                        prompt: prompt.clone(),
+                                        prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                         from_agent_id: "Proactive Context Agent".into(),
                                     };
                                     if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
