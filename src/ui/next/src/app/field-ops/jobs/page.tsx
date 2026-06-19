@@ -16,12 +16,14 @@ type Appointment = {
   notes: string;
   actual_start_time?: string;
   actual_end_time?: string;
+  travelBlock?: string;
 };
 
 export default function FieldOpsJobsPage() {
   const [isOffline, setIsOffline] = useState(false);
   const [jobs, setJobs] = useState<Appointment[]>([]);
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
+  const [proposedRoute, setProposedRoute] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,9 +38,11 @@ export default function FieldOpsJobsPage() {
       .then(res => res.json())
       .then(data => {
         if (data.appointments) {
-          setJobs(data.appointments);
+          // Immediately optimize the route to get travel blocks
+          optimizeRoute(data.appointments);
+        } else {
+          setLoading(false);
         }
-        setLoading(false);
       })
       .catch(err => {
         console.error("Failed to load appointments", err);
@@ -50,6 +54,36 @@ export default function FieldOpsJobsPage() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const optimizeRoute = (updatedJobs: Appointment[], delayMinutes?: number, delayedJobId?: string) => {
+    fetch('/api/v1/field-ops/optimize-route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appointments: updatedJobs,
+        currentLocationLat: 0,
+        currentLocationLng: 0,
+        delayMinutes,
+        delayedJobId
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        if (delayMinutes && delayedJobId) {
+          setAgentSuggestion(data.agentSuggestion);
+          setProposedRoute(data.optimizedRoute);
+        } else {
+          setJobs(data.optimizedRoute);
+          if (data.agentSuggestion) {
+            setAgentSuggestion(data.agentSuggestion);
+          }
+        }
+      }
+    })
+    .catch(err => console.error("Optimization failed", err))
+    .finally(() => setLoading(false));
+  };
 
   const handleStatusChange = (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
@@ -77,25 +111,34 @@ export default function FieldOpsJobsPage() {
     });
 
     if (newStatus === 'Completed') {
-       fetch('/api/v1/field-ops/optimize-route', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           appointments: updatedJobs,
-           currentLocationLat: 0,
-           currentLocationLng: 0
-         })
-       })
-       .then(res => res.json())
-       .then(data => {
-         if (data.success) {
-           setJobs(data.optimizedRoute);
-           if (data.agentSuggestion) {
-             setAgentSuggestion(data.agentSuggestion);
-           }
-         }
-       })
-       .catch(err => console.error("Optimization failed", err));
+       optimizeRoute(updatedJobs);
+    }
+  };
+
+  const handleRunningLate = (jobId: string) => {
+    optimizeRoute(jobs, 30, jobId);
+  };
+
+  const approveDelay = async () => {
+    if (proposedRoute.length === 0) return;
+
+    setJobs(proposedRoute);
+    setAgentSuggestion(null);
+    setProposedRoute([]);
+
+    // Persist changes to backend
+    for (const job of proposedRoute) {
+       await fetch('/api/v1/field-ops/appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+             id: job.id,
+             status: job.status,
+             scheduled_start_time: job.scheduled_start_time,
+             scheduled_end_time: job.scheduled_end_time,
+             notes: job.notes
+          })
+       }).catch(console.error);
     }
   };
 
@@ -147,13 +190,16 @@ export default function FieldOpsJobsPage() {
                <p className="text-sm font-medium text-gray-900 mb-2">{agentSuggestion}</p>
                <div className="flex gap-2">
                  <button
-                   onClick={() => setAgentSuggestion(null)}
+                   onClick={proposedRoute.length > 0 ? approveDelay : () => setAgentSuggestion(null)}
                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
                  >
-                   Yes, text them
+                   {proposedRoute.length > 0 ? "Approve & Send" : "Yes, text them"}
                  </button>
                  <button
-                   onClick={() => setAgentSuggestion(null)}
+                   onClick={() => {
+                     setAgentSuggestion(null);
+                     setProposedRoute([]);
+                   }}
                    className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
                  >
                    No, stick to schedule
@@ -165,8 +211,9 @@ export default function FieldOpsJobsPage() {
       )}
 
       <div className="space-y-4">
-        {jobs.map(job => (
-          <div key={job.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {jobs.map((job, index) => (
+          <React.Fragment key={job.id}>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold text-lg text-gray-900">{job.customer_name}</h3>
@@ -219,6 +266,14 @@ export default function FieldOpsJobsPage() {
                         Job Done
                       </button>
                   )}
+                  { (job.status === 'En-Route' || job.status === 'In-Progress') && (
+                      <button
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl border border-red-200 transition-colors active:scale-[0.98] min-h-[44px]"
+                        onClick={() => handleRunningLate(job.id)}
+                      >
+                        Running Late
+                      </button>
+                  )}
                 </div>
               </div>
             )}
@@ -230,6 +285,12 @@ export default function FieldOpsJobsPage() {
                 </div>
             )}
           </div>
+          {job.travelBlock && (
+             <div className="flex items-center justify-center py-2 text-sm text-gray-500 font-medium">
+               🚗 {job.travelBlock}
+             </div>
+          )}
+          </React.Fragment>
         ))}
       </div>
     </div>

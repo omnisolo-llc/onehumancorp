@@ -95,6 +95,8 @@ pub struct UpdateAppointmentRequest {
     pub id: String,
     pub status: String,
     pub notes: Option<String>,
+    pub scheduled_start_time: Option<DateTime<Utc>>,
+    pub scheduled_end_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize)]
@@ -103,6 +105,8 @@ pub struct UpdateAppointmentResponse {
     pub id: String,
     pub status: String,
     pub notes: Option<String>,
+    pub scheduled_start_time: Option<DateTime<Utc>>,
+    pub scheduled_end_time: Option<DateTime<Utc>>,
 }
 
 pub async fn update_appointment(
@@ -112,13 +116,19 @@ pub async fn update_appointment(
     sqlx::query(
         r#"
         UPDATE appointments
-        SET status = $1, notes = COALESCE($2, notes), updated_at = CURRENT_TIMESTAMP
+        SET status = $1,
+            notes = COALESCE($2, notes),
+            scheduled_start_time = COALESCE($4, scheduled_start_time),
+            scheduled_end_time = COALESCE($5, scheduled_end_time),
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
         "#,
     )
     .bind(&payload.status)
     .bind(&payload.notes)
     .bind(&payload.id)
+    .bind(&payload.scheduled_start_time)
+    .bind(&payload.scheduled_end_time)
     .execute(&state.pool)
     .await
     .map_err(|e| {
@@ -133,6 +143,8 @@ pub async fn update_appointment(
         id: payload.id,
         status: payload.status,
         notes: payload.notes,
+        scheduled_start_time: payload.scheduled_start_time,
+        scheduled_end_time: payload.scheduled_end_time,
     }))
 }
 
@@ -157,6 +169,30 @@ mod tests {
         let req = Request::builder()
             .uri("/appointments?tenant_id=t1")
             .body(Body::empty())
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(res.status(), axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[tokio::test]
+    async fn test_update_appointment_invalid_db() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let app = router(pool);
+
+        let body = serde_json::json!({
+            "id": "apt_123",
+            "status": "In-Progress",
+            "notes": "Test notes",
+            "scheduled_start_time": "2023-10-27T10:00:00Z",
+            "scheduled_end_time": "2023-10-27T11:00:00Z"
+        });
+
+        let req = Request::builder()
+            .method("POST")
+            .uri("/appointments")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&body).unwrap()))
             .unwrap();
 
         let res = app.oneshot(req).await.unwrap();
