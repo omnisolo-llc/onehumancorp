@@ -1,13 +1,37 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
+
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlanData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/billing/my-plan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (response.ok) {
+          const json = await response.json();
+          setCurrentPlan(json.current_plan);
+        }
+      } catch (error) {
+        console.error('Failed to fetch plan data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlanData();
+  }, []);
 
   const handleUpgrade = async (tier: string) => {
     try {
@@ -64,9 +88,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Free' || !currentPlan ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Current Plan
+              </button>
+            ) : (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Downgrade to Free
+              </button>
+            )}
           </div>
 
           {/* Starter Tier */}
@@ -83,9 +117,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Starter' ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Current Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Starter via Stripe
+              </button>
+            )}
           </div>
 
           {/* Pro Tier */}
@@ -100,9 +144,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Pro' ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Current Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Pro via Stripe
+              </button>
+            )}
           </div>
 
           {/* Business Tier */}
@@ -117,9 +171,19 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
-            </button>
+            {loading ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Loading...
+              </button>
+            ) : currentPlan === 'Business' ? (
+              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                Current Plan
+              </button>
+            ) : (
+              <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+                Upgrade to Business via Stripe
+              </button>
+            )}
           </div>
         </div>
 
