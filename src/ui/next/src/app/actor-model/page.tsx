@@ -48,7 +48,7 @@ export default function ActorModelPage() {
           </label>
           <textarea
             id="message"
-            className="w-full p-4 border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-4 border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 glass-card bg-transparent"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -66,14 +66,14 @@ export default function ActorModelPage() {
       </button>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200" data-testid="error-message">
+        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-xl text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
           <h3 className="font-bold mb-2">Execution Error:</h3>
           <p>{error}</p>
         </div>
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-white border rounded-lg shadow-sm" data-testid="success-message">
+        <div className="mt-8 p-6 glass-card shadow-sm" data-testid="success-message">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Swarm Result</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono bg-gray-50 p-4 rounded">
             {result}

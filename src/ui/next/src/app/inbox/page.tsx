@@ -53,18 +53,44 @@ function InboxWorkspace({
     return messages.find((m) => m.id === selectedId) || messages[0];
   }, [messages, selectedId]);
 
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchApprovals() {
+      try {
+        const token = localStorage.getItem("token") || "";
+        const res = await fetch(`/api/agents/approvals?limit=50`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPendingApprovals(data.pending_approvals || []);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchApprovals();
+  }, []);
+
+  const activeApproval = useMemo(() => {
+    if (!selected) return null;
+    return pendingApprovals.find((a: any) => {
+      try {
+        const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
+        return payload && payload.inbox_message_id === selected.id;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [selected, pendingApprovals]);
+
+
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals?limit=50`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch approvals");
-      const data = await res.json();
-      const pendingApprovals = data.pending_approvals || [];
-
       const approval = pendingApprovals.find((a: any) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
@@ -201,10 +227,36 @@ function InboxWorkspace({
                 </div>
                 {badgeTone(selected.status) === "warn" && (
                   <div className="mt-6">
-                    <button
-                      className="app-button primary w-full"
-                      onClick={() => handleApproveAndSend(selected.id)}
-                    >✨ Approve &amp; Send Draft</button>
+                    {(() => {
+                      let buttonText = "✨ Approve & Send Draft";
+                      let parsedPayload = null;
+                      if (activeApproval && activeApproval.payload) {
+                        try {
+                          parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
+                        } catch(e) {}
+                        if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
+                           let amount = 0;
+                           if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {
+                              amount = parsedPayload.total_amount_cents / 100;
+                           } else if (parsedPayload.total_amount !== undefined && parsedPayload.total_amount !== null) {
+                              amount = parsedPayload.total_amount;
+                           }
+                           buttonText = `✨ Send quote for $${amount.toFixed(2)}`;
+                        } else if (parsedPayload && parsedPayload.action_type === "Draft Booking") {
+                           buttonText = "✨ Approve booking";
+                        } else if (parsedPayload && parsedPayload.action_type === "Draft Reply") {
+                           buttonText = "✨ Approve & Send Draft";
+                        }
+                      }
+                      return (
+                        <button
+                          className="app-button primary w-full"
+                          onClick={() => handleApproveAndSend(selected.id)}
+                        >
+                          {buttonText}
+                        </button>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

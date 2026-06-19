@@ -28,18 +28,38 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Ensure the Offline Mode badge is visible
     await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-    // Click "New Order" while offline
+    await memberPage.getByRole("button", { name: "Accept Contactless Payment" }).click();
     await memberPage.getByRole('button', { name: 'Accept Contactless Payment' }).click();
+>>>>>>> a3c61c39 (🔗 Link: Universal Tap-to-Pay Terminal Integration with Agentic Offline-First Sync)
 
     // Verify it queues the order
-    await expect(memberPage.getByRole('status')).toContainText('Offline Quick Charge Saved.', { timeout: 1000 }).catch(() => {});
+    await expect(memberPage.getByText('Offline Quick Charge Saved.')).toBeVisible({ timeout: 10000 });
 
-    // Assert the transaction was written to localStorage
+    // Assert the transaction was written to IndexedDB
     const queuedTxs = await memberPage.evaluate(() => {
-      return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
+      return new Promise<any[]>((resolve, reject) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const all = store.getAll();
+          all.onsuccess = () => resolve(all.result);
+          all.onerror = () => reject(all.error);
+        };
+      });
     });
+
+    // There should be two items in the queue (the tap_to_pay action and the CRDT mutation)
     expect(queuedTxs.length).toBeGreaterThan(0);
-    expect(queuedTxs[0].amount_cents).toBe(5000);
+    const tapToPayTx = queuedTxs.find((tx: any) => tx.type === 'tap_to_pay');
+    expect(tapToPayTx).toBeDefined();
+    expect(tapToPayTx.amount_cents).toBe(5000);
 
     // Make network online
     await context.setOffline(false);
@@ -52,14 +72,46 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Verify "Syncing..." or Online indicator
     await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-    // Wait for the sync to complete and the local storage to be cleared
-    await memberPage.waitForFunction(() => {
-        return true;
+    // Wait for the sync to complete and the IndexedDB to be cleared
+    await memberPage.waitForFunction(async () => {
+      return new Promise<boolean>((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve(true);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const all = store.getAll();
+          all.onsuccess = () => {
+            resolve(all.result.length === 0);
+          };
+          all.onerror = () => resolve(false);
+        };
+        req.onerror = () => resolve(false);
+      });
     }, { timeout: 15000 });
 
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
-        return window.indexedDB.databases().then(()=>[{amount_cents: 5000}]);
+      return new Promise<any[]>((resolve, reject) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const all = store.getAll();
+          all.onsuccess = () => resolve(all.result);
+          all.onerror = () => reject(all.error);
+        };
+      });
     });
     expect(afterSyncTxs.length).toBe(0);
   });

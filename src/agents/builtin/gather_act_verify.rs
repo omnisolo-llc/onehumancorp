@@ -71,6 +71,15 @@ impl GatherActVerifyHarness {
             let tools_by_phase = vec![gather_tools, act_tools, verify_tools];
 
             for iteration in 0..config.max_iterations {
+                if config.enable_observation_masking {
+                    crate::observation_masking::apply_observation_masking(
+                        &mut messages,
+                        config.observation_masking_threshold,
+                        config.observation_masking_size_limit,
+                        config.observation_masking_element_limit,
+                    );
+                }
+
                 let phase_idx = iteration % 3;
                 let current_phase = phases[phase_idx];
                 let current_tools = &tools_by_phase[phase_idx];
@@ -388,6 +397,68 @@ mod tests {
         assert!(act_started, "Act phase should have started");
         assert!(verify_started, "Verify phase should have started");
         assert!(task_complete, "Task should have completed");
+    }
+
+    #[tokio::test]
+    async fn test_gather_act_verify_observation_masking_integration() {
+        let llm = Arc::new(MockLlm {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_gather".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-1".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("TASK COMPLETE"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-2".to_string()),
+                }
+            ]),
+        });
+
+        let gather_tools = vec![Tool {
+            name: "test_gather".to_string(),
+            description: "gather tool".to_string(),
+            parameters: serde_json::json!({"type": "object", "properties": {}}),
+            execute: Arc::new(MockToolExecutor {
+                result: "A very long tool output that should be masked because it is long and old".repeat(50).to_string(),
+            }),
+            is_read_only: true,
+        }];
+
+        let harness = GatherActVerifyHarness::new(llm, gather_tools, vec![], vec![]);
+
+        let mut config = AgentRunConfig::default();
+        config.enable_observation_masking = true;
+        config.observation_masking_threshold = 0;
+        config.observation_masking_size_limit = 10;
+        config.observation_masking_element_limit = 10;
+
+        let mut rx = harness.query(config, "Task".to_string());
+
+        let mut events = vec![];
+        while let Some(evt) = rx.recv().await {
+            events.push(evt);
+        }
+
+        let contains_complete = events.iter().any(|e| match e {
+            AgentEvent::TaskComplete { .. } => true,
+            _ => false,
+        });
+        assert!(contains_complete);
     }
 
     #[tokio::test]
