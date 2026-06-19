@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(bubble);
 
             function renderStep() {
-                const step = steps[currentStep]; bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
+                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
 
                 document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
                     el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
