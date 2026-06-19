@@ -208,8 +208,7 @@ impl JetBrainsObservationMasker {
                                     {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
-                                        serde_json::json!({ "_masked_observation": raw_msg })
-                                            .to_string()
+                                        raw_msg
                                     }
                                 } else {
                                     let raw_msg = format!(
@@ -222,8 +221,7 @@ impl JetBrainsObservationMasker {
                                     {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
-                                        serde_json::json!({ "_masked_observation": raw_msg })
-                                            .to_string()
+                                        raw_msg
                                     }
                                 };
 
