@@ -191,6 +191,16 @@ export default function InvoiceGeneratorPage() {
         .glassmorphism {
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        @media (prefers-color-scheme: dark) {
+            .glassmorphism {
+                background: rgba(22, 22, 26, 0.7);
+                backdrop-filter: blur(30px) saturate(210%);
+                -webkit-backdrop-filter: blur(30px) saturate(210%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
