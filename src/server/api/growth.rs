@@ -343,6 +343,7 @@ where
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/discount-code/embed", get(handle_discount_code_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
@@ -3199,4 +3200,48 @@ pub async fn handle_post_link_in_bio(
 
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::OK)
+}
+
+pub async fn handle_discount_code_embed(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl axum::response::IntoResponse {
+    let tenant = params.get("tenant").map(|s| s.as_str()).unwrap_or("unknown");
+    let discount = params.get("discount").map(|s| s.as_str()).unwrap_or("20%");
+    let code = params.get("code").map(|s| s.as_str()).unwrap_or("DISCOUNT20");
+    let hide_branding = params.get("hideBranding").map(|s| s.as_str()).unwrap_or("false") == "true";
+
+    let branding_html = if hide_branding {
+        "".to_string()
+    } else {
+        format!(
+            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OHC</a></div>",
+            tenant
+        )
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {{ font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: transparent; }}
+.widget {{ background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 12px; padding: 20px; text-align: center; }}
+.discount {{ font-size: 24px; font-weight: bold; color: #111827; margin-bottom: 8px; }}
+.code {{ display: inline-block; background: #fff; border: 2px dashed #1f2937; padding: 8px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 12px; }}
+.desc {{ font-size: 14px; color: #4b5563; margin-bottom: 16px; }}
+</style>
+</head>
+<body>
+    <div class="widget">
+        <div class="discount">{} OFF</div>
+        <div class="desc">Use this code at checkout to claim your discount!</div>
+        <div class="code">{}</div>
+        {}
+    </div>
+</body>
+</html>"#,
+        discount, code, branding_html
+    );
+
+    axum::response::Html(html)
 }
