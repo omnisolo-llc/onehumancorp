@@ -97,8 +97,28 @@ test.describe('Onboarding Wizard CUJ', () => {
   });
 
   // Test 3: Validate missing location blocks progression
-  test('Persona: Business Owner cannot progress without location', async ({ page }) => {
-    test.skip(true, 'Location is no longer an explicit step in new UI');
+  test('Persona: Business Owner cannot progress without offer', async ({ page }) => {
+    await startOnboarding(page);
+    // Test the actual failure for some other step if location is removed, maybe missing offer blocks progression?
+    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
+    const categorySelect = page.getByTestId('business-categories');
+    await categorySelect.selectOption('Bakery');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
+    await page.getByTestId('business-name').fill('Maya');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
+    await page.getByTestId('assistant-name').fill('Buddy');
+    await page.getByTestId('assistant-tone').selectOption('Friendly');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
+    await page.getByTestId('admin-email').fill('admin@testbakery.local');
+    await page.getByTestId('admin-password').fill('SuperSecretPassword123');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
+
+    // Do not fill offer, try to proceed
+    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
+
+    // Expect validation failure message
+    await expect(page.getByText('Please enter an offer.')).toBeVisible();
   });
 
   // Test 4: Navigating Back works
@@ -124,7 +144,24 @@ test.describe('Onboarding Wizard CUJ', () => {
   });
 
   // Test 5: Can cancel from Style & Team
-  test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
-    test.skip(true, 'Style & Team is no longer an explicit step with auto-respond in new UI');
+  test('Persona: Business Owner can change Assistant Tone', async ({ page }) => {
+    await startOnboarding(page);
+
+    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
+
+    const categorySelect = page.getByTestId('business-categories');
+    await expect(categorySelect).toBeVisible();
+    await categorySelect.selectOption('Bakery');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
+
+    await page.getByTestId('business-name').fill('Maya');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
+
+    // Test the assistant auto-respond or tone settings which is the new equivalent
+    const assistantToneSelect = page.getByTestId('assistant-tone');
+    await expect(assistantToneSelect).toBeVisible();
+    await assistantToneSelect.selectOption('Professional');
+    await expect(assistantToneSelect).toHaveValue('Professional');
   });
 });
