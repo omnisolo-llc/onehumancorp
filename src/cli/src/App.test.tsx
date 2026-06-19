@@ -1,8 +1,8 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { App } from './App';
-import * as orchestrator from './hooks/useOrchestrator';
+import { App } from './App.js';
+import * as orchestrator from './hooks/useOrchestrator.js';
 
 describe('App', () => {
   beforeEach(() => {

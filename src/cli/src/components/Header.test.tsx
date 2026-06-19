@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { expect, test } from 'vitest';
-import { Header } from './Header';
+import { Header } from './Header.js';
 
 test('renders Header correctly', () => {
   const { lastFrame } = render(<Header />);
