@@ -403,11 +403,14 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
 
-    let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
+    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
         7
     } else {
         now.day()
     };
+    if elapsed_days == 0 {
+        elapsed_days = 1;
+    }
 
     let pool = crate::db::get_pool();
     let tier_str: String = sqlx::query_scalar("SELECT tier FROM tenants WHERE id = $1")
