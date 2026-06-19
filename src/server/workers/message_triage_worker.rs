@@ -106,8 +106,61 @@ impl MessageTriageWorker {
         if let Some((job_id, tenant_id, payload)) = job {
             let message_id = payload.get("message_id").and_then(|v| v.as_str()).unwrap_or("");
             let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
+
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+            let mut historical_context = String::new();
+
+            if let Some(c_id) = customer_id_val {
+                historical_context.push_str("Customer History:\n");
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        use sqlx::Row;
+                        if let Ok(orders) = sqlx::query("SELECT id, CAST(total_amount AS TEXT) AS total_amount, status FROM orders WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 3").bind(&tenant_id).bind(&c_id).fetch_all(&self.db.pool).await {
+                            for o in orders {
+                                let oid: String = o.get("id");
+                                let amt: Option<String> = o.try_get("total_amount").ok();
+                                let amt_str = amt.unwrap_or_else(|| "0".to_string());
+                                let status: Option<String> = o.try_get("status").ok();
+                                historical_context.push_str(&format!("Order {}: amount {}, status {}\n", oid, amt_str, status.unwrap_or_default()));
+                            }
+                        }
+                        if let Ok(msgs) = sqlx::query("SELECT original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND customer_id = $2 AND id != $3 ORDER BY created_at DESC LIMIT 5").bind(&tenant_id).bind(&c_id).bind(&message_id).fetch_all(&self.db.pool).await {
+                            for m in msgs {
+                                let content: Option<String> = m.try_get("original_content").ok();
+                                if let Some(c) = content {
+                                    historical_context.push_str(&format!("Past msg: {}\n", c));
+                                }
+                            }
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        use sqlx::Row;
+                        if let Ok(orders) = sqlx::query("SELECT id, CAST(total_amount AS TEXT) AS total_amount, status FROM orders WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 3")
+                            .bind(&tenant_id).bind(&c_id).fetch_all(sqlite_pool).await {
+                            for o in orders {
+                                let oid: String = o.get("id");
+                                let amt: Option<String> = o.try_get("total_amount").ok();
+                                let amt_str = amt.unwrap_or_else(|| "0".to_string());
+                                let status: Option<String> = o.try_get("status").ok();
+                                historical_context.push_str(&format!("Order {}: amount {}, status {}\n", oid, amt_str, status.unwrap_or_default()));
+                            }
+                        }
+                        if let Ok(msgs) = sqlx::query("SELECT original_content FROM omni_inbox_messages WHERE tenant_id = ? AND customer_id = ? AND id != ? ORDER BY created_at DESC LIMIT 5")
+                            .bind(&tenant_id).bind(&c_id).bind(&message_id).fetch_all(sqlite_pool).await {
+                            for m in msgs {
+                                let content: Option<String> = m.try_get("original_content").ok();
+                                if let Some(c) = content {
+                                    historical_context.push_str(&format!("Past msg: {}\n", c));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Extract intent & context using LLM
             let prompt = format!(
@@ -115,6 +168,7 @@ impl MessageTriageWorker {
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
+{}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
@@ -127,7 +181,7 @@ Output JSON format:
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
 }}",
-                sender_id, customer_message, source
+                sender_id, customer_message, source, historical_context
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
