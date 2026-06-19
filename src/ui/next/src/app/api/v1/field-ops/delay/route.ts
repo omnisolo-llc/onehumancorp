@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const payload = await request.json();
     payload.tenant_id = tenantId;
 
-    const res = await fetch(`${backendUrl}/api/v1/field-ops/optimize-route`, {
+    const res = await fetch(`${backendUrl}/api/v1/field-ops/delay`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     } else {
         const errorText = await res.text();
         console.error('Backend error:', res.status, errorText);
-        return NextResponse.json({ error: 'Failed to optimize route' }, { status: res.status });
+        return NextResponse.json({ error: 'Failed to process delay' }, { status: res.status });
     }
   } catch (error) {
-    console.error('Failed to optimize route in backend:', error);
+    console.error('Failed to process delay in backend:', error);
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 }

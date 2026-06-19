@@ -13,6 +13,8 @@ type Appointment = {
   scheduled_start_time: string;
   scheduled_end_time: string;
   location_address: string;
+  location_lat?: number;
+  location_lng?: number;
   notes: string;
   actual_start_time?: string;
   actual_end_time?: string;
@@ -23,6 +25,9 @@ export default function FieldOpsJobsPage() {
   const [jobs, setJobs] = useState<Appointment[]>([]);
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [delayModalJob, setDelayModalJob] = useState<Appointment | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     setIsOffline(!navigator.onLine);
@@ -31,7 +36,20 @@ export default function FieldOpsJobsPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Fetch initial schedule
+    // Get current location if possible
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setCurrentLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (error) => console.log("Geolocation error:", error),
+            { timeout: 10000 }
+        );
+    }
+
     fetch('/api/v1/field-ops/appointments')
       .then(res => res.json())
       .then(data => {
@@ -65,7 +83,6 @@ export default function FieldOpsJobsPage() {
       })
     );
 
-    // Call optimize route endpoint after state change to simulate Operations Agent logic
     const updatedJobs = jobs.map(j => {
       if (j.id === jobId) {
         const updated = { ...j, status: newStatus };
@@ -76,17 +93,22 @@ export default function FieldOpsJobsPage() {
       return j;
     });
 
-    if (newStatus === 'Completed') {
+    if (newStatus === 'Completed' || newStatus === 'En-Route') {
        fetch('/api/v1/field-ops/optimize-route', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({
            appointments: updatedJobs,
-           currentLocationLat: 0,
-           currentLocationLng: 0
+           currentLocationLat: currentLocation?.lat,
+           currentLocationLng: currentLocation?.lng
          })
        })
-       .then(res => res.json())
+       .then(async res => {
+           if (!res.ok) {
+               throw new Error(await res.text());
+           }
+           return res.json();
+       })
        .then(data => {
          if (data.success) {
            setJobs(data.optimizedRoute);
@@ -118,6 +140,49 @@ export default function FieldOpsJobsPage() {
     }
   };
 
+  const handleRunningLate = (job: Appointment) => {
+    setDelayModalJob(job);
+    setErrorMessage(null);
+  };
+
+  const approveDelay = () => {
+    if (!delayModalJob) return;
+
+    fetch('/api/v1/field-ops/delay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appointment_id: delayModalJob.id,
+          delay_minutes: 30
+        })
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to update delay');
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.success && data.appointments) {
+            setJobs(data.appointments);
+            setDelayModalJob(null);
+        } else {
+            setErrorMessage('Failed to update delay');
+        }
+    })
+    .catch(err => {
+        console.error("Delay notification failed", err);
+        setErrorMessage(err.message || 'Network error');
+    });
+  };
+
+  const calculateAffectedClients = (delayJob: Appointment) => {
+      const delayJobDate = new Date(delayJob.scheduled_start_time);
+      const affected = jobs.filter(j => new Date(j.scheduled_start_time) > delayJobDate && j.status !== 'Completed' && j.status !== 'Cancelled');
+      return affected.length;
+  };
+
   if (loading) {
      return <div className="p-4 bg-gray-50 min-h-screen flex items-center justify-center">Loading schedule...</div>;
   }
@@ -132,6 +197,44 @@ export default function FieldOpsJobsPage() {
           </div>
         )}
       </div>
+
+      {delayModalJob && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-xl rounded-2xl p-6 w-full max-w-sm">
+                  <div className="flex gap-4 items-start mb-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-2xl shrink-0">🤖</div>
+                      <div>
+                          <h3 className="text-lg font-bold text-gray-900">Operations Agent</h3>
+                          <p className="text-sm text-gray-700 mt-1">
+                              {calculateAffectedClients(delayModalJob) > 0
+                                ? `Notify the next ${calculateAffectedClients(delayModalJob)} clients of a 30-minute delay?`
+                                : "No subsequent clients affected. Adjust schedule?"
+                              }
+                          </p>
+                      </div>
+                  </div>
+                  {errorMessage && (
+                      <div className="mb-4 text-sm text-red-600 font-semibold text-center bg-red-50 p-2 rounded">
+                          {errorMessage}
+                      </div>
+                  )}
+                  <div className="flex gap-3 mt-6">
+                      <button
+                          onClick={() => { setDelayModalJob(null); setErrorMessage(null); }}
+                          className="flex-1 py-3 px-4 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                          Cancel
+                      </button>
+                      <button
+                          onClick={approveDelay}
+                          className="flex-1 py-3 px-4 rounded-xl font-semibold text-white bg-[#0071E3] hover:bg-blue-600 transition-colors shadow-md"
+                      >
+                          Approve & Send
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {agentSuggestion && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm relative">
@@ -182,7 +285,9 @@ export default function FieldOpsJobsPage() {
               <p className="text-gray-600 text-sm mb-1 flex items-center gap-2">📍 {job.location_address}</p>
               <p className="text-gray-600 text-sm flex items-center gap-2">🔧 {job.job_name}</p>
               <p className="text-gray-500 text-xs mt-2 font-medium">
-                ⏱ {new Date(job.scheduled_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(job.scheduled_end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                {job.scheduled_start_time && job.scheduled_end_time && (
+                  <>⏱ {new Date(job.scheduled_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(job.scheduled_end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</>
+                )}
               </p>
             </div>
 
@@ -197,6 +302,13 @@ export default function FieldOpsJobsPage() {
                 />
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
+                  <button
+                    className="flex-1 bg-[#FF9500]/10 hover:bg-[#FF9500]/20 text-[#FF9500] font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                    onClick={() => handleRunningLate(job)}
+                  >
+                    Running Late
+                  </button>
+
                   {job.status === 'Requested' || job.status === 'Scheduled' ? (
                      <button
                         className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
