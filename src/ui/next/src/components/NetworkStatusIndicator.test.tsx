@@ -45,7 +45,7 @@ describe('NetworkStatusIndicator', () => {
     });
 
     // Check if the offline text is present
-    expect(screen.getByText('Working Offline')).toBeInTheDocument();
+    expect(screen.getByText('Working offline. Changes saved.')).toBeInTheDocument();
   });
 
   it('applies the new Translucent Glass CSS classes', async () => {
@@ -59,7 +59,7 @@ describe('NetworkStatusIndicator', () => {
     });
 
     // Verify the div contains the specific Translucent Glass classes
-    const container = screen.getByText('Working Offline').closest('div');
+    const container = screen.getByText('Working offline. Changes saved.').closest('div');
     expect(container).toHaveClass('bg-white/65');
     expect(container).toHaveClass('backdrop-blur-[30px]');
     expect(container).toHaveClass('saturate-[210%]');
