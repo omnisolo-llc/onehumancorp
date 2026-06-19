@@ -34,7 +34,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await expect(page.locator('h1', { hasText: 'Cost Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Verify elements by id or text mapped to their metrics
-    await expect(page.locator('#cost-dashboard-total-revenue')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
     await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible();
     await expect(page.locator('#cost-dashboard-projected-cost')).toBeVisible();
   });
