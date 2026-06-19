@@ -54,6 +54,16 @@ impl AuthConfig {
             .unwrap_or_else(|_| {
                 let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
                 if secret_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                            let perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                            }
+                        }
+                    }
                     if let Ok(bytes) = std::fs::read(&secret_path) {
                         if bytes.len() >= 32 {
                             return bytes;
@@ -100,6 +110,16 @@ fn hmac_token(tok: &str) -> Vec<u8> {
         .unwrap_or_else(|_| {
             let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
             if secret_path.exists() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                        let perms = metadata.permissions();
+                        if perms.mode() & 0o777 != 0o600 {
+                            panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                        }
+                    }
+                }
                 if let Ok(bytes) = std::fs::read(&secret_path) {
                     if bytes.len() >= 32 {
                         return bytes;
