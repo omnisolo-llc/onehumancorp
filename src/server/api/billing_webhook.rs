@@ -388,6 +388,19 @@ pub async fn stripe_webhook_handler(
 
                 let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
 
+                // Notify KAIROS Orchestrator for Sales and Operations AI agents
+                let orch = webhook_state.orchestrator.clone();
+                let payload_val = obj.clone();
+                let tenant_id_val = tenant_id.to_string();
+                tokio::spawn(async move {
+                    let evt = crate::orchestration::departments::types::DepartmentEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id_val,
+                        event_type: "POS_SALE_COMPLETED".to_string(),
+                        payload: payload_val,
+                    };
+                    let _ = orch.dispatch_event(evt).await;
+                });
             }
 
             // Also try to update the order status to Paid if order_id is present

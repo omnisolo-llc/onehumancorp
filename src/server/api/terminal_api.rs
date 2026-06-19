@@ -631,8 +631,10 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.require_api_key() {
-        Ok(_) => match client.create_terminal_payment_intent(
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_payment_intent(
             &tenant_id,
             req_data.amount_cents,
             &req_data.currency,
@@ -799,8 +801,10 @@ pub async fn get_terminal_connection_token_handler(
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.require_api_key() {
-        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_connection_token(&tenant_id).await {
             Ok(token) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "secret": token }))).into_response(),
             Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e }))).into_response(),
         },
