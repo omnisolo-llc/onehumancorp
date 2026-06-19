@@ -84,6 +84,7 @@ export class SyncManager {
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
+    window.dispatchEvent(new Event('ohc_sync_started'));
 
     try {
       // Separate POS transactions from general offline sync
@@ -286,12 +287,14 @@ export class SyncManager {
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
         setTimeout(() => {
           this.syncInProgress = false;
+          window.dispatchEvent(new Event('ohc_sync_completed'));
           this.sync(retryCount + 1);
         }, delay);
         return; // Don't unset syncInProgress yet
       }
     } finally {
       this.syncInProgress = false;
+      window.dispatchEvent(new Event('ohc_sync_completed'));
     }
   }
 }
