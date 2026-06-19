@@ -161,6 +161,11 @@ impl MinimaxClient {
             } else {
                 return Ok(r#"{
                     "business_name": "Generic Business",
+"priority": "urgent",
+"context_summary": "Customer needs sink fixed tomorrow",
+"action_type": "Draft Booking",
+"action_payload": "I can fix it tomorrow at 2 PM.",
+"feature_type": "instagram_dm",
                     "business_type": "Retail",
                     "categories": ["physical"],
                     "initial_products": [{"name": "Item 1", "price": "10.00"}],
