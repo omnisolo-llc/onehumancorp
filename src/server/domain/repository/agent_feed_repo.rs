@@ -47,7 +47,37 @@ impl AgentFeedRepository {
 
     pub async fn get(&self, tenant_id: &str, id: &str) -> Result<Option<AgentFeedItem>, sqlx::Error> {
         let rec = sqlx::query_as::<_, AgentFeedItem>(
-            "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND id = $2"
+            r#"
+            SELECT
+                id,
+                tenant_id,
+                event_source,
+                context_payload,
+                proposed_action,
+                lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_feed_items
+            WHERE tenant_id = $1 AND id = $2
+
+            UNION ALL
+
+            SELECT
+                id,
+                tenant_id,
+                department as event_source,
+                jsonb_build_object('description', description) as context_payload,
+                payload as proposed_action,
+                CASE
+                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
+                    WHEN status = 'REJECTED' THEN 'DISMISSED'
+                    ELSE status
+                END as lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_approvals
+            WHERE tenant_id = $1 AND id = $2
+            "#
         )
         .bind(tenant_id)
         .bind(id)
@@ -152,10 +182,66 @@ impl AgentFeedRepository {
         .bind(new_state)
         .bind(tenant_id)
         .bind(id)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok(rec)
+        if let Some(r) = rec {
+            return Ok(r);
+        }
+
+        // Fallback to agent_approvals
+        let legacy_status = if new_state == "APPROVED" { "APPROVED" } else if new_state == "DISMISSED" { "REJECTED" } else { "DRAFT" };
+        sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+            .bind(legacy_status)
+            .bind(tenant_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        let fetched = self.get(tenant_id, id).await?;
+        if let Some(f) = fetched {
+            return Ok(f);
+        }
+
+        Err(sqlx::Error::RowNotFound)
+    }
+
+    pub async fn update_payloads(&self, tenant_id: &str, id: &str, context_payload: Option<sqlx::types::Json<serde_json::Value>>, proposed_action: Option<sqlx::types::Json<serde_json::Value>>) -> Result<(), sqlx::Error> {
+        let res = sqlx::query(
+            r#"
+            UPDATE agent_feed_items
+            SET context_payload = $1, proposed_action = $2, updated_at = NOW()
+            WHERE tenant_id = $3 AND id = $4
+            "#
+        )
+        .bind(&context_payload)
+        .bind(&proposed_action)
+        .bind(tenant_id)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        if res.rows_affected() > 0 {
+            return Ok(());
+        }
+
+        // Fallback for agent_approvals
+        if let Some(action) = proposed_action {
+            sqlx::query(
+                r#"
+                UPDATE agent_approvals
+                SET payload = $1, updated_at = NOW()
+                WHERE tenant_id = $2 AND id = $3
+                "#
+            )
+            .bind(action)
+            .bind(tenant_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        }
+
+        Ok(())
     }
 }
 

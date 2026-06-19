@@ -77,6 +77,8 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct UpdateStateRequest {
     pub state: String,
+    pub proposed_action: Option<serde_json::Value>,
+    pub context_payload: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -316,6 +318,12 @@ async fn update_feed_item_state(
     };
 
     let repo = AgentFeedRepository::new(pool.clone());
+
+    if payload.proposed_action.is_some() || payload.context_payload.is_some() {
+        let proposed = payload.proposed_action.clone().map(sqlx::types::Json);
+        let context = payload.context_payload.clone().map(sqlx::types::Json);
+        let _ = repo.update_payloads(&tenant_id, &id, context, proposed).await;
+    }
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
