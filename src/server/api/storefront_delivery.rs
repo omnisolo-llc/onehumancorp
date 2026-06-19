@@ -1,15 +1,14 @@
 use axum::{
-    extract::{Extension, Path, State},
+    extract::{Path, State},
     response::{Html, IntoResponse},
     routing::{get, post},
     Json, Router,
 };
 use axum::http::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::builder::edge::{get_edge_cache, regenerate_cache};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -28,7 +27,7 @@ pub struct InvalidateRequest {
 }
 
 async fn invalidate_cache_webhook(
-    State(state): State<DeliveryState>,
+    State(_state): State<DeliveryState>,
     Json(payload): Json<InvalidateRequest>,
 ) -> impl IntoResponse {
     let cache = get_edge_cache();
