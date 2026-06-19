@@ -268,7 +268,7 @@ mod db_tests {
         if !url.starts_with("postgres") {
             return;
         }
-        let pool = match PgPoolOptions::new().connect(&url).await {
+        let pool = match crate::db::secure_pg_pool_options().connect(&url).await {
             Ok(p) => p,
             Err(_) => return, // Skip test if database is not available to keep it hermetic
         };
