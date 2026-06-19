@@ -116,6 +116,8 @@ pub struct Order {
     pub status: Option<String>,
     pub total_amount: Option<f64>,
     pub payment_source: Option<String>,
+    pub notes: Option<String>,
+    pub translated_notes: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

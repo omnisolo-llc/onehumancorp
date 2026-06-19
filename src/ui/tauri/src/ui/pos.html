@@ -272,6 +272,14 @@
   <body>
     <div class="container glassmorphism" id="main-container">
 
+      <button id="preorder-dashboard-btn" class="glassmorphism-btn" onclick="document.getElementById('fatima-dashboard').style.display='block'; document.getElementById('pos-view').style.display='none'" style="background: #34c759; color: white; border: none; padding: 8px 16px; margin-bottom: 8px; width: 100%;">Pre-Orders Dashboard</button>
+
+      <div id="fatima-dashboard" style="display: none; flex-direction: column; height: 100%;">
+        <h2>Next 10 Orders</h2>
+        <div id="pre-orders-list">Loading...</div>
+        <button class="glassmorphism-btn" onclick="document.getElementById('fatima-dashboard').style.display='none'; document.getElementById('pos-view').style.display='flex'" style="background: #007aff; color: white; border: none; padding: 12px; width: 100%; margin-top: 16px;">Back to POS</button>
+      </div>
+
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
 
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
@@ -1374,10 +1382,100 @@ initWalkthrough();
     window.addEventListener("online", () => {
         updateOfflineStatus();
         syncOfflineQueue();
+        loadPreOrders();
     });
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
+
+    // Fatima Dashboard Logic
+    async function loadPreOrders() {
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        try {
+            const res = await fetch(`/api/v1/pos/orders?tenant_id=${tenantId}`);
+            const data = await res.json();
+            const list = document.getElementById('pre-orders-list');
+            list.innerHTML = '';
+            if (data.orders && data.orders.length > 0) {
+                data.orders.slice(0, 10).forEach(o => {
+                    if (o.status === 'READY') return;
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '12px';
+                    div.style.padding = '12px';
+                    div.style.background = 'rgba(255,255,255,0.8)';
+                    div.style.borderRadius = '8px';
+                    div.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 4px;">Order #${o.id.substring(0, 8)}</div>
+                        <div style="color: #666; margin-bottom: 8px; font-size: 0.9em;">
+                            Note: ${o.translated_notes || o.notes || 'None'}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="glassmorphism-btn" onclick="markOrderReady('${o.id}')" style="flex: 1; background: #34c759; color: white; border: none; padding: 8px;">Mark Ready</button>
+                            <button class="glassmorphism-btn" onclick="delayOrder('${o.id}')" style="flex: 1; background: #ff9500; color: white; border: none; padding: 8px;">Delay 5 mins</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                list.innerHTML = 'No pending orders.';
+            }
+        } catch(e) {
+            document.getElementById('pre-orders-list').innerHTML = 'Offline - orders will sync when connected.';
+        }
+    }
+
+    async function markOrderReady(orderId) {
+        if (!navigator.onLine) {
+            let queue = JSON.parse(localStorage.getItem("pos_action_queue") || "[]");
+            queue.push({ type: "ready", orderId });
+            localStorage.setItem("pos_action_queue", JSON.stringify(queue));
+            alert("Offline: Will mark ready when reconnected.");
+            return;
+        }
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        await fetch('/api/v1/pos/order/ready', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'x-tenant-id': tenantId},
+            body: JSON.stringify({ order_id: orderId })
+        });
+        loadPreOrders();
+    }
+
+    async function delayOrder(orderId) {
+        if (!navigator.onLine) {
+            let queue = JSON.parse(localStorage.getItem("pos_action_queue") || "[]");
+            queue.push({ type: "delay", orderId, delay_mins: 5 });
+            localStorage.setItem("pos_action_queue", JSON.stringify(queue));
+            alert("Offline: Will delay when reconnected.");
+            return;
+        }
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        await fetch('/api/v1/pos/order/delay', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'x-tenant-id': tenantId},
+            body: JSON.stringify({ order_id: orderId, delay_mins: 5 })
+        });
+        alert("Customer notified of 5 min delay.");
+    }
+
+    // Check pre-order actions queue in syncOfflineQueue or online event
+    window.addEventListener("online", async () => {
+        let queue = JSON.parse(localStorage.getItem("pos_action_queue") || "[]");
+        if (queue.length > 0) {
+            const tenantId = localStorage.getItem("tenant_id") || "default";
+            for (let action of queue) {
+                if (action.type === "ready") {
+                    await fetch('/api/v1/pos/order/ready', { method: 'POST', headers: {'Content-Type': 'application/json', 'x-tenant-id': tenantId}, body: JSON.stringify({ order_id: action.orderId }) });
+                } else if (action.type === "delay") {
+                    await fetch('/api/v1/pos/order/delay', { method: 'POST', headers: {'Content-Type': 'application/json', 'x-tenant-id': tenantId}, body: JSON.stringify({ order_id: action.orderId, delay_mins: action.delay_mins }) });
+                }
+            }
+            localStorage.setItem("pos_action_queue", "[]");
+        }
+    });
+
+    loadPreOrders();
+    setInterval(() => { if (navigator.onLine) loadPreOrders(); }, 5000);
 </script>
 </body>
 </html>

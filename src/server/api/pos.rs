@@ -19,6 +19,9 @@ where
     Router::new()
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
+        .route("/preorder", axum::routing::post(post_preorder_handler))
+        .route("/order/ready", axum::routing::post(post_order_ready_handler))
+        .route("/order/delay", axum::routing::post(post_order_delay_handler))
         .with_state(hub)
 }
 
@@ -32,6 +35,24 @@ pub struct OrderStatusUpdate {
 pub struct InventoryToggle {
     pub item_id: String,
     pub is_sold_out: bool,
+}
+
+#[derive(serde::Deserialize)]
+pub struct PreOrderRequest {
+    pub item_id: String,
+    pub quantity: i32,
+    pub customer_note: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct MarkOrderReady {
+    pub order_id: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct DelayOrder {
+    pub order_id: String,
+    pub delay_mins: i32,
 }
 
 async fn post_orders_handler(
@@ -221,4 +242,172 @@ mod tests {
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
     }
+}
+async fn post_preorder_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<PreOrderRequest>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+
+    // Check yield management (throttle if low inventory or high velocity)
+    let product_row = sqlx::query("SELECT inventory_count, is_sold_out FROM products WHERE id = $1 AND tenant_id = $2")
+        .bind(&payload.item_id)
+        .bind(tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+
+    if let Some(row) = product_row {
+        let stock: i32 = row.get("inventory_count");
+        let is_sold_out: bool = row.get("is_sold_out");
+
+        if is_sold_out || stock < payload.quantity {
+            return Json(json!({"error": "Insufficient stock or sold out"}));
+        }
+
+        // Predictive throttling check
+        // Check how many orders in the last 15 minutes to estimate velocity
+        let recent_sales: Option<i64> = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM orders
+             WHERE tenant_id = $1
+             AND created_at > (CURRENT_TIMESTAMP - INTERVAL '15 minutes')
+             AND status != 'CANCELLED'"
+        )
+        .bind(tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+
+        let velocity = recent_sales.unwrap_or(0);
+        // Predictive throttling: if velocity outpaces current stock significantly (e.g. 10 items in 15 mins but only 2 items left)
+        if velocity > 0 && stock <= 5 {
+            let sales_per_minute = velocity as f64 / 15.0;
+            let minutes_until_empty = stock as f64 / sales_per_minute;
+
+            // If we project to run out in less than 5 minutes, throttle incoming pre-orders
+            // to allow in-person orders priority or give operations agent time to restock
+            if minutes_until_empty < 5.0 {
+                return Json(json!({"error": "High volume: We are pausing online orders briefly to catch up. Please try again in a few minutes."}));
+            }
+        }
+
+        let translated_note = if let Some(ref note) = payload.customer_note {
+            let client = crate::api::agents::translation::LlmInboxTranslationClient;
+            use crate::api::agents::translation::InboxTranslationClient;
+
+            // Assume tenant target language is Arabic for the operator
+            if let Ok(translation) = client.translate_for_inbox(tenant_id, "preorder", note, "ar").await {
+                Some(translation.translated_content)
+            } else {
+                Some(note.clone())
+            }
+        } else {
+            None
+        };
+
+        // Create order
+        let order_id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = sqlx::query("INSERT INTO orders (id, tenant_id, status, total_amount, notes, translated_notes, created_at, updated_at) VALUES ($1, $2, 'PENDING', 0, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(&order_id)
+            .bind(tenant_id)
+            .bind(&payload.customer_note)
+            .bind(&translated_note)
+            .execute(&pool)
+            .await
+        {
+            return Json(json!({"error": format!("Failed to create order: {}", e)}));
+        }
+
+        // Deduct stock via inventory service to trigger alerts
+        let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+        if let Err(e) = inventory_service.reserve_inventory(tenant_id, &payload.item_id, payload.quantity, 60).await {
+            return Json(json!({"error": format!("Failed to reserve inventory: {}", e)}));
+        }
+        if let Err(e) = inventory_service.commit_inventory(tenant_id, &payload.item_id, payload.quantity, "").await {
+            return Json(json!({"error": format!("Failed to commit inventory: {}", e)}));
+        }
+
+        // Clear cache
+        let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+        cache.invalidate_by_tag("pos_orders").await;
+
+        return Json(json!({"status": "ok", "order_id": order_id}));
+    }
+
+    Json(json!({"error": "Insufficient stock or sold out"}))
+}
+
+async fn post_order_ready_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<MarkOrderReady>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+    if let Err(e) = sqlx::query("UPDATE orders SET status = 'READY' WHERE id = $1 AND tenant_id = $2")
+        .bind(&payload.order_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await
+    {
+        return Json(json!({"error": format!("Failed to update order status: {}", e)}));
+    }
+
+    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    cache.invalidate_by_tag("pos_orders").await;
+
+    // Also trigger ambassador to SMS customer...
+
+    Json(json!({"status": "ok"}))
+}
+
+async fn post_order_delay_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<DelayOrder>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+    if let Err(e) = sqlx::query("UPDATE orders SET status = 'DELAYED' WHERE id = $1 AND tenant_id = $2")
+        .bind(&payload.order_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await
+    {
+        return Json(json!({"error": format!("Failed to update order status: {}", e)}));
+    }
+
+    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    cache.invalidate_by_tag("pos_orders").await;
+
+    // Trigger Ambassador agent via department_tasks to notify customer
+    let event_id = uuid::Uuid::new_v4().to_string();
+    let event_payload = json!({
+        "order_id": payload.order_id,
+        "delay_mins": payload.delay_mins,
+        "message": format!("Your order has been delayed by {} minutes.", payload.delay_mins)
+    }).to_string();
+
+    let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'OrderDelayedEvent', $3::jsonb, 'PENDING')")
+        .bind(event_id)
+        .bind(tenant_id)
+        .bind(&event_payload)
+        .execute(&pool)
+        .await;
+
+    Json(json!({"status": "ok", "delayed": payload.delay_mins}))
 }
