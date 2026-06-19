@@ -26,4 +26,26 @@ describe('/api/changelog GET', () => {
     expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:18789/api/changelog');
     expect(data).toEqual(mockResults);
   });
+
+  it('returns fallback changelog on backend failure', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network Error'));
+
+    const request = new NextRequest('http://localhost:3000/api/changelog');
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+
+    expect(data).toEqual([
+      {
+        version: "v1.0.0",
+        contentLines: [
+          "### Initial Release",
+          "- Welcome to OneHumanCorp!",
+          "- Added AI Support Agent to help manage your business.",
+          "- Included Storefront Builder for quick setup.",
+        ]
+      }
+    ]);
+  });
 });
