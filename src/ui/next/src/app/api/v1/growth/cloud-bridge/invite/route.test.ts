@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
 describe('POST /api/v1/growth/cloud-bridge/invite', () => {
