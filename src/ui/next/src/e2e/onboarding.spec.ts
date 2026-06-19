@@ -31,6 +31,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     await page.getByText('Modern').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
@@ -64,6 +65,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await expect(page.locator('input[value="Plumbing and general repairs"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     await page.getByText('Minimal').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Carlos');
@@ -98,6 +100,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
     // Removed product assertion since fallback logic doesn't generate products
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     await page.getByText('Classic').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Leo Tutor');
@@ -131,6 +134,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     await page.getByText('Bold').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Fatima');
@@ -193,6 +197,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
@@ -345,6 +350,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText('Review Details')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByText('Style & Team')).toBeVisible();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
     await page.getByPlaceholder(/you@example.com/i).fill('admin@test.com');
@@ -358,4 +364,57 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await context.unroute('/api/onboarding/start');
     await context.unroute('/api/onboarding/intake');
+  });
+
+
+  test('Wizard goes backward step gracefully', async ({ page }) => {
+    await page.goto('/onboarding');
+    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+  });
+
+  test('Shows correct validation message when name length < 3', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Ma');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+  });
+
+  test('Conversational setup button transitions properly', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Conversational Setup' }).click();
+    await expect(page.getByText('Setup Assistant')).toBeVisible();
+  });
+
+  test('Instant build validates input', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    await page.getByRole('button', { name: 'Next' }).click();
+    // button disabled, wait for error
+    const is_disabled = await page.getByRole('button', { name: 'Next' }).isDisabled();
+    expect(is_disabled).toBe(true);
+  });
+
+  test('Check save draft', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Start My Business' }).click();
+
+    // Fill the business name
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Drafty Bakery');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Fill the sell items
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Muffins');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Now on step 3 location
+    await expect(page.getByText('Where are you located?')).toBeVisible();
+
+    // Save draft
+    await page.getByRole('button', { name: 'Save Draft' }).click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible();
   });

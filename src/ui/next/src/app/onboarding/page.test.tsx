@@ -64,8 +64,8 @@ describe('OnboardingWizard', () => {
     await renderOnboardingWizard();
 
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
-    expect(button).not.toBeDisabled();
+    const button_next = screen.getByRole('button', { name: /Next/i });
+    expect(button_next).not.toBeDisabled();
   });
 
   it('Handles enter key progression in chat steps', async () => {
@@ -225,11 +225,9 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const button = screen.getByRole('button', { name: /Next/i });
-    expect(button).not.toBeDisabled();
-
-    // Step 1: Intake
-    await user.click(button);
+    const button_next = screen.getByRole('button', { name: /Next/i });
+    expect(button_next).not.toBeDisabled();
+    await user.click(button_next);
 
     // Verify it transitions to Step 2: Review Details
     await waitFor(() => {
