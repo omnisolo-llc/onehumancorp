@@ -306,6 +306,7 @@ pub struct SyncOfflineTransactionsResponse {
     pub success: bool,
     pub synced_count: i32,
     pub failed_transaction_ids: Vec<String>,
+    pub pending_reconciliation: Option<Vec<serde_json::Value>>,
 }
 
 pub async fn sync_offline_transactions_handler(
@@ -466,10 +467,30 @@ pub async fn sync_offline_transactions_handler(
         }
     }
 
+    let mut pending_reconciliation = None;
+    if let Some(session_id) = &req_data.session_id {
+        if let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
+            .bind(session_id)
+            .bind(&tenant_id)
+            .fetch_optional(&pool)
+            .await
+        {
+            if let Some(r) = row {
+                let pr: Option<serde_json::Value> = sqlx::Row::try_get(&r, "pending_reconciliation").unwrap_or(None);
+                if let Some(pr_val) = pr {
+                    if let Some(arr) = pr_val.as_array() {
+                        pending_reconciliation = Some(arr.clone());
+                    }
+                }
+            }
+        }
+    }
+
     let res = SyncOfflineTransactionsResponse {
         success: failed_ids.is_empty(),
         synced_count,
         failed_transaction_ids: failed_ids,
+        pending_reconciliation,
     };
 
     (axum::http::StatusCode::OK, Json(res)).into_response()

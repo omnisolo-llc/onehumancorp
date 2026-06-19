@@ -71,7 +71,7 @@ impl Department for OperationsAgent {
             },
             "LowStockAlert" => {
                 let _product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                let _remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                 let _msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
                 let product_name = event.payload.get("product_title").and_then(|v| v.as_str()).unwrap_or("unknown item");
@@ -85,12 +85,25 @@ impl Department for OperationsAgent {
                     obj.insert("est_runout_days".to_string(), serde_json::json!(2));
                     obj.insert("suggested_reorder_quantity".to_string(), serde_json::json!(500));
                     obj.insert("draft_message".to_string(), serde_json::json!(format!("Hi Sam, please send 500 more {} to the Main St location.", product_name)));
-                    obj.insert("description".to_string(), serde_json::json!(format!("Supply Alert: {} running low. Order drafted.", product_name)));
+                    if remaining_stock == 0 {
+                        obj.insert("description".to_string(), serde_json::json!(format!("{} sold out. Would you like to draft a restock order?", product_name)));
+                    } else {
+                        obj.insert("description".to_string(), serde_json::json!(format!("Supply Alert: {} running low. Order drafted.", product_name)));
+                    }
                 }
+
+                let desc = if remaining_stock == 0 {
+                    format!("{} sold out. Would you like to draft a restock order?", product_name)
+                } else {
+                    format!("Supply Alert: {} running low. Order drafted.", product_name)
+                };
+
+                // Trigger push notification directly for owner visibility
+                let _ = self.orchestrator.notify_owner(&event.tenant_id, &desc).await;
 
                 return self.orchestrator.execute_action(
                     DepartmentType::Operations,
-                    format!("Supply Alert: {} running low. Order drafted.", product_name),
+                    desc,
                     event.tenant_id.clone(),
                     risk,
                     new_payload,

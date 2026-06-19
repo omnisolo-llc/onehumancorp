@@ -349,6 +349,29 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn notify_owner(&self, tenant_id: &str, message: &str) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let pool = self.db.pool.clone();
+                let job_id = Uuid::new_v4().to_string();
+                let payload = serde_json::json!({
+                    "tenant_id": tenant_id,
+                    "message": message,
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'send_push_notification', $3::jsonb)")
+                    .bind(job_id)
+                    .bind(tenant_id)
+                    .bind(payload)
+                    .execute(&pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            },
+            _ => Ok(())
+        }
+    }
+
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
         let now = Utc::now();
         let status_str = match req.status {
