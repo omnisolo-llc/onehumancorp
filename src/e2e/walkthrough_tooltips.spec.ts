@@ -86,7 +86,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Help Center elements are visible', async ({ page }) => {
-    await page.goto('/help.html');
+    await page.goto('/api/ui/help.html');
 
     // Verify title
     await expect(page.locator('h1')).toHaveText('In-App Help Center');
