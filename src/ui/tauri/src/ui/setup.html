@@ -54,7 +54,7 @@
         padding: 14px;
         min-height: 44px !important;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
@@ -80,7 +80,7 @@
       input:focus, textarea:focus, select:focus {
         outline: none;
         border-color: #0071E3;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
       button {
@@ -259,13 +259,13 @@
           color: #A1A1A6;
         }
         input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
         input:focus, textarea:focus, select:focus {
           border-color: #0071E3;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
       }
 
@@ -283,7 +283,7 @@
         left: 0;
         right: 0;
         height: 2px;
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.65);
         z-index: 1;
         transform: translateY(-50%);
       }
@@ -408,10 +408,10 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
         .stepper::before {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
         }
         .step-indicator {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
       }
@@ -435,7 +435,7 @@
         padding: 14px;
         min-height: 44px !important;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
@@ -448,7 +448,7 @@
       input:focus, select:focus, textarea:focus {
         outline: none;
         border-color: #0071E3;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
 
@@ -475,7 +475,7 @@
         min-height: 44px;
       }
       .context-card:hover {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         transform: translateY(-2px);
       }
       .context-card.selected {
@@ -514,7 +514,7 @@
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         min-height: 44px !important;
         border-radius: 16px;
@@ -522,7 +522,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       .radio-option:hover {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.65);
       }
       .radio-option.selected {
         border-color: #0071E3;
@@ -591,7 +591,7 @@
       }
 
       .chat-bubble {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
         border-radius: 18px;
@@ -696,20 +696,20 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
         input, select, textarea {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
         input:focus, select:focus, textarea:focus {
           border-color: #0071E3;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
         .radio-option:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(22, 22, 26, 0.7);
         }
         .radio-option.selected {
           border-color: #0071E3;
@@ -727,7 +727,7 @@
           color: #F5F5F7;
         }
         .chat-bubble {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(22, 22, 26, 0.7);
           color: #F5F5F7;
           border-color: rgba(255, 255, 255, 0.1);
         }
@@ -2398,10 +2398,10 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(2.1);
-            -webkit-backdrop-filter: blur(20px) saturate(2.1);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
@@ -3857,7 +3857,7 @@ initWalkthrough();
 <!-- Authorized deletion line 997 -->
 <!-- Authorized deletion line 998 -->
 <!-- Authorized deletion line 999 -->
-    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
+    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
       <a href="/setup.html?ref=website-builder" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OHC
