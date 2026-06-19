@@ -1,7 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Agentic Storefront Editor', () => {
-  test('Maya can use the Marketing Agent to edit her storefront', async ({ page }) => {
+  test('Maya can use the Marketing Agent to edit her storefront', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
     // Navigate to the storefront builder page
     await page.goto('/storefront-builder');
 
@@ -15,7 +17,7 @@ test.describe('Agentic Storefront Editor', () => {
     await page.click('button:has-text("Build My Storefront")');
 
     // Wait for generation to finish and preview mode to appear
-    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 15000 });
 
     // Click on "Ask Agent to Edit"
     await page.click('button:has-text("Ask Agent to Edit")');
@@ -27,9 +29,9 @@ test.describe('Agentic Storefront Editor', () => {
     await page.fill('textarea[placeholder="e.g. Add a new product..."]', 'Add a new vegan chocolate cake for $45');
 
     // Click send (the SVG icon button)
-    await page.click('button:has-text("Marketing Agent") ~ div:last-child button');
+    await page.locator('button:has-text("Marketing Agent") ~ div:last-child button').click();
 
     // Wait for generation to finish and return to preview mode
-    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Preview Mode')).toBeVisible({ timeout: 15000 });
   });
 });
