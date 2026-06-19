@@ -28,6 +28,7 @@ export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center">
       <style dangerouslySetInnerHTML={{__html: `
+        .swagger-ui { background: white; border-radius: 12px; padding: 24px; }
         .swagger-ui .wrapper { max-width: 100%; overflow-x: hidden; padding: 0 10px; }
         .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; }
         .swagger-ui table { display: block; overflow-x: auto; max-width: 100%; }
