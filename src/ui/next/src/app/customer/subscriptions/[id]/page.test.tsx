@@ -15,11 +15,33 @@ vi.mock('../../../components/PoweredByOHC', () => ({
 describe('CustomerSubscriptionPortal', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Mock global fetch for testing
+    global.fetch = vi.fn((url: string | URL | Request) => {
+      if (url.toString().includes('/action')) {
+         return Promise.resolve({
+           ok: true,
+           json: () => Promise.resolve({ success: true }),
+         });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          id: 'sub_123',
+          productName: 'Artisan Coffee Blend',
+          frequency: 'Monthly',
+          status: 'active',
+          nextDeliveryDate: '2023-11-15',
+          price: 24.00,
+          discountedPrice: 21.60,
+        }),
+      });
+    }) as any;
   });
 
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('renders loading state initially', async () => {
@@ -64,6 +86,28 @@ describe('CustomerSubscriptionPortal', () => {
     });
 
     const skipButton = screen.getByText('Skip Next Delivery');
+
+    // Make the mock return the skipped date for the second fetch
+    (global.fetch as any).mockImplementationOnce((url: string | URL | Request) => {
+        return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true })
+        });
+    }).mockImplementationOnce((url: string | URL | Request) => {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            id: 'sub_123',
+            productName: 'Artisan Coffee Blend',
+            frequency: 'Monthly',
+            status: 'active',
+            nextDeliveryDate: '2023-12-15',
+            price: 24.00,
+            discountedPrice: 21.60,
+          }),
+        });
+    });
+
     fireEvent.click(skipButton);
 
     await act(async () => {

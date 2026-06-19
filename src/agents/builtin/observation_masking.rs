@@ -203,13 +203,12 @@ impl JetBrainsObservationMasker {
                                         bytes, start_preview, end_preview, tr.tool_call_id
                                     );
                                     let content_trimmed = tr.content.trim();
-                                    if content_trimmed.starts_with('{')
-                                        || content_trimmed.starts_with('[')
-                                    {
+                                    if content_trimmed.starts_with('{') {
                                         serde_json::json!({ "error": raw_msg }).to_string()
+                                    } else if content_trimmed.starts_with('[') {
+                                        serde_json::json!([{ "error": raw_msg }]).to_string()
                                     } else {
-                                        serde_json::json!({ "_masked_observation": raw_msg })
-                                            .to_string()
+                                        raw_msg
                                     }
                                 } else {
                                     let raw_msg = format!(
@@ -217,13 +216,12 @@ impl JetBrainsObservationMasker {
                                         bytes, tr.tool_call_id
                                     );
                                     let content_trimmed = tr.content.trim();
-                                    if content_trimmed.starts_with('{')
-                                        || content_trimmed.starts_with('[')
-                                    {
+                                    if content_trimmed.starts_with('{') {
                                         serde_json::json!({ "error": raw_msg }).to_string()
+                                    } else if content_trimmed.starts_with('[') {
+                                        serde_json::json!([{ "error": raw_msg }]).to_string()
                                     } else {
-                                        serde_json::json!({ "_masked_observation": raw_msg })
-                                            .to_string()
+                                        raw_msg
                                     }
                                 };
 

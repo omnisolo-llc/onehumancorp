@@ -26,10 +26,16 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+            "pos_sales".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "POS_SALE_COMPLETED" {
+            tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id);
+            return Ok(());
+        }
+
         if event.event_type == "tenant.inventory.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();

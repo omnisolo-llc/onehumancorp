@@ -83,14 +83,15 @@ impl StripeClient {
 
     pub async fn capture_terminal_payment_intent(
         &self,
-        intent_id: &str,
+        payment_intent_id: &str,
     ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
-        let res = reqwest::Client::new().post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), intent_id))
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), payment_intent_id))
             .basic_auth(api_key, Some(""))
             .send()
             .await
-            .map_err(|e| format!("Stripe API request failed: {}", e))?;
+            .map_err(|e| format!("Stripe API capture request failed: {}", e))?;
 
         if !res.status().is_success() {
             let status = res.status();
@@ -99,7 +100,7 @@ impl StripeClient {
         }
 
         let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        Ok(json["id"].as_str().unwrap_or(intent_id).to_string())
+        Ok(json["id"].as_str().unwrap_or(payment_intent_id).to_string())
     }
 }
 
