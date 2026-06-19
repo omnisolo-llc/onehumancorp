@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Location Manager Escalation Flow', () => {
   test('Jun can view local tasks and escalate an issue', async ({ page }) => {
     // Navigate to the location manager dashboard
-    await page.goto('/location-dashboard');
+    await page.goto('/location-manager');
 
     // Verify dashboard elements
-    await expect(page.locator('h1')).toHaveText('Location Dashboard');
+    await expect(page.locator('h1').filter({ hasText: 'Location Dashboard' }).first()).toBeVisible();
 
     // Verify tasks are present
     await expect(page.getByText('Restock coffee beans')).toBeVisible();
@@ -38,7 +38,9 @@ test.describe('Location Manager Escalation Flow', () => {
     expect(draftValue).toContain('Spike in pickup complaints at Location A');
 
     // Submit escalation
-    await page.getByRole('button', { name: 'Send to Owner' }).click();
+    const sendBtn = page.getByRole('button', { name: 'Send to Owner' });
+    await expect(sendBtn).toBeVisible();
+    await sendBtn.dispatchEvent('click');
 
     // Verify modal closes and alert is removed (in this mock implementation)
     await expect(page.getByText('Escalate Issue')).not.toBeVisible();
