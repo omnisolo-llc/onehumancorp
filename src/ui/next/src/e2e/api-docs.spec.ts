@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('API Documentation', () => {
   test('should load the Swagger UI on the api-docs page', async ({ page }) => {
     // Navigate to the API Docs page
-    await page.goto('/api-docs');
+    await page.goto('/api/ui/api-docs.html');
 
     // Check for the "Advanced" warning banner
     await expect(page.getByText('This section is for developers directly integrating')).toBeVisible({ timeout: 15000 });
