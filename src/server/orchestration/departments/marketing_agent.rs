@@ -236,6 +236,7 @@ impl Department for MarketingAgent {
             "tenant.inventory.updated".to_string(),
             "tenant.website.updated".to_string(),
             "loyalty.points_awarded".to_string(),
+            "tenant.site.updated".to_string(),
         ]
     }
 
@@ -278,6 +279,40 @@ impl Department for MarketingAgent {
 
         let risk = ActionRisk::DraftForReview;
 
+
+
+        if event.event_type == "tenant.site.updated" {
+            let risk = ActionRisk::AutoExecute;
+            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            let payload = serde_json::json!({
+                "site_id": site_id,
+            });
+
+            // Trigger SEO pre-rendering
+            if let Ok(orchestrator) = self.orchestrator() {
+                let db = orchestrator.db();
+                let pool = db.pool.clone();
+                let tenant_id_str = event.tenant_id.clone();
+                let site_id_str = site_id.to_string();
+
+                tokio::spawn(async move {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
+                        if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str) {
+                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, s_id).await;
+                        }
+                    }
+                });
+            }
+
+            return self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Trigger Agentic SEO Pre-rendering".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
