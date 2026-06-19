@@ -796,6 +796,12 @@
       }
 
 
+
+      /* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+      button, input, select, textarea {
+        min-height: 44px;
+        min-width: 44px;
+      }
       /* OHC Premium Glassmorphism Overrides */
       .glassmorphism {
         border-radius: 16px !important;
@@ -936,8 +942,8 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
+        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
 
@@ -981,9 +987,9 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." enterkeyhint="send" style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
@@ -1081,10 +1087,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" />
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" enterkeyhint="next" />
 
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-assistant">Next</button>
@@ -1102,7 +1108,7 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" inputmode="text" autocomplete="off" />
+        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" inputmode="text" autocomplete="off" enterkeyhint="done" />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism" style="margin-bottom: 0;">
@@ -1159,11 +1165,11 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
         <div style="position: relative; width: 100%;">
-          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" style="padding-right: 40px;" />
+          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 40px;" />
           <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #555;">
             <svg id="eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -1219,7 +1225,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
@@ -1233,7 +1239,7 @@
         <h1>Where will your business live?</h1>
         <p>Choose a free subdomain for your store.</p>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" style="flex: 1; margin-bottom: 0;" />
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" style="flex: 1; margin-bottom: 0;" />
           <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
         </div>
         <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
