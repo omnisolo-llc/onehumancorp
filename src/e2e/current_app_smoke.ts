@@ -33,8 +33,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible({ timeout: 5000 });
 
-    await page.goto('/referrals');
-    await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible({ timeout: 5000 });
+    await page.goto('/customer-referral-program');
+    await expect(page.getByRole('heading', { name: 'Customer Referral Program' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/storefront-builder');
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
