@@ -165,10 +165,10 @@ impl InviteTracker {
         InviteTracker { repo }
     }
 
-    pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<TeamInvite, String> {
+    pub async fn record_invite(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<TeamInvite, String> {
         let invite = TeamInvite {
             id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
-            tenant_id: team_id.to_string(), // Ensure isolation mapping
+            tenant_id: tenant_id.to_string(), // Ensure isolation mapping
             team_id: team_id.to_string(),
             inviter_id: inviter_id.to_string(),
             invitee_id: invitee_id.to_string(),
@@ -198,12 +198,12 @@ impl InviteTracker {
         self.repo.get_total_invites_count(tenant_id).await
     }
 
-    pub async fn record_invites(&self, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
+    pub async fn record_invites(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
         let mut invites = Vec::new();
         for invitee_id in invitee_ids {
             invites.push(TeamInvite {
                 id: format!("inv-{}-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0), invitee_id),
-                tenant_id: team_id.to_string(),
+                tenant_id: tenant_id.to_string(),
                 team_id: team_id.to_string(),
                 inviter_id: inviter_id.to_string(),
                 invitee_id: invitee_id.clone(),

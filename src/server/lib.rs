@@ -2364,13 +2364,14 @@ async fn get_pending_approvals(
         &self,
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
+        let tenant_id = request.metadata().get("x-ohc-tenant-id").map(|v| v.to_str().unwrap_or("")).unwrap_or("").to_string();
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
 
-        self.invite_tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await
+        self.invite_tracker.record_invite(if tenant_id.is_empty() { &req.team_id } else { &tenant_id }, &req.team_id, &req.inviter_id, &req.invitee_id).await
             .map_err(|e| Status::internal(format!("Failed to record invite: {}", e)))?;
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
