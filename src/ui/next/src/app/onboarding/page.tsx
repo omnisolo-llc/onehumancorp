@@ -664,12 +664,12 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism border border-white/20 shadow-2xl">
+    <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4 font-inter">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism rounded-[16px] shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
-              <button type="button" onClick={handleBackToIntro} className="setup-nav-button">
+              <button type="button" onClick={handleBackToIntro} className="setup-nav-button rounded-[8px]">
                 Back
               </button>
             ) : (
@@ -679,7 +679,7 @@ export default function OnboardingWizard() {
               <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
               <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
             </div>
-            <button type="button" onClick={handleSkipSetup} className="setup-nav-button">
+            <button type="button" onClick={handleSkipSetup} className="setup-nav-button rounded-[8px]">
               Skip setup
             </button>
           </div>
@@ -713,21 +713,21 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
                 <button
                   type="button"
-                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(-1); syncStateToBackend({ step: -1 }); }}
                 >
                   Instant Build
                 </button>
                 <button
                   type="button"
-                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(-2); syncStateToBackend({ step: -2 }); }}
                 >
                   Conversational Setup
@@ -795,7 +795,7 @@ export default function OnboardingWizard() {
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
                       disabled={isLoading}
-                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50"
+                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
                     </button>
@@ -834,7 +834,7 @@ export default function OnboardingWizard() {
                   id="instant-image-url"
                   data-testid="instant-image-url"
                   type="url"
-                  className="glassmorphism w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms]"
+                  className="glassmorphism w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms] rounded-[8px]"
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) => setInstantImageUrl(e.target.value)}
@@ -844,7 +844,7 @@ export default function OnboardingWizard() {
                   <button
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
-                    className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     Next
                   </button>
