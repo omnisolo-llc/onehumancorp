@@ -19,6 +19,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
   const [status, setStatus] = useState<string>('Initializing...');
   const [reserving, setReserving] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
 
   useEffect(() => {
     async function initTerminal() {
@@ -81,12 +82,21 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
       }
     };
 
+    const handleSyncReconciliation = (event: any) => {
+      if (event.detail && event.detail.pending_reconciliation) {
+         setPendingReconciliation(event.detail.pending_reconciliation);
+         setStatus('Offline sync completed with conflicts');
+      }
+    };
+
     if (typeof window !== 'undefined') {
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+        window.addEventListener('ohc_sync_reconciliation', handleSyncReconciliation);
         return () => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
+          window.removeEventListener('ohc_sync_reconciliation', handleSyncReconciliation);
         };
     }
   }, [sessionId, connectedReader]);
@@ -197,7 +207,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
 
       if (!reserveData.success) {
         onOptimisticRollback?.();
-        setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
+        setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
         setReserving(false);
         return;
       }
@@ -267,7 +277,23 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
   return (
     <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
-      <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') ? 'bg-red-50/80 backdrop-blur-md text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
+      <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-md text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
+
+      {pendingReconciliation.length > 0 && (
+        <div className="mb-6 p-4 rounded-xl bg-orange-50/80 border border-orange-200 backdrop-blur-md">
+           <h3 className="text-orange-800 font-bold text-sm mb-2">Needs Reconciliation</h3>
+           <p className="text-orange-700 text-xs mb-3">Some offline sales conflicted with online inventory. The Operations Agent has sent an email to the affected online customers.</p>
+           <ul className="space-y-2">
+             {pendingReconciliation.map((pr, idx) => (
+               <li key={idx} className="text-xs text-orange-900 bg-orange-100/50 p-2 rounded flex justify-between">
+                 <span>Product: {pr.product_id}</span>
+                 <span className="font-bold">Shortage: {pr.shortage}</span>
+               </li>
+             ))}
+           </ul>
+           <button onClick={() => setPendingReconciliation([])} className="mt-3 text-xs bg-orange-200 hover:bg-orange-300 text-orange-800 px-3 py-1.5 rounded-lg transition-colors font-medium">Dismiss</button>
+        </div>
+      )}
 
       {!connectedReader && (
         <div className="mb-4">
