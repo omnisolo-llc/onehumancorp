@@ -98,11 +98,82 @@ pub struct DailyWorkItemRow {
     pub status: String,
 }
 
+
+static DAILY_WORK_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+
 pub async fn get_daily_work_handler(
     State(db): State<Arc<DB>>,
     Query(query): Query<UiTenantQuery>,
 ) -> axum::response::Response {
     let tenant_id = ui_tenant_id(&query);
+    let cache_key = format!("daily_work:{}", tenant_id);
+    let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, Json(serde_json::json!({"items": cached}))).into_response();
+        }
+
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+
+        tokio::spawn(async move {
+            let res = match &db_bg.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query!(
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC",
+                        t_bg
+                    ).fetch_all(&db_bg.pool).await.map(|rows| {
+                        rows.into_iter().map(|r| {
+                            serde_json::json!({
+                                "id": r.id,
+                                "signal_id": r.signal_id,
+                                "intent": r.intent,
+                                "customer_info": r.customer_info,
+                                "suggested_actions": r.suggested_actions,
+                                "status": r.status
+                            })
+                        }).collect::<Vec<_>>()
+                    })
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query(
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC"
+                    ).bind(&t_bg).fetch_all(pool).await.map(|rows| {
+                        use sqlx::Row;
+                        rows.into_iter().map(|r| {
+                            let customer_info_str: Option<String> = r.try_get("customer_info").ok();
+                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
+
+                            let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
+                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
+
+                            let id: String = r.get("id");
+                            let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
+                            let intent: String = r.get("intent");
+                            let status: String = r.get("status");
+
+                            serde_json::json!({
+                                "id": id,
+                                "signal_id": signal_id,
+                                "intent": intent,
+                                "customer_info": customer_info,
+                                "suggested_actions": suggested_actions,
+                                "status": status
+                            })
+                        }).collect::<Vec<_>>()
+                    })
+                }
+            };
+            if let Ok(items) = res {
+                if let Some(c) = DAILY_WORK_CACHE.get() {
+                    let _ = c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
+                }
+            }
+        });
+        return (axum::http::StatusCode::OK, Json(serde_json::json!({"items": cached}))).into_response();
+    }
 
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -124,6 +195,7 @@ pub async fn get_daily_work_handler(
                             "status": r.status
                         })
                     }).collect();
+                    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
                     (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
                 },
                 Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
@@ -160,6 +232,7 @@ pub async fn get_daily_work_handler(
                             "status": status
                         })
                     }).collect();
+                    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
                     (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
                 },
                 Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),

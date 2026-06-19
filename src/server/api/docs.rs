@@ -1,7 +1,8 @@
 use axum::{extract::Query, Json};
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct HelpArticle {
     pub category: String,
     pub title: String,
@@ -9,7 +10,7 @@ pub struct HelpArticle {
     pub link: String,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct VideoTutorial {
     pub id: i32,
     pub title: String,
@@ -28,6 +29,7 @@ pub struct WalkthroughStep {
     pub title: String,
     pub text: String,
 }
+
 
 pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
     let steps = match page.as_str() {
@@ -103,22 +105,87 @@ pub fn get_videos() -> Vec<VideoTutorial> {
     ]
 }
 
+
+static DOCS_ARTICLES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<HelpArticle>>> = std::sync::OnceLock::new();
+static DOCS_VIDEOS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<VideoTutorial>>> = std::sync::OnceLock::new();
+
 pub async fn list_articles() -> Json<Vec<HelpArticle>> {
-    Json(get_articles())
+    let cache_key = "docs:articles:all";
+    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(cache_key).await {
+        if !is_stale {
+            return Json(cached);
+        }
+        let cache_key_bg = cache_key.to_string();
+        tokio::spawn(async move {
+            let items = get_articles();
+            if let Some(c) = DOCS_ARTICLES_CACHE.get() {
+                let _ = c.set(&cache_key_bg, items, std::time::Duration::from_secs(3600)).await;
+            }
+        });
+        return Json(cached);
+    }
+
+    let items = get_articles();
+    let _ = cache.set(cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+    Json(items)
 }
 
 pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<HelpArticle>> {
     let q = query.q.to_lowercase();
+    let cache_key = format!("docs:articles:search:{}", q);
+    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return Json(cached);
+        }
+        let cache_key_bg = cache_key.clone();
+        let q_bg = q.clone();
+        tokio::spawn(async move {
+            let articles = get_articles();
+            let filtered: Vec<HelpArticle> = articles.into_iter().filter(|a| {
+                a.category.to_lowercase().contains(&q_bg) || a.title.to_lowercase().contains(&q_bg) || a.desc.to_lowercase().contains(&q_bg)
+            }).collect();
+            if let Some(c) = DOCS_ARTICLES_CACHE.get() {
+                let _ = c.set(&cache_key_bg, filtered, std::time::Duration::from_secs(3600)).await;
+            }
+        });
+        return Json(cached);
+    }
+
     let articles = get_articles();
-    let filtered = articles.into_iter().filter(|a| {
+    let filtered: Vec<HelpArticle> = articles.into_iter().filter(|a| {
         a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
     }).collect();
+    let _ = cache.set(&cache_key, filtered.clone(), std::time::Duration::from_secs(3600)).await;
     Json(filtered)
 }
 
 pub async fn list_videos() -> Json<Vec<VideoTutorial>> {
-    Json(get_videos())
+    let cache_key = "docs:videos:all";
+    let cache = DOCS_VIDEOS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(cache_key).await {
+        if !is_stale {
+            return Json(cached);
+        }
+        let cache_key_bg = cache_key.to_string();
+        tokio::spawn(async move {
+            let items = get_videos();
+            if let Some(c) = DOCS_VIDEOS_CACHE.get() {
+                let _ = c.set(&cache_key_bg, items, std::time::Duration::from_secs(3600)).await;
+            }
+        });
+        return Json(cached);
+    }
+
+    let items = get_videos();
+    let _ = cache.set(cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+    Json(items)
 }
+
 
 
 #[derive(Serialize, Clone)]
