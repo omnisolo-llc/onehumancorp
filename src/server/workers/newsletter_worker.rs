@@ -99,8 +99,8 @@ impl NewsletterWorker {
 
                         let req = ohc_builtin_agent::types::ChatRequest {
                             model: "default".to_string(),
-                            system: system_prompt.to_string(),
-                            messages: vec![ohc_builtin_agent::types::Message::user(user_prompt)],
+                            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+                            messages: vec![ohc_builtin_agent::types::Message::user(::server_pricing::compression::reduce_tokens(&user_prompt))],
                             tools: vec![],
                             max_tokens: 500,
                             temperature: 0.7,
