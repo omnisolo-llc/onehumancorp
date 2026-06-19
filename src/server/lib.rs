@@ -3819,12 +3819,11 @@ pub(crate) async fn load_ui_dashboard_metrics(
 
     let db1 = db.clone(); let t1 = tenant_id.to_string();
     let db2 = db.clone(); let t2 = tenant_id.to_string();
-    let db3 = db.clone(); let t3 = tenant_id.to_string();
     let db4 = db.clone(); let t4 = tenant_id.to_string();
     let db5 = db.clone(); let t5 = tenant_id.to_string();
 
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = if mobile_optimized {
-        let (r1, r2, r3) = tokio::join!(
+    let (active_customers_res, orders_metrics_res, campaigns_res, auto_replied_res) = if mobile_optimized {
+        let (r1, r2) = tokio::join!(
             tokio::spawn(async move {
                 match &db1.store {
                     crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&db1.pool).await,
@@ -3833,18 +3832,12 @@ pub(crate) async fn load_ui_dashboard_metrics(
             }),
             tokio::spawn(async move {
                 match &db2.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&t2).fetch_one(&db2.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(&t2).fetch_one(pool).await,
-                }
-            }),
-            tokio::spawn(async move {
-                match &db3.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t3).fetch_one(&db3.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t3).fetch_one(pool).await,
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&db2.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t2).fetch_one(pool).await,
                 }
             })
         );
-        (r1, r2, r3, Ok(Ok(0)), Ok(Ok(0)))
+        (r1, r2, Ok(Ok(0)), Ok(Ok(0)))
     } else {
         tokio::join!(
             tokio::spawn(async move {
@@ -3855,14 +3848,8 @@ pub(crate) async fn load_ui_dashboard_metrics(
             }),
             tokio::spawn(async move {
                 match &db2.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&t2).fetch_one(&db2.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(&t2).fetch_one(pool).await,
-                }
-            }),
-            tokio::spawn(async move {
-                match &db3.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t3).fetch_one(&db3.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t3).fetch_one(pool).await,
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&db2.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t2).fetch_one(pool).await,
                 }
             }),
             tokio::spawn(async move {
@@ -3881,8 +3868,10 @@ pub(crate) async fn load_ui_dashboard_metrics(
     };
 
     let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Ok(Some(0.0))).unwrap_or(Some(0.0)).unwrap_or(0.0);
+    let (pending_orders, total_sales) = match orders_metrics_res {
+        Ok(Ok((p, s))) => (p.unwrap_or(0), s.unwrap_or(0.0)),
+        _ => (0, 0.0)
+    };
     let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
     let auto_replied = auto_replied_res.unwrap_or(Ok(0)).unwrap_or(0);
 
