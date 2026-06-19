@@ -71,7 +71,6 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
         // Validate empty state or removal
         await expect(page.getByText('New Service Inquiry')).toBeHidden();
     } catch (e) {
-        console.warn('Mocked approval data might have been overwritten or not loaded. Skipping exact interaction check.');
     }
   });
 });
