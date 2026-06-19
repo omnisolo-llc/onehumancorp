@@ -56,3 +56,30 @@ test.describe('Field Ops Appointments', () => {
     expect(body.appointments).toEqual([]);
   });
 });
+
+  test('should optimize route based on distance', async ({ request }) => {
+    const response = await request.post('/api/v1/field-ops/optimize-route', {
+      data: {
+        appointments: [
+          { id: '1', status: 'Scheduled', location_lat: 40.7128, location_lng: -74.0060, notes: '' }, // NY
+          { id: '2', status: 'Scheduled', location_lat: 34.0522, location_lng: -118.2437, notes: '' }, // LA
+          { id: '3', status: 'Scheduled', location_lat: 41.8781, location_lng: -87.6298, notes: '' }  // Chicago
+        ],
+        currentLocationLat: 40.0,
+        currentLocationLng: -74.0
+      }
+    });
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.optimizedRoute.length).toBe(3);
+
+    // NY is closest to 40,-74, then Chicago, then LA
+    expect(body.optimizedRoute[0].id).toBe('1');
+    expect(body.optimizedRoute[1].id).toBe('3');
+    expect(body.optimizedRoute[2].id).toBe('2');
+
+    // Check travel time mock insertion
+    expect(body.optimizedRoute[0].notes).toContain('[Travel:');
+  });
