@@ -60,6 +60,62 @@ async fn test_get_terminal_connection_token_authenticated() {
 }
 
 #[tokio::test]
+async fn test_capture_payment_intent_unauthenticated() {
+    let hub = Arc::new(Hub::new());
+    let app = crate::api::terminal_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/intent/capture")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"payment_intent_id": "pi_12345"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Unauthenticated"));
+}
+
+#[tokio::test]
+async fn test_capture_payment_intent_authenticated() {
+    let hub = Arc::new(Hub::new());
+
+    let app_with_auth = axum::Router::new()
+        .route("/intent/capture", axum::routing::post(crate::api::terminal_api::capture_payment_intent_handler))
+        .with_state(hub)
+        .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://test".to_string(),
+            agent_id: "agent_1".to_string(),
+            org_id: "test_tenant".to_string(),
+        }));
+
+    let response = app_with_auth
+        .oneshot(
+            Request::builder()
+                .uri("/intent/capture")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"payment_intent_id": "pi_12345"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API capture request failed") || body_str.contains("Stripe API error"));
+}
+
+#[tokio::test]
 async fn test_create_payment_intent_authenticated() {
     let hub = Arc::new(Hub::new());
 
