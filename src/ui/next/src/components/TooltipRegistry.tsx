@@ -109,6 +109,11 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
     }, 500); // 500ms for long press
   };
 
+  const handleTouchMove = () => {
+    // If the user scrolls, cancel the long press tooltip
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+
   const handleTouchEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const hideTimer = setTimeout(() => {
@@ -129,6 +134,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
