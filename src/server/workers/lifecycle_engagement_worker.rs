@@ -26,23 +26,22 @@ impl LifecycleEngagementWorker {
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
         let pool = db.pool.clone();
 
-        let mut customers: Vec<(Uuid, String, String, Option<String>, Option<String>)> = Vec::new();
-        match &db.store {
+        let customers = match &db.store {
             crate::db::DbStore::Postgres => {
-                customers = sqlx::query_as(
+                sqlx::query_as::<_, (Uuid, String, String, Option<String>, Option<String>)>(
                     "SELECT id, tenant_id, name, email, phone FROM customers WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '90 days'"
                 )
                 .fetch_all(&pool)
                 .await
-                .unwrap_or_default();
+                .unwrap_or_default()
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                customers = sqlx::query_as(
+                sqlx::query_as::<_, (Uuid, String, String, Option<String>, Option<String>)>(
                     "SELECT id, tenant_id, name, email, phone FROM customers WHERE updated_at < datetime('now', '-90 days')"
                 )
                 .fetch_all(sqlite_pool)
                 .await
-                .unwrap_or_default();
+                .unwrap_or_default()
             }
         };
 
@@ -215,7 +214,7 @@ mod tests {
             .bind(state_change)
             .execute(&pool).await;
 
-        let processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
+        let _processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
         // Since we are mocking/ignoring DB errors, let's just make sure it runs without panicking.
         // If it successfully processed, great. If not, it means the inserts above didn't take because of locking.
 

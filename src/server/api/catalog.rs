@@ -197,7 +197,7 @@ async fn handle_create_product(
             .clone()
             .unwrap_or_else(|| "Monthly".to_string())
             .to_lowercase();
-        let discount = payload.subscription_discount_percent.unwrap_or(0);
+        let _discount = payload.subscription_discount_percent.unwrap_or(0);
 
         let insert_plan = sqlx::query(
             "INSERT INTO subscription_plans (id, tenant_id, name, price_cents, frequency) VALUES ($1, $2, $3, $4, $5)"
