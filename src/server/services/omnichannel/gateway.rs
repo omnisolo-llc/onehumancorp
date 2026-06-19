@@ -33,7 +33,7 @@ pub struct WebhookPayload {
 pub struct DraftedResponse {
     pub customer_id: String,
     pub context_summary: String,
-    pub drafted_reply: String,
+    pub draft_reply: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,7 +72,7 @@ pub async fn handle_webhook(
 
     // 2. Draft Response using "The Ambassador" logic (simulated for now, would use the actual ohc_builtin_agent_lib)
     // We simulate querying "seed inventory/customer history data" as requested.
-    let drafted_reply = format!(
+    let draft_reply = format!(
         "Hi {}! We see you asked: '{}'. Yes, we still make that item. Would you like to reorder?",
         customer.name, payload.message
     );
@@ -81,7 +81,7 @@ pub async fn handle_webhook(
     let draft = DraftedResponse {
         customer_id: customer.id.clone(),
         context_summary,
-        drafted_reply,
+        draft_reply,
     };
 
     // 3. Publish to Action Required Queue (Agent Feed)
