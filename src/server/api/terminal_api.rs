@@ -689,8 +689,10 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.require_api_key() {
-        Ok(_) => match client.create_terminal_payment_intent(
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_payment_intent(
             &tenant_id,
             req_data.amount_cents,
             &req_data.currency,
@@ -770,11 +772,16 @@ mod tests {
         let hub = Arc::new(Hub::new(tx, pool.clone()));
         let req_data = axum::extract::Json(CommitInventoryRequest {
             tenant_id: tenant_id.to_string(),
-            product_id: "prod-terminal-test-2".to_string(),
-            quantity: 2,
+            product_id: Some("prod-terminal-test-2".to_string()),
+            quantity: Some(2),
+            items: None,
             lock_id: "".to_string(),
             customer_id: None,
             amount_cents: None,
+            terminal_session_id: None,
+            cashier_id: None,
+            device_id: None,
+            payment_method: None,
         });
         let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
             org_id: tenant_id.to_string(),
@@ -810,11 +817,16 @@ mod tests {
         let hub = Arc::new(Hub::new(tx, pool.clone()));
         let req_data = axum::extract::Json(CommitInventoryRequest {
             tenant_id: tenant_id.to_string(),
-            product_id: "prod-pos-test".to_string(),
-            quantity: 1,
+            product_id: Some("prod-pos-test".to_string()),
+            quantity: Some(1),
+            items: None,
             lock_id: "".to_string(),
             customer_id: None,
             amount_cents: Some(1999),
+            terminal_session_id: None,
+            cashier_id: None,
+            device_id: None,
+            payment_method: None,
         });
         let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
             org_id: tenant_id.to_string(),
@@ -857,8 +869,10 @@ pub async fn get_terminal_connection_token_handler(
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.require_api_key() {
-        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_connection_token(&tenant_id).await {
             Ok(token) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "secret": token }))).into_response(),
             Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e }))).into_response(),
         },
