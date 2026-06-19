@@ -421,7 +421,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = PosSyncWorker::new(db.clone());
 
@@ -484,7 +484,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = PosSyncWorker::new(db.clone());
 
@@ -558,7 +558,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = PosSyncWorker::new(db.clone());
 

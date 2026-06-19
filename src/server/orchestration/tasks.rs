@@ -967,7 +967,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: crate::db::secure_pg_pool_options()
                 .connect_lazy("postgres://dummy")
                 .unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
@@ -1123,7 +1123,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
+            pool: crate::db::secure_pg_pool_options()
                 .connect_lazy("postgres://dummy")
                 .unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
@@ -1273,7 +1273,7 @@ mod tests {
             return;
         }
 
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1429,7 +1429,7 @@ mod tests {
     #[tokio::test]
     async fn test_tasks_dual_deployment() {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1629,7 +1629,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let _dummy_pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://dummy")
             .unwrap();
         // Since Postgres testing is complex in unit tests without an actual Postgres DB,
@@ -1721,7 +1721,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let _dummy_pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://dummy")
             .unwrap();
         let db = std::sync::Arc::new(crate::db::DB {

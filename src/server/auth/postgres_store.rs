@@ -482,7 +482,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -535,7 +535,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -581,7 +581,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

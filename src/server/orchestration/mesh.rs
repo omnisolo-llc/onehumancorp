@@ -366,7 +366,7 @@ mod tests {
             return;
         }
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
