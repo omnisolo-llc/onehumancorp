@@ -24,10 +24,21 @@ pub struct PaymentIntentResponse {
     pub lock_id: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct CapturePaymentIntentRequest {
+    pub payment_intent_id: String,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
+    pub lock_id: Option<String>,
+    pub customer_id: Option<String>,
+    pub amount_cents: Option<i64>,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/intent/capture", axum::routing::post(capture_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
@@ -571,6 +582,94 @@ pub async fn commit_inventory_handler(
                 "success": false,
                 "error_message": e
             }))).into_response()
+        }
+    }
+}
+
+pub async fn capture_payment_intent_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<CapturePaymentIntentRequest>,
+) -> Json<Result<String, String>> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(Err("Unauthenticated: Missing tenant ID".to_string()));
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return Json(Err("Unauthenticated".to_string()))
+            }
+        }
+    };
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    match client.capture_terminal_payment_intent(&req_data.payment_intent_id).await {
+        Ok(captured_intent_id) => {
+            // Replicate commit inventory logic if product is specified
+            if let (Some(product_id), Some(lock_id)) = (&req_data.product_id, &req_data.lock_id) {
+                let service = crate::services::inventory::InventoryService::new(
+                    hub.redis_client.clone()
+                );
+                let quantity = req_data.quantity.unwrap_or(1);
+
+                if let Ok(result) = service.commit_inventory(&tenant_id, product_id, quantity, lock_id).await {
+                    if result.success {
+                        let pool = crate::db::get_pool();
+                        if let Ok(mut tx) = pool.begin().await {
+                            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                                let order_id = uuid::Uuid::new_v4().to_string();
+                                let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+                                let customer_id = req_data.customer_id.clone().unwrap_or_else(|| "walk_in".to_string());
+                                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                                    .bind(&order_id).bind(&tenant_id).bind(&customer_id).bind(total_amount).execute(&mut *tx).await;
+
+                                let item_id = uuid::Uuid::new_v4().to_string();
+                                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                                    .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(product_id).bind(quantity).bind(total_amount).execute(&mut *tx).await;
+
+                                let event_payload = serde_json::json!({
+                                    "order_id": order_id,
+                                    "tenant_id": tenant_id,
+                                    "customer_id": customer_id,
+                                    "amount": total_amount,
+                                    "source": "in_person_pos",
+                                });
+
+                                let event = crate::orchestration::departments::types::DepartmentEvent {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    tenant_id: tenant_id.clone(),
+                                    event_type: "POS_SALE_COMPLETED".to_string(),
+                                    payload: event_payload,
+                                };
+                                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                                    event_id: uuid::Uuid::new_v4().to_string(),
+                                    topic: "pos_sales".to_string(),
+                                    payload: serde_json::to_vec(&event).unwrap_or_default(),
+                                    timestamp: chrono::Utc::now().timestamp(),
+                                });
+                            }
+                            let _ = tx.commit().await;
+                        }
+                    } else {
+                        tracing::error!("Failed to commit inventory after capture: {}", result.error_message);
+                    }
+                }
+            }
+            Json(Ok(captured_intent_id))
+        },
+        Err(e) => {
+            tracing::error!("Failed to capture payment intent: {}", e);
+            Json(Err(e))
         }
     }
 }
