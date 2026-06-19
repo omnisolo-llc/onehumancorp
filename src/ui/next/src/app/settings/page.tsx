@@ -65,6 +65,7 @@ export default function SettingsPage() {
               voice_receptionist_enabled: data.voice_receptionist_enabled || false,
               voice_receptionist_number: data.voice_receptionist_number || "",
               voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
+              voice_receptionist_instructions: data.voice_receptionist_instructions || "",
             });
           }
         })
