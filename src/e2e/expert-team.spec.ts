@@ -4,7 +4,7 @@ test.describe('Expert Team Feature CUJ', () => {
 
   test('Persona: Business Owner uses Expert Team successfully', async ({ page }) => {
     await page.goto('/expert-team');
-    await expect(page.getByRole('heading', { name: /Expert Team/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Collaborative Expert Team/i })).toBeVisible();
 
     // 2. Owner enters task
     const input = page.getByPlaceholder(/e.g. Write a comprehensive/i);
