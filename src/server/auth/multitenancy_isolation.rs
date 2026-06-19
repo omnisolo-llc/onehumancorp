@@ -87,12 +87,15 @@ async fn test_revoke_token_tenant_isolation() {
 
     // Insert an already expired token for the OTHER tenant using raw query
     let expired_time = chrono::Utc::now() - chrono::Duration::hours(1);
+    let mut tx1 = pool.begin().await.unwrap();
+    sqlx::query("SELECT set_config('app.current_tenant', 'tenant_b', false)").execute(&mut *tx1).await.unwrap();
     let _ = sqlx::query("INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3) ON CONFLICT (jti, tenant_id) DO NOTHING")
         .bind("other_tenant_expired_token")
         .bind(expired_time)
         .bind(other_tenant)
-        .execute(&pool)
+        .execute(&mut *tx1)
         .await;
+    tx1.commit().await.unwrap();
 
     // Call revoke token on the CURRENT tenant
     let future_time = chrono::Utc::now() + chrono::Duration::hours(1);
@@ -100,10 +103,13 @@ async fn test_revoke_token_tenant_isolation() {
     assert!(res.is_ok(), "revoke_token should succeed");
 
     // Ensure the other tenant's expired token still exists, proving GC only cleared current_tenant
+    let mut tx2 = pool.begin().await.unwrap();
+    sqlx::query("SELECT set_config('app.current_tenant', 'tenant_b', false)").execute(&mut *tx2).await.unwrap();
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM revoked_tokens WHERE jti = 'other_tenant_expired_token'")
-        .fetch_one(&pool)
+        .fetch_one(&mut *tx2)
         .await
         .unwrap_or((0,));
+    tx2.commit().await.unwrap();
 
     assert_eq!(row.0, 1, "The expired token from the other tenant was incorrectly garbage collected, proving cross-tenant deletion vulnerability");
 }
