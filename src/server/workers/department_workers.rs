@@ -1058,6 +1058,16 @@ let db_for_products = self.db.clone();
                                 if let Some(obj) = parsed.as_object_mut() {
                                     obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
                                     obj.insert("product_name".to_string(), serde_json::json!(product_name));
+
+                                    for platform in ["tiktok", "instagram", "facebook", "twitter", "linkedin"].iter() {
+                                        if let Some(v) = obj.get_mut(*platform) {
+                                            if let Some(s) = v.as_str() {
+                                                if !s.contains("Powered by OHC") {
+                                                    *v = serde_json::json!(format!("{}\n\n⚡ Powered by OHC", s));
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
                                 let task_id = Uuid::new_v4().to_string();
