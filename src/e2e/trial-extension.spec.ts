@@ -23,6 +23,10 @@ test.describe.serial('Trial Extension', () => {
 
     await expect(page.getByText('Interactive Trial Extension')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Want 7 Extra Days of Pro?')).toBeVisible();
+
+    const poweredByLink = page.locator('a', { hasText: /Powered by OHC/i }).first();
+    await expect(poweredByLink).toBeVisible();
+    await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
   });
 
   test('should claim trial extension successfully', async ({ page, adminUser, loginAs }) => {
