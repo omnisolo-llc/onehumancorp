@@ -22,6 +22,7 @@ export default function FieldOpsJobsPage() {
   const [isOffline, setIsOffline] = useState(false);
   const [jobs, setJobs] = useState<Appointment[]>([]);
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
+  const [delaySuggestion, setDelaySuggestion] = useState<{jobId: string, message: string} | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +100,45 @@ export default function FieldOpsJobsPage() {
     }
   };
 
+  const handleRunningLate = (jobId: string) => {
+    // Determine how many subsequent jobs exist
+    const jobIndex = jobs.findIndex(j => j.id === jobId);
+    const subsequentCount = jobs.length - 1 - jobIndex;
+
+    if (subsequentCount > 0) {
+      setDelaySuggestion({
+        jobId,
+        message: `Drafting delay notifications for the next ${subsequentCount} clients. Approve?`
+      });
+    } else {
+      // Just mark as delayed internally if it's the last job
+      setAgentSuggestion("You're running late on the last job of the day. No further clients to notify.");
+    }
+  };
+
+  const approveDelay = () => {
+    if (!delaySuggestion) return;
+
+    fetch('/api/v1/field-ops/delay-route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: delaySuggestion.jobId,
+        appointments: jobs,
+        delayMinutes: 30
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setJobs(data.updatedRoute);
+        setDelaySuggestion(null);
+        setAgentSuggestion(`Notified ${data.notifiedCount} clients of a 30-minute delay.`);
+      }
+    })
+    .catch(err => console.error("Delay update failed", err));
+  };
+
   const handleNotesChange = (jobId: string, notes: string) => {
     setJobs(jobs.map(j => j.id === jobId ? { ...j, notes } : j));
   };
@@ -132,6 +172,54 @@ export default function FieldOpsJobsPage() {
           </div>
         )}
       </div>
+
+      {/* Morning Briefing Card */}
+      {!isOffline && jobs.length > 0 && !agentSuggestion && !delaySuggestion && (
+        <div className="mb-6 p-4 bg-blue-50/70 border border-blue-100 rounded-xl shadow-sm relative backdrop-blur-md">
+          <div className="flex gap-3">
+             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-xl shrink-0">🤖</div>
+             <div>
+               <p className="text-sm font-medium text-gray-900 mb-1">Your route today is optimized.</p>
+               <p className="text-sm text-gray-700">{jobs.length} stops, starting at {new Date(jobs[0].scheduled_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}.</p>
+               <div className="mt-2 flex gap-2">
+                 <button className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg">Start Day</button>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {delaySuggestion && (
+        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm relative">
+          <button
+            onClick={() => setDelaySuggestion(null)}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
+          >
+            ✕
+          </button>
+          <div className="flex gap-3">
+             <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-xl shrink-0">⚠️</div>
+             <div>
+               <p className="text-sm font-medium text-gray-900 mb-2">Ops Agent:</p>
+               <p className="text-sm text-gray-800 mb-2">{delaySuggestion.message}</p>
+               <div className="flex gap-2">
+                 <button
+                   onClick={approveDelay}
+                   className="px-3 py-1.5 bg-orange-600 text-white text-xs font-semibold rounded-lg"
+                 >
+                   Approve & Send
+                 </button>
+                 <button
+                   onClick={() => setDelaySuggestion(null)}
+                   className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {agentSuggestion && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm relative">
@@ -196,28 +284,39 @@ export default function FieldOpsJobsPage() {
                   onChange={(e) => handleNotesChange(job.id, e.target.value)}
                 />
 
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
-                  {job.status === 'Requested' || job.status === 'Scheduled' ? (
-                     <button
-                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
-                        onClick={() => handleStatusChange(job.id, 'En-Route')}
-                      >
-                        Heading to Job
-                      </button>
-                  ) : job.status === 'En-Route' ? (
-                      <button
-                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
-                        onClick={() => handleStatusChange(job.id, 'In-Progress')}
-                      >
-                        Start Work
-                      </button>
-                  ) : (
-                      <button
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
-                        onClick={() => handleComplete(job.id)}
-                      >
-                        Job Done
-                      </button>
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                    {job.status === 'Requested' || job.status === 'Scheduled' ? (
+                       <button
+                          className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                          onClick={() => handleStatusChange(job.id, 'En-Route')}
+                        >
+                          Heading to Job
+                        </button>
+                    ) : job.status === 'En-Route' ? (
+                        <button
+                          className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                          onClick={() => handleStatusChange(job.id, 'In-Progress')}
+                        >
+                          Start Work
+                        </button>
+                    ) : (
+                        <button
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                          onClick={() => handleComplete(job.id)}
+                        >
+                          Job Done
+                        </button>
+                    )}
+                  </div>
+
+                  {job.status !== 'Completed' && (
+                    <button
+                      className="w-full bg-white border border-orange-200 hover:bg-orange-50 text-orange-700 font-semibold py-2 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] text-sm"
+                      onClick={() => handleRunningLate(job.id)}
+                    >
+                      Running Late
+                    </button>
                   )}
                 </div>
               </div>
