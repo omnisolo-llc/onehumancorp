@@ -689,18 +689,18 @@ export default function Dashboard() {
             </div>
             <div className="app-list">
                             {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
-                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
+                <div key={approval.id} data-testid={`${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm-card`} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
                     <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || approval.payload?.original_payload?.source || "Instagram DM"}</div>
                     <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || approval.payload?.original_payload?.original_message || "Customer message"}"</div>
                     <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
-                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
+                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">Draft:</span>
                       {approval.payload?.generated_response || approval.payload?.draft_reply || approval.payload?.original_payload?.generated_response || "Ready to send."}
                     </div>
                   </div>
                   <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
+                    <button type="button" data-testid={`approve-${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm`} className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
                     <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
                   </div>
                 </div>
