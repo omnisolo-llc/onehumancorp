@@ -542,3 +542,15 @@ ON CONFLICT DO NOTHING;
 INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174001', '823e4567-e89b-12d3-a456-426614174000', 'Fix leaking sink including labor and standard materials', 15000, 1, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+VALUES
+  ('e2e-product-cake-pos', 'e2e-tenant-pos', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb),
+  ('e2e-product-cake-pos-additional', 'e2e-tenant-pos-additional', 'POS Additional', 'POS Additional', 'physical', 10.00, 1000, 'USD', 5, '{"seeded_by":"e2e"}'::jsonb);
+
+INSERT INTO tenants (id, name, industry, status, skip_onboarding)
+VALUES
+  ('e2e-tenant-pos', 'OHC E2E Bakery POS', 'Food and beverage', 'active', true),
+  ('e2e-tenant-pos-additional', 'OHC E2E Bakery POS Add', 'Food and beverage', 'active', true);
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+VALUES
+  ('e2e-product-pos-sync', 'e2e-tenant', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb);
