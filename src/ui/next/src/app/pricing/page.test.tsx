@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import PricingPage from './page';
 import { useRouter } from 'next/navigation';
 
@@ -36,7 +36,6 @@ describe('PricingPage', () => {
       return { ok: true, json: async () => ({}) };
     });
 
-
     // Mock window.location.href
     originalWindowLocation = window.location;
     delete (window as any).location;
@@ -47,8 +46,10 @@ describe('PricingPage', () => {
     window.location = originalWindowLocation;
   });
 
-  it('renders the pricing page', () => {
-    render(<PricingPage />);
+  it('renders the pricing page', async () => {
+    await act(async () => {
+      render(<PricingPage />);
+    });
     expect(screen.getByText('Pricing Plans')).toBeDefined();
     expect(screen.getByText('Free')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
@@ -75,12 +76,21 @@ describe('PricingPage', () => {
     });
 
 
-    render(<PricingPage />);
-    const upgradeButton = await screen.findByText('Upgrade to Starter via Stripe');
-    fireEvent.click(upgradeButton);
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let upgradeButton;
+    await waitFor(() => {
+       upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    });
+
+    await act(async () => {
+       fireEvent.click(upgradeButton!);
+    });
 
     // Wait for the async logic to finish
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -109,11 +119,20 @@ describe('PricingPage', () => {
     const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    render(<PricingPage />);
-    const upgradeButton = await screen.findByText('Upgrade to Starter via Stripe');
-    fireEvent.click(upgradeButton);
+    await act(async () => {
+      render(<PricingPage />);
+    });
 
-    await vi.waitFor(() => {
+    let upgradeButton;
+    await waitFor(() => {
+       upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    });
+
+    await act(async () => {
+       fireEvent.click(upgradeButton!);
+    });
+
+    await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalled();
       expect(alertMock).toHaveBeenCalledWith('Failed to initiate upgrade. Please try again.');
     });
@@ -122,13 +141,17 @@ describe('PricingPage', () => {
     consoleSpy.mockRestore();
   });
 
-  it('renders the PoweredByOHC component', () => {
-    render(<PricingPage />);
+  it('renders the PoweredByOHC component', async () => {
+    await act(async () => {
+      render(<PricingPage />);
+    });
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
 
-  it('renders the FAQ section with Stripe Billing integration info', () => {
-    render(<PricingPage />);
+  it('renders the FAQ section with Stripe Billing integration info', async () => {
+    await act(async () => {
+      render(<PricingPage />);
+    });
     expect(screen.getByText(/Stripe Billing for self-serve plan upgrades, downgrades, and cancellation/)).toBeDefined();
   });
 });

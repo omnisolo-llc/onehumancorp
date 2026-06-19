@@ -1,5 +1,4 @@
 #!/bin/bash
-# Strict bash mode
 set -euo pipefail
 
 # This script is run via Bazel sh_test to ensure no PII leakage in logging statements
@@ -26,7 +25,7 @@ for FILE in $FILES; do
 
     # We grep all matches first. The issue reviewer mentioned ".*? with grep -E is not supported",
     # so we should use a simpler pattern for the {}
-    MATCHES=$(grep -iE "tracing::(info|debug|warn|error)!\(.*\{[^\}]*\}[^;]*($PII_KEYWORDS)[^a-zA-Z0-9_]|tracing::(info|debug|warn|error)!\(.*($PII_KEYWORDS)[^a-zA-Z0-9_].*\{[^\}]*\}" "$FILE" || true)
+    MATCHES=$(grep -iE "tracing::(info|debug|warn|error)!\(.*\{[^\}]*\}[^;]*(^|[^a-zA-Z0-9_])($PII_KEYWORDS)([^a-zA-Z0-9_]|$)|tracing::(info|debug|warn|error)!\((.*[^a-zA-Z0-9_])?($PII_KEYWORDS)([^a-zA-Z0-9_]|$)[^;]*\{[^\}]*\}" "$FILE" || true)
 
     if [ -n "$MATCHES" ]; then
         # Check if the matched line has an explicit opt-out // pii-safe

@@ -134,7 +134,7 @@ pub async fn handle_edge_request_impl(
         }
         response.headers_mut().insert(
             CACHE_CONTROL,
-            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+            axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
         );
         if stale {
             // Spawn background regeneration logic if it was stale, but prevent thundering herd
@@ -178,7 +178,7 @@ pub async fn handle_edge_request_impl(
         }
             response.headers_mut().insert(
                 CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
             );
             return Ok(response);
         }
@@ -202,7 +202,7 @@ pub async fn handle_edge_request_impl(
     }
     response.headers_mut().insert(
         CACHE_CONTROL,
-        "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
     );
     Ok(response)
 }
