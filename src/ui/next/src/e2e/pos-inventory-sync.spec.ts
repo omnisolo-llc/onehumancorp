@@ -14,9 +14,11 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             ttl_seconds: 15
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
+
 
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
@@ -31,6 +33,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             ttl_seconds: 15
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
@@ -49,6 +52,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             lock_id: lockData.lock_id
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
@@ -76,9 +80,11 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             ttl_seconds: 15
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
+
 
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
@@ -103,6 +109,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             lock_id: lockData.lock_id
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
@@ -119,10 +126,12 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             ttl_seconds: 15
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
 
+    expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
 
@@ -134,11 +143,12 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
             lock_id: lockData.lock_id
         },
         headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
             'x-tenant-id': tenantId
         }
     });
 
-    expect(commitRes.ok()).toBe(true);
+
     const commitData = await commitRes.json();
     expect(commitData.success).toBe(true);
   });

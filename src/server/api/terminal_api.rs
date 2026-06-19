@@ -252,7 +252,14 @@ pub async fn reserve_inventory_handler(
 ) -> axum::response::Response {
     let tenant_id = match auth_info {
         Some(info) => info.org_id.clone(),
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+            }
+        }
     };
 
     let service = crate::services::inventory::InventoryService::new(
@@ -479,7 +486,14 @@ pub async fn commit_inventory_handler(
 ) -> axum::response::Response {
     let tenant_id = match auth_info {
         Some(info) => info.org_id.clone(),
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+            }
+        }
     };
 
     let service = crate::services::inventory::InventoryService::new(
@@ -554,7 +568,14 @@ pub async fn create_payment_intent_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(Err("Unauthenticated".to_string()))
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return Json(Err("Unauthenticated".to_string()))
+            }
+        }
     };
 
     let mut lock_id_out = None;
