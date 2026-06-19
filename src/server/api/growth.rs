@@ -235,7 +235,7 @@ pub async fn handle_conversational_chat(
                 payload: serde_json::json!({"count": abandoned_count}),
             });
         } else {
-            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.".to_string();
+            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.\n\n⚡ Powered by OHC".to_string();
         }
     } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
         let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
