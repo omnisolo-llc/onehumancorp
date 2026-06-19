@@ -512,8 +512,9 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ? OR CAST(total_cost AS TEXT) LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
+                    .bind(&query_lower)
                     .bind(&query_lower)
                     .bind(&query_lower)
                     .fetch_all(sqlite_pool)
@@ -589,7 +590,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&mut *tx)
