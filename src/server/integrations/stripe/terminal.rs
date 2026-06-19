@@ -1,6 +1,47 @@
 use super::client::StripeClient;
 
+
+pub struct TerminalSessionManager {
+    client: StripeClient,
+}
+
+impl TerminalSessionManager {
+    pub fn new(client: StripeClient) -> Self {
+        Self { client }
+    }
+
+    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        if tenant_id.is_empty() {
+            return Err("Unauthenticated: Missing tenant ID".to_string());
+        }
+        self.client.create_terminal_connection_token(tenant_id).await
+    }
+
+    pub async fn create_terminal_payment_intent(
+        &self,
+        tenant_id: &str,
+        amount_cents: i64,
+        currency: &str,
+        product_id: Option<&str>,
+        quantity: Option<i32>,
+        order_id: Option<&str>,
+    ) -> Result<String, String> {
+        if tenant_id.is_empty() {
+            return Err("Unauthenticated: Missing tenant ID".to_string());
+        }
+        self.client.create_terminal_payment_intent(
+            tenant_id,
+            amount_cents,
+            currency,
+            product_id,
+            quantity,
+            order_id
+        ).await
+    }
+}
+
 impl StripeClient {
+
     pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         let res = reqwest::Client::new()
