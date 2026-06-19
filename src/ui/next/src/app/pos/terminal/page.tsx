@@ -27,6 +27,10 @@ export default function POSTerminal() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string>('');
+
+
   useEffect(() => {
     const checkQueue = async () => {
       const qLen = await SyncManager.getInstance().getQueueLength();
@@ -50,7 +54,15 @@ export default function POSTerminal() {
       checkQueue();
     };
 
+
     if (typeof window !== 'undefined') {
+        let storedDeviceId = localStorage.getItem('ohc_pos_device_id');
+        if (!storedDeviceId) {
+            storedDeviceId = 'device_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            localStorage.setItem('ohc_pos_device_id', storedDeviceId);
+        }
+        setDeviceId(storedDeviceId);
+
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
@@ -90,6 +102,24 @@ export default function POSTerminal() {
             setActiveStaff(data.staff);
             setLocked(false);
             setPin('');
+
+            // Initialize terminal session
+            try {
+              const sessionRes = await fetch('/api/v1/payments/terminal/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-tenant-id': data.staff.tenant_id },
+                body: JSON.stringify({ device_id: deviceId })
+              });
+              const sessionData = await sessionRes.json();
+              if (sessionData.success) {
+                setSessionId(sessionData.session_id);
+              } else {
+                console.error("Failed to start terminal session", sessionData.error_message);
+              }
+            } catch(e) {
+               console.error("Failed to fetch session", e);
+            }
+
           } else {
             alert(t('Invalid PIN'));
             setPin('');
