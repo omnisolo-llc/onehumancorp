@@ -11,17 +11,17 @@ test.describe('Documentation full suite', () => {
     await expect(title).toContainText('Help Center');
 
     // Make sure search bar exists
-    const searchInput = page.locator('#search-input');
+    const searchInput = page.locator('input[placeholder="Search for help articles and videos..."]');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('Test search');
 
     // Chat widget open interaction
-    const chatBtn = page.locator('#ohc-floating-help-btn');
+    const chatBtn = page.locator('[aria-label="Open help chat"]');
     await expect(chatBtn).toBeVisible();
     await chatBtn.click();
 
     // Check if the chat input is now visible
-    const chatInput = page.locator('#ohc-help-chat-input');
+    const chatInput = page.locator('input[placeholder="Ask anything..."]');
     await expect(chatInput).toBeVisible();
   });
 
@@ -36,7 +36,7 @@ test.describe('Documentation full suite', () => {
 
     // Expecting to load cards dynamically from API
     // The test waits for the dynamic content to appear
-    const changelogContainer = page.locator('#changelog-container');
+    const changelogContainer = page.locator('div.space-y-8');
     await expect(changelogContainer).toBeVisible();
   });
 
