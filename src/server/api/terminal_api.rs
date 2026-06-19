@@ -573,6 +573,22 @@ pub async fn commit_inventory_handler(
                             payload: serde_json::to_vec(&event).unwrap_or_default(),
                             timestamp: chrono::Utc::now().timestamp(),
                         });
+
+                        // Create an agent action request for the Operations Agent
+                        let action_req_id = uuid::Uuid::new_v4().to_string();
+                        let payload = serde_json::json!({
+                            "source": "pos",
+                            "order_id": order_id,
+                            "quantity": req_data.quantity,
+                            "reason": "in_person_sale_inventory_check"
+                        });
+                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload) VALUES ($1, $2, 'InventoryCheck', 'Pending', $3, $4)")
+                            .bind(&action_req_id)
+                            .bind(&tenant_id)
+                            .bind(&req_data.product_id)
+                            .bind(&payload)
+                            .execute(&mut *tx)
+                            .await;
                     }
                     let _ = tx.commit().await;
                 }

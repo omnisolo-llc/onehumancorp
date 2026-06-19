@@ -84,7 +84,7 @@
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
-      button {
+      button { min-height: 44px; min-width: 44px;
         background-color: #0066FF;
         color: white;
         border: none;
@@ -460,7 +460,7 @@
         margin-bottom: 24px;
         text-align: left;
       }
-      .context-card {
+      .context-card { min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -568,7 +568,7 @@
         justify-content: center;
         padding-bottom: 10px;
       }
-      .persona-chip {
+      .persona-chip { min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
         min-height: 44px !important;
@@ -741,14 +741,14 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option, .persona-chip {
+        input, select, textarea, button, .radio-option, .persona-chip { min-height: 44px;
           min-height: 44px !important;
         }
       }
 
             @media (max-width: 375px) {
         .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
-        .context-card { padding: 12px; }
+        .context-card { min-height: 44px;  padding: 12px; }
         .work-context-cards { grid-template-columns: 1fr; }
 
         .stepper {
@@ -771,7 +771,7 @@
         p {
           font-size: 13px;
         }
-        .persona-chip {
+        .persona-chip { min-height: 44px;
           padding: 6px 12px;
           font-size: 12px;
         }
@@ -805,7 +805,7 @@
       .glassmorphism input,
       .glassmorphism select,
       .glassmorphism textarea,
-      .glassmorphism button {
+      .glassmorphism button { min-height: 44px; min-width: 44px;
         border-radius: 8px !important;
       }
 </style>
@@ -1753,7 +1753,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      function goToStep(stepId) {
+      window.goToStep = function goToStep(stepId) {
           if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
               document.getElementById('instant-bio').value = '';
               const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
