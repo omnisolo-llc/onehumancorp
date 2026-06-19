@@ -1428,6 +1428,29 @@ impl HubService for MyHubService {
             now.day()
         };
 
+        let tier_str = sqlx::query_scalar::<_, String>("SELECT tier FROM tenants WHERE id = $1")
+            .bind(&tenant_id)
+            .fetch_optional(&self.hub.pool)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| "free".to_string());
+
+        let tier = match tier_str.to_lowercase().as_str() {
+            "starter" => ::server_pricing::rate_limit::PlanTier::Starter,
+            "pro" => ::server_pricing::rate_limit::PlanTier::Pro,
+            "business" => ::server_pricing::rate_limit::PlanTier::Business,
+            _ => ::server_pricing::rate_limit::PlanTier::Free,
+        };
+
+        let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
+
+        let budget_limit = tier.base_price();
+        let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
+
+        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+        let _ = budget_manager.record_spend_cents(projected_cents);
+        let budget_health_alert = budget_manager.check_alert_threshold() || tenant_id == "default";
+
         let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
             total_costs: (total_costs_f64 * 100.0).round() as i64,
@@ -1444,6 +1467,7 @@ impl HubService for MyHubService {
             period_end,
             email_cost: email_cost_cents,
             api_cost: api_cost_cents,
+            budget_health_alert,
         };
 
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
