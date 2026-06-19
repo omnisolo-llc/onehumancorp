@@ -59,7 +59,7 @@ test.describe('Omnichannel Intake Agent feed card', () => {
 
     // Check if the drafted reply is visible
     await expect(approvalCard.getByText('Hello, what is the status of my order?')).toBeVisible({ timeout: 15000 });
-    await expect(approvalCard.getByText('AI Draft')).toBeVisible();
+    await expect(approvalCard.getByText('Draft:')).toBeVisible();
 
     // Approve the response
     const approveButton = approvalCard.getByRole('button', { name: /Send Draft/ }).first();
