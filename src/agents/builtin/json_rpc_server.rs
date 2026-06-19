@@ -7,6 +7,7 @@ use crate::codex_runner::Runner;
 
 /// JSON-RPC 2.0 Request
 #[derive(Debug, Deserialize)]
+#[derive(Serialize)]
 pub struct JsonRpcRequest {
     pub jsonrpc: String,
     pub method: String,
@@ -60,7 +61,7 @@ async fn handle_rpc(
     }
 
     let params: RunParams = match payload.params {
-        Some(p) => match serde_json::from_value(p) {
+        Some(ref p) => match serde_json::from_value(p.clone()) {
             Ok(params) => params,
             Err(e) => {
                 return Json(JsonRpcResponse {
@@ -108,7 +109,13 @@ async fn handle_rpc(
                 Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
             }
         }
-        _ => {
+        _method => {
+            let app_server = crate::codex_runner::AppServer { runner: state.runner.clone() };
+            let req_str = serde_json::to_string(&payload).unwrap_or_default();
+            let res_str = app_server.handle_request(&req_str).await;
+            if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(&res_str) {
+                return Json(resp);
+            }
             return Json(JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 result: None,
