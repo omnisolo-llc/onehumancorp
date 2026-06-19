@@ -459,9 +459,9 @@ impl UserRepository for PgUserRepository {
 
         let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).bind(now).execute(&mut *tx).await
+            sqlx::query(query).bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await
+            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;

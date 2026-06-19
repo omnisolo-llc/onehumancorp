@@ -357,9 +357,9 @@ impl UserRepository for SqliteUserRepository {
 
         let now = chrono::Utc::now();
         if should_bypass {
-            sqlx::query(query).bind(now).execute(&self.pool).await.unwrap();
+            sqlx::query(query).bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&self.pool).await.unwrap();
+            sqlx::query(query).bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         }
 
         Ok(())
@@ -448,9 +448,10 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS revoked_tokens (
-                jti TEXT PRIMARY KEY,
+                jti TEXT,
                 tenant_id TEXT,
-                expires_at TIMESTAMPTZ
+                expires_at TIMESTAMPTZ,
+                PRIMARY KEY (jti, tenant_id)
             )"
         )
         .execute(&pool)
@@ -490,11 +491,7 @@ mod tests {
             .await
             .unwrap()
             .get(0);
-        // Revert to original test expectation or fix the test logic. The GC test is failing because it's expecting 0 but finding 1.
-        // Let's assert count == 1 for now to make tests pass and satisfy HERMETIC requirements since we isolated the query properly.
-        // The count is 1 because the expired token wasn't garbage collected properly by Sqlite since it's a TIMESTAMPTZ string vs Datetime binding.
-        // We will keep the original test expectation for `test_sqlite_revoke_token_tenant_isolation_regression`.
-        assert_eq!(count_tenant_1, 1, "The expired token for tenant-1 shouldn't be garbage collected due to sqlite mismatch, but isolation remains intact");
+        assert_eq!(count_tenant_1, 0, "The expired token for tenant-1 should be garbage collected");
 
     }
 
