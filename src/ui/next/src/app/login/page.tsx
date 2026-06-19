@@ -23,7 +23,7 @@ export default function Login() {
         <h1 className="text-3xl font-bold text-center text-[#1D1D1F] dark:text-[#F5F5F7] mb-8">Login</h1>
 
         <div className="flex flex-col gap-4 mb-8">
-          <input
+          <input className="min-h-[54px]"
             type="text"
             placeholder="Email or Username"
             value={username}
@@ -33,7 +33,7 @@ export default function Login() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full p-4 rounded-[16px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+            className="min-h-[54px] w-full p-4 rounded-[16px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
           />
           <button
             onClick={goDashboard}
@@ -49,7 +49,7 @@ export default function Login() {
             <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
         </div>
 
-        <button
+        <button className="min-h-[54px]"
           onClick={() => router.push('/onboarding')}
           className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[16px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
         >

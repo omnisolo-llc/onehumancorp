@@ -669,7 +669,7 @@ export default function OnboardingWizard() {
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
-              <button type="button" onClick={handleBackToIntro} className="setup-nav-button rounded-[8px]">
+              <button type="button" onClick={handleBackToIntro} className="min-h-[54px] setup-nav-button rounded-[8px]">
                 Back
               </button>
             ) : (
@@ -679,7 +679,7 @@ export default function OnboardingWizard() {
               <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
               <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
             </div>
-            <button type="button" onClick={handleSkipSetup} className="setup-nav-button rounded-[8px]">
+            <button type="button" onClick={handleSkipSetup} className="min-h-[54px] setup-nav-button rounded-[8px]">
               Skip setup
             </button>
           </div>
@@ -713,21 +713,21 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
+                  className="min-h-[54px] w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
                 <button
                   type="button"
-                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
+                  className="min-h-[54px] w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(-1); syncStateToBackend({ step: -1 }); }}
                 >
                   Instant Build
                 </button>
                 <button
                   type="button"
-                  className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
+                  className="min-h-[54px] w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
                   onClick={() => { setStep(-2); syncStateToBackend({ step: -2 }); }}
                 >
                   Conversational Setup
@@ -738,7 +738,7 @@ export default function OnboardingWizard() {
 
           {step === -2 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button className="min-h-[54px]" onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Setup Assistant</h2>
@@ -771,7 +771,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="flex flex-col gap-2 shrink-0">
-                  <input
+                  <input className="min-h-[54px]"
                     type="text"
                     id="chat-image-url"
                     value={instantImageUrl}
@@ -780,7 +780,7 @@ export default function OnboardingWizard() {
                     placeholder="Image URL (Optional)"
                   />
                   <div className="flex gap-2 w-full">
-                    <input
+                    <input className="min-h-[54px]"
                       type="text"
                       id="chat-input"
                       value={bio}
@@ -795,7 +795,7 @@ export default function OnboardingWizard() {
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
                       disabled={isLoading}
-                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
+                      className="min-h-[54px] bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
                     </button>
@@ -807,7 +807,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button className="min-h-[54px]" onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
@@ -834,7 +834,7 @@ export default function OnboardingWizard() {
                   id="instant-image-url"
                   data-testid="instant-image-url"
                   type="url"
-                  className="glassmorphism w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms] rounded-[8px]"
+                  className="min-h-[54px] glassmorphism w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms] rounded-[8px]"
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) => setInstantImageUrl(e.target.value)}
@@ -844,7 +844,7 @@ export default function OnboardingWizard() {
                   <button
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
-                    className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                    className="min-h-[54px] w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     Next
                   </button>
@@ -868,7 +868,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
@@ -880,7 +880,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
                         autoFocus
 
@@ -907,7 +907,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => {
                         if (businessName.trim().length < 3) {
                           setValidationError('Business Name must be at least 3 characters.');
@@ -927,7 +927,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button className="min-h-[54px]" onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -935,7 +935,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       Tell us a bit about your products or services.
                     </p>
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
@@ -947,7 +947,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
-                      <textarea
+                      <textarea className="min-h-[54px]"
                         autoFocus
 
                         autoCapitalize="sentences"
@@ -972,7 +972,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => {
                         if (!whatYouSell.trim()) {
                           setValidationError('Please tell us what you sell.');
@@ -992,7 +992,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button className="min-h-[54px]" onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -1000,7 +1000,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       This helps us set up your shipping and tax settings.
                     </p>
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
@@ -1012,7 +1012,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
                         autoFocus
 
@@ -1039,7 +1039,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => {
                         if (!location.trim()) {
                           setValidationError('Please tell us your location.');
@@ -1059,7 +1059,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 4 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button className="min-h-[54px]" onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
@@ -1067,7 +1067,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       This helps our AI generate the perfect storefront copy and select the best tools for your business.
                     </p>
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
@@ -1079,7 +1079,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
                         autoFocus
 
@@ -1106,7 +1106,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button className="min-h-[54px]"
                       onClick={() => {
                         if (!targetAudience.trim()) {
                           setValidationError('Please tell us your target audience.');
@@ -1136,7 +1136,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button className="min-h-[54px]" onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -1144,7 +1144,7 @@ export default function OnboardingWizard() {
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
-                <button
+                <button className="min-h-[54px]"
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                 >
@@ -1157,7 +1157,7 @@ export default function OnboardingWizard() {
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
+                  <input className="min-h-[54px]"
                     type="text"
                     autoFocus
 
@@ -1173,7 +1173,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
+                  <input className="min-h-[54px]"
                     type="text"
 
                     autoCapitalize="words"
@@ -1188,7 +1188,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
+                  <input className="min-h-[54px]"
                     type="text"
 
                     autoCapitalize="words"
@@ -1200,7 +1200,7 @@ export default function OnboardingWizard() {
                 <div className="grid grid-cols-2 gap-2">
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
 
                         autoCapitalize="words"
@@ -1211,7 +1211,7 @@ export default function OnboardingWizard() {
                    </div>
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
                         inputMode="decimal"
                         value={firstProductPrice}
@@ -1232,7 +1232,7 @@ export default function OnboardingWizard() {
 
               {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
-                <button
+                <button className="min-h-[54px]"
                   onClick={() => {
                     let hasError = false;
                     const newErrors: Record<string, string> = { ...validationErrors };
@@ -1268,7 +1268,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button className="min-h-[54px]" onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
@@ -1276,7 +1276,7 @@ export default function OnboardingWizard() {
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
-                <button
+                <button className="min-h-[54px]"
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                 >
@@ -1327,7 +1327,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-3 mb-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
-                      <input
+                      <input className="min-h-[54px]"
                         type="text"
 
                         autoCapitalize="words"
@@ -1349,7 +1349,7 @@ export default function OnboardingWizard() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
-                      <input
+                      <input className="min-h-[54px]"
                         type="email"
 
                         autoCapitalize="none"
@@ -1376,7 +1376,7 @@ export default function OnboardingWizard() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
-                      <input
+                      <input className="min-h-[54px]"
                         type="password"
                         enterKeyHint="done"
                         autoComplete="new-password"
@@ -1423,7 +1423,7 @@ export default function OnboardingWizard() {
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
-                      className="sr-only"
+                      className="min-h-[54px] sr-only"
                       checked={aiAutoRespond}
                       onChange={(e) => setAiAutoRespond(e.target.checked)}
                     />
@@ -1435,7 +1435,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div className="mt-auto pt-6">
-                <button
+                <button className="min-h-[54px]"
                   onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
