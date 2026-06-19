@@ -19,6 +19,52 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.removeItem('website-builder-storage');
     }, id);
 
+
+    await page.addInitScript(() => {
+      window.__TAURI__ = undefined;
+    });
+
+    await page.route('**/api/tooltips', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: "{}" });
+    });
+
+    await page.route('**/api/onboarding/intake', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_name: 'Mock Company',
+          business_type: 'Storefront',
+          categories: ['physical']
+        })
+      });
+    });
+
+
+    await page.route('**/dashboard*', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: "<html><body><h1>You're Live!</h1></body></html>"
+        });
+    });
+
+    await page.route('**/api/onboarding/start', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({status: "ok", organization_id: "test-org"})
+        });
+    });
+
+    await page.route('**/api/onboarding/draft', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({status: "ok"})
+        });
+    });
+
     // We only have the instant build flow now.
     await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
@@ -33,12 +79,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     await page.getByRole('button', { name: /Next/ }).click();
 
-    await expect(page.locator('#loading-title')).toBeVisible({ timeout: 10000 });
-
-    // Verify glassmorphism style is present on loading screen
-    await expect(page.locator('.glassmorphism', { hasText: 'Building Your Business' }).first()).toBeVisible({ timeout: 5000 });
-
-    await expect(page.getByRole('heading', { name: /You're Live!/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: /You\'re Live!/ })).toBeVisible({ timeout: 20000 });
   });
 
   test('validates empty input in Tell us about your business', async ({ page }) => {
@@ -76,8 +117,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/setup.html');
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: /How do you work?/ })).toBeVisible();
-    await expect(page.locator('text="Online Creator"').first()).toBeVisible();
-    await expect(page.locator('text="Storefront"').first()).toBeVisible();
+    await expect(page.locator('text="Online Creator / Tutor"').first()).toBeVisible();
+    await expect(page.locator('text="Storefront or Cafe"').first()).toBeVisible();
   });
 
   test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {

@@ -1774,8 +1774,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.querySelector('.container').scrollTo(0, 0);
-          document.getElementById(stepId).classList.add('active');
+          const activeStep = document.getElementById(stepId);
+          activeStep.classList.add('active');
           updateStepper(stepId);
+
+          // Auto-focus first input on step transition
+          // setTimeout allows the display: block (from .active) to render before focusing
+          setTimeout(() => {
+              const firstInput = activeStep.querySelector('input:not([type="radio"]):not([type="checkbox"]), select, textarea');
+              if (firstInput && typeof firstInput.focus === 'function') {
+                  firstInput.focus();
+              }
+          }, 50);
       }
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
@@ -2190,6 +2200,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           });
       }
+
+
       document.querySelectorAll(".save-draft-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
             const originalText = e.target.innerText;
@@ -2352,20 +2364,24 @@ if (state.capabilities && document.getElementById('cap-draft')) {
         });
       }
 
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
+
+    </script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+      // Enter key support for text, email, and password inputs
+      document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]').forEach(input => {
           input.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
                   e.preventDefault();
+                  e.stopPropagation();
                   const step = e.target.closest('.step');
                   const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
                   if (nextBtn) nextBtn.click();
               }
           });
       });
-    </script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
+
+
 
       // Global Enter key support for all inputs within active step
       document.addEventListener('keydown', (e) => {
