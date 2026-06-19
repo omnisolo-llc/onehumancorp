@@ -449,6 +449,7 @@ mod tests {
 
 #[cfg(test)]
 mod additional_transient_tests {
+    #[allow(unused_imports)]
     use super::*;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
