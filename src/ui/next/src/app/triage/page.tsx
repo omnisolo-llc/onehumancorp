@@ -160,10 +160,10 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="w-full glassmorphism border border-white/40 dark:border-white/10 rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden"
+                className="w-full bg-white/60 dark:bg-black/60 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden"
               >
                 {/* Header Context */}
-                <div className="p-5 border-b border-gray-200 dark:border-white/10 bg-white/30 dark:bg-black/10">
+                <div className="p-5 border-b border-gray-200 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{getSourceIcon(item.source || "")}</span>
@@ -182,24 +182,24 @@ export default function TriagePage() {
 
                 {/* Draft Proposal */}
                 {item.action_type && (
-                  <div className="p-5 bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2">
+                  <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-sm flex flex-col gap-2">
                     <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                       Proposed Action: {item.action_type}
                     </div>
-                    <div className="proposed-action rounded-[16px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/80 dark:bg-black/40 p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
+                    <div className="proposed-action rounded-[16px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-md p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
                       {item.action_payload || "No specific payload"}
                     </div>
                   </div>
                 )}
 
                 {/* Meta Details */}
-                <div className="px-5 py-3 flex justify-between bg-white/20 dark:bg-black/5 text-[11px] text-gray-500 dark:text-gray-400">
+                <div className="px-5 py-3 flex justify-between bg-white/30 dark:bg-black/30 backdrop-blur-sm text-[11px] text-gray-500 dark:text-gray-400">
                   <span>{new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   <span>{new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10">
+                <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-sm">
                   <button
                     disabled={isProcessing}
                     className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
@@ -210,7 +210,7 @@ export default function TriagePage() {
                   </button>
                   <button
                     disabled={isProcessing}
-                    className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50"
+                    className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                     data-testid="dismiss-btn"
                     onClick={() => handleDecision(item.id, false)}
                   >
