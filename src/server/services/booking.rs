@@ -43,6 +43,9 @@ pub struct Service {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -159,6 +162,9 @@ impl BookingService {
             title: row.get("title"),
             description: row.get("description"),
             price_cents: row.get("price_cents"),
+            seo_title: row.get("seo_title"),
+            seo_description: row.get("seo_description"),
+            seo_schema_json: row.get("seo_schema_json"),
         }).collect();
 
         Ok(services)

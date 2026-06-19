@@ -165,6 +165,9 @@ mod tests {
             subscription_frequency: None,
             subscription_discount_percent: None,
             metadata: None,
+            seo_title: None,
+            seo_description: None,
+            seo_schema_json: None,
             created_at: None,
             updated_at: None,
         };
