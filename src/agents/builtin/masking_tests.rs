@@ -245,4 +245,6 @@ fn test_json_fallback_bug() {
     // Ideally it should still be valid JSON.
     // If it falls back to raw string, it will be "[Observation Masked ...]" which is invalid JSON.
     assert!(serde_json::from_str::<Value>(result).is_ok(), "Fails to parse as JSON because it fell back to raw string masking");
+    let parsed = serde_json::from_str::<Value>(result).unwrap();
+    assert!(parsed.get("error").is_some());
 }
