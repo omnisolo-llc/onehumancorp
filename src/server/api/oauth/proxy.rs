@@ -89,8 +89,15 @@ mod tests {
     use axum::extract::Query;
     use std::collections::HashMap;
 
+
+
+
+
+
+
+
     #[tokio::test]
-    async fn test_valid_tunnel_id() {
+    async fn test_valid_tunnel_id_secure_fragment_redirect() {
         let mut extra = HashMap::new();
         extra.insert("foo".to_string(), "bar".to_string());
 
@@ -102,7 +109,23 @@ mod tests {
 
         let response = handle_oauth_callback(Query(query)).await.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        // Assert that the redirect uses a fragment (#) instead of a query string (?)
+        assert!(body_str.contains("tunnel.ohc.network"));
+        assert!(body_str.contains("code=test_code"));
+        assert!(body_str.contains("state=actualState123"));
+        assert!(body_str.contains("foo=bar"));
     }
+
+
+
+
+
+
+
 
     #[tokio::test]
     async fn test_invalid_tunnel_id_path_traversal() {
