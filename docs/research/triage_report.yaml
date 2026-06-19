@@ -2,13 +2,13 @@ issue_category: refactor
 status: completed
 details:
   - Cleaned backlog without hallucinating features since no task was given.
-  - Phase 1: Signal Hygiene applied to QueueManager's polling mechanism in `src/server/queue.rs`, downgrading noise level from tracing::error to tracing::trace.
+  - Phase 1: Signal Hygiene applied to QueueManager's polling mechanism in `src/server/orchestration/queue/worker_pool.rs`, downgrading noise level from tracing::error to tracing::trace.
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
   <h1>🧹 Maintainer: Triage & Debt Report</h1>
   <h2>Phase 1: Signal Hygiene</h2>
   <ul>
-    <li>Identified systematic noise vectors in <code>src/server/queue.rs</code>. </li>
+    <li>Identified systematic noise vectors in <code>src/server/orchestration/queue/worker_pool.rs</code>. </li>
     <li>Failed queue polls spammed <code>tracing::error!</code> inside loop execution, creating unnecessary noise.</li>
     <li>Downgraded the noise vector to <code>tracing::trace!</code> to un-obfuscate genuine reliability signals.</li>
   </ul>
