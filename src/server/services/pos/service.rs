@@ -37,6 +37,28 @@ impl MyPosService {
         }
 
         db_tx.commit().await.map_err(|e| e.to_string())?;
+
+        // Notify KAIROS Orchestrator for Sales and Operations AI agents about POS offline sync completion
+        let pool = crate::db::get_pool();
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+
+        let evt = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            event_type: "POS_OFFLINE_SYNC_COMPLETED".to_string(),
+            payload: serde_json::json!({
+                "message": "Offline transactions reconciled."
+            }),
+        };
+
+        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+            event_id: uuid::Uuid::new_v4().to_string(),
+            topic: "pos_sales".to_string(),
+            payload: serde_json::to_vec(&evt).unwrap_or_default(),
+            timestamp: chrono::Utc::now().timestamp(),
+        });
+
         Ok(())
     }
 
