@@ -177,10 +177,11 @@ impl JetBrainsObservationMasker {
                                     } else {
                                         // Either it wasn't modified, or the modification still didn't bring it under the limit.
                                         // We replace the entire content with a safe JSON string indicating masking.
-                                        tr.content = format!(
-                                            "{{\"error\": \"[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]\"}}",
+                                        let raw_msg = format!(
+                                            "[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]",
                                             bytes, tr.tool_call_id
                                         );
+                                        tr.content = serde_json::json!({ "error": raw_msg }).to_string();
                                     }
                                     continue; // Treated as JSON, don't fall back to raw string masking
                                 }
