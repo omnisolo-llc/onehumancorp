@@ -5,6 +5,8 @@ import { loadStripeTerminal } from '@stripe/terminal-js';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 interface StripeTerminalClientProps {
+  onSuccess?: () => void;
+  cart?: { product: any, quantity: number }[];
   amount: number;
   productId: string;
   tenantId: string;
@@ -12,7 +14,7 @@ interface StripeTerminalClientProps {
   onOptimisticRollback?: () => void;
 }
 
-export default function StripeTerminalClient({ amount, productId, tenantId, onOptimisticReserve, onOptimisticRollback }: StripeTerminalClientProps) {
+export default function StripeTerminalClient({ amount, productId, cart, tenantId, onOptimisticReserve, onOptimisticRollback, onSuccess }: StripeTerminalClientProps) {
   const [terminal, setTerminal] = useState<any>(null);
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
@@ -165,26 +167,27 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
              amount_cents: amount,
              amount: amount,
              currency: 'usd',
-             product_id: productId,
-             quantity: 1,
-             payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
+             product_id: cart ? cart[0].product.id : productId,
+             quantity: cart ? cart[0].quantity : 1,
+             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
              timestamp: new Date().toISOString()
           };
 
-          const crdtTx = {
-            id: `crdt_${transactionId}`,
-            type: 'CRDT_MUTATION',
-            timestamp: new Date().toISOString(),
-            payload: {
-               entity_id: productId,
-               data: {
-                  pn_counter_n_increment: 1
-               }
-            }
-          };
-
+          for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
+            const crdtTx = {
+              id: `crdt_${transactionId}_${item.product.id}`,
+              type: 'CRDT_MUTATION',
+              timestamp: new Date().toISOString(),
+              payload: {
+                 entity_id: item.product.id,
+                 data: {
+                    pn_counter_n_increment: item.quantity
+                 }
+              }
+            };
+            await SyncManager.getInstance().enqueue(crdtTx);
+          }
           await SyncManager.getInstance().enqueue(tx);
-          await SyncManager.getInstance().enqueue(crdtTx);
 
           setStatus('Payment saved offline. Will sync when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);
@@ -196,22 +199,25 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
     setStatus('Reserving inventory...');
     onOptimisticReserve?.();
 
+    let lockIds: string[] = [];
     let lockId = '';
     try {
-      const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, ttl_seconds: 15 })
-      });
-      const reserveData = await reserveRes.json();
-
-      if (!reserveData.success) {
-        onOptimisticRollback?.();
-        setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
-        setReserving(false);
-        return;
+      for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
+        });
+        const reserveData = await reserveRes.json();
+        if (!reserveData.success) {
+          onOptimisticRollback?.();
+          setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
+          setReserving(false);
+          return;
+        }
+        lockIds.push(reserveData.lock_id);
       }
-      lockId = reserveData.lock_id;
+      lockId = lockIds[0]; // Legacy
     } catch (e: any) {
       onOptimisticRollback?.();
       setStatus('Reservation error: ' + e.message);
@@ -246,22 +252,31 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
         setStatus('Payment successful. Committing inventory...');
 
         try {
-          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tenant_id: tenantId,
-              product_id: productId,
-              quantity: 1,
-              lock_id: lockId,
-              amount_cents: amount
-            })
-          });
-          const commitData = await commitRes.json();
-          if (commitData.success) {
+          let allCommitted = true;
+          const items = cart || [{product: {id: productId}, quantity: 1}];
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const currentLockId = lockIds[i];
+            const commitRes = await fetch('/api/v1/payments/terminal/commit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tenant_id: tenantId,
+                product_id: item.product.id,
+                quantity: item.quantity,
+                lock_id: currentLockId,
+                amount_cents: i === 0 ? amount : 0
+              })
+            });
+            const commitData = await commitRes.json();
+            if (!commitData.success) {
+               allCommitted = false;
+               setStatus('Payment successful, but inventory commit failed for an item: ' + commitData.error_message);
+            }
+          }
+          if (allCommitted) {
             setStatus('Payment successful!');
-          } else {
-            setStatus('Payment successful, but inventory commit failed: ' + commitData.error_message);
+            if (onSuccess) onSuccess();
           }
         } catch (commitErr: any) {
           setStatus('Payment successful, but inventory commit error: ' + commitErr.message);
