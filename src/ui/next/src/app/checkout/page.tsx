@@ -100,7 +100,7 @@ function CheckoutContent() {
         setDeliveryFee(null);
       }
     } catch (e) {
-      console.error("Failed to check delivery eligibility", e);
+
       setDeliveryError("Error checking delivery.");
     } finally {
       setIsCheckingDelivery(false);
@@ -144,7 +144,7 @@ function CheckoutContent() {
       setCheckoutStatus("Redirecting to checkout...");
       window.location.assign(data.checkout_url);
     } catch (e: any) {
-      console.error("Failed to start checkout", e);
+
       setCheckoutStatus("Checkout is temporarily unavailable.");
       setIsProcessing(false);
     }
@@ -439,7 +439,7 @@ function CheckoutContent() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ referrer_id: tenant, source: 'checkout_affiliate' })
-                  }).catch(err => console.error('Failed to track referral click:', err));
+                  }).catch(() => { /* ignore */ });
                 }}>⚡ Powered by OHC</a>
               </p>
             </div>

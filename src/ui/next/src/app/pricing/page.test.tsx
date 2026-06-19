@@ -154,4 +154,46 @@ describe('PricingPage', () => {
     });
     expect(screen.getByText(/Stripe Billing for self-serve plan upgrades, downgrades, and cancellation/)).toBeDefined();
   });
+
+  it('initiates billing portal session for manage billing', async () => {
+    const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Starter' }),
+        };
+      }
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({ url: mockPortalUrl }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let manageButton;
+    await waitFor(() => {
+       manageButton = screen.getAllByText('Manage Plan')[0];
+    });
+
+    await act(async () => {
+       fireEvent.click(manageButton!);
+    });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-billing-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(window.location.href).toBe(mockPortalUrl);
+    });
+  });
 });
