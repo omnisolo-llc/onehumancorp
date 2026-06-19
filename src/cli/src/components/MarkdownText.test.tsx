@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { MarkdownText } from './MarkdownText';
+import { MarkdownText } from './MarkdownText.js';
 
 describe('MarkdownText', () => {
   it('renders correctly', () => {

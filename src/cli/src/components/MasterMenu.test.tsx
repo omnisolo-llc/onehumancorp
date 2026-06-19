@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { MasterMenu } from './MasterMenu';
+import { MasterMenu } from './MasterMenu.js';
 import { expect, test, describe, vi } from 'vitest';
 
 describe('MasterMenu', () => {

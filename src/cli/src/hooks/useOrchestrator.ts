@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ToolItem } from '../components/ToolProgress';
+import { ToolItem } from '../components/ToolProgress.js';
 
 export interface OrchestratorState {
   status: string;
