@@ -5789,6 +5789,8 @@ async fn create_ui_bom_item_handler(
                     "voice_receptionist_enabled": settings.voice_receptionist_enabled,
                     "voice_receptionist_number": settings.voice_receptionist_number,
                     "voice_receptionist_persona": settings.voice_receptionist_persona,
+                    settings.voice_receptionist_instructions,
+                    "voice_receptionist_instructions": settings.voice_receptionist_instructions,
                 }))
             }
         }))
@@ -5804,13 +5806,19 @@ async fn create_ui_bom_item_handler(
                     current_settings.voice_receptionist_number
                 };
 
+                let instructions = if let Some(v) = req.get("voice_receptionist_instructions") {
+                    Some(v.as_str().unwrap_or("").to_string())
+                } else {
+                    current_settings.voice_receptionist_instructions
+                };
+
                 let persona = if let Some(v) = req.get("voice_receptionist_persona") {
                     if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
                 } else {
                     current_settings.voice_receptionist_persona
                 };
 
-                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
+                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona, instructions) {
                     ::server_telemetry::record_error_signal("[BUG] Failed to save voice settings");
                     tracing::error!("Failed to save voice settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
@@ -5832,6 +5840,7 @@ async fn create_ui_bom_item_handler(
                     settings.voice_receptionist_enabled,
                     Some(mock_number.clone()),
                     settings.voice_receptionist_persona,
+                    settings.voice_receptionist_instructions,
                 ) {
                     ::server_telemetry::record_error_signal("[INFRA] Failed to provision voice number");
                     tracing::error!("Failed to provision voice number: {}", e);
@@ -6588,19 +6597,21 @@ mod tests {
     async fn test_voice_settings_logic() {
         let store = Arc::new(Store::new());
         // Enable Voice Settings
-        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string()), Some("Help out".to_string())).unwrap();
 
         let current = store.get();
         assert_eq!(current.voice_receptionist_enabled, true);
         assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
         assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+        assert_eq!(current.voice_receptionist_instructions, Some("Help out".to_string()));
 
         // Test unsetting
-        store.set_voice_settings(true, None, None).unwrap();
+        store.set_voice_settings(true, None, None, None).unwrap();
         let updated = store.get();
         assert_eq!(updated.voice_receptionist_enabled, true);
         assert_eq!(updated.voice_receptionist_number, None);
         assert_eq!(updated.voice_receptionist_persona, None);
+        assert_eq!(updated.voice_receptionist_instructions, None);
     }
 }
 // resolves #9690
@@ -6611,7 +6622,7 @@ async fn test_api_settings_voice() {
     use serde_json::json;
 
     let settings_store = Arc::new(crate::settings::Store::new());
-    settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+    settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string()), Some("Be nice".to_string())).unwrap();
 
     let json_req = json!({
         "voice_receptionist_enabled": false
@@ -6626,18 +6637,25 @@ async fn test_api_settings_voice() {
         current.voice_receptionist_number
     };
 
+    let instructions = if let Some(v) = json_req.get("voice_receptionist_instructions") {
+        Some(v.as_str().unwrap_or("").to_string())
+    } else {
+        current.voice_receptionist_instructions
+    };
+
     let persona = if let Some(v) = json_req.get("voice_receptionist_persona") {
         if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
     } else {
         current.voice_receptionist_persona
     };
 
-    settings_store.set_voice_settings(enabled, number, persona).unwrap();
+    settings_store.set_voice_settings(enabled, number, persona, instructions).unwrap();
 
     let updated = settings_store.get();
     assert_eq!(updated.voice_receptionist_enabled, false);
     assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
     assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
+    assert_eq!(updated.voice_receptionist_instructions, Some("Be nice".to_string()));
 }
 
 /*
