@@ -1029,6 +1029,17 @@ async fn handle_send_receipt(
     Json(SendReceiptResponse { success: true, message: generated })
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub organization_id: String,
+    pub user_id: String,
+    pub message: String,
+}
 
 #[derive(Deserialize)]
 pub struct LeadGenCampaignRequest {
@@ -1116,20 +1127,6 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateResponse {
-    pub name: String,
-    pub url: String,
-    pub products_count: usize,
-    pub organization_id: String,
-    pub user_id: String,
 }
 
 async fn handle_track_visitor(
@@ -2898,11 +2895,9 @@ pub async fn handle_zero_click_generate(
     };
 
     Ok(axum::Json(ZeroClickGenerateResponse {
-        name: intake_data.business_name,
-        url,
-        products_count: intake_data.initial_products.len(),
         organization_id: _start_res.organization_id,
         user_id: _start_res.user_id,
+        message: "Storefront generated successfully".to_string()
     }))
 }
 
