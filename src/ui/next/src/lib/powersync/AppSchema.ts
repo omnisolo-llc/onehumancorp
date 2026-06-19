@@ -25,7 +25,14 @@ const omniInboxMessages = new Table({
   updated_at: column.text
 });
 
+const pendingActions = new Table({
+  type: column.text,
+  payload: column.text,
+  timestamp: column.integer
+}, { localOnly: true });
+
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
-  omni_inbox_messages: omniInboxMessages
+  omni_inbox_messages: omniInboxMessages,
+  pending_actions: pendingActions
 });

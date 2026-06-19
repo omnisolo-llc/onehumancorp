@@ -1,4 +1,6 @@
-/// <reference types="node" />
+import { getPowerSync } from '../../lib/powersync/db';
+import { OfflineBackgroundWorker } from '../../lib/sync/OfflineBackgroundWorker';
+
 export interface OfflineAction {
   id: string; // The action request ID or a UUID
   type: string; // E.g., 'approve_agent_feed'
@@ -6,48 +8,17 @@ export interface OfflineAction {
   timestamp: number;
 }
 
-const DB_NAME = "OHC_Offline_Queue";
-const STORE_NAME = "actions";
-const DB_VERSION = 1;
-
-function getDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = (event) => {
-      // Suppress error log if IndexedDB is intentionally unavailable in tests
-      if (process.env.NODE_ENV !== 'test') {
-        console.error("IndexedDB error", event);
-      }
-      reject(request.error);
-    };
-
-    request.onsuccess = (event) => {
-      resolve((event.target as IDBOpenDBRequest).result);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-    };
-  });
-}
-
 export async function enqueueAction(action: OfflineAction): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(action);
+    const db = await getPowerSync();
+    await db.execute(
+      'INSERT INTO pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+      [action.id, action.type, JSON.stringify(action.payload), action.timestamp]
+    );
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    // Trigger background worker
+    OfflineBackgroundWorker.getInstance().drainPendingActions();
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
       console.error("Failed to enqueue action", err);
@@ -56,19 +27,16 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
 }
 
 export async function getActions(): Promise<OfflineAction[]> {
-  if (typeof window === "undefined" || !window.indexedDB) return [];
+  if (typeof window === "undefined") return [];
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        resolve(request.result as OfflineAction[]);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    const db = await getPowerSync();
+    const result = await db.getAll('SELECT * FROM pending_actions ORDER BY timestamp ASC');
+    return result.map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      payload: row.payload ? JSON.parse(row.payload) : null,
+      timestamp: row.timestamp
+    }));
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
       console.error("Failed to get actions", err);
@@ -78,17 +46,10 @@ export async function getActions(): Promise<OfflineAction[]> {
 }
 
 export async function removeAction(id: string): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const db = await getPowerSync();
+    await db.execute('DELETE FROM pending_actions WHERE id = ?', [id]);
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
       console.error("Failed to remove action", err);

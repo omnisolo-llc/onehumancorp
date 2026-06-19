@@ -1,25 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { PowerSyncDatabase } from '@powersync/web';
 import { PowerSyncContext } from '@powersync/react';
-import { AppSchema } from './AppSchema';
-
-class BackendConnector {
-  async fetchCredentials() {
-    const res = await fetch('/api/v1/auth/powersync_token');
-    if (!res.ok) {
-      throw new Error(`Failed to get token: ${res.status}`);
-    }
-    const body = await res.json();
-    return {
-      endpoint: body.powersync_url,
-      token: body.token,
-      expiresAt: body.expires_at || new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    };
-  }
-  async uploadData(database: any) {
-    // Offline mutations handle local changes queue directly
-  }
-}
+import { getPowerSync, closePowerSync } from './db';
+import { OfflineBackgroundWorker } from '../sync/OfflineBackgroundWorker';
 
 export function isPowerSyncSupportedForLocation(isSecureContext: boolean, hostname: string) {
   return isSecureContext || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
@@ -46,34 +29,20 @@ export const PowerSyncProvider = ({
 
   useEffect(() => {
     if (!supported) return;
-    let _powerSync: PowerSyncDatabase;
-    const init = async () => {
-      _powerSync = new PowerSyncDatabase({
-        database: {
-          dbFilename: 'ohc-offline.db'
-        },
-        schema: AppSchema,
-      });
 
-      await _powerSync.init();
-
-      const connector = new BackendConnector();
-      _powerSync.connect(connector);
-
-      setPowerSync(_powerSync);
+    getPowerSync().then((db) => {
+      setPowerSync(db);
       setReady(true);
-    };
 
-    init().catch((err) => {
+      // Initialize the background worker
+      OfflineBackgroundWorker.getInstance();
+    }).catch((err) => {
       console.error(err);
       setError(err instanceof Error ? err : new Error('Failed to initialize PowerSync'));
     });
 
     return () => {
-       if (_powerSync) {
-         _powerSync.disconnect();
-         _powerSync.close();
-       }
+       closePowerSync();
     };
   }, [supported]);
 
