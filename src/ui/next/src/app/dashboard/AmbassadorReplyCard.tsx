@@ -14,7 +14,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
         Customer Inquiry
       </div>
       <div className="bg-white/50 dark:bg-black/20 p-3 rounded-[8px] text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic shadow-sm">
-        "{(approval.proposed_action || approval.context_payload).original_message}"
+        "{approval.payload?.original_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.original_payload?.original_message || approval.payload?.original_payload?.original_message || "Customer message"}"
       </div>
       <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,7 +23,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
         Draft Reply
       </div>
       <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
-        {(approval.proposed_action || approval.context_payload).generated_response}
+        {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send."}
       </div>
     </div>
   );

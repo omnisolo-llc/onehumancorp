@@ -145,10 +145,14 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
+    let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
+    let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &sender_id, &source).await;
+    let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
+
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, NOW())"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, $7, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -156,12 +160,13 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&text)
             .bind(&text)
             .bind(&sender_id)
+            .bind(customer_id)
             .execute(pool)
             .await.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -169,6 +174,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&text)
             .bind(&text)
             .bind(&sender_id)
+            .bind(customer_id)
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
@@ -179,13 +185,15 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     }
 
     let job_id = Uuid::new_v4().to_string();
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "message_id": inbox_id,
         "source": source,
         "content": text,
         "sender_id": sender_id
     });
-    // In future iterations, customer_id can be looked up and included in payload
+    if let Ok(c_id) = customer_id_result {
+        payload["customer_id"] = serde_json::json!(c_id);
+    }
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
