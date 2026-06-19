@@ -123,11 +123,27 @@ export default function Integrations() {
   };
 
   const saveWhatsAppCloudApiIntegration = async () => {
-    // Mock API call to save connection status
-    setTimeout(() => {
+    setStatusMessage("Connecting WhatsApp Cloud API...");
+    try {
+      const res = await fetch(`/api/integrations/whatsapp_cloud_api/connect`, { method: "POST" });
+      if (!res.ok) {
+        setStatusMessage(`Unable to start WhatsApp Cloud API connection.`);
+        return;
+      }
+      const data = await res.json();
+      const oauthUrl = data.authorization_url || data.url;
+      if (oauthUrl) {
+        window.location.assign(oauthUrl);
+        return;
+      }
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'whatsapp_cloud_api' ? { ...integration, status: "connected" } : integration
+      ));
       setShowWhatsAppCloudApiModal(false);
       setStatusMessage("WhatsApp Cloud API connected.");
-    }, 500);
+    } catch {
+      setStatusMessage(`Unable to start WhatsApp Cloud API connection.`);
+    }
   };
 
   return (

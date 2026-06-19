@@ -464,6 +464,83 @@ use std::pin::Pin;
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
 use std::sync::Arc;
+async fn handle_integration_connect(
+    axum::extract::State(_db): axum::extract::State<Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if id == "whatsapp_cloud_api" {
+        // Return a mock Meta OAuth URL
+        let redirect_uri = urlencoding::encode("http://localhost:3000/api/integrations/whatsapp_cloud_api/callback");
+        let oauth_url = format!("https://www.facebook.com/v19.0/dialog/oauth?client_id=mock_meta_app_id&redirect_uri={}&state=whatsapp_cloud_api", redirect_uri);
+        return (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+            "authorization_url": oauth_url
+        }))).into_response();
+    }
+
+    (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({
+        "error": "Integration not supported for OAuth connect"
+    }))).into_response()
+}
+
+async fn handle_integration_callback(
+    axum::extract::State(db): axum::extract::State<Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    axum::extract::Query(_params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    // Determine tenant_id from somewhere or use a default one for now
+    let tenant_id = "default".to_string();
+    let integration_id = uuid::Uuid::new_v4().to_string();
+
+    let insert_result = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code) VALUES ($1, $2, $3, 'connected', $4)")
+                .bind(&integration_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("mock_token")
+                .execute(&db.pool)
+                .await.map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code) VALUES (?, ?, ?, 'connected', ?)")
+                .bind(&integration_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("mock_token")
+                .execute(sqlite_pool)
+                .await.map(|_| ())
+        }
+    };
+
+    if let Err(e) = insert_result {
+        tracing::error!("Failed to save tool integration: {}", e);
+    }
+
+    let redirect_url = "/integrations?success=true";
+    let html_redirect = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="refresh" content="0; url={}" />
+    <script>
+        window.location.replace("{}");
+    </script>
+</head>
+<body>Redirecting...</body>
+</html>"#,
+        redirect_url, redirect_url
+    );
+    (
+        axum::http::StatusCode::OK,
+        [("Cache-Control", "no-store"), ("Content-Type", "text/html")],
+        html_redirect,
+    ).into_response()
+}
+
 // OTP Cache for verification
 pub static OTP_STORE: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>> = std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
 
@@ -4813,7 +4890,7 @@ async fn ui_dashboard_unified_feed_handler(
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
-            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
+            let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
@@ -5880,6 +5957,8 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+            .route("/api/integrations/{id}/connect", axum::routing::post(handle_integration_connect).with_state(db.clone()))
+            .route("/api/integrations/{id}/callback", axum::routing::get(handle_integration_callback).with_state(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))

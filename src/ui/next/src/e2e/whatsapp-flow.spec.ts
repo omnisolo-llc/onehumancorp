@@ -18,10 +18,32 @@ test.describe('WhatsApp Flow CUJ', () => {
 
     // 3. Mock the Meta embedded signup popover flow
     await expect(page.getByRole('heading', { name: /Connect WhatsApp/i })).toBeVisible();
+
+    // Intercept Facebook navigation and redirect back to our callback
+    await page.route('https://www.facebook.com/**', route => {
+      const url = new URL(route.request().url());
+      const redirectUri = url.searchParams.get('redirect_uri');
+
+      if (redirectUri) {
+        // Send them back with a dummy code
+        route.fulfill({
+          status: 302,
+          headers: {
+            Location: `${redirectUri}${redirectUri.includes('?') ? '&' : '?'}code=dummy_code_from_meta`
+          }
+        });
+      } else {
+        route.continue();
+      }
+    });
+
     await page.getByRole('button', { name: /Continue with Meta/i }).click();
 
-    // After connecting, the status message should show connected
-    await expect(page.getByText(/WhatsApp Cloud API connected/i)).toBeVisible();
+    // The callback handler redirects to /integrations?success=true
+    await expect(page).toHaveURL(/.*\/integrations\?success=true/);
+
+    // Check that the integration shows "connected" (Manage button)
+    await expect(whatsappCard.getByRole('button', { name: /Manage/i })).toBeVisible();
 
     // 4. Trigger inbound message via webhook
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
