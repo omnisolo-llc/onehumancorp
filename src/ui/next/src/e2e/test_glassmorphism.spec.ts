@@ -26,10 +26,14 @@ test.describe('Premium Aesthetics Verification', () => {
       return {
         backdropFilter: computed.backdropFilter,
         backgroundColor: computed.backgroundColor,
+        border: computed.border,
       };
     });
 
     expect(styles).toBeDefined();
+    expect(styles.backgroundColor).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.65\)|rgba\(22,\s*22,\s*26,\s*0\.7\)/);
+    expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\(210%\)/);
+    expect(styles.border).toMatch(/1px solid rgba\(255,\s*255,\s*255,\s*(0\.4|0\.1)\)/);
   });
 
   test('Verify glassmorphism effect on Invoice Generator Page', async ({ page }) => {
@@ -38,6 +42,21 @@ test.describe('Premium Aesthetics Verification', () => {
     await page.waitForSelector('.glassmorphism');
     const glassContainer = page.locator('.glassmorphism').first();
     await expect(glassContainer).toBeVisible();
+
+    // Evaluate the computed styles to guarantee the premium aesthetics
+    const styles = await glassContainer.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return {
+        backdropFilter: computed.backdropFilter,
+        backgroundColor: computed.backgroundColor,
+        border: computed.border,
+      };
+    });
+
+    expect(styles).toBeDefined();
+    expect(styles.backgroundColor).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.65\)|rgba\(22,\s*22,\s*26,\s*0\.7\)/);
+    expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\(210%\)/);
+    expect(styles.border).toMatch(/1px solid rgba\(255,\s*255,\s*255,\s*(0\.4|0\.1)\)/);
   });
 
   test('Verify glassmorphism effect on Setup Wizard', async ({ page }) => {
@@ -45,9 +64,24 @@ test.describe('Premium Aesthetics Verification', () => {
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
-    // After navigating, some elements might have the glassmorphism class if we added it there.
-    // In builder page it's explicitly there. Let's verify we don't have broken layouts
-    expect(await page.locator('body').count()).toBe(1);
+    // The wizard container usually has glassmorphism
+    await page.waitForSelector('.glassmorphism');
+    const glassContainer = page.locator('.glassmorphism').first();
+    await expect(glassContainer).toBeVisible();
+
+    const styles = await glassContainer.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return {
+        backdropFilter: computed.backdropFilter,
+        backgroundColor: computed.backgroundColor,
+        border: computed.border,
+      };
+    });
+
+    expect(styles).toBeDefined();
+    expect(styles.backgroundColor).toMatch(/rgba\(255,\s*255,\s*255,\s*0\.65\)|rgba\(22,\s*22,\s*26,\s*0\.7\)/);
+    expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\(210%\)/);
+    expect(styles.border).toMatch(/1px solid rgba\(255,\s*255,\s*255,\s*(0\.4|0\.1)\)/);
   });
 
   test('Verify glassmorphism effect on Action Center', async ({ page }) => {
