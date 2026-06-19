@@ -51,16 +51,8 @@ export default function KitchenView() {
     updateCount();
     window.addEventListener("ohc_queue_updated", updateCount);
 
-    // Seed test data for E2E missing db data scenarios
-    const seedMock = (e: any) => {
-        if(e.detail.orders && orders.length === 0) setOrders(e.detail.orders);
-        if(e.detail.menu && menu.length === 0) setMenu(e.detail.menu);
-    };
-    window.addEventListener('seed_mock', seedMock);
-
     return () => {
       window.removeEventListener("ohc_queue_updated", updateCount);
-      window.removeEventListener('seed_mock', seedMock);
     };
   }, []);
 
@@ -117,11 +109,14 @@ export default function KitchenView() {
                     <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg p-3 mb-4">
                       <p className="text-sm font-medium text-[#FF9500] mb-1">Customer Notes:</p>
                       <p className="text-sm italic mb-2">"{order.notes}"</p>
-                      {/* Operations Agent translation simulated for E2E */}
-                      <p className="text-sm font-medium text-[#0071E3] mb-1">AI Translation:</p>
-                      <p className="text-sm font-bold text-lg" dir="rtl">
-                        {order.notes.toLowerCase().includes('no onions') ? 'بدون بصل' : (order.notes.toLowerCase().includes('extra pita') ? 'خبز إضافي' : 'ملاحظة: ' + order.notes)}
-                      </p>
+                      {order.translated_notes && (
+                        <>
+                          <p className="text-sm font-medium text-[#0071E3] mb-1 mt-2">AI Translation:</p>
+                          <p className="text-sm font-bold text-lg" dir="rtl">
+                            {order.translated_notes}
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
                   <button

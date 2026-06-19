@@ -13,51 +13,79 @@ export default function CustomerSubscriptionPortal() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching subscription details
-    setTimeout(() => {
-      setSubscription({
-        id: subscriptionId,
-        productName: 'Artisan Coffee Blend',
-        frequency: 'Monthly',
-        status: 'active',
-        nextDeliveryDate: '2023-11-15',
-        price: 24.00,
-        discountedPrice: 21.60,
-      });
-      setLoading(false);
-    }, 500);
+    const fetchSubscription = async () => {
+      try {
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
+          headers: { "x-tenant-id": tenantId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSubscription(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch subscription", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubscription();
   }, [subscriptionId]);
 
-  const handleAction = (action: 'pause' | 'skip' | 'cancel') => {
+  const handleAction = async (action: 'pause' | 'skip' | 'cancel') => {
     setIsProcessing(true);
     setActionStatus(null);
 
-    // Simulate API call to handle action
-    setTimeout(() => {
-      let updatedStatus = subscription.status;
-      let nextDate = subscription.nextDeliveryDate;
-      let message = '';
-
-      if (action === 'pause') {
-        updatedStatus = 'paused';
-        message = 'Your subscription has been paused.';
-      } else if (action === 'skip') {
-        // Simple mock of adding 1 month
-        nextDate = '2023-12-15';
-        message = 'Your next delivery has been skipped.';
-      } else if (action === 'cancel') {
-        updatedStatus = 'cancelled';
-        message = 'Your subscription has been cancelled.';
-      }
-
-      setSubscription({
-        ...subscription,
-        status: updatedStatus,
-        nextDeliveryDate: nextDate,
+    try {
+      const tenantId = localStorage.getItem("tenant_id") || "default";
+      const res = await fetch(`/api/subscriptions/${subscriptionId}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
+        },
+        body: JSON.stringify({ action }),
       });
+
+      if (res.ok) {
+        let updatedStatus = subscription.status;
+        let message = '';
+
+        if (action === 'pause') {
+          updatedStatus = 'paused';
+          message = 'Your subscription has been paused.';
+        } else if (action === 'skip') {
+          message = 'Your next delivery has been skipped.';
+        } else if (action === 'cancel') {
+          updatedStatus = 'canceled'; // or 'cancelled' based on backend
+          message = 'Your subscription has been cancelled.';
+        }
+
+        // Optimistically update
+        setSubscription({
+          ...subscription,
+          status: updatedStatus,
+        });
+        setActionStatus({ message, type: 'success' });
+
+        // Re-fetch to get correct nextDeliveryDate if skipped
+        if (action === 'skip') {
+           const refresh = await fetch(`/api/subscriptions/${subscriptionId}`, {
+              headers: { "x-tenant-id": tenantId }
+           });
+           if (refresh.ok) {
+              setSubscription(await refresh.json());
+           }
+        }
+      } else {
+        setActionStatus({ message: 'Failed to update subscription.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setActionStatus({ message: 'An error occurred.', type: 'error' });
+    } finally {
       setIsProcessing(false);
-      setActionStatus({ message, type: 'success' });
-    }, 1000);
+    }
   };
 
   if (loading) {
@@ -82,6 +110,7 @@ export default function CustomerSubscriptionPortal() {
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">Active</span>;
       case 'paused':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-200">Paused</span>;
+      case 'canceled':
       case 'cancelled':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">Cancelled</span>;
       default:
@@ -121,7 +150,7 @@ export default function CustomerSubscriptionPortal() {
           <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center py-2 border-b border-gray-100/50">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Next Delivery</span>
-              <span className="font-bold text-gray-900">{subscription.status === 'cancelled' ? '-' : subscription.nextDeliveryDate}</span>
+              <span className="font-bold text-gray-900">{subscription.status === 'cancelled' || subscription.status === 'canceled' ? '-' : subscription.nextDeliveryDate}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100/50">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Frequency</span>
@@ -130,13 +159,13 @@ export default function CustomerSubscriptionPortal() {
             <div className="flex justify-between items-center py-2">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Price</span>
               <div className="text-right">
-                <span className="font-bold text-gray-900 text-lg">${subscription.discountedPrice.toFixed(2)}</span>
-                <span className="block text-xs text-gray-400 line-through">${subscription.price.toFixed(2)}</span>
+                <span className="font-bold text-gray-900 text-lg">${(subscription.discountedPrice || 0).toFixed(2)}</span>
+                <span className="block text-xs text-gray-400 line-through">${(subscription.price || 0).toFixed(2)}</span>
               </div>
             </div>
           </div>
 
-          {subscription.status !== 'cancelled' && (
+          {subscription.status !== 'cancelled' && subscription.status !== 'canceled' && (
             <div className="space-y-3 pt-2">
                <button
                   onClick={() => handleAction('skip')}
@@ -176,7 +205,7 @@ export default function CustomerSubscriptionPortal() {
             </div>
           )}
 
-          {subscription.status === 'cancelled' && (
+          {(subscription.status === 'cancelled' || subscription.status === 'canceled') && (
              <div className="pt-2">
                 <p className="text-center text-sm text-gray-500 mb-4">You have cancelled this subscription.</p>
              </div>
