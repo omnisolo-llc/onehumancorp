@@ -48,7 +48,7 @@ describe('MilestonesPage', () => {
     expect(screen.getByText('First Sale!')).toBeDefined();
   });
 
-  it('shows card preview after clicking a milestone', async () => {
+  it('shows card preview and embed generator after clicking a milestone', async () => {
     await act(async () => {
       render(<MilestonesPage />);
     });
@@ -61,14 +61,13 @@ describe('MilestonesPage', () => {
         fireEvent.click(container!);
     });
 
-    // The component sets selectedMilestone, triggering a re-render showing the embed area
-    // expect(screen.getByText('Embed on your website')).toBeDefined();
+    // Verify embed generator
+    expect(screen.getByText('Embed on your website')).toBeDefined();
 
-    // Check if the pre element is there
-    const preElement = document.querySelector('pre');
-    expect(preElement).toBeDefined();
-    // expect(preElement?.textContent).toContain('First Order! 🎉');
-    // expect(preElement?.textContent).toContain('Powered by OHC');
+    const textarea = document.querySelector('textarea');
+    expect(textarea).toBeDefined();
+    expect(textarea?.value).toContain('mock-tenant');
+    expect(textarea?.value).toContain('milestone_id=first_sale');
   });
 
   it('contains the invite a friend CTA and navigates to referrals', async () => {

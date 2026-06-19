@@ -211,6 +211,35 @@ export default function MilestonesPage() {
                                     Invite a friend and get a $50 credit
                                 </button>
                             </div>
+
+                            {/* Embed Generator UI */}
+                            <div className="mt-6 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+                                <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-2">Embed on your website</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                    Show off your verified milestone directly on your storefront or blog to build customer trust.
+                                </p>
+                                <div className="relative">
+                                    <textarea
+                                        readOnly
+                                        className="w-full h-32 p-3 text-sm font-mono text-gray-600 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400"
+                                        value={`<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">
+  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />
+</a>`}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const code = `<a href="${window.location.origin}/onboarding?ref=${tenantId}&source=milestone_embed" target="_blank" rel="noopener noreferrer">\n  <img src="${window.location.origin}${cardUrl}" alt="${activeM.title}" style="width: 100%; max-width: 600px; height: auto;" />\n</a>`;
+                                            navigator.clipboard.writeText(code);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                        title="Copy embed code"
+                                    >
+                                        <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     );
                 })() : (
