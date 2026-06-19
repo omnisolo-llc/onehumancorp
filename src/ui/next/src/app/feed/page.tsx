@@ -100,25 +100,36 @@ export default function FeedPage() {
     setEditValue(textToEdit || "");
   };
 
-  const saveEdit = (id: string) => {
-    setItems((prev) => prev.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          proposed_action: {
-            ...item.proposed_action,
-            description: item.proposed_action?.feature_type === 'ambassador_reply' ? item.proposed_action.description : editValue,
-            generated_response: item.proposed_action?.feature_type === 'ambassador_reply' ? editValue : item.proposed_action?.generated_response,
-          },
-          context_payload: {
-            ...item.context_payload,
-            summary: item.context_payload?.feature_type === 'ambassador_reply' ? item.context_payload.summary : editValue,
-            generated_response: item.context_payload?.feature_type === 'ambassador_reply' ? editValue : item.context_payload?.generated_response,
-          }
-        };
+  const saveEdit = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+
+    const updatedProposed = {
+        ...item.proposed_action,
+        description: isAmbassador ? item.proposed_action?.description : editValue,
+        generated_response: isAmbassador ? editValue : item.proposed_action?.generated_response,
+    };
+
+    const updatedContext = {
+        ...item.context_payload,
+        summary: isAmbassador ? item.context_payload?.summary : editValue,
+        generated_response: isAmbassador ? editValue : item.context_payload?.generated_response,
+    };
+
+    setItems((prev) => prev.map((i) => {
+      if (i.id === id) {
+        return { ...i, proposed_action: updatedProposed, context_payload: updatedContext };
       }
-      return item;
+      return i;
     }));
+
+    if (isAmbassador) {
+       await handleAction(id, 'APPROVED', updatedProposed, updatedContext);
+    } else {
+       await handleAction(id, 'PENDING_APPROVAL', updatedProposed, updatedContext);
+    }
     setEditingId(null);
   };
 
@@ -126,7 +137,7 @@ export default function FeedPage() {
     setEditingId(null);
   };
 
-  const handleAction = async (id: string, state: string) => {
+  const handleAction = async (id: string, state: string, updatedProposed?: any, updatedContext?: any) => {
     const item = items.find(i => i.id === id);
     if (state === 'APPROVED') {
       if (item?.proposed_action?.action_type === 'Draft Quote') {
@@ -142,15 +153,25 @@ export default function FeedPage() {
 
     try {
       setProcessingId(id);
+
+      const bodyPayload: any = { state };
+      const proposed = updatedProposed || item?.proposed_action;
+      const context = updatedContext || item?.context_payload;
+
+      if (proposed) bodyPayload.proposed_action = proposed;
+      if (context) bodyPayload.context_payload = context;
+
       const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify(bodyPayload),
       });
       if (!res.ok) throw new Error('Action failed');
 
       // Update UI optimistically or refetch
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      if (state === 'APPROVED' || state === 'DISMISSED') {
+          setItems((prev) => prev.filter((item) => item.id !== id));
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
