@@ -151,7 +151,7 @@ Output JSON format:
                         .as_deref()
                     {
                         Ok("minimax") => {
-                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
                             if !api_key.is_empty() {
                                 crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt_clone).await
                             } else {
