@@ -7,6 +7,8 @@ pub mod twilio_voice;
 pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;
+#[cfg(test)]
+pub mod terminal_api_test;
 pub mod pos;
 pub mod staff_mesh;
 

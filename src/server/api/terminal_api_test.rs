@@ -8,7 +8,7 @@ use crate::hub::Hub;
 
 #[tokio::test]
 async fn test_get_terminal_connection_token_unauthenticated() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
     let app = crate::api::terminal_api::router(hub);
 
     let response = app
@@ -31,7 +31,7 @@ async fn test_get_terminal_connection_token_unauthenticated() {
 
 #[tokio::test]
 async fn test_get_terminal_connection_token_authenticated() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
 
     let app_with_auth = axum::Router::new()
         .route("/token", axum::routing::get(crate::api::terminal_api::get_terminal_connection_token_handler))
@@ -61,7 +61,7 @@ async fn test_get_terminal_connection_token_authenticated() {
 
 #[tokio::test]
 async fn test_create_payment_intent_authenticated() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
 
     let app_with_auth = axum::Router::new()
         .route("/intent", axum::routing::post(crate::api::terminal_api::create_payment_intent_handler))
@@ -93,7 +93,7 @@ async fn test_create_payment_intent_authenticated() {
 
 #[tokio::test]
 async fn test_create_payment_intent_unauthenticated() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
     let app = crate::api::terminal_api::router(hub);
 
     let response = app
@@ -117,7 +117,7 @@ async fn test_create_payment_intent_unauthenticated() {
 
 #[tokio::test]
 async fn test_get_terminal_connection_token_authenticated_via_router() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
     let mut app = crate::api::terminal_api::router(hub);
 
     let mut req = Request::builder()
@@ -146,7 +146,7 @@ async fn test_get_terminal_connection_token_authenticated_via_router() {
 
 #[tokio::test]
 async fn test_create_payment_intent_authenticated_via_router() {
-    let hub = Arc::new(Hub::new());
+    let (tx, _) = tokio::sync::mpsc::channel(100); let pool = sqlx::postgres::PgPoolOptions::new().connect("postgres://localhost/dummy").await.unwrap(); let hub = Arc::new(Hub::new(tx, pool));
     let mut app = crate::api::terminal_api::router(hub);
 
     let mut req = Request::builder()
