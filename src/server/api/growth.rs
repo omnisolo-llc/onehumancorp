@@ -339,6 +339,7 @@ where
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/generate-win-back", post(handle_generate_win_back))
+        .route("/campaign/generate-subscription-offer", post(handle_generate_subscription_offer))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
@@ -948,6 +949,20 @@ pub struct GenerateWinBackResponse {
     pub body: String,
 }
 
+#[derive(Deserialize)]
+pub struct GenerateSubscriptionOfferRequest {
+    pub product_name: Option<String>,
+    pub discount_percentage: Option<String>,
+    pub frequency: Option<String>,
+    pub store_name: Option<String>,
+    pub brand_link: Option<bool>,
+}
+
+#[derive(Serialize)]
+pub struct GenerateSubscriptionOfferResponse {
+    pub message: String,
+}
+
 async fn handle_generate_win_back(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateWinBackRequest>,
@@ -956,6 +971,26 @@ async fn handle_generate_win_back(
     Json(GenerateWinBackResponse {
         subject: format!("We miss you! Here is {}", offer),
         body: format!("Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team", offer),
+    })
+}
+
+async fn handle_generate_subscription_offer(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateSubscriptionOfferRequest>,
+) -> impl IntoResponse {
+    let product_name = req.product_name.unwrap_or_else(|| "your favorite items".to_string());
+    let discount = req.discount_percentage.unwrap_or_else(|| "10".to_string());
+    let freq = req.frequency.unwrap_or_else(|| "monthly".to_string());
+    let store_name = req.store_name.unwrap_or_else(|| "our store".to_string());
+    let branding = if req.brand_link.unwrap_or(false) { "\n\n⚡ Powered by OHC" } else { "" };
+
+    let generated = format!(
+        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe {} Team{}",
+        product_name, product_name, freq, discount, store_name, branding
+    );
+
+    Json(GenerateSubscriptionOfferResponse {
+        message: generated,
     })
 }
 
