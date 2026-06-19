@@ -156,6 +156,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("milestone-copy-btn".to_string(), "Copy your milestone link to share with others.".to_string());
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
+    m.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
