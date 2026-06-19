@@ -1,10 +1,11 @@
 mod tool_executor_engine;
-use tool_executor_engine::ToolExecutionEngine;
+
+
 
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    use crate::tool_executor_engine::ToolExecutionEngine;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
@@ -449,13 +450,12 @@ mod tests {
 
 #[cfg(test)]
 mod additional_transient_tests {
-    use super::*;
+    use crate::tool_executor_engine::ToolExecutionEngine;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
-    use crate::tool_executor_engine::ToolExecutionEngine;
 
     struct TransientRetryExecutor {
         call_count: Arc<AtomicUsize>,

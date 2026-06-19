@@ -194,6 +194,7 @@ pub struct HierarchicalPromptBuilder {
     tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
+    lightweight_memory_index: Vec<String>,
 }
 
 impl HierarchicalPromptBuilder {
@@ -201,6 +202,7 @@ impl HierarchicalPromptBuilder {
         cfg: &AgentRunConfig,
         tools: &[crate::tools::Tool],
         cascading_agents_md: Option<String>,
+        lightweight_memory_index: Option<Vec<String>>,
     ) -> Self {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
@@ -247,11 +249,25 @@ impl HierarchicalPromptBuilder {
             user_instr = format!("{}\n... [User Instructions TRUNCATED TO 32KiB]", truncated);
         }
 
+        let mut processed_memory_index = Vec::new();
+        if let Some(mut index) = lightweight_memory_index {
+            for entry in index.drain(..) {
+                let char_count = entry.chars().count();
+                if char_count > 150 {
+                    let truncated: String = entry.chars().take(147).collect();
+                    processed_memory_index.push(format!("{}...", truncated));
+                } else {
+                    processed_memory_index.push(entry);
+                }
+            }
+        }
+
         Self {
             server_system_message: cfg.server_system_message.clone(),
             tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
+            lightweight_memory_index: processed_memory_index,
         }
     }
 
@@ -293,6 +309,20 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str("<user_instructions>\n");
             combined_system.push_str(&self.user_instructions);
             combined_system.push_str("\n</user_instructions>");
+        }
+
+        // 4.5. System Memory Index (Anthropic Lightweight Index Mechanic)
+        if !self.lightweight_memory_index.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("<system_memory_index>\n");
+            for entry in &self.lightweight_memory_index {
+                combined_system.push_str("- ");
+                combined_system.push_str(entry);
+                combined_system.push('\n');
+            }
+            combined_system.push_str("</system_memory_index>");
         }
 
         // High-Signal Re-injection (System Anchor)
@@ -358,7 +388,7 @@ mod tests {
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let agents_md = load_cascading_instructions(Some(&grandchild_dir)).await;
             let cfg = AgentRunConfig::default();
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
             builder.build()
         });
 
@@ -401,7 +431,7 @@ mod tests {
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let agents_md = load_cascading_instructions(Some(&root_dir)).await;
             let cfg = AgentRunConfig::default();
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md));
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
             builder.build()
         });
 
@@ -536,7 +566,7 @@ mod tests {
         // Total will be > 4000 chars
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools, None);
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let built = builder.build();
 
         assert!(built.contains("<system_anchor_high_signal_context_reinjection>"));
@@ -591,6 +621,28 @@ mod tests {
 
         let momentum = PromptBuilder::summarize_recent_momentum(&messages);
         assert_eq!(momentum, "Recent Momentum: read_file -> ls");
+    }
+
+    #[test]
+    fn test_lightweight_memory_index_injection_and_truncation() {
+        let cfg = AgentRunConfig::default();
+        let long_entry = "A".repeat(200);
+        let normal_entry = "Just a regular memory entry".to_string();
+        let index = vec![long_entry, normal_entry.clone()];
+
+        let builder = HierarchicalPromptBuilder::new(&cfg, &[], None, Some(index));
+        let built = builder.build();
+
+        assert!(built.contains("<system_memory_index>"));
+        assert!(built.contains("</system_memory_index>"));
+
+        // Normal entry should be fully present
+        assert!(built.contains(&format!("- {}", normal_entry)));
+
+        // Long entry should be truncated to 147 chars + "..." = 150 chars
+        let truncated_long = format!("- {}...", "A".repeat(147));
+        assert!(built.contains(&truncated_long));
+        assert!(!built.contains(&"A".repeat(151)));
     }
 
     #[tokio::test]
