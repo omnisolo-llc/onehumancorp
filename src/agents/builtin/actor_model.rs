@@ -147,6 +147,7 @@ impl Actor for ToolActor {
 
         tokio::spawn(async move {
             info!("Actor {} started", name);
+            let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
             while let Some(msg) = receiver.recv().await {
                 debug!(
                     "Actor {} received message from {}: executing tools",
@@ -164,6 +165,7 @@ impl Actor for ToolActor {
                             .await;
                             match res {
                                 Ok(content) => {
+                                    error_counts.insert(tc.name.clone(), 0);
                                     tool_results.push(ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content,
@@ -171,17 +173,26 @@ impl Actor for ToolActor {
                                     });
                                 }
                                 Err(e) => {
+                                    let error_str = match e {
+                                        ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => {
+                                            let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
+                                            error_counts.insert(tc.name.clone(), count);
+                                            if count > 2 {
+                                                format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg)
+                                            } else {
+                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error
+                                            }
+                                        },
+                                        ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
+                                        ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
+                                    };
                                     tool_results.push(ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
-                                        error: match e {
-                                            ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error,
-                                            ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
-                                            ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
-                                            ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
-                                            ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
-                                            ohc_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
-                                        },
+                                        error: error_str,
                                     });
                                 }
                             }
