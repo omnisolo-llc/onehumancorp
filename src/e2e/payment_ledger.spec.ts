@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
 
 test.describe('Omni-Channel Payment & Ledger System', () => {
   test('CUJ: Business owner creates a deposit request and it instantly updates revenue', async ({ page }) => {
