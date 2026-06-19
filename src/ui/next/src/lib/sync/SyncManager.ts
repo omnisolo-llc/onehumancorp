@@ -110,7 +110,7 @@ export class SyncManager {
               payment_intent_id: null,
               currency: null
            };
-        } else if (m.type === 'draft_quote') {
+        } else if (m.type === 'CREATE_QUOTE' || m.type === 'draft_quote') {
           return {
              timestamp: new Date(m.timestamp || Date.now()).toISOString(),
              transaction_id: m.id,
@@ -121,7 +121,20 @@ export class SyncManager {
              payment_intent_id: null,
              currency: 'usd',
              mutation_type: 'draft_quote',
-             payload: m.notes
+             payload: m.notes || m.payload
+          };
+        } else if (m.type === 'UPDATE_JOB_STATUS') {
+          return {
+             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+             transaction_id: m.id,
+             product_id: m.jobId,
+             quantity_deducted: 0,
+             amount: null,
+             payment_method: null,
+             payment_intent_id: null,
+             currency: null,
+             mutation_type: 'UPDATE_JOB_STATUS',
+             payload: JSON.stringify(m.payload)
           };
         } else if (m.type === 'agent_intent') {
           return {

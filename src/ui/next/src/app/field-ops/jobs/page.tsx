@@ -31,8 +31,17 @@ export default function FieldOpsJobsPage() {
   const [proposedRoute, setProposedRoute] = useState<Appointment[] | null>(
     null,
   );
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
 
   useEffect(() => {
+    const updateQueueLength = async () => {
+      const len = await SyncManager.getInstance().getQueueLength();
+      setPendingSyncCount(len);
+    };
+
+    updateQueueLength();
+    window.addEventListener("ohc_queue_updated", updateQueueLength);
+
     setIsOffline(!navigator.onLine);
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -56,6 +65,7 @@ export default function FieldOpsJobsPage() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("ohc_queue_updated", updateQueueLength);
     };
   }, []);
 
@@ -73,37 +83,46 @@ export default function FieldOpsJobsPage() {
       }),
     );
 
-    // Call optimize route endpoint after state change to simulate Operations Agent logic
-    const updatedJobs = jobs.map((j) => {
-      if (j.id === jobId) {
-        const updated = { ...j, status: newStatus };
-        if (newStatus === "In-Progress") updated.actual_start_time = now;
-        if (newStatus === "Completed") updated.actual_end_time = now;
-        return updated;
-      }
-      return j;
+    SyncManager.getInstance().enqueue({
+      id: `mutation-${Date.now()}`,
+      type: "UPDATE_JOB_STATUS",
+      jobId: jobId,
+      payload: { status: newStatus, timestamp: now },
     });
 
-    if (newStatus === "Completed") {
-      fetch("/api/v1/field-ops/optimize-route", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appointments: updatedJobs,
-          currentLocationLat: 0,
-          currentLocationLng: 0,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setJobs(data.optimizedRoute);
-            if (data.agentSuggestion) {
-              setAgentSuggestion(data.agentSuggestion);
-            }
-          }
+    if (!isOffline) {
+      // Call optimize route endpoint after state change to simulate Operations Agent logic
+      const updatedJobs = jobs.map((j) => {
+        if (j.id === jobId) {
+          const updated = { ...j, status: newStatus };
+          if (newStatus === "In-Progress") updated.actual_start_time = now;
+          if (newStatus === "Completed") updated.actual_end_time = now;
+          return updated;
+        }
+        return j;
+      });
+
+      if (newStatus === "Completed") {
+        fetch("/api/v1/field-ops/optimize-route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointments: updatedJobs,
+            currentLocationLat: 0,
+            currentLocationLng: 0,
+          }),
         })
-        .catch((err) => console.error("Optimization failed", err));
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              setJobs(data.optimizedRoute);
+              if (data.agentSuggestion) {
+                setAgentSuggestion(data.agentSuggestion);
+              }
+            }
+          })
+          .catch((err) => console.error("Optimization failed", err));
+      }
     }
   };
 
@@ -173,10 +192,10 @@ export default function FieldOpsJobsPage() {
 
     handleStatusChange(jobId, "Completed");
 
-    if (job.notes && !isOffline) {
+    if (job.notes) {
       SyncManager.getInstance().enqueue({
         id: `mutation-${Date.now()}`,
-        type: "draft_quote",
+        type: "CREATE_QUOTE",
         notes: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`,
       });
     }

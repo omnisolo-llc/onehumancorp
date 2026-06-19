@@ -76,6 +76,29 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("UPDATE_JOB_STATUS") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.unwrap();
+                let job_id = &mutation.product_id; // we stuffed jobId in product_id
+
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                     VALUES ($1, $2, 'operations', 'job.status.updated', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "job_id": job_id,
+                    "update_payload": mutation.payload.unwrap_or_default()
+                }).to_string())
+                .execute(&mut *db_tx)
+                .await;
+                db_tx.commit().await.unwrap();
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;

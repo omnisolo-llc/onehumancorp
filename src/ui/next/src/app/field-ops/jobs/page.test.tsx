@@ -6,6 +6,7 @@ vi.mock('../../../lib/sync/SyncManager', () => ({
   SyncManager: {
     getInstance: vi.fn(() => ({
       enqueue: vi.fn(),
+      getQueueLength: vi.fn().mockResolvedValue(0),
     })),
   },
 }));
