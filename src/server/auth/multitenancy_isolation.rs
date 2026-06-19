@@ -21,6 +21,20 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
     }
 
     let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
         .acquire_timeout(Duration::from_millis(50))
         .connect_lazy(&database_url)
         .unwrap();
@@ -48,6 +62,20 @@ async fn test_standalone_mode_allows_system_org_id() {
     }
 
     let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
         .acquire_timeout(Duration::from_millis(50))
         .connect_lazy(&database_url)
         .unwrap();
@@ -76,6 +104,20 @@ async fn test_revoke_token_tenant_isolation() {
     }
 
     let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
         .acquire_timeout(Duration::from_millis(50))
         .connect_lazy(&database_url)
         .unwrap();

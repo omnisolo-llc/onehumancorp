@@ -102,11 +102,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row_opt = if should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -152,11 +148,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row_opt = if should_bypass {
             sqlx::query(query).bind(username).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -201,11 +193,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row_opt = if should_bypass {
             sqlx::query(query).bind(email).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -250,11 +238,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row_opt = if should_bypass {
             sqlx::query(query).bind(sub).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -297,10 +281,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let rows = if should_bypass {
             sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
@@ -353,10 +334,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let res = if should_bypass {
             sqlx::query(query)
@@ -407,10 +385,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let res = if should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -433,9 +408,7 @@ impl UserRepository for PgUserRepository {
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -510,6 +483,20 @@ mod security_tests {
         }
 
         let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
@@ -549,6 +536,20 @@ mod security_tests {
         }
 
         let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
@@ -581,6 +582,20 @@ mod security_tests {
         }
 
         let pool = PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();

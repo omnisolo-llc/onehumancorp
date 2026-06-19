@@ -80,6 +80,31 @@ impl StripeClient {
 
         Ok(secret.to_string())
     }
+
+    pub async fn capture_terminal_payment_intent(
+        &self,
+        payment_intent_id: &str,
+    ) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), payment_intent_id))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API capture request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        json["status"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Missing status in capture response".to_string())
+    }
 }
 
 #[cfg(test)]
@@ -91,6 +116,14 @@ mod tests {
         let client = StripeClient::new("".to_string());
         let result = client.create_terminal_connection_token("test_tenant").await;
         let err = result.expect_err("Terminal tokens must not be mocked when Stripe credentials are missing");
+        assert!(err.contains("Stripe API key"));
+    }
+
+    #[tokio::test]
+    async fn test_capture_terminal_payment_intent_requires_configured_key() {
+        let client = StripeClient::new("".to_string());
+        let result = client.capture_terminal_payment_intent("pi_test_123").await;
+        let err = result.expect_err("Capture intent must not be mocked when Stripe credentials are missing");
         assert!(err.contains("Stripe API key"));
     }
 }

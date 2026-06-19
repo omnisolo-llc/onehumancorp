@@ -361,6 +361,7 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/referrals/generate", post(handle_referral_generate))
@@ -3279,4 +3280,33 @@ body {{ font-family: sans-serif; display: flex; justify-content: center; align-i
     );
 
     axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WaitlistGenerateRequest {
+    pub product_name: String,
+    pub referral_goal: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WaitlistGenerateResponse {
+    pub success: bool,
+}
+
+async fn handle_generate_viral_waitlist(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<WaitlistGenerateRequest>,
+) -> Result<Json<WaitlistGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.waitlist_generated",
+        "tenant_id": auth_info.org_id,
+        "product_name": req.product_name,
+        "referral_goal": req.referral_goal
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(WaitlistGenerateResponse {
+        success: true,
+    }))
 }
