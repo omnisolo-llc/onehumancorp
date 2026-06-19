@@ -348,7 +348,7 @@ export default function POSTerminal() {
               ) : inventory.map(product => (
                 <button
                   key={product.id}
-                  onClick={() => handleSelectProduct(product)}
+                  onClick={() => handleSelectProduct(product)} disabled={reserving}
                   className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/40'}`}
                 >
                   <div className="flex justify-between items-center">
