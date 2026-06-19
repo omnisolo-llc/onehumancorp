@@ -53,6 +53,9 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await expect(page.getByText('Proposal Accepted')).toBeVisible();
     await expect(page.getByText('Thank you! This quote has been approved.')).toBeVisible();
 
+    // Verify offline feedback indicator
+    await expect(page.locator('text=Working Offline')).toBeVisible();
+
     // 8. Restore connection and wait for sync
     await context.setOffline(false);
 

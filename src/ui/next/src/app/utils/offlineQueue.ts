@@ -1,4 +1,5 @@
-/// <reference types="node" />
+import { getPowerSyncInstance } from '../../lib/powersync/PowerSyncProvider';
+
 export interface OfflineAction {
   id: string; // The action request ID or a UUID
   type: string; // E.g., 'approve_agent_feed'
@@ -6,47 +7,24 @@ export interface OfflineAction {
   timestamp: number;
 }
 
-const DB_NAME = "OHC_Offline_Queue";
-const STORE_NAME = "actions";
-const DB_VERSION = 1;
-
-function getDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = (event) => {
-      // Suppress error log if IndexedDB is intentionally unavailable in tests
-      if (process.env.NODE_ENV !== 'test') {
-        console.error("IndexedDB error", event);
-      }
-      reject(request.error);
-    };
-
-    request.onsuccess = (event) => {
-      resolve((event.target as IDBOpenDBRequest).result);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-    };
-  });
-}
-
 export async function enqueueAction(action: OfflineAction): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(action);
+    const powerSync = getPowerSyncInstance();
+    if (!powerSync) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn("PowerSync instance not available yet");
+      }
+      return;
+    }
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+    // Direct SQLite usage over powersync DB
+    // Since pending_actions is local-only, write local
+    await powerSync.writeTransaction(async (tx) => {
+       await tx.execute(
+          `INSERT INTO pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)`,
+          [action.id, action.type, JSON.stringify(action.payload), action.timestamp]
+       );
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
@@ -56,19 +34,20 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
 }
 
 export async function getActions(): Promise<OfflineAction[]> {
-  if (typeof window === "undefined" || !window.indexedDB) return [];
+  if (typeof window === "undefined") return [];
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+    const powerSync = getPowerSyncInstance();
+    if (!powerSync) {
+      return [];
+    }
 
-      request.onsuccess = () => {
-        resolve(request.result as OfflineAction[]);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    const result = await powerSync.getAll(`SELECT * FROM pending_actions ORDER BY timestamp ASC`);
+    return result.map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      payload: JSON.parse(row.payload),
+      timestamp: row.timestamp
+    }));
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
       console.error("Failed to get actions", err);
@@ -78,16 +57,15 @@ export async function getActions(): Promise<OfflineAction[]> {
 }
 
 export async function removeAction(id: string): Promise<void> {
-  if (typeof window === "undefined" || !window.indexedDB) return;
+  if (typeof window === "undefined") return;
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
+    const powerSync = getPowerSyncInstance();
+    if (!powerSync) {
+      return;
+    }
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+    await powerSync.writeTransaction(async (tx) => {
+       await tx.execute(`DELETE FROM pending_actions WHERE id = ?`, [id]);
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {

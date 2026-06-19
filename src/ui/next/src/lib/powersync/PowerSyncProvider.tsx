@@ -30,6 +30,12 @@ function browserSupportsPowerSync() {
   return isPowerSyncSupportedForLocation(window.isSecureContext, window.location.hostname);
 }
 
+let globalPowerSyncInstance: PowerSyncDatabase | null = null;
+
+export function getPowerSyncInstance() {
+  return globalPowerSyncInstance;
+}
+
 export const PowerSyncProvider = ({
   children,
   fallback,
@@ -60,6 +66,7 @@ export const PowerSyncProvider = ({
       const connector = new BackendConnector();
       _powerSync.connect(connector);
 
+      globalPowerSyncInstance = _powerSync;
       setPowerSync(_powerSync);
       setReady(true);
     };
@@ -73,6 +80,7 @@ export const PowerSyncProvider = ({
        if (_powerSync) {
          _powerSync.disconnect();
          _powerSync.close();
+         globalPowerSyncInstance = null;
        }
     };
   }, [supported]);

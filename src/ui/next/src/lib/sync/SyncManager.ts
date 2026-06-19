@@ -5,13 +5,37 @@ export class SyncManager {
   private syncInProgress = false;
   private retryDelayMs = 1000;
   private maxRetries = 5;
+  private workerTimer: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {
     this.connectWebSocket();
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.sync());
+      window.addEventListener('online', () => {
+        this.retryDelayMs = 1000; // Reset backoff on reconnect
+        this.sync();
+      });
+      this.startBackgroundWorker();
     }
+  }
+
+  private startBackgroundWorker() {
+    if (this.workerTimer) {
+      clearInterval(this.workerTimer);
+    }
+    // Check queue periodically as a background worker
+    this.workerTimer = setInterval(async () => {
+      if (navigator.onLine && !this.syncInProgress) {
+        try {
+          const queueLength = await this.getQueueLength();
+          if (queueLength > 0) {
+            this.sync();
+          }
+        } catch (e) {
+           console.error("Background worker failed to check queue", e);
+        }
+      }
+    }, 15000);
   }
 
   private connectWebSocket() {
@@ -283,12 +307,16 @@ export class SyncManager {
     } catch (e) {
       console.error('Failed to sync offline queue:', e);
       if (retryCount < this.maxRetries) {
+        // Exponential backoff
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
+        console.warn(`Sync failed, retrying in ${delay}ms... (Attempt ${retryCount + 1} of ${this.maxRetries})`);
         setTimeout(() => {
           this.syncInProgress = false;
           this.sync(retryCount + 1);
         }, delay);
         return; // Don't unset syncInProgress yet
+      } else {
+        console.error(`Max retries reached (${this.maxRetries}). Sync aborted until next reconnect or worker cycle.`);
       }
     } finally {
       this.syncInProgress = false;
