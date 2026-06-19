@@ -453,6 +453,7 @@ impl Agent {
                 &phase_cfg,
                 session_tools,
                 agents_md,
+                None,
             )
             .build();
 
@@ -793,6 +794,7 @@ impl Agent {
             cfg,
             session_tools,
             agents_md,
+            None,
         )
         .build();
 
@@ -1516,6 +1518,7 @@ impl Agent {
             &cfg_arc,
             &session_tools_arc,
             None,
+            None,
         )
         .build();
 
@@ -2131,6 +2134,7 @@ impl Agent {
             &planner_cfg,
             &[],
             agents_md,
+            None,
         )
         .build();
 
@@ -2517,6 +2521,7 @@ impl Agent {
             &replier_cfg,
             &[],
             agents_md,
+            None,
         )
         .build();
 
@@ -3187,6 +3192,7 @@ impl Agent {
             &final_cfg,
             &session_tools,
             agents_md,
+            None,
         )
         .build();
 
@@ -7653,7 +7659,7 @@ mod tests {
         };
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
@@ -7669,7 +7675,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7685,7 +7691,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7696,7 +7702,7 @@ mod tests {
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
         let prompt2 =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None, None).build();
         assert_eq!(
             prompt2,
             "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
@@ -7712,7 +7718,7 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
@@ -7734,7 +7740,7 @@ mod tests {
         cfg.user_instructions.push('€');
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
         let user_part = prompt.replace(notice, "");
@@ -9742,7 +9748,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(
@@ -9761,7 +9767,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(
