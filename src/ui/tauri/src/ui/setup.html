@@ -2364,7 +2364,282 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           });
       });
     </script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
 
+      // Global Enter key support for all inputs within active step
+      document.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+              const activeStep = document.querySelector('.step.active');
+              if (activeStep) {
+                  // Don't auto-advance in chat if we are focused on chat input
+                  if (activeStep.id === 'step-chat' && (e.target.id === 'chat-input' || e.target.id === 'chat-image-url')) {
+                      e.preventDefault();
+                      sendChatMessage();
+                      return;
+                  }
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const nextBtn = activeStep.querySelector('.next-step-btn');
+                  if (nextBtn) {
+                      nextBtn.click();
+                  } else if (activeStep.id === 'step-instant' || activeStep.id === 'step-template') {
+                      const launchBtn = activeStep.querySelector('#generate-storefront-btn, #finish-btn, button[onclick*="start_onboarding"]');
+                      if (launchBtn) {
+                          launchBtn.click();
+                      } else {
+                          // Try to find any submit/launch button
+                          const anyLaunchBtn = document.querySelector('button[onclick*="start_onboarding"]');
+                          if (anyLaunchBtn) {
+                              anyLaunchBtn.click();
+                          }
+                      }
+                  }
+              }
+          }
+      });
+
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.1);
+        transition: .3s;
+        border-radius: 24px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      input:checked + .slider {
+        background-color: #34C759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+
+        .context-card, .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.9);
+        }
+        .context-title, .toggle-title { color: #F5F5F7; }
+        .context-desc, .toggle-desc { color: #A1A1A6; }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066FF;
+        }
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    let hideTimeout;
+
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+
+        const targetRect = e.target.getBoundingClientRect();
+
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
 
 
 
@@ -2397,7 +2672,90 @@ if (state.capabilities && document.getElementById('cap-draft')) {
     opacity: 1;
 }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
 
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+});
+</script>
 
 
 <script>
