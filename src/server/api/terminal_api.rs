@@ -24,10 +24,26 @@ pub struct PaymentIntentResponse {
     pub lock_id: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct CapturePaymentRequest {
+    pub payment_intent_id: String,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
+    pub amount_cents: Option<i64>,
+    pub customer_id: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct CapturePaymentResponse {
+    pub success: bool,
+    pub error_message: String,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/capture", axum::routing::post(capture_payment_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
@@ -575,6 +591,114 @@ pub async fn commit_inventory_handler(
     }
 }
 
+pub async fn capture_payment_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<CapturePaymentRequest>,
+) -> Json<CapturePaymentResponse> {
+    let tenant_id = match auth_info {
+        Some(info) => info.org_id.clone(),
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return Json(CapturePaymentResponse {
+                    success: false,
+                    error_message: "unauthenticated".to_string(),
+                });
+            }
+        }
+    };
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    if let Err(e) = client.capture_terminal_payment_intent(&req_data.payment_intent_id).await {
+        return Json(CapturePaymentResponse {
+            success: false,
+            error_message: e,
+        });
+    }
+
+    let pool = crate::db::get_pool();
+    if let Ok(mut tx) = pool.begin().await {
+        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+            let mut success = true;
+            let mut error_msg = "".to_string();
+
+            if let Some(product_id) = &req_data.product_id {
+                let quantity = req_data.quantity.unwrap_or(1);
+                if let Err(e) = sqlx::query(
+                    "UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3"
+                )
+                .bind(quantity)
+                .bind(product_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await {
+                    tracing::error!("Failed to deduct inventory: {}", e);
+                    success = false;
+                    error_msg = format!("Failed to deduct inventory: {}", e);
+                }
+            }
+
+            if success {
+                let order_id = uuid::Uuid::new_v4().to_string();
+                let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                    .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
+
+                if let Some(product_id) = &req_data.product_id {
+                    let item_id = uuid::Uuid::new_v4().to_string();
+                    let quantity = req_data.quantity.unwrap_or(1);
+                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                        .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(product_id).bind(quantity).bind(total_amount).execute(&mut *tx).await;
+                }
+
+                let event_payload = serde_json::json!({
+                    "order_id": order_id,
+                    "tenant_id": tenant_id,
+                    "customer_id": req_data.customer_id,
+                    "amount": total_amount,
+                    "source": "in_person_pos",
+                });
+
+                let event = crate::orchestration::departments::types::DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: tenant_id.clone(),
+                    event_type: "POS_SALE_COMPLETED".to_string(),
+                    payload: event_payload,
+                };
+                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                    event_id: uuid::Uuid::new_v4().to_string(),
+                    topic: "pos_sales".to_string(),
+                    payload: serde_json::to_vec(&event).unwrap_or_default(),
+                    timestamp: chrono::Utc::now().timestamp(),
+                });
+
+                let _ = tx.commit().await;
+                return Json(CapturePaymentResponse {
+                    success: true,
+                    error_message: "".to_string(),
+                });
+            } else {
+                let _ = tx.rollback().await;
+                return Json(CapturePaymentResponse {
+                    success: false,
+                    error_message: error_msg,
+                });
+            }
+        }
+    }
+
+    Json(CapturePaymentResponse {
+        success: false,
+        error_message: "Database error".to_string(),
+    })
+}
+
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
@@ -778,6 +902,44 @@ mod tests {
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
         assert!(items_count.0 > 0);
+    }
+
+    #[tokio::test]
+    async fn test_capture_payment_handler_fails_without_stripe_key() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-pos-capture-test";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'POS Capture Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+
+        let req_data = axum::extract::Json(super::CapturePaymentRequest {
+            payment_intent_id: "pi_test_123".to_string(),
+            product_id: None,
+            quantity: None,
+            amount_cents: Some(1500),
+            customer_id: None,
+        });
+
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = super::capture_payment_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        let resp_json = resp.0;
+
+        assert_eq!(resp_json.success, false);
+        assert!(resp_json.error_message.contains("Stripe API key is required"));
     }
 }
 
