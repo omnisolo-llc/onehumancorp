@@ -1693,6 +1693,7 @@ message CostDashboardResponse {
   double cost_per_1k_tokens = 13;
   int64 email_cost = 14;
   int64 api_cost = 15;
+  bool budget_health_alert = 16;
 }
 
 message SelectPlanRequest {
