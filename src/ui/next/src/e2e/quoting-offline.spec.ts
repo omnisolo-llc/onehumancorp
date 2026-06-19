@@ -44,6 +44,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     // 5. Go offline using CDP to simulate offline environment
     const context = page.context();
     await context.setOffline(true);
+    await expect(page.getByText("Working offline. Changes saved.")).toBeVisible();
 
     // 6. Click Approve & Send
     const approveBtn = page.getByTestId('quote-approve-btn');
