@@ -6,29 +6,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-exports_files(
-    [
-        "dummy.rs",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 rust_library(
     name = "server_monitoring",
     srcs = [
         "bazel_lib.rs",
-        "dummy.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
-)
-
-rust_test(
-    name = "dummy_test",
-    srcs = ["dummy.rs"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
