@@ -119,10 +119,10 @@ describe('StorefrontBuilderPage', () => {
     fireEvent.click(screen.getByText('Build My Storefront'));
 
     await waitFor(() => {
-      expect(screen.getByText('Ask Agent to Edit')).toBeTruthy();
+      expect(screen.getByText('Agent')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Ask Agent to Edit'));
+    fireEvent.click(screen.getByText('Agent'));
 
     await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));

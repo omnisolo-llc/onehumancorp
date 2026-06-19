@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SmartBlock, DraggableBlock } from "../builder/components";
+import { SmartBlock, DraggableBlock, ActionSheet } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
@@ -14,9 +14,19 @@ export default function StorefrontBuilderPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
+  const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
+  const [editingBlockContent, setEditingBlockContent] = useState<any>(null);
   const [saveMessage, setSaveMessage] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const { startWalkthrough } = useWalkthrough();
+
+  useEffect(() => {
+    if (selectedBlockIndex !== null) {
+      setEditingBlockContent(JSON.parse(JSON.stringify(blocks[selectedBlockIndex].props)));
+    } else {
+      setEditingBlockContent(null);
+    }
+  }, [selectedBlockIndex]);
 
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
@@ -100,6 +110,36 @@ export default function StorefrontBuilderPage() {
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "chat") => {
     setStatus(newStatus);
     localStorage.setItem("ohc_builder_status", newStatus);
+  };
+
+  const handleSaveBlock = () => {
+    if (selectedBlockIndex !== null && editingBlockContent) {
+      const newBlocks = [...blocks];
+      newBlocks[selectedBlockIndex] = {
+        ...newBlocks[selectedBlockIndex],
+        props: editingBlockContent
+      };
+      setBlocks(newBlocks);
+      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      setSelectedBlockIndex(null);
+      setSaveMessage("Changes saved!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    }
+  };
+
+  const addBlock = (type: string) => {
+    let defaultProps = {};
+    if (type === "Hero") defaultProps = { headline: "New Section", copy: "Add some text here." };
+    if (type === "Catalog") defaultProps = { items: [{ name: "New Product", price: "$0", description: "Description here" }] };
+    if (type === "Booking") defaultProps = { title: "Book a Time", availability: "Available all week" };
+    if (type === "Contact") defaultProps = { email: "contact@example.com", phone: "555-0199" };
+    if (type === "Referral") defaultProps = { offerTitle: "Refer & Earn", offerDescription: "Get 20% off" };
+
+    const newBlocks = [...blocks, { type, props: defaultProps }];
+    setBlocks(newBlocks);
+    localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+    setIsAddBlockOpen(false);
+    setSelectedBlockIndex(newBlocks.length - 1);
   };
 
   const handleGenerate = async () => {
@@ -421,7 +461,12 @@ export default function StorefrontBuilderPage() {
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
-          <div className="flex gap-2 mb-3"><button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Ask Agent to Edit</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+          <div className="flex gap-2 mb-3">
+            <button onClick={() => setIsAddBlockOpen(true)} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Add Block
+            </button>
+            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Agent</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[16px]"
@@ -432,6 +477,125 @@ export default function StorefrontBuilderPage() {
             </button>
           </WithTooltip>
         </div>
+
+        {/* Inline Editing Action Sheet */}
+        <ActionSheet
+          isOpen={selectedBlockIndex !== null && editingBlockContent !== null}
+          onClose={() => setSelectedBlockIndex(null)}
+          title={`Edit ${selectedBlockIndex !== null && blocks[selectedBlockIndex] ? blocks[selectedBlockIndex].type : ''} Block`}
+        >
+          {selectedBlockIndex !== null && editingBlockContent && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 pb-20">
+              {Object.keys(editingBlockContent).map((key) => {
+                if (key === 'items' && Array.isArray(editingBlockContent[key])) {
+                  return (
+                    <div key={key} className="space-y-4">
+                      <h3 className="font-semibold text-gray-700 dark:text-gray-200 capitalize">Items</h3>
+                      {editingBlockContent[key].map((item: any, idx: number) => (
+                        <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2 relative">
+                           <button
+                             className="absolute top-2 right-2 text-red-500 text-xs font-bold"
+                             onClick={() => {
+                               const newItems = [...editingBlockContent[key]];
+                               newItems.splice(idx, 1);
+                               setEditingBlockContent({...editingBlockContent, [key]: newItems});
+                             }}
+                           >
+                             Remove
+                           </button>
+                          {Object.keys(item).map(itemKey => (
+                            <div key={itemKey}>
+                              <label className="block text-xs text-gray-500 mb-1 capitalize">{itemKey}</label>
+                              <input
+                                type="text"
+                                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-sm text-black dark:text-white"
+                                value={item[itemKey] || ''}
+                                onChange={(e) => {
+                                  const newItems = [...editingBlockContent[key]];
+                                  newItems[idx] = { ...newItems[idx], [itemKey]: e.target.value };
+                                  setEditingBlockContent({ ...editingBlockContent, [key]: newItems });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      <button
+                        className="w-full py-2 bg-gray-100 dark:bg-gray-800 text-sm font-semibold rounded-lg text-gray-700 dark:text-gray-200"
+                        onClick={() => {
+                          const newItems = [...editingBlockContent[key], { name: 'New Item', price: '$0', description: 'Description' }];
+                          setEditingBlockContent({ ...editingBlockContent, [key]: newItems });
+                        }}
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </label>
+                    {key === 'copy' || key === 'description' || key === 'offerDescription' ? (
+                      <textarea
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-black dark:text-white"
+                        rows={3}
+                        value={editingBlockContent[key] || ''}
+                        onChange={(e) => setEditingBlockContent({ ...editingBlockContent, [key]: e.target.value })}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-black dark:text-white"
+                        value={editingBlockContent[key] || ''}
+                        onChange={(e) => setEditingBlockContent({ ...editingBlockContent, [key]: e.target.value })}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mt-4 shadow-md"
+                onClick={handleSaveBlock}
+              >
+                Save Changes
+              </button>
+              <button
+                className="w-full bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-bold py-3 rounded-xl mt-2"
+                onClick={() => {
+                  const newBlocks = blocks.filter((_, i) => i !== selectedBlockIndex);
+                  setBlocks(newBlocks);
+                  localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+                  setSelectedBlockIndex(null);
+                }}
+              >
+                Delete Block
+              </button>
+            </div>
+          )}
+        </ActionSheet>
+
+        {/* Add Block Action Sheet */}
+        <ActionSheet
+          isOpen={isAddBlockOpen}
+          onClose={() => setIsAddBlockOpen(false)}
+          title="Add Block"
+        >
+          <div className="grid grid-cols-2 gap-3 pb-20">
+            {['Hero', 'Catalog', 'Booking', 'Contact', 'Referral'].map((type) => (
+              <button
+                key={type}
+                onClick={() => addBlock(type)}
+                className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-semibold text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </ActionSheet>
+
       </div>
     </div>
   );
