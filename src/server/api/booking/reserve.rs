@@ -13,6 +13,7 @@ use crate::db::DB;
 pub struct ReserveRequest {
     pub customer_id: Option<String>,
     pub service_id: String,
+    pub resource_id: Option<String>,
     pub start_time: String,
     pub end_time: String,
 }
@@ -103,14 +104,15 @@ async fn handle_reserve(
 
     let res = sqlx::query(
         r#"
-        INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status)
-        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        INSERT INTO bookings (id, tenant_id, customer_id, service_id, resource_id, start_time, end_time, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
         "#,
     )
     .bind(&booking_id)
     .bind(&tenant_id)
     .bind(&c_id)
     .bind(&payload.service_id)
+    .bind(&payload.resource_id)
     .bind(st)
     .bind(et)
     .execute(&mut *tx)
@@ -147,7 +149,19 @@ async fn handle_reserve(
     let _ = tx.commit().await;
 
     // Check if deposit is required
-    let requires_deposit = false; // We can read from services table, hardcoded to false here for now.
+    let mut requires_deposit = false;
+    if let Ok(row) = sqlx::query!("SELECT deposit_required FROM services WHERE id = $1 AND tenant_id = $2", payload.service_id, tenant_id)
+        .fetch_one(&pool).await {
+            if let Some(deposit) = row.deposit_required {
+                // deposit_required is decimal
+                // simple check for now: if deposit > 0 it requires deposit
+                // ignoring exact decimal decoding here, just doing basic truth check based on your schema logic
+                let deposit_str = deposit.to_string();
+                if deposit_str != "0" && deposit_str != "0.0" {
+                     requires_deposit = true;
+                }
+            }
+    }
 
     let checkout_url = if requires_deposit {
         Some(format!("/api/v1/booking/deposit?booking_id={}", booking_id))

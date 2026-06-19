@@ -234,6 +234,7 @@ impl Department for SalesAgent {
             "tenant.omnichannel.message.received".to_string(),
             "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
+            "tenant.booking.dormant_client_detected".to_string(),
         ]
     }
 

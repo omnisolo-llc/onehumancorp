@@ -26,6 +26,7 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.booking.reschedule_requested".to_string(),
         ]
     }
 
@@ -159,6 +160,15 @@ impl Department for OperationsAgent {
                 format!(
                     "Prepare subscription fulfillment batch {} for {} subscribers",
                     batch_id, subscriber_count
+                )
+            }
+            "tenant.booking.reschedule_requested" => {
+                risk = ActionRisk::DraftForReview;
+                let booking_id = event.payload.get("booking_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+                format!(
+                    "{} requested to reschedule booking {}. Drafted availability options.",
+                    customer_name, booking_id
                 )
             }
             _ => "Create order and booking".to_string(),
