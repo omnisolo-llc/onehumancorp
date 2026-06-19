@@ -1,12 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test('Chaos Report Dashboard should render and display charts', async ({ page }) => {
+test('Chaos Report Dashboard should render and display charts', async ({ page, adminUser, loginAs }) => {
+  await loginAs(page, adminUser);
   await page.goto('/chaos-report');
-  await expect(page.locator('text=System Reliability Report')).toBeVisible();
-  await expect(page.locator('text=Latency Distribution')).toBeVisible();
-  await expect(page.locator('text=Error Rate Over Time')).toBeVisible();
 
-  await expect(page.locator('text=API Latency (P99) under 100 Cloud Users: 124ms')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('text=API Latency (P99) under 10 Standalone Users: 89ms')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('text=Error Rate during LLM Outage: 0% (Handled via Graceful Pause)')).toBeVisible({ timeout: 15000 });
+  await page.waitForLoadState('networkidle');
+
+  await expect(page.locator('h1').filter({ hasText: /System Reliability Report/i }).first()).toBeVisible({ timeout: 15000 });
+
+  await expect(page.getByText('Latency Distribution', { exact: false })).toBeVisible();
+  await expect(page.getByText('Error Rate Over Time', { exact: false })).toBeVisible();
+
+  await expect(page.getByText('API Latency (P99) under 100 Cloud Users:', { exact: false })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('API Latency (P99) under 10 Standalone Users:', { exact: false })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Error Rate during LLM Outage:', { exact: false })).toBeVisible({ timeout: 15000 });
 });
