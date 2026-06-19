@@ -101,6 +101,24 @@ pub async fn offline_sync_handler(
         futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
+            let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
+                Box::new(crate::orchestration::locks::StandaloneLock::new())
+            } else {
+                if let Some(client) = crate::get_redis_client() {
+                    Box::new(crate::orchestration::locks::RedisLock::new(client))
+                } else {
+                    Box::new(crate::orchestration::locks::StandaloneLock::new())
+                }
+            };
+            let _lock_guard = match locker.acquire_resource(&tenant_id_clone, "inventory", &mutation.product_id).await {
+                Ok(guard) => guard,
+                Err(_) => {
+                    tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", mutation.product_id);
+                    return Err("Failed to acquire lock".to_string());
+                }
+            };
+
+
             let mut db_tx = db_clone.begin().await.unwrap();
 
             let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
