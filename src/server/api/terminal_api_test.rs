@@ -26,7 +26,10 @@ async fn test_get_terminal_connection_token_unauthenticated() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Unauthenticated"));
+
+    let json_body: serde_json::Value = serde_json::from_str(&body_str).unwrap();
+    assert_eq!(json_body["success"], false);
+    assert!(json_body["error_message"].as_str().unwrap().contains("Unauthenticated"));
 }
 
 #[tokio::test]
@@ -198,6 +201,54 @@ async fn test_get_terminal_connection_token_authenticated_via_router() {
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
     assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe Terminal connection token request failed"));
+}
+
+#[tokio::test]
+async fn test_start_terminal_session_unauthenticated() {
+    let hub = Arc::new(Hub::new());
+    let app = crate::api::terminal_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/session/start")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"device_id": "test_device"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Unauthenticated"));
+}
+
+#[tokio::test]
+async fn test_sync_offline_transactions_unauthenticated() {
+    let hub = Arc::new(Hub::new());
+    let app = crate::api::terminal_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/sync_offline")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"session_id": "test_session", "transactions": []}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Unauthenticated"));
 }
 
 #[tokio::test]
