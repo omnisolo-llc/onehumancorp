@@ -306,6 +306,15 @@ pub async fn update_cart_status_handler(
     match res {
         Ok(result) => {
             if result.rows_affected() > 0 {
+                if req_data.status == "abandoned" {
+                    let abandoned_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO abandoned_carts (id, tenant_id, cart_id, status) VALUES ($1, $2, $3, 'PENDING') ON CONFLICT DO NOTHING")
+                        .bind(&abandoned_id)
+                        .bind(&tenant_id)
+                        .bind(&cart_id)
+                        .execute(&pool)
+                        .await;
+                }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
             } else {
                 (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Cart not found" }))).into_response()

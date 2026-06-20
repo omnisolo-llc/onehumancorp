@@ -29,6 +29,16 @@ pub async fn dispatch_action(
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
         }
+        "cart_recovery.dispatch" => {
+            tracing::info!("Approved and dispatched abandoned cart recovery message for tenant: {}", tenant_id);
+            if let Some(abandoned_cart_id) = payload.get("abandoned_cart_id").and_then(|v| v.as_str()) {
+                let _ = sqlx::query("UPDATE abandoned_carts SET status = 'RECOVERED' WHERE id = $1 AND tenant_id = $2")
+                    .bind(abandoned_cart_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
         "booking_draft" => {
             crate::domain::booking::handle_booking_action(tenant_id, payload, pool)
                 .await

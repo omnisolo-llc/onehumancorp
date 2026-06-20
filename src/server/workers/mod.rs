@@ -12,3 +12,4 @@ pub mod message_triage_worker;
 pub mod pricing_analysis_worker;
 pub mod deposit_follow_up_worker;
 pub mod lifecycle_engagement_worker;
+pub mod abandoned_cart_worker;

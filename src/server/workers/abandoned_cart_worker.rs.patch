@@ -1,0 +1,21 @@
+<<<<<<< SEARCH
+pub struct AbandonedCartWorker {
+    pub pool: Arc<PgPool>,
+}
+
+impl AbandonedCartWorker {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+=======
+use crate::db::DB;
+
+pub struct AbandonedCartWorker {
+    pub pool: Arc<PgPool>,
+}
+
+impl AbandonedCartWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self { pool: db.pool.clone() }
+    }
+>>>>>>> REPLACE

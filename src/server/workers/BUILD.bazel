@@ -13,6 +13,7 @@ exports_files(
         "pricing_analysis_worker.rs",
         "deposit_follow_up_worker.rs",
         "lifecycle_engagement_worker.rs",
+        "abandoned_cart_worker.rs",
         "mod.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",

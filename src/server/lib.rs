@@ -2551,6 +2551,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();
 
+    // Start Abandoned Cart Recovery Worker
+    let abandoned_cart_worker = Arc::new(crate::workers::abandoned_cart_worker::AbandonedCartWorker::new(db.clone()));
+    abandoned_cart_worker.start_background_loop();
+
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
