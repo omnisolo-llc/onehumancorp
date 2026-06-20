@@ -148,6 +148,48 @@ impl Department for OperationsAgent {
                         return Ok(());
                     }
 
+                    // Create an actionable task in the owner's Triage Feed asking how to resolve it
+                    let pool = crate::db::get_pool();
+                    let triage_id = uuid::Uuid::new_v4().to_string();
+                    let action_id = uuid::Uuid::new_v4().to_string();
+
+                    let context_json = serde_json::json!({
+                        "message": llm_response,
+                        "transaction_id": transaction_id,
+                        "product_id": product_id,
+                        "expected_stock": expected,
+                        "actual_stock": actual
+                    }).to_string();
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'Operations Agent', 'high', $3, 'pending')"
+                    )
+                    .bind(&triage_id)
+                    .bind(&event.tenant_id)
+                    .bind(&context_json)
+                    .execute(&pool)
+                    .await {
+                        tracing::error!("Failed to insert triage item for inventory conflict: {}", e);
+                    }
+
+                    let triage_payload = serde_json::json!({
+                        "action": "resolve_inventory_conflict",
+                        "transaction_id": transaction_id,
+                        "product_id": product_id
+                    }).to_string();
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, 'operations_decision', $4::jsonb)"
+                    )
+                    .bind(&action_id)
+                    .bind(&triage_id)
+                    .bind(&event.tenant_id)
+                    .bind(&triage_payload)
+                    .execute(&pool)
+                    .await {
+                        tracing::error!("Failed to insert triage proposed action for inventory conflict: {}", e);
+                    }
+
                     llm_response
                 }
             },
