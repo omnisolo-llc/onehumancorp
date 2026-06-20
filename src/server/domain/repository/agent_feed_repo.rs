@@ -10,6 +10,8 @@ pub struct AgentFeedItem {
     pub context_payload: Option<sqlx::types::Json<serde_json::Value>>,
     pub proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
     pub lifecycle_state: String,
+    pub priority_score: Option<i32>,
+    pub correlation_id: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -26,8 +28,8 @@ impl AgentFeedRepository {
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
-            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, priority_score, correlation_id, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
             "#
         )
@@ -37,6 +39,8 @@ impl AgentFeedRepository {
         .bind(item.context_payload)
         .bind(item.proposed_action)
         .bind(item.lifecycle_state)
+        .bind(item.priority_score.unwrap_or(0))
+        .bind(item.correlation_id)
         .bind(item.created_at)
         .bind(item.updated_at)
         .fetch_one(&self.pool)
@@ -55,6 +59,8 @@ impl AgentFeedRepository {
                 context_payload,
                 proposed_action,
                 lifecycle_state,
+                priority_score,
+                correlation_id,
                 created_at,
                 updated_at
             FROM agent_feed_items
@@ -73,6 +79,8 @@ impl AgentFeedRepository {
                     WHEN status = 'REJECTED' THEN 'DISMISSED'
                     ELSE status
                 END as lifecycle_state,
+                0 as priority_score,
+                NULL as correlation_id,
                 created_at,
                 updated_at
             FROM agent_approvals
@@ -97,6 +105,8 @@ impl AgentFeedRepository {
                 NULL::jsonb as context_payload,
                 NULL::jsonb as proposed_action,
                 lifecycle_state,
+                priority_score,
+                correlation_id,
                 created_at,
                 updated_at
             FROM agent_feed_items
@@ -115,12 +125,14 @@ impl AgentFeedRepository {
                     WHEN status = 'REJECTED' THEN 'DISMISSED'
                     ELSE status
                 END as lifecycle_state,
+                0 as priority_score,
+                NULL as correlation_id,
                 created_at,
                 updated_at
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
 
-            ORDER BY created_at DESC
+            ORDER BY priority_score DESC NULLS LAST, created_at DESC
             LIMIT $2 OFFSET $3
             "#
         } else {
@@ -132,6 +144,8 @@ impl AgentFeedRepository {
                 context_payload,
                 proposed_action,
                 lifecycle_state,
+                priority_score,
+                correlation_id,
                 created_at,
                 updated_at
             FROM agent_feed_items
@@ -150,12 +164,14 @@ impl AgentFeedRepository {
                     WHEN status = 'REJECTED' THEN 'DISMISSED'
                     ELSE status
                 END as lifecycle_state,
+                0 as priority_score,
+                NULL as correlation_id,
                 created_at,
                 updated_at
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
 
-            ORDER BY created_at DESC
+            ORDER BY priority_score DESC NULLS LAST, created_at DESC
             LIMIT $2 OFFSET $3
             "#
         };
@@ -269,6 +285,8 @@ mod tests {
             context_payload: Some(sqlx::types::Json(serde_json::json!({"test": "data"}))),
             proposed_action: Some(sqlx::types::Json(serde_json::json!({"action": "test"}))),
             lifecycle_state: "PENDING".to_string(),
+            priority_score: Some(10),
+            correlation_id: Some("test_correlation".to_string()),
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };

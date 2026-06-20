@@ -113,6 +113,8 @@ async fn create_incident(
         }))),
         proposed_action: Some(sqlx::types::Json(resolution_plan.clone())),
         lifecycle_state: "PENDING_APPROVAL".to_string(),
+        priority_score: Some(100),
+        correlation_id: Some(format!("incident_{}", incident_id)),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
     };

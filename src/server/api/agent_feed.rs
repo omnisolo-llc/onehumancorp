@@ -86,6 +86,8 @@ pub struct CreateFeedItemRequest {
     pub event_source: String,
     pub context_payload: Option<serde_json::Value>,
     pub proposed_action: Option<serde_json::Value>,
+    pub correlation_id: Option<String>,
+    pub priority_score: Option<i32>,
 }
 
 #[derive(Clone)]
@@ -266,21 +268,17 @@ async fn create_feed_item(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool);
+    let triage_service = crate::domain::work_triage::WorkTriageService::new(pool.clone());
 
-    let item = AgentFeedItem {
-        id: Uuid::new_v4().to_string(),
-        tenant_id: tenant_id.clone(),
-        event_source: payload.event_source,
-        context_payload: payload.context_payload.map(sqlx::types::Json),
-        proposed_action: payload.proposed_action.map(sqlx::types::Json),
-        lifecycle_state: "PENDING_APPROVAL".to_string(),
-        created_at: Some(Utc::now()),
-        updated_at: Some(Utc::now()),
-    };
-
-    match repo.create(item.clone()).await {
-        Ok(_) => {
+    match triage_service.process_incoming_alert(
+        &tenant_id,
+        payload.event_source,
+        payload.context_payload,
+        payload.proposed_action,
+        payload.correlation_id,
+        payload.priority_score,
+    ).await {
+        Ok(item) => {
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
