@@ -9,6 +9,8 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
+
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
@@ -629,7 +631,7 @@ impl DB {
         E: std::fmt::Debug + std::fmt::Display + From<String>,
     {
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = MAX_DB_RETRY_ATTEMPTS;
         #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
         #[cfg(test)]
