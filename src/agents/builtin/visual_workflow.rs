@@ -418,6 +418,7 @@ impl WorkflowExecutor {
             }
 
             let mut visit_counts = std::collections::HashMap::new();
+            let mut just_finished_fork = false;
 
             loop {
                 let node = nodes_map
@@ -431,9 +432,28 @@ impl WorkflowExecutor {
                     return Err("Visual Orchestrator cycle detected".to_string());
                 }
 
+                let current_just_finished_fork = just_finished_fork;
+                just_finished_fork = false;
+
                 match &node.node_type {
-                    NodeType::ParallelJoin { .. } => {
-                        return Ok((state, Some(current_node_id)));
+                    NodeType::ParallelJoin {
+                        state_keys,
+                        output_key,
+                    } => {
+                        if !current_just_finished_fork {
+                            return Ok((state, Some(current_node_id)));
+                        } else {
+                            let mut merged_data = Vec::new();
+                            for key in state_keys {
+                                if let Some(val) = state.get(key) {
+                                    merged_data.push(val.clone());
+                                }
+                            }
+                            merged_data.sort();
+                            let merged_string = serde_json::to_string(&merged_data)
+                                .unwrap_or_else(|_| "[]".to_string());
+                            state.insert(output_key.clone(), merged_string);
+                        }
                     }
                     NodeType::Output => {
                         return Ok((state, Some(current_node_id)));
@@ -594,6 +614,7 @@ impl WorkflowExecutor {
 
                         if let Some(join_node) = join_node_opt {
                             current_node_id = join_node;
+                            just_finished_fork = true;
                             continue;
                         } else {
                             return Ok((state, None));
