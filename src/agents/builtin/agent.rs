@@ -565,7 +565,11 @@ impl Agent {
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
             for (tc, res) in ro_results {
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = msg
+                    .tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
 
                 match res {
                     Ok(r) => {
@@ -634,7 +638,11 @@ impl Agent {
                     Err(e) => Err(e),
                 };
 
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = msg
+                    .tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
 
                 match res {
                     Ok(r) => {
@@ -1652,7 +1660,7 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc.id == id).unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc.id == id).expect("Tool call not found in tool_calls array");
                     let tool_name = tool_calls[idx].name.clone();
                     match final_res {
                         Ok(res) => {
@@ -1703,7 +1711,7 @@ impl Agent {
                     let name = tc.name.clone();
                     let args = tc.arguments.clone();
                     let id = tc.id.clone();
-                    let idx = tool_calls.iter().position(|t| t.id == id).unwrap();
+                    let idx = tool_calls.iter().position(|t| t.id == id).expect("Tool call not found in tool_calls array");
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
@@ -3750,7 +3758,10 @@ impl Agent {
 
             // Emit events and collect results for read-only tools
             for (tc, res) in ro_results {
-                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
                 match res {
                     Err(crate::types::ToolError::Transient(msg)) => {
                         let err = format!("Transient error after retries: {}", msg);
@@ -3899,7 +3910,10 @@ impl Agent {
                             && let Some(human_input) = cb(&msg).await
                         {
                             on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
-                            let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                            let idx = tool_calls
+                                .iter()
+                                .position(|t| t.id == tc.id)
+                                .expect("Tool call not found in tool_calls array");
                             tool_results[idx] = crate::types::ToolResult {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
@@ -3961,7 +3975,10 @@ impl Agent {
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                let idx = tool_calls
+                                    .iter()
+                                    .position(|t| t.id == tc.id)
+                                    .expect("Tool call not found in tool_calls array");
                                 tool_results[idx] = crate::types::ToolResult {
                                     tool_call_id: tc.id.clone(),
                                     content: String::new(),
@@ -4161,7 +4178,10 @@ impl Agent {
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                let idx = tool_calls
+                                    .iter()
+                                    .position(|t| t.id == tc.id)
+                                    .expect("Tool call not found in tool_calls array");
                                 tool_results[idx] = crate::types::ToolResult {
                                     tool_call_id: tc.id.clone(),
                                     content: String::new(),
@@ -4195,7 +4215,10 @@ impl Agent {
                     }
                 }
 
-                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
                 tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
