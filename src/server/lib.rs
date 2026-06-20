@@ -3471,6 +3471,17 @@ pub async fn simulate_agent_feed_item_handler(
                 tracing::error!("Failed to insert agent_feed_item: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
+
+            let client = crate::api::agent_feed::get_redis_client();
+            let topic = format!("agent_feed:{}", tenant_id);
+            let payload_json = serde_json::json!({"id": item_id, "tenant_id": tenant_id, "event_source": "Simulated Webhook", "lifecycle_state": "PENDING_APPROVAL"}).to_string();
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.publish(topic, payload_json).await;
+                }
+            });
+
         },
         crate::db::DbStore::Sqlite(_) => {
             if let Err(e) = sqlx::query(
@@ -3487,6 +3498,16 @@ pub async fn simulate_agent_feed_item_handler(
                 tracing::error!("Failed to insert agent_feed_item: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
+
+            let client = crate::api::agent_feed::get_redis_client();
+            let topic = format!("agent_feed:{}", tenant_id);
+            let payload_json = serde_json::json!({"id": item_id, "tenant_id": tenant_id, "event_source": "Simulated Webhook", "lifecycle_state": "PENDING_APPROVAL"}).to_string();
+            tokio::spawn(async move {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.publish(topic, payload_json).await;
+                }
+            });
         }
     }
 

@@ -109,4 +109,29 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
     // It might be empty, or have activities if we share tenant DB. Either way, it shouldn't crash.
     await expect(emptyStateText.or(page.locator('text=APPROVED').first())).toBeVisible({ timeout: 15000 });
   });
+
+  test('Scenario 6: Verifies offline queueing', async ({ page, request, context }) => {
+    const tenantId = 'e2e-tenant-6';
+
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    const simulatedCardText = page.locator('text=A new simulated event needs your attention.').first();
+    await expect(simulatedCardText).toBeVisible({ timeout: 15000 });
+
+    const card = page.locator('text=A new simulated event needs your attention.').locator('..').locator('..');
+    const approveButton = card.locator('button', { hasText: 'Approve' }).first();
+    await expect(approveButton).toBeVisible();
+
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+    await approveButton.click();
+    await expect(simulatedCardText).not.toBeVisible({ timeout: 15000 });
+
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  });
 });
