@@ -10,3 +10,7 @@ logs/
 
 # bazel convenience symlinks
 bazel-*
+node_modules/
+bazel-out/
+bazel-*/
+target/
