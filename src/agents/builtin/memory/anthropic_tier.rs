@@ -14,6 +14,24 @@ pub struct Anthropic3TierMemory {
 }
 
 impl Anthropic3TierMemory {
+    pub fn new_sync<P: AsRef<Path>>(base_dir: P) -> std::io::Result<Self> {
+        let base_dir = base_dir.as_ref().to_path_buf();
+        let index_file = base_dir.join("index.md");
+        let topics_dir = base_dir.join("topics");
+        let transcripts_dir = base_dir.join("transcripts");
+
+        std::fs::create_dir_all(&base_dir)?;
+        std::fs::create_dir_all(&topics_dir)?;
+        std::fs::create_dir_all(&transcripts_dir)?;
+
+        Ok(Self {
+            _base_dir: base_dir,
+            index_file,
+            topics_dir,
+            transcripts_dir,
+        })
+    }
+
     pub async fn new<P: AsRef<Path>>(base_dir: P) -> std::io::Result<Self> {
         let base_dir = base_dir.as_ref().to_path_buf();
         let index_file = base_dir.join("index.md");
@@ -66,6 +84,11 @@ impl Anthropic3TierMemory {
         } else {
             Ok(String::new())
         }
+    }
+
+    /// Overwrites the entire lightweight index.
+    pub async fn update_index(&self, content: &str) -> std::io::Result<()> {
+        fs::write(&self.index_file, content).await
     }
 
     /// Writes a detailed topic file.
