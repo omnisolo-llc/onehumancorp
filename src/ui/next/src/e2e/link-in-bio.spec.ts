@@ -45,6 +45,25 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         const publicFooterLink = page.locator('a', { hasText: 'Powered by OHC' });
         await expect(publicFooterLink).toBeVisible();
         await expect(publicFooterLink).toHaveAttribute('href', 'https://ohc.store/join?ref=e2e-bakery');
+
+        // 6. Test toggling the "remove branding" checkbox
+        await page.goto('/link-in-bio-generator');
+
+        // Check the toggle
+        const removeBrandingCheckbox = page.locator('input[aria-label="Remove branding"]');
+        await removeBrandingCheckbox.check({ force: true }); // It's hidden visually by CSS, force click
+
+        // Check that preview doesn't have it
+        const previewPoweredByHidden = page.locator('a', { hasText: 'Powered by OHC' });
+        await expect(previewPoweredByHidden).toBeHidden();
+
+        // Wait for publish save
+        await page.waitForTimeout(500);
+
+        // 7. Verify public page hides it
+        await page.goto('/bio/e2e-bakery');
+        const publicPoweredByHidden = page.locator('a', { hasText: 'Powered by OHC' });
+        await expect(publicPoweredByHidden).toBeHidden();
     });
 
     test('Dashboard contains link to Link-in-Bio generator', async ({ page }) => {

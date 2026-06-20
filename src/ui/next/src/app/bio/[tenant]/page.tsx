@@ -17,6 +17,7 @@ export default function LinkInBioPublicPage() {
         { id: '2', title: 'Book an Appointment', url: '/booking' },
     ]);
     const [theme, setTheme] = useState('gradient');
+    const [removeBranding, setRemoveBranding] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -30,6 +31,7 @@ export default function LinkInBioPublicPage() {
                     setBio(data.bio || 'Welcome to my storefront!');
                     setLinks(data.links || []);
                     setTheme(data.theme || 'gradient');
+                    if (data.remove_branding !== undefined) setRemoveBranding(data.remove_branding);
                 } else if (typeof localStorage !== 'undefined') {
                     // Fallback to localStorage if API fails (e.g. not found)
                     const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
@@ -39,6 +41,7 @@ export default function LinkInBioPublicPage() {
                         setBio(parsed.bio || 'Welcome to my storefront!');
                         setLinks(parsed.links || []);
                         setTheme(parsed.theme || 'gradient');
+                        if (parsed.removeBranding !== undefined) setRemoveBranding(parsed.removeBranding);
                     } else {
                         const storedName = localStorage.getItem('business_name');
                         if (storedName) setStoreName(storedName);
@@ -55,6 +58,7 @@ export default function LinkInBioPublicPage() {
                         setBio(parsed.bio || 'Welcome to my storefront!');
                         setLinks(parsed.links || []);
                         setTheme(parsed.theme || 'gradient');
+                        if (parsed.removeBranding !== undefined) setRemoveBranding(parsed.removeBranding);
                     }
                 }
             } finally {
@@ -114,11 +118,13 @@ export default function LinkInBioPublicPage() {
                          ))}
                      </div>
 
-                     <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenantId}`} className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-                             ⚡ Powered by OHC
-                         </a>
-                     </div>
+                     {!removeBranding && (
+                         <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
+                             <a href={`https://ohc.store/join?ref=${tenantId}`} className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
+                                 ⚡ Powered by OHC
+                             </a>
+                         </div>
+                     )}
                  </div>
              </div>
              <style dangerouslySetInnerHTML={{__html: `

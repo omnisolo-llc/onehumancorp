@@ -44,10 +44,33 @@ test.describe('Link-in-Bio Generator E2E', () => {
         await expect(memberPage.locator('#title')).toHaveText('My Awesome Bakery');
         await expect(memberPage.locator('#bio')).toHaveText('The best cookies in town.');
 
-        // Verify Powered by link
-        const poweredBy = memberPage.locator('#powered-by-link');
-        await expect(poweredBy).toBeVisible();
-        await expect(poweredBy).toContainText('Powered by OHC');
-        await expect(poweredBy).toHaveAttribute('href', `https://ohc.store/join?ref=${tenantId}`);
+        // Verify Powered by link (it is an ohc-badge in bio.html)
+        const poweredByBadge = memberPage.locator('#ohc-badge');
+        await expect(poweredByBadge).toBeVisible();
+        await expect(poweredByBadge).toContainText('Powered by OHC');
+
+        // Go back and toggle the remove branding switch
+        await memberPage.goto('/ui/link-in-bio-generator.html');
+        await memberPage.waitForTimeout(1000); // Wait for data to load
+
+        // Wait for preview to render the badge
+        const previewPoweredBy = memberPage.locator('#powered-by-link');
+        await expect(previewPoweredBy).toBeVisible();
+
+        // Click the toggle to remove branding
+        await memberPage.locator('label', { has: memberPage.locator('#remove-branding-toggle') }).click();
+
+        // Wait for saveState to flush
+        await memberPage.waitForTimeout(1000);
+
+        // Ensure preview hides it
+        await expect(previewPoweredBy).toBeHidden();
+
+        // Go back to public page to ensure it's hidden there too
+        await memberPage.goto(`/ui/bio.html?tenant=${tenantId}`);
+        await memberPage.waitForTimeout(1000);
+
+        const hiddenPoweredByBadge = memberPage.locator('#ohc-badge');
+        await expect(hiddenPoweredByBadge).toBeHidden();
     });
 });
