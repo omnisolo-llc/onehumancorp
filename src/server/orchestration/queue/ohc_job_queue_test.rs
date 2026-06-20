@@ -337,3 +337,67 @@ async fn test_chaos_redis_mailbox_corruption() {
     // Since it's corrupt data, it might return an error or skip. The critical condition is NO panic.
     assert!(result.is_err() || result.unwrap().is_none(), "Corrupt data should not panic, and should yield an error or None");
 }
+
+#[tokio::test]
+async fn test_cleanup_stagnant_pending_jobs() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/ohc"); }
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+    let queue = OHCJobQueue::new(Arc::new(pool.clone()));
+
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
+
+    let tenant_id = "tenant_test_stagnant";
+    let job_type = "test_stagnant_job";
+    let payload = serde_json::json!({"test": "stagnant"});
+
+    // Insert a normal recent PENDING job
+    queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
+
+    // Insert a stagnant PENDING job
+    let stagnant_job_id = "stagnant_job_123";
+    sqlx::query(
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, created_at, next_retry_at)
+         VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP - INTERVAL '25 hours', CURRENT_TIMESTAMP)"
+    )
+    .bind(stagnant_job_id)
+    .bind(tenant_id)
+    .bind(job_type)
+    .bind(&payload)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Run cleanup
+    let cleaned = queue.cleanup_stale_jobs().await.unwrap();
+    assert_eq!(cleaned, 1);
+
+    // Verify stagnant job is FAILED
+    use sqlx::Row;
+    let status_row = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = $1")
+        .bind(stagnant_job_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let status: String = status_row.get("status");
+    assert_eq!(status, "FAILED");
+
+    // Verify recent PENDING job is still PENDING
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_job_queue WHERE status = 'PENDING'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+
+    // Verify dead letter was created
+    let dl_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM department_dead_letters WHERE id = $1")
+        .bind(stagnant_job_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(dl_count, 1);
+}
