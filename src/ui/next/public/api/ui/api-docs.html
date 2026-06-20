@@ -128,6 +128,7 @@
         .method-post { background: rgba(52, 199, 89, 0.2); }
       }
     </style>
+      <link rel="stylesheet" href="/api/ui/swagger-ui.css" />
   </head>
   <body>
     <div class="container">
@@ -139,35 +140,29 @@
       <div class="header">
         <h1><span class="badge">Advanced:</span> OHC Advanced API Reference</h1>
         <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
+        <p>This section is for developers directly integrating with our APIs.</p>
       </div>
 
-      <div class="docs-card">
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-get">GET</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">List Catalog Items</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">Create a new Catalog Item</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/agents/task</span>
-            <span class="endpoint-summary">Dispatch a task</span>
-          </div>
-        </div>
+      <div class="backdrop-blur-[30px] saturate-[210%]">
+        <div id="swagger-ui" class="docs-card swagger-ui" style="padding: 0; max-width: 100%; overflow-x: hidden;"></div>
       </div>
     </div>
 
+    <script src="/api/ui/swagger-ui-bundle.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.SwaggerUIBundle) {
+          const swaggerUI = window.SwaggerUIBundle({
+            url: "/api/api-docs-spec",
+            dom_id: "#swagger-ui",
+            deepLinking: true,
+            presets: [window.SwaggerUIBundle.presets.apis],
+            layout: "BaseLayout",
+          });
+        }
+      });
+    </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
