@@ -1,6 +1,3 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use std::sync::Arc;
 use serde_json::json;
 
 #[async_trait::async_trait]
