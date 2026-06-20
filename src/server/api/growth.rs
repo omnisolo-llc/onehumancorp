@@ -2930,7 +2930,7 @@ pub async fn handle_zero_click_generate(
     }
     let clean_name = clean_name.trim_matches('-').to_string();
 
-    let url = if clean_name.is_empty() {
+    let _url = if clean_name.is_empty() {
         "my-business.ohc.app".to_string()
     } else {
         format!("{}.ohc.app", clean_name)

@@ -104,6 +104,7 @@ impl JobHandler for PosConflictWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
