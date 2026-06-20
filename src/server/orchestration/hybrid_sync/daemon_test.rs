@@ -562,3 +562,143 @@ async fn test_hybrid_sync_pos_offline_transactions() {
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
     }
+
+    #[tokio::test]
+    async fn test_prune_stuck_queued_items() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                parent_task_id TEXT,
+                payload TEXT,
+                status TEXT,
+                worker_id TEXT,
+                scheduled_at TEXT,
+                completed_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )").execute(&sqlite_pool).await.unwrap();
+
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pg_pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            sqlx::postgres::PgPoolOptions::new().connect(&database_url),
+        )
+        .await
+        {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+                id VARCHAR PRIMARY KEY,
+                tenant_id VARCHAR NOT NULL,
+                parent_task_id VARCHAR,
+                payload TEXT,
+                status VARCHAR,
+                worker_id VARCHAR,
+                scheduled_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+        )
+        .execute(&pg_pool)
+        .await
+        .unwrap();
+
+        // Insert stuck queued tasks
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'))")
+            .execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours')")
+            .execute(&pg_pool).await.unwrap();
+
+        let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        daemon.prune_stuck_sub_agent_queue().await.unwrap();
+
+        // Verify SQLite queue is failed
+        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queued_sqlite'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        use sqlx::Row;
+        assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
+
+        // Verify PG queue is failed
+        let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queued_pg'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
+    }
+
+    #[tokio::test]
+    async fn test_agent_mission_failure_categorization() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT,
+                synced_to_cloud BOOLEAN DEFAULT false,
+                sync_error TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_synced_at TEXT
+            )").execute(&sqlite_pool).await.unwrap();
+
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pg_pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            sqlx::postgres::PgPoolOptions::new().connect(&database_url),
+        )
+        .await
+        {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id VARCHAR PRIMARY KEY,
+                status VARCHAR NOT NULL,
+                payload TEXT,
+                tenant_id VARCHAR,
+                sync_error TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_synced_at TIMESTAMP
+            )",
+        )
+        .execute(&pg_pool)
+        .await
+        .unwrap();
+
+        // Insert stuck mission
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'))")
+            .execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at) VALUES ('stuck_mission_pg_cat', 'RUNNING', NOW() - INTERVAL '2 hours')")
+            .execute(&pg_pool).await.unwrap();
+
+        let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        daemon.prune_stuck_agent_missions().await.unwrap();
+
+        // Verify SQLite mission failure category
+        let row_sqlite = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_sqlite_cat'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        use sqlx::Row;
+        assert!(row_sqlite.get::<String, _>("sync_error").contains("[bug]"));
+
+        // Verify PG mission failure category
+        let row_pg = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_pg_cat'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert!(row_pg.get::<String, _>("sync_error").contains("[bug]"));
+    }
