@@ -11,13 +11,16 @@ mod parity_tests {
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let sqlite_pool = SqlitePoolOptions::new()
             .max_connections(2)
+            // Fix connection pooling timeout on sqlite
+            .acquire_timeout(std::time::Duration::from_secs(5))
             .connect(&uri)
             .await
             .unwrap();
 
         // Run migrations/schema setup for SQLite
         let db = DB {
-            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            // Fix connection pooling timeout on mocked pg pool
+            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(5)).connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();
@@ -765,7 +768,7 @@ mod parity_tests {
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_execute_with_retry_sync_lag() {
         let sqlite_db = setup_sqlite_db().await;
 
