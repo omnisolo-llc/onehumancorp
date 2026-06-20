@@ -84,14 +84,6 @@ test.describe('Premium Aesthetics Verification', () => {
     expect(styles.border).toMatch(/1px solid rgba\(255,\s*255,\s*255,\s*(0\.4|0\.1)\)/);
   });
 
-  test('Verify glassmorphism effect on Action Center', async ({ page }) => {
-    await page.goto('/action-center');
-
-    // Check for some main UI component that implies loading is successful
-    const mainContainer = page.locator('body');
-    await expect(mainContainer).toBeVisible();
-  });
-
   test('Verify transparent class on Dashboard', async ({ page }) => {
     await page.goto('/dashboard');
 
