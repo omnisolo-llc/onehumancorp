@@ -497,7 +497,7 @@ use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClie
     struct MockSeoClient;
     #[async_trait::async_trait]
     impl SeoClient for MockSeoClient {
-        async fn generate_seo_metadata(&self, name: &str, description: &str, item_type: &str, price: f64) -> Result<(String, String, serde_json::Value), String> {
+        async fn generate_seo_metadata(&self, name: &str, description: &str, _item_type: &str, _price: f64) -> Result<(String, String, serde_json::Value), String> {
             Ok((
                 format!("Mock SEO Title for {}", name),
                 format!("Mock SEO Desc for {}", description),
