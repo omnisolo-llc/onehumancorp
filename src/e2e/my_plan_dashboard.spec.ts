@@ -33,7 +33,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await page.goto('/cost-dashboard');
 
     // Check core metric elements visibility
-    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Verify elements by id or text mapped to their metrics
     await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
