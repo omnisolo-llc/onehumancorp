@@ -22,7 +22,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Check if there are proposal action buttons with min 44x44
     // If the backend returns no proposals, this might be empty, but we can verify touch targets of the tab
-    const proposalsTab = page.getByRole('button', { name: /Proposals \(\d+\)/ });
+    const proposalsTab = page.getByRole('button', { name: /Proposals/ });
     const box = await proposalsTab.boundingBox();
     expect(box).not.toBeNull();
     if (box) {
