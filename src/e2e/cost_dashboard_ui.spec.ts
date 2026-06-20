@@ -15,6 +15,9 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Network & Storage Savings' }).first()).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Trend:' }).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' }).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Department Usage' }).first()).toBeVisible();
 
     // Check if the plan navigation link is present
     await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();

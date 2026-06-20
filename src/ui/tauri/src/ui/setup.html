@@ -116,7 +116,7 @@
 
       .text-\[\#FF3B30\] { color: #FF3B30 !important; }
       .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
-      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px !important; padding: 10px !important; }
+      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px; padding: 10px !important; }
 
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
@@ -748,9 +748,9 @@
 
             @media (max-width: 375px) {
         .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
-        .context-card { min-height: 44px;  padding: 12px; }
+        .context-card { padding: 12px; min-height: 44px; }
         .work-context-cards { grid-template-columns: 1fr; }
-
+        .radio-group { grid-template-columns: 1fr; } /* Added if it was a grid */
         .stepper {
           gap: 4px;
         }
@@ -771,12 +771,12 @@
         p {
           font-size: 13px;
         }
-        .persona-chip { min-height: 44px;
+        .persona-chip {
           padding: 6px 12px;
           font-size: 12px;
+          min-height: 44px;
         }
       }
-
 
       *:focus-visible {
         outline: 3px solid #0066FF;
@@ -806,9 +806,42 @@
       .glassmorphism select,
       .glassmorphism textarea,
       .glassmorphism button { min-height: 44px; min-width: 44px;
-        border-radius: 8px !important;
+        border-radius: 8px;
       }
-</style>
+
+      /* macOS-style scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      @media (prefers-color-scheme: dark) {
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+      }
+
+    </style>
 
 <style>
       .capability-toggles {
@@ -920,7 +953,7 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
@@ -1173,7 +1206,7 @@
             </svg>
           </button>
         </div>
-        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
+        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters and contain a number.</div>
 
         <div style="border-top: 1px solid rgba(255,255,255,0.4); margin-top: 24px; padding-top: 16px; text-align: left;">
           <label style="display: block; font-size: 12px; font-weight: 600; color: #1d1d1f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Auto-Configured AI Departments</label>
@@ -1451,7 +1484,7 @@
       });
 
       inputs.adminPassword.addEventListener('input', () => {
-          if (inputs.adminPassword.value.trim().length >= 8) {
+          if (inputs.adminPassword.value.trim().length >= 8 && /\d/.test(inputs.adminPassword.value)) {
               errors.adminPassword.style.display = 'none';
               inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
           }
@@ -1753,7 +1786,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      window.goToStep = function goToStep(stepId) {
+      function goToStep(stepId) {
+
           if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
               document.getElementById('instant-bio').value = '';
               const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
@@ -1780,6 +1814,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           });
       });
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
 
       // Enter key support for select inputs
       document.querySelectorAll('select').forEach(input => {
@@ -2266,7 +2306,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    payment_pref: "online",
                    admin_email: state.adminEmail || "admin@mybusiness.com",
                    admin_name: state.assistantName || "Admin",
-                   admin_password: state.adminPassword || "password",
+                   admin_password: state.adminPassword || "password123",
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
@@ -2846,7 +2886,7 @@ function initWalkthrough() {
         }
 
         renderStep();
-
+    };
 }
 initWalkthrough();
 </script>

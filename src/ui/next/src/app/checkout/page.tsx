@@ -185,9 +185,6 @@ function CheckoutContent() {
             </div>
 
             <PostPurchaseShareWidget tenantId={tenant || "default-store"} orderId={searchParams.get("orderId") || "success"} />
-            <div className="flex justify-center">
-              <PoweredByOHC tenantId={tenant} />
-            </div>
           </div>
         ) : tier ? (
             <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px]">
@@ -220,7 +217,6 @@ function CheckoutContent() {
                   Cancel
                 </button>
               </WithTooltip>
-              <PoweredByOHC tenantId={tenant} />
             </div>
         ) : (
           <>
@@ -388,10 +384,14 @@ function CheckoutContent() {
               Cancel
             </button>
           </WithTooltip>
-          <PoweredByOHC tenantId={tenant} />
         </div>
         </>
         )}
+
+        {/* Powered By OHC Footer */}
+        <div className="flex justify-center mt-6 w-full relative z-[9999] pb-8">
+          <PoweredByOHC tenantId={tenant} />
+        </div>
       </main>
 
       {/* Post-Purchase Referral Modal */}

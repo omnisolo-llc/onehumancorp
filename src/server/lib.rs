@@ -114,28 +114,7 @@ pub struct CreateTriageItemPayload {
 }
 
 pub fn is_standalone_runtime() -> bool {
-    fn parse_bool(value: &str) -> Option<bool> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "1" | "true" | "yes" | "y" | "on" => Some(true),
-            "0" | "false" | "no" | "n" | "off" => Some(false),
-            _ => None,
-        }
-    }
-
-    if let Ok(value) = std::env::var("OHC_STANDALONE_MODE") {
-        if let Some(parsed) = parse_bool(&value) {
-            return parsed;
-        }
-    }
-    if let Ok(value) = std::env::var("OHC_SOURCE_MODE") {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "standalone" | "desktop" => return true,
-            "cloud" | "cluster" | "headless" => return false,
-            _ => {}
-        }
-    }
-
-    true
+    crate::config::get().standalone
 }
 
 pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
@@ -145,7 +124,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
 
-    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly. It can guide you to the right article.".to_string());
     m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
@@ -159,10 +138,28 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
+
+    // Fallback tooltips matching frontend
+    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest updates.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Connect custom tools with your account. Only needed for advanced setups.".to_string());
+    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
+    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
+    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());
+    m.insert("kairos-nav-link-tooltip".to_string(), "See what your AI helpers are planning. Watch them work on your tasks.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Access the Help Center, AI Support, or Tutorials.".to_string());
+    m.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
+    m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
+    m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
+    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
+    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
+    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+    m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
+    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
+    m.insert("my-plan-tooltip".to_string(), "View and manage your subscription plan and usage.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
     m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
     m.insert("checkout-subscribe-tooltip".to_string(), "Start a monthly subscription using saved wallet payment for frictionless vaulting.".to_string());
     m.insert("checkout-tap-to-pay-tooltip".to_string(), "Tap your card or phone on the reader to pay in person.".to_string());
@@ -1386,7 +1383,19 @@ impl HubService for MyHubService {
             crate::pricing::cost_aggregator::aggregate_daily_costs(&db_pool, &t_id).await
         });
 
-        let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+        let t_id_2 = tenant_id.clone();
+        let db_pool_2 = self.hub.pool.clone();
+        let agent_costs_future = tokio::task::spawn(async move {
+            crate::pricing::cost_aggregator::aggregate_agent_costs(&db_pool_2, &t_id_2).await
+        });
+
+        let hub_clone_for_dept = hub_clone.clone();
+        let t_id_3 = tenant_id.clone();
+        let department_future = tokio::task::spawn(async move {
+            crate::api::billing_api::department_tier_usage_for_tenant(&hub_clone_for_dept, &t_id_3).await
+        });
+
+        let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
         let trend = trend_res.unwrap_or_else(|_| vec![]);
@@ -1468,6 +1477,19 @@ impl HubService for MyHubService {
             email_cost: email_cost_cents,
             api_cost: api_cost_cents,
             budget_health_alert,
+            trend: if trend.is_empty() { "stable".to_string() } else { "up".to_string() },
+            agent_costs: agent_costs_res.unwrap_or_else(|_| vec![]).into_iter().map(|r| ::server_ohc::orchestration::AgentCostProto {
+                agent_name: format!("Agent {}", r.agent_id), // Default formatting
+                agent_id: r.agent_id,
+                cost: r.cost_cents,
+            }).collect(),
+            department_tier_usage: Some(::server_ohc::orchestration::DepartmentTierUsageResponseProto {
+                departments: department_res.unwrap_or_else(|_| crate::api::billing_api::empty_department_tier_usage_response()).departments.into_iter().map(|d| ::server_ohc::orchestration::DepartmentUsageProto {
+                    department_id: d.id,
+                    department_name: d.department_type,
+                    cost: (d.actions_used as i64) * 10, // approximate cost mapping
+                }).collect()
+            }),
         };
 
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
@@ -2550,6 +2572,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();
+
+    // Start Missed Lead Recovery Worker
+    let missed_lead_recovery_worker = Arc::new(crate::workers::missed_lead_recovery_worker::MissedLeadRecoveryWorker::new(db.clone()));
+    missed_lead_recovery_worker.start();
 
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());

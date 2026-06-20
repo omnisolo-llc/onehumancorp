@@ -31,6 +31,7 @@ rust_library(
         "agent_approvals.rs",
         "b2b.rs",
         "blueprint.rs",
+        "work_triage.rs",
         "compute.rs",
         "federation.rs",
         "inbox.rs",
