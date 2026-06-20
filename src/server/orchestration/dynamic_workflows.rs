@@ -553,6 +553,10 @@ mod tests {
             self.jobs.lock().unwrap().push(job);
             Ok(())
         }
+
+        async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+            Ok(0)
+        }
     }
 
     fn request(prompt: &str) -> DynamicWorkflowRequest {

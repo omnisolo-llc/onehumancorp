@@ -6583,6 +6583,15 @@ async fn create_ui_bom_item_handler(
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+    let is_standalone_prune = crate::is_standalone_runtime();
+    let sub_agent_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_queue").unwrap())
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(hub_for_sched.pool.clone())),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone())),
+        }
+    };
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
@@ -6602,6 +6611,9 @@ async fn create_ui_bom_item_handler(
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
+                    }
+                    if let Err(e) = sub_agent_queue_prune.cleanup_stale_jobs().await {
+                        tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
                 }
                 _ = interval.tick() => {
