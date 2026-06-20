@@ -26,9 +26,9 @@ export async function GET(request?: Request) {
     const response = await fetch(`${backendUrl()}/api/assistant/tasks`, {
       headers: backendHeaders(request),
     });
-    return upstreamJson(response, 'Assistant backend unavailable');
+    return upstreamJson(response, 'Assistant tasks unavailable');
   } catch (error: any) {
-    return NextResponse.json({ error: `Assistant backend unavailable` }, { status: 502 });
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'tasks request failed'}` }, { status: 502 });
   }
 }
 
@@ -40,12 +40,34 @@ export async function POST(request: Request) {
       headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
       body: JSON.stringify(payload || {}),
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-       return NextResponse.json({ error: data.error || 'Assistant backend unavailable' }, { status: response.status === 404 ? 404 : 502 });
-    }
-    return NextResponse.json(data, { status: 201 });
+    return upstreamJson(response, 'Assistant tasks could not be created');
   } catch (error: any) {
-    return NextResponse.json({ error: `Assistant backend unavailable` }, { status: 502 });
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'tasks update failed'}` }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/tasks`, {
+      method: 'PATCH',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant tasks could not be updated');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'tasks update failed'}` }, { status: 502 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/tasks`, {
+      method: 'DELETE',
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant tasks could not be deleted');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'tasks delete failed'}` }, { status: 502 });
   }
 }

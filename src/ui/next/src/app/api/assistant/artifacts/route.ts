@@ -1,12 +1,73 @@
 import { NextResponse } from 'next/server';
-import { createExportArtifact } from '../store';
+
+function backendUrl() {
+  return process.env.BACKEND_URL || 'http://localhost:8080';
+}
+
+function backendHeaders(request?: Request) {
+  const headers: Record<string, string> = {
+    'x-tenant-id': request?.headers?.get('x-tenant-id') || 'storefront',
+  };
+  const authHeader = request?.headers?.get('Authorization');
+  if (authHeader) headers.Authorization = authHeader;
+  return headers;
+}
+
+async function upstreamJson(response: Response, fallbackMessage: string) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
+  }
+  return NextResponse.json(data);
+}
+
+export async function GET(request?: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/artifacts`, {
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant artifacts unavailable');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'artifacts request failed'}` }, { status: 502 });
+  }
+}
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
   try {
-    const artifact = createExportArtifact(payload || {});
-    return NextResponse.json({ artifact }, { status: 201 });
+    const response = await fetch(`${backendUrl()}/api/assistant/artifacts`, {
+      method: 'POST',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant artifacts could not be created');
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'artifact could not be exported' }, { status: 400 });
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'artifacts update failed'}` }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/artifacts`, {
+      method: 'PATCH',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant artifacts could not be updated');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'artifacts update failed'}` }, { status: 502 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/artifacts`, {
+      method: 'DELETE',
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant artifacts could not be deleted');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'artifacts delete failed'}` }, { status: 502 });
   }
 }

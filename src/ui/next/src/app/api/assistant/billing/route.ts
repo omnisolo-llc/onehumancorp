@@ -1,39 +1,73 @@
-export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server';
-import { getBilling } from '../store';
+
+function backendUrl() {
+  return process.env.BACKEND_URL || 'http://localhost:8080';
+}
+
+function backendHeaders(request?: Request) {
+  const headers: Record<string, string> = {
+    'x-tenant-id': request?.headers?.get('x-tenant-id') || 'storefront',
+  };
+  const authHeader = request?.headers?.get('Authorization');
+  if (authHeader) headers.Authorization = authHeader;
+  return headers;
+}
+
+async function upstreamJson(response: Response, fallbackMessage: string) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
+  }
+  return NextResponse.json(data);
+}
 
 export async function GET(request?: Request) {
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request?.headers?.get('x-tenant-id') || 'storefront';
-    
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-    };
-    
-    const authHeader = request?.headers?.get('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    const res = await fetch(`${backendUrl}/api/billing/my-plan`, {
-      headers,
+    const response = await fetch(`${backendUrl()}/api/assistant/billing`, {
+      headers: backendHeaders(request),
     });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json({
-        plan: data.current_plan,
-        aiActionsUsed: data.ai_actions_used,
-        aiActionsLimit: data.ai_actions_limit || 0,
-        storageUsedGB: parseFloat((data.storage_used_bytes / (1024 * 1024 * 1024)).toFixed(2)),
-        storageLimitGB: data.storage_limit_bytes ? parseFloat((data.storage_limit_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
-        estimatedNextBill: data.next_bill_estimated / 100,
-      });
-    }
-  } catch (error) {
-    console.error('Failed to fetch real billing data from backend:', error);
+    return upstreamJson(response, 'Assistant billing unavailable');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'billing request failed'}` }, { status: 502 });
   }
+}
 
-  return NextResponse.json(getBilling());
+export async function POST(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/billing`, {
+      method: 'POST',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant billing could not be created');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'billing update failed'}` }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/billing`, {
+      method: 'PATCH',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant billing could not be updated');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'billing update failed'}` }, { status: 502 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/billing`, {
+      method: 'DELETE',
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant billing could not be deleted');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'billing delete failed'}` }, { status: 502 });
+  }
 }

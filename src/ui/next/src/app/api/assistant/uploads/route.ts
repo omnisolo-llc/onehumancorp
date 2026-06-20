@@ -1,15 +1,73 @@
 import { NextResponse } from 'next/server';
-import { createUpload, listUploads } from '../store';
 
-export async function GET() {
-  return NextResponse.json(listUploads());
+function backendUrl() {
+  return process.env.BACKEND_URL || 'http://localhost:8080';
+}
+
+function backendHeaders(request?: Request) {
+  const headers: Record<string, string> = {
+    'x-tenant-id': request?.headers?.get('x-tenant-id') || 'storefront',
+  };
+  const authHeader = request?.headers?.get('Authorization');
+  if (authHeader) headers.Authorization = authHeader;
+  return headers;
+}
+
+async function upstreamJson(response: Response, fallbackMessage: string) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
+  }
+  return NextResponse.json(data);
+}
+
+export async function GET(request?: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/uploads`, {
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant uploads unavailable');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'uploads request failed'}` }, { status: 502 });
+  }
 }
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
   try {
-    return NextResponse.json({ upload: createUpload(payload || {}) }, { status: 201 });
+    const response = await fetch(`${backendUrl()}/api/assistant/uploads`, {
+      method: 'POST',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant uploads could not be created');
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'upload could not be created' }, { status: 400 });
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'uploads update failed'}` }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/uploads`, {
+      method: 'PATCH',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant uploads could not be updated');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'uploads update failed'}` }, { status: 502 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/uploads`, {
+      method: 'DELETE',
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant uploads could not be deleted');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'uploads delete failed'}` }, { status: 502 });
   }
 }

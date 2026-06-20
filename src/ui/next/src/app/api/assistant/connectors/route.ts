@@ -32,6 +32,20 @@ export async function GET(request?: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/connectors`, {
+      method: 'POST',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, 'Assistant connectors could not be created');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'connectors update failed'}` }, { status: 502 });
+  }
+}
+
 export async function PATCH(request: Request) {
   const payload = await request.json().catch(() => null);
   try {
@@ -40,8 +54,20 @@ export async function PATCH(request: Request) {
       headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
       body: JSON.stringify(payload || {}),
     });
-    return upstreamJson(response, 'Assistant connector could not be updated');
+    return upstreamJson(response, 'Assistant connectors could not be updated');
   } catch (error: any) {
-    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'connector update failed'}` }, { status: 502 });
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'connectors update failed'}` }, { status: 502 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/connectors`, {
+      method: 'DELETE',
+      headers: backendHeaders(request),
+    });
+    return upstreamJson(response, 'Assistant connectors could not be deleted');
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable: ${error.message || 'connectors delete failed'}` }, { status: 502 });
   }
 }
