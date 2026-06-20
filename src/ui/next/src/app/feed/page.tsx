@@ -48,7 +48,9 @@ export default function FeedPage() {
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
+      const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
       ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
