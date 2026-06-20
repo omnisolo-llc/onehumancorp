@@ -26,7 +26,7 @@ test.describe('Triage Action Feed UI', () => {
       // Verify interaction
       // Removed click to select, card already contains buttons
 
-      const approveBtn = firstCard.locator('[data-testid="approve-btn"]');
+      const approveBtn = firstCard.locator('[data-testid="feed-approve-btn"]');
       const dismissBtn = firstCard.locator('[data-testid="dismiss-btn"]');
 
       await expect(approveBtn).toBeVisible();

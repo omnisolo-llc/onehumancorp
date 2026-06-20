@@ -61,7 +61,7 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
         await expect(dmCard.getByText('Draft:')).toBeVisible();
 
         // Approve the response
-        const approveButton = page.getByTestId('approve-instagram-dm');
+        const approveButton = page.getByTestId('feed-approve-btn');
         await expect(approveButton).toBeVisible();
 
         // Ensure the button has a min 44x44 bounding box

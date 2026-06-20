@@ -60,7 +60,7 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     await expect(promoterDraft).toContainText('TikTok:');
 
     // 5. Approve & Schedule
-    const approveBtn = promoterDraft.locator('button[data-testid="approve-btn"]');
+    const approveBtn = promoterDraft.locator('button[data-testid="feed-approve-btn"]');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 

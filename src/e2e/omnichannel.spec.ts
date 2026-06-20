@@ -51,8 +51,8 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
         await expect(dmCard).toBeVisible({ timeout: 15000 });
         await expect(dmCard).toContainText(messageText);
 
-        // 4. Click "Approve" (using data-testid="approve-proposal" which falls back to the generic approve)
-        const approveBtn = dmCard.locator('..').locator('[data-testid="approve-proposal"]').first();
+        // 4. Click "Approve" (using data-testid="feed-approve-btn" which falls back to the generic approve)
+        const approveBtn = dmCard.locator('..').locator('[data-testid="feed-approve-btn"]').first();
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
 
