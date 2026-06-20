@@ -144,7 +144,7 @@ export function VoiceAssistant() {
         </button>
       </WithTooltip>
 
-      <style jsx>{`
+      <style>{`
         .glassmorphism {
           background: rgba(255, 255, 255, 0.65);
           backdrop-filter: blur(30px) saturate(210%);
