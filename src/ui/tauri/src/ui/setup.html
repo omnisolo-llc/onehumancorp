@@ -31,6 +31,7 @@
         max-height: calc(100vh - 40px);
         overflow-y: auto;
       }
+                        /* OHC Premium Glassmorphism */
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -39,6 +40,8 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
+
+
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -82,7 +85,14 @@
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
-      button { min-height: 44px; min-width: 44px;
+            button, input, select, textarea, .glassmorphism {
+        min-height: 44px;
+        box-sizing: border-box;
+      }
+      button, input, select, textarea {
+        border-radius: 8px !important;
+      }
+      button { min-width: 44px;
         background-color: #0066FF;
         color: white;
         border: none;
@@ -244,12 +254,8 @@
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .glassmorphism {
-          border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border-color: rgba(255, 255, 255, 0.1);
         }
         h1 {
           color: #F5F5F7;
@@ -788,24 +794,11 @@
         min-height: 44px;
         min-width: 44px;
       }
-      /* OHC Premium Glassmorphism Overrides */
-      .glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
-      button.glassmorphism,
-      input.glassmorphism,
-      select.glassmorphism,
-      textarea.glassmorphism,
-      .glassmorphism input,
-      .glassmorphism select,
-      .glassmorphism textarea,
-      .glassmorphism button { min-height: 44px; min-width: 44px;
-        border-radius: 8px;
-      }
+
+
+
+
+
 
       /* macOS-style scrollbar */
       .custom-scrollbar::-webkit-scrollbar {
