@@ -125,3 +125,21 @@ describe('HelpChat Component', () => {
     });
   });
 });
+
+describe('HelpChat accessibility', () => {
+  it('has dialog role and aria-labelledby', () => {
+    render(<HelpChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('aria-labelledby', 'ai-chat-header-title');
+    expect(dialog).toHaveAttribute('aria-modal', 'false');
+  });
+  it('has polite aria-live region for messages', () => {
+    render(<HelpChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+    const log = screen.getByRole('log');
+    expect(log).toBeInTheDocument();
+    expect(log).toHaveAttribute('aria-live', 'polite');
+  });
+});
