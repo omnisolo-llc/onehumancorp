@@ -221,6 +221,13 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
+            let message_lower = message.to_lowercase();
+            let is_dispute = message_lower.contains("damaged")
+                || message_lower.contains("broken")
+                || message_lower.contains("complaint")
+                || message_lower.contains("issue")
+                || message_lower.contains("refund");
+
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
                 .as_deref()
@@ -252,10 +259,17 @@ impl Department for CustomerSuccessAgent {
                 context_summary.push_str(&inventory_summary);
             }
 
-            let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
-                event.tenant_id, message, context_summary
-            );
+            let prompt = if is_dispute {
+                format!(
+                    "Write one concise, warm customer-service reply addressing a complaint or issue for an omnichannel SMB inbox. Apologize for the inconvenience and offer a resolution. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                    event.tenant_id, message, context_summary
+                )
+            } else {
+                format!(
+                    "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                    event.tenant_id, message, context_summary
+                )
+            };
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
             let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
@@ -271,7 +285,9 @@ impl Department for CustomerSuccessAgent {
                 }
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
+            let description = if is_dispute {
+                "Customer Dispute Resolution Proposal".to_string()
+            } else if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
                 "Customer Inquiry Reply Draft".to_string()
@@ -282,29 +298,54 @@ impl Department for CustomerSuccessAgent {
                 .and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
-                if risk == ActionRisk::AutoExecute {
+                if risk == ActionRisk::AutoExecute && !is_dispute {
                     let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
                 }
             }
 
-            let action_payload = serde_json::json!({
-                "feature_type": "ambassador_reply",
-                "original_message": message,
-                "generated_response": generated_response,
-                "context_used": context_summary,
-                "inbox_message_id": inbox_id,
-                "source": source,
-                "original_content": message,
-                "sender_id": sender_id,
-                "customer_id": customer_id,
-                "past_orders": past_orders,
-            });
+            let action_payload = if is_dispute {
+                serde_json::json!({
+                    "action_type": "Dispute Resolution",
+                    "feature_type": "dispute_resolution",
+                    "title": "Dispute Resolution Proposal",
+                    "description": description,
+                    "original_message": message,
+                    "generated_response": generated_response,
+                    "context_used": context_summary,
+                    "inbox_message_id": inbox_id,
+                    "source": source,
+                    "original_content": message,
+                    "sender_id": sender_id,
+                    "customer_id": customer_id,
+                    "past_orders": past_orders,
+                    "financial_action": "$15 refund",
+                    "operational_action": "mark 1 unit as damaged in inventory",
+                    "enable_financial_action": true,
+                    "enable_operational_action": true
+                })
+            } else {
+                serde_json::json!({
+                    "action_type": "Draft Reply",
+                    "feature_type": "ambassador_reply",
+                    "original_message": message,
+                    "generated_response": generated_response,
+                    "context_used": context_summary,
+                    "inbox_message_id": inbox_id,
+                    "source": source,
+                    "original_content": message,
+                    "sender_id": sender_id,
+                    "customer_id": customer_id,
+                    "past_orders": past_orders,
+                })
+            };
+
+            let effective_risk = if is_dispute { ActionRisk::DraftForReview } else { risk.clone() };
 
             let approval_req = self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk.clone(),
+                effective_risk,
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
 

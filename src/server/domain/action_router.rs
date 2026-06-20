@@ -34,6 +34,23 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+        "dispute_resolution" => {
+            tracing::info!("Executing Dispute Resolution for tenant: {}", tenant_id);
+            if payload.get("enable_financial_action").and_then(|v| v.as_bool()).unwrap_or(false) {
+                tracing::info!("Dispute Resolution: Executing financial action: {:?}", payload.get("financial_action"));
+                // Simulation of a refund action since StripeClient does not support refunds right now.
+            }
+            if payload.get("enable_operational_action").and_then(|v| v.as_bool()).unwrap_or(false) {
+                tracing::info!("Dispute Resolution: Executing operational action: {:?}", payload.get("operational_action"));
+            }
+            if let Some(msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
+                tracing::info!("Dispute Resolution: Sending apology message: {}", msg);
+                // Also trigger handle_inbox_action to send the actual message out
+                crate::domain::inbox::handle_inbox_action(tenant_id, payload, pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }
