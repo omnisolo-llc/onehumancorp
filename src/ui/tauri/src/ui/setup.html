@@ -66,6 +66,7 @@
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px;
+        min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -954,7 +955,7 @@
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-secondary" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
@@ -2306,7 +2307,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    payment_pref: "online",
                    admin_email: state.adminEmail || "admin@mybusiness.com",
                    admin_name: state.assistantName || "Admin",
-                   admin_password: state.adminPassword || "password",
+                   admin_password: state.adminPassword || "password123",
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",

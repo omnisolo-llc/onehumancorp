@@ -114,28 +114,7 @@ pub struct CreateTriageItemPayload {
 }
 
 pub fn is_standalone_runtime() -> bool {
-    fn parse_bool(value: &str) -> Option<bool> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "1" | "true" | "yes" | "y" | "on" => Some(true),
-            "0" | "false" | "no" | "n" | "off" => Some(false),
-            _ => None,
-        }
-    }
-
-    if let Ok(value) = std::env::var("OHC_STANDALONE_MODE") {
-        if let Some(parsed) = parse_bool(&value) {
-            return parsed;
-        }
-    }
-    if let Ok(value) = std::env::var("OHC_SOURCE_MODE") {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "standalone" | "desktop" => return true,
-            "cloud" | "cluster" | "headless" => return false,
-            _ => {}
-        }
-    }
-
-    true
+    crate::config::get().standalone
 }
 
 pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
@@ -2594,6 +2573,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();
 
+    // Start Missed Lead Recovery Worker
+    let missed_lead_recovery_worker = Arc::new(crate::workers::missed_lead_recovery_worker::MissedLeadRecoveryWorker::new(db.clone()));
+    missed_lead_recovery_worker.start();
+
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
@@ -3460,7 +3443,7 @@ pub async fn simulate_agent_feed_item_handler(
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
             )
-            .bind(&item_id)
+            .bind(item_id.clone())
             .bind(&tenant_id)
             .bind("Simulated Webhook")
             .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
@@ -3476,7 +3459,7 @@ pub async fn simulate_agent_feed_item_handler(
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
             )
-            .bind(&item_id)
+            .bind(item_id.clone())
             .bind(&tenant_id)
             .bind("Simulated Webhook")
             .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
@@ -3490,9 +3473,99 @@ pub async fn simulate_agent_feed_item_handler(
         }
     }
 
+    // Invalidating cache
+    let cache_key = format!("ui_unified_agent_feed:{}:mobile:false", tenant_id);
+    let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let _ = cache.invalidate(&cache_key).await;
+
+    let cache_key_mobile = format!("ui_unified_agent_feed:{}:mobile:true", tenant_id);
+    let _ = cache.invalidate(&cache_key_mobile).await;
+
+    // Also publish to pubsub so SSE picks it up
+    if let Some(client) = get_redis_client() {
+        let topic = format!("agent_feed:{}", tenant_id);
+        let item_json = serde_json::json!({
+            "id": item_id.clone(),
+            "tenant_id": tenant_id,
+            "event_source": "Simulated Webhook",
+            "lifecycle_state": "PENDING_APPROVAL",
+            "context_payload": {"description": "A new simulated event needs your attention."},
+            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}
+        });
+        if let Ok(payload_str) = serde_json::to_string(&item_json) {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_str).query_async(&mut conn).await;
+            }
+        }
+    }
+
     if let Some(cache) = UI_TRIAGE_CACHE.get() {
         cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
         cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+    }
+    if let Some(cache) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
+        cache.invalidate(&format!("ui_unified_agent_feed:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_unified_agent_feed:{}:mobile:true", tenant_id)).await;
+    }
+    if let Some(cache) = UI_UNIFIED_FEED_CACHE.get() {
+        cache.invalidate(&format!("ui_unified_feed:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_unified_feed:{}:mobile:true", tenant_id)).await;
+    }
+
+    let cache = crate::api::agent_feed::get_agent_feed_cache();
+    cache.invalidate_by_tag(&format!("agent_feed_tenant:{}", tenant_id)).await;
+
+    // Publish to Redis Pub/Sub for WebSockets
+    if let Some(client) = get_redis_client() {
+        let topic = format!("agent_feed:{}", tenant_id);
+        let payload_json = serde_json::json!({
+            "id": item_id,
+            "tenant_id": tenant_id,
+            "event_source": "Simulated Webhook",
+            "context_payload": {"description": "A new simulated event needs your attention."},
+            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."},
+            "lifecycle_state": "PENDING_APPROVAL",
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "updated_at": chrono::Utc::now().to_rfc3339()
+        }).to_string();
+
+        tokio::spawn(async move {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_json).query_async(&mut conn).await;
+            }
+        });
+    }
+
+    // Invalidate the actual agent feed cache too
+    let feed_cache = crate::api::agent_feed::get_agent_feed_cache();
+    let tag = format!("agent_feed_tenant:{}", tenant_id);
+    feed_cache.invalidate_by_tag(&tag).await;
+
+    // And publish to Redis to wake up websockets
+    let client = crate::api::agent_feed::get_redis_client();
+    let topic = format!("agent_feed:{}", tenant_id);
+    let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+        id: item_id.clone(),
+        tenant_id: tenant_id.clone(),
+        event_source: "Simulated Webhook".to_string(),
+        context_payload: Some(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."}))),
+        proposed_action: Some(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}))),
+        lifecycle_state: "PENDING_APPROVAL".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    if let Ok(payload_json) = serde_json::to_string(&item) {
+        tokio::spawn(async move {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let res: Result<(), _> = redis::AsyncCommands::publish(&mut conn, topic, payload_json).await;
+                if let Err(e) = res {
+                    tracing::error!("Failed to publish to redis for agent_feed simulate: {}", e);
+                }
+            } else {
+                tracing::error!("Failed to get multiplexed connection for agent_feed simulate");
+            }
+        });
     }
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": item_id }))).into_response()
@@ -6568,6 +6641,15 @@ async fn create_ui_bom_item_handler(
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+    let is_standalone_prune = crate::is_standalone_runtime();
+    let sub_agent_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_queue").unwrap())
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(hub_for_sched.pool.clone())),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone())),
+        }
+    };
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
@@ -6587,6 +6669,9 @@ async fn create_ui_bom_item_handler(
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
+                    }
+                    if let Err(e) = sub_agent_queue_prune.cleanup_stale_jobs().await {
+                        tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
                 }
                 _ = interval.tick() => {

@@ -873,6 +873,22 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        original_content TEXT NOT NULL,
+                        translated_content TEXT NOT NULL,
+                        source_language TEXT,
+                        target_language TEXT NOT NULL,
+                        draft_reply TEXT,
+                        status TEXT NOT NULL DEFAULT 'unread',
+                        sender_id TEXT,
+                        customer_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_feed_items (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
