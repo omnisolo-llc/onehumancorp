@@ -31,6 +31,51 @@ impl PosSyncWorker {
             return Err("Failed to set org context".into());
         }
 
+        let is_failed_payment = payload.get("payload")
+            .and_then(|p| p.as_str())
+            .map(|s| s.contains("\"payment_status\":\"failed\"") || s.contains("\"payment_status\": \"failed\""))
+            .unwrap_or(false) || payload.get("payment_status").and_then(|v| v.as_str()) == Some("failed");
+
+        if is_failed_payment {
+            sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
+                .bind(transaction_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
+            let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&agent_feed_item_id)
+            .bind(&job.tenant_id)
+            .bind("offline_payment_failed")
+            .bind(serde_json::json!({
+                "transaction_id": transaction_id,
+                "client_id": client_id,
+                "amount_cents": amount_cents
+            }))
+            .bind(serde_json::json!({
+                "action_type": "Draft SMS",
+                "draft_reply": "Hi, your card at Fatima's Food Cart couldn't be processed later. Here's a secure link to update payment.",
+                "transaction_id": transaction_id
+            }))
+            .execute(&mut *tx).await.unwrap();
+
+            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Customer Success', 'offline_payment_failed', $3::jsonb)")
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&job.tenant_id)
+                .bind(&job.payload)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            tx.commit().await.unwrap();
+            return Ok(Ok(()));
+        }
+
         sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED', _sync_status = 'synced' WHERE id = $1")
             .bind(transaction_id)
             .execute(&mut *tx)
