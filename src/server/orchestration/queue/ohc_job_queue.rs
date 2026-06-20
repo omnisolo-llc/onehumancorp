@@ -130,8 +130,28 @@ impl OHCJobQueue {
         .await
         .map_err(|e| e.to_string())?;
 
+        // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
+        sqlx::query(
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
+             SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, 'Stagnant backlog item stuck in PENDING for > 24 hours'
+             FROM ohc_job_queue
+             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let stagnant_result = sqlx::query(
+            "UPDATE ohc_job_queue
+             SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
         tx.commit().await.map_err(|e| e.to_string())?;
-        Ok(result.rows_affected())
+        Ok(result.rows_affected() + stagnant_result.rows_affected())
     }
 
     pub async fn fail(&self, job_id: &str, max_retries: i32) -> Result<(), String> {
