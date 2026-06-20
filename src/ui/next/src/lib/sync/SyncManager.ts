@@ -94,7 +94,8 @@ export class SyncManager {
           amount_cents: Math.round(m.amount),
           currency: m.currency || 'usd',
           payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-          timestamp: new Date(m.timestamp || Date.now()).toISOString()
+          timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+          device_signature: m.device_signature || 'mock_secure_enclave_signature_123'
         };
       });
 

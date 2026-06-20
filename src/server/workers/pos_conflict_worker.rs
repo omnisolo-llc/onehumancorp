@@ -42,7 +42,7 @@ impl JobHandler for PosConflictWorker {
             use sqlx::Row;
             let order_id: String = row.get("id");
 
-            sqlx::query("UPDATE orders SET status = 'Requires Intervention' WHERE id = $1")
+            sqlx::query("UPDATE orders SET status = 'Backordered' WHERE id = $1")
                 .bind(&order_id)
                 .execute(&mut *tx)
                 .await
@@ -52,6 +52,22 @@ impl JobHandler for PosConflictWorker {
         } else {
             "An in-store sale overlapped with an online order. Operations has secured the in-store sale. Please review recent online orders to address the out-of-stock item.".to_string()
         };
+
+        // Automatically queue a supplier reorder draft
+        let reorder_request_id = uuid::Uuid::new_v4().to_string();
+        let reorder_payload = serde_json::json!({
+            "product_id": product_id,
+            "suggested_action": "Supplier Reorder Draft",
+            "reason": "Overselling conflict resolved"
+        }).to_string();
+        sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(&reorder_request_id)
+            .bind(&tenant_id)
+            .bind(product_id)
+            .bind(&reorder_payload)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let state_change = json!({
             "job_id": job.id,
@@ -141,7 +157,10 @@ mod tests {
         assert!(res.is_ok());
 
         let status: (String,) = sqlx::query_as("SELECT status FROM orders WHERE id = 'order-1'").fetch_one(&pool).await.unwrap();
-        assert_eq!(status.0, "Requires Intervention");
+        assert_eq!(status.0, "Backordered");
+
+        let agent_requests: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_action_requests WHERE action_type = 'Reorder' AND tenant_id = 'tenant-conflict-test'").fetch_one(&pool).await.unwrap();
+        assert_eq!(agent_requests, 1);
 
         let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'pos_conflict_resolution' AND tenant_id = 'tenant-conflict-test'").fetch_one(&pool).await.unwrap();
         assert_eq!(ledger_count.0, 1);

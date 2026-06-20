@@ -12,6 +12,8 @@ impl PosSyncWorker {
     }
 
     pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
+        let db = self.db.clone();
+
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
         let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
             .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
@@ -36,6 +38,16 @@ impl PosSyncWorker {
             .execute(&mut *tx)
             .await
             .unwrap();
+
+        if payload.get("simulate_payment_failure").is_some() {
+            let action_request_id = uuid::Uuid::new_v4().to_string();
+            let recovery_payload = serde_json::json!({
+                "message": "Hi, your card at Fatima's Food Cart couldn't be processed later. Here's a secure link to update payment.",
+                "transaction_id": transaction_id
+            }).to_string();
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'Payment Recovery', 'Pending', 0.95, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                .bind(&action_request_id).bind(&job.tenant_id).bind(&recovery_payload).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        }
 
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();

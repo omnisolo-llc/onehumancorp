@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
+test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {
     // Navigate to POS terminal
     await page.goto('/pos/terminal');
@@ -83,18 +83,21 @@ test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
       const transactionId = `tx-conflict-${Date.now()}`;
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
-      const res = await page.request.post('/api/v1/sync/offline', {
+      const res = await page.request.post('/api/v1/payments/terminal/sync_offline', {
         headers: {
           'x-spiffe-id': spiffeId
         },
         data: {
-          mutations: [
+          session_id: 'e2e-session',
+          transactions: [
             {
-              transaction_id: transactionId,
-              product_id: 'e2e-product-cake', // Assumed to exist and have < 100 stock
-              quantity_deducted: 100,
-              amount: 5000,
+              id: transactionId,
+              client_id: 'e2e-client',
+              amount_cents: 5000,
               currency: 'usd',
+              payload: JSON.stringify({ mutation: { product_id: 'e2e-product-cake', quantity_deducted: 100 } }),
+              timestamp: new Date().toISOString(),
+              device_signature: 'mock_secure_enclave_signature_123'
             }
           ]
         }
@@ -113,6 +116,51 @@ test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
     // Fallback LLM text or "oversold the item" should be visible
     if (stockMatch) {
       await expect(page.getByText(/We oversold the item/i).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/Supplier Reorder Draft/i).first()).toBeVisible({ timeout: 10000 });
     }
   });
+
+  test('Simulated payment failure creates Payment Recovery task', async ({ page }) => {
+    await page.goto('/pos/terminal');
+    await expect(page.getByText('Terminal Locked')).toBeVisible();
+
+    await page.getByRole('button', { name: '1', exact: true }).click();
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await page.getByRole('button', { name: '3', exact: true }).click();
+    await page.getByRole('button', { name: '4', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+
+    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
+    const transactionId = `tx-fail-${Date.now()}`;
+    const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+    const res = await page.request.post('/api/v1/payments/terminal/sync_offline', {
+      headers: {
+        'x-spiffe-id': spiffeId
+      },
+      data: {
+        session_id: 'e2e-session',
+        transactions: [
+          {
+            id: transactionId,
+            client_id: 'e2e-client',
+            amount_cents: 5000,
+            currency: 'usd',
+            payload: JSON.stringify({ simulate_payment_failure: true, mutation: { product_id: 'e2e-product-cake', quantity_deducted: 1 } }),
+            timestamp: new Date().toISOString(),
+            device_signature: 'mock_secure_enclave_signature_123'
+          }
+        ]
+      }
+    });
+
+    expect(res.ok()).toBeTruthy();
+
+    await page.waitForTimeout(5000);
+
+    await page.goto('/action-center');
+    await expect(page.getByText(/Hi, your card at Fatima's Food Cart couldn't be processed later/i).first()).toBeVisible({ timeout: 10000 });
+  });
+
 });
