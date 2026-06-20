@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
     "morning-briefing": "Your AI Decision Assistant's daily summary.",
     "checkout-cancel-tooltip": "Go back to the previous screen without subscribing.",
     "department-card-tooltip": "Click to view and manage pending approvals for this department.",
-    "my-plan-tooltip": "View and manage your subscription plan and usage."
+    "my-plan-tooltip": "View and manage your subscription plan and usage.",
+    "help-search-tooltip": "Search for specific topics or keywords in our help articles and videos."
   };
 
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
