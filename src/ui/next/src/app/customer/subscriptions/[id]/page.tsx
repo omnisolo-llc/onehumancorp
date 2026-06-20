@@ -13,51 +13,75 @@ export default function CustomerSubscriptionPortal() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching subscription details
-    setTimeout(() => {
-      setSubscription({
-        id: subscriptionId,
-        productName: 'Artisan Coffee Blend',
-        frequency: 'Monthly',
-        status: 'active',
-        nextDeliveryDate: '2023-11-15',
-        price: 24.00,
-        discountedPrice: 21.60,
+    fetch(`/api/subscriptions/${subscriptionId}`)
+      .then(res => res.json())
+      .then(data => {
+        setSubscription(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch subscription details', err);
+        setLoading(false);
       });
-      setLoading(false);
-    }, 500);
   }, [subscriptionId]);
 
-  const handleAction = (action: 'pause' | 'skip' | 'cancel') => {
+  const handleAction = async (action: 'pause' | 'skip' | 'cancel') => {
     setIsProcessing(true);
     setActionStatus(null);
 
-    // Simulate API call to handle action
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/subscriptions/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: subscriptionId, action }), // the endpoint seems to use the token to lookup the subscription
+      });
+
+      if (!res.ok) throw new Error('Failed to perform action');
+      const resData = await res.json();
+
       let updatedStatus = subscription.status;
-      let nextDate = subscription.nextDeliveryDate;
+      let nextDate = subscription.next_delivery_date;
       let message = '';
 
       if (action === 'pause') {
-        updatedStatus = 'paused';
+        updatedStatus = 'Paused';
         message = 'Your subscription has been paused.';
       } else if (action === 'skip') {
-        // Simple mock of adding 1 month
-        nextDate = '2023-12-15';
+        if (resData.next_delivery_date) {
+            nextDate = resData.next_delivery_date;
+        } else {
+            // For simple optimistic update if the server doesn't return the new date.
+            const parts = nextDate.split('-');
+            if (parts.length >= 3) {
+              let year = parseInt(parts[0], 10);
+              let month = parseInt(parts[1], 10);
+              const rest = parts.slice(2).join('-');
+              month++;
+              if (month > 12) {
+                month = 1;
+                year++;
+              }
+              nextDate = `${year}-${month.toString().padStart(2, '0')}-${rest}`;
+            }
+        }
         message = 'Your next delivery has been skipped.';
       } else if (action === 'cancel') {
-        updatedStatus = 'cancelled';
+        updatedStatus = 'Canceled';
         message = 'Your subscription has been cancelled.';
       }
 
       setSubscription({
         ...subscription,
         status: updatedStatus,
-        nextDeliveryDate: nextDate,
+        next_delivery_date: nextDate,
       });
-      setIsProcessing(false);
       setActionStatus({ message, type: 'success' });
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      setActionStatus({ message: 'Failed to perform action. Please try again.', type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (loading) {
@@ -68,7 +92,7 @@ export default function CustomerSubscriptionPortal() {
     );
   }
 
-  if (!subscription) {
+  if (!subscription || !subscription.id) {
      return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 font-inter">
         <p className="text-red-500 font-medium">Subscription not found.</p>
@@ -77,11 +101,13 @@ export default function CustomerSubscriptionPortal() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const s = status.toLowerCase();
+    switch (s) {
       case 'active':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">Active</span>;
       case 'paused':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-200">Paused</span>;
+      case 'canceled':
       case 'cancelled':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">Cancelled</span>;
       default:
@@ -112,7 +138,7 @@ export default function CustomerSubscriptionPortal() {
 
           <div className="flex justify-between items-start mb-6 border-b border-gray-100/50 pb-5">
             <div>
-              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">{subscription.productName}</h2>
+              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">{subscription.product_name}</h2>
               <p className="text-sm text-gray-500 font-medium">Subscription ID: <span className="text-gray-400 font-mono text-xs">{subscriptionId}</span></p>
             </div>
             {getStatusBadge(subscription.status)}
@@ -121,7 +147,7 @@ export default function CustomerSubscriptionPortal() {
           <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center py-2 border-b border-gray-100/50">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Next Delivery</span>
-              <span className="font-bold text-gray-900">{subscription.status === 'cancelled' ? '-' : subscription.nextDeliveryDate}</span>
+              <span className="font-bold text-gray-900">{subscription.status.toLowerCase() === 'canceled' || subscription.status.toLowerCase() === 'cancelled' ? '-' : subscription.next_delivery_date.split(' ')[0]}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100/50">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Frequency</span>
@@ -130,23 +156,25 @@ export default function CustomerSubscriptionPortal() {
             <div className="flex justify-between items-center py-2">
               <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Price</span>
               <div className="text-right">
-                <span className="font-bold text-gray-900 text-lg">${subscription.discountedPrice.toFixed(2)}</span>
-                <span className="block text-xs text-gray-400 line-through">${subscription.price.toFixed(2)}</span>
+                <span className="font-bold text-gray-900 text-lg">${subscription.discounted_price.toFixed(2)}</span>
+                {subscription.price !== subscription.discounted_price && (
+                    <span className="block text-xs text-gray-400 line-through">${subscription.price.toFixed(2)}</span>
+                )}
               </div>
             </div>
           </div>
 
-          {subscription.status !== 'cancelled' && (
+          {subscription.status.toLowerCase() !== 'canceled' && subscription.status.toLowerCase() !== 'cancelled' && (
             <div className="space-y-3 pt-2">
                <button
                   onClick={() => handleAction('skip')}
-                  disabled={isProcessing || subscription.status === 'paused'}
+                  disabled={isProcessing || subscription.status.toLowerCase() === 'paused'}
                   className="w-full py-3.5 px-4 bg-white border border-gray-200 text-gray-900 font-semibold rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
                 >
                   Skip Next Delivery
                 </button>
 
-                {subscription.status === 'active' ? (
+                {subscription.status.toLowerCase() === 'active' ? (
                   <button
                     onClick={() => handleAction('pause')}
                     disabled={isProcessing}
@@ -176,7 +204,7 @@ export default function CustomerSubscriptionPortal() {
             </div>
           )}
 
-          {subscription.status === 'cancelled' && (
+          {(subscription.status.toLowerCase() === 'canceled' || subscription.status.toLowerCase() === 'cancelled') && (
              <div className="pt-2">
                 <p className="text-center text-sm text-gray-500 mb-4">You have cancelled this subscription.</p>
              </div>

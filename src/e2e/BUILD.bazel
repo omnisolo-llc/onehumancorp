@@ -44,7 +44,6 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
 
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
-    "//src/ui/next:src/e2e/regression_audit_mock_fixes.spec.ts",
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
     "//src/ui/next:e2e/checkout.spec.ts",
@@ -55,7 +54,6 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "playwright/documentation_features.spec.ts",
-    "playwright/mock_agent_feed_end_to_end.spec.ts",
     "//src/ui/next:e2e/social_share_widget.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",

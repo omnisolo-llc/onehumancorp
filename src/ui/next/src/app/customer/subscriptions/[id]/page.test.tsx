@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import CustomerSubscriptionPortal from './page';
 
 // Mock useParams
@@ -13,13 +13,42 @@ vi.mock('../../../components/PoweredByOHC', () => ({
 }));
 
 describe('CustomerSubscriptionPortal', () => {
+  let originalFetch: typeof global.fetch;
+
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/api/subscriptions/sub_123')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            id: 'sub_123',
+            product_name: 'Artisan Coffee Blend',
+            frequency: 'Monthly',
+            status: 'active',
+            next_delivery_date: '2023-11-15 00:00:00',
+            price: 24.00,
+            discounted_price: 21.60,
+          })
+        });
+      }
+      if (urlStr.includes('/api/subscriptions/magic-link')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, next_delivery_date: '2023-12-15 00:00:00' })
+        });
+      }
+      return Promise.reject(new Error('not mocked'));
+    }) as any;
   });
 
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    global.fetch = originalFetch;
   });
 
   it('renders loading state initially', async () => {
@@ -28,7 +57,7 @@ describe('CustomerSubscriptionPortal', () => {
 
     // allow state to settle
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      await Promise.resolve(); // flush promises
     });
     unmount();
   });
@@ -37,7 +66,7 @@ describe('CustomerSubscriptionPortal', () => {
     const { unmount } = render(<CustomerSubscriptionPortal />);
 
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      await Promise.resolve();
     });
 
     await waitFor(() => {
@@ -56,7 +85,7 @@ describe('CustomerSubscriptionPortal', () => {
     const { unmount } = render(<CustomerSubscriptionPortal />);
 
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      await Promise.resolve();
     });
 
     await waitFor(() => {
@@ -67,7 +96,9 @@ describe('CustomerSubscriptionPortal', () => {
     fireEvent.click(skipButton);
 
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(100);
+      await Promise.resolve(); // handle fetch
+      await Promise.resolve(); // handle json
     });
 
     await waitFor(() => {
@@ -81,7 +112,7 @@ describe('CustomerSubscriptionPortal', () => {
     const { unmount } = render(<CustomerSubscriptionPortal />);
 
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      await Promise.resolve();
     });
 
     await waitFor(() => {
@@ -92,7 +123,9 @@ describe('CustomerSubscriptionPortal', () => {
     fireEvent.click(pauseButton);
 
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(100);
+      await Promise.resolve(); // handle fetch
+      await Promise.resolve(); // handle json
     });
 
     await waitFor(() => {
@@ -107,7 +140,7 @@ describe('CustomerSubscriptionPortal', () => {
     const { unmount } = render(<CustomerSubscriptionPortal />);
 
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      await Promise.resolve();
     });
 
     await waitFor(() => {
@@ -118,7 +151,9 @@ describe('CustomerSubscriptionPortal', () => {
     fireEvent.click(cancelButton);
 
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(100);
+      await Promise.resolve(); // handle fetch
+      await Promise.resolve(); // handle json
     });
 
     await waitFor(() => {

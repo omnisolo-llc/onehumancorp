@@ -51,16 +51,8 @@ export default function KitchenView() {
     updateCount();
     window.addEventListener("ohc_queue_updated", updateCount);
 
-    // Seed test data for E2E missing db data scenarios
-    const seedMock = (e: any) => {
-        if(e.detail.orders && orders.length === 0) setOrders(e.detail.orders);
-        if(e.detail.menu && menu.length === 0) setMenu(e.detail.menu);
-    };
-    window.addEventListener('seed_mock', seedMock);
-
     return () => {
       window.removeEventListener("ohc_queue_updated", updateCount);
-      window.removeEventListener('seed_mock', seedMock);
     };
   }, []);
 
