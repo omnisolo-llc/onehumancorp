@@ -357,6 +357,10 @@ impl CostAuditor {
             use crate::integrations::stripe::routing::{PaymentRouter, PaymentMethod};
             let method = PaymentRouter::optimize_payment_method(amount);
 
+            let savings = PaymentRouter::calculate_fee_savings(amount);
+            if savings > 0.0 {
+                tracing::info!("💰 Miser telemetry: Payment method optimized for revenue recording. Saved ${:.2} in fees", savings);
+            }
             let fee = match method {
                 PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
                 PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago | PaymentMethod::Alipay => {
