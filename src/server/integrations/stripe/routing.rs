@@ -60,7 +60,14 @@ impl PaymentRouter {
 
         let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
-            (savings * 100.0).round() / 100.0
+            let final_savings = (savings * 100.0).round() / 100.0;
+
+            // OpenTelemetry tracking
+            let meter = opentelemetry::global::meter("ohc_billing");
+            let counter = meter.f64_counter("ohc_transaction_fee_savings_usd").build();
+            counter.add(final_savings, &[]);
+
+            final_savings
         } else {
             0.0
         }

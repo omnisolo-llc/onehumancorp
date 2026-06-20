@@ -279,7 +279,7 @@ export default function StorefrontBuilderPage() {
               <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
-                  enterKeyHint="done"
+
                   autoCapitalize="sentences"
                   className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[16px]"
                   value={bio}
