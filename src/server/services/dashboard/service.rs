@@ -895,6 +895,8 @@ impl DashboardService for MyDashboardService {
             Ok(Ok(_)) => {
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             },
             Ok(Err(e)) => {
@@ -903,12 +905,16 @@ impl DashboardService for MyDashboardService {
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
         }
