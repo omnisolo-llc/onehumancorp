@@ -172,11 +172,11 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/40 dark:border-white/10 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/60 dark:bg-[#16161a]/70 backdrop-blur-[40px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/60 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
-            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[30px]"
+            className="bg-blue-600/90 text-white p-4 flex justify-between items-center backdrop-blur-[40px]"
           >
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
