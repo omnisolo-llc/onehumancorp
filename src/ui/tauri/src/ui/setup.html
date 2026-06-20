@@ -1341,6 +1341,26 @@
       };
 
 
+      window.goToStep = function goToStep(stepId) {
+          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
+              const bioEl = document.getElementById('instant-bio');
+              bioEl.value = '';
+              bioEl.dispatchEvent(new Event('input', { bubbles: true }));
+              const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = true;
+              }
+          }
+          if (stepId === 'step-categories') {
+              populateCategories();
+          }
+          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+          document.querySelector('.container').scrollTo(0, 0);
+          document.getElementById(stepId).classList.add('active');
+          updateStepper(stepId);
+      }
+      function goToStep(stepId) { window.goToStep(stepId); }
+
       let state = {
           businessName: '',
           assistantName: '',
@@ -1753,22 +1773,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      window.goToStep = function goToStep(stepId) {
-          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
-              document.getElementById('instant-bio').value = '';
-              const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
-              if (generateStorefrontBtn) {
-                  generateStorefrontBtn.disabled = true;
-              }
-          }
-          if (stepId === 'step-categories') {
-              populateCategories();
-          }
-          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-          document.querySelector('.container').scrollTo(0, 0);
-          document.getElementById(stepId).classList.add('active');
-          updateStepper(stepId);
-      }
+
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {

@@ -18,6 +18,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     const instantBuildBtn = page.getByRole('button', { name: /Instant Build/ });
     await expect(instantBuildBtn).toBeVisible();
     await instantBuildBtn.click();
+    await page.waitForSelector('#step-instant.active', { state: 'attached', timeout: 5000 });
 
     // Ensure we are on Step Instant
     await expect(page.getByRole('heading', { name: /Tell us about your business/ })).toBeVisible();
@@ -42,11 +43,11 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     });
 
     await generateBtn.click({ force: true });
-    await page.waitForTimeout(500);
   });
 
   test('validates empty input in Tell us about your business', async ({ page }) => {
     await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.waitForSelector('#step-instant.active', { state: 'attached', timeout: 5000 });
 
     const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
@@ -54,28 +55,30 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test('clears previous bio input when re-entering Instant Build', async ({ page }) => {
     await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.waitForSelector('#step-instant.active', { state: 'attached', timeout: 5000 });
     const bioInput = page.locator('#instant-bio');
     await bioInput.fill("Temporary text");
 
     // Click Back to Step 0
     await page.locator('#step-instant').getByRole('button', { name: /Back/ }).click();
+    await page.waitForSelector('#step-initial.active', { state: 'attached', timeout: 5000 });
 
     // Ensure we are back on Step 0
     await expect(page.getByRole('heading', { name: /10-Minute Setup Wizard/ })).toBeVisible();
 
     // Go back to Instant Build
     await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.waitForSelector('#step-instant.active', { state: 'attached', timeout: 5000 });
 
-    // The text should persist because localStorage handles this but without proper
-    // re-initialization it stays. We should ensure the app handles persistence or not.
-    // For this test, we verify the user can edit it.
     await expect(bioInput).toBeVisible();
+    await expect(bioInput).toHaveValue('');
     await bioInput.fill("New text");
     await expect(bioInput).toHaveValue("New text");
   });
 
   test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
     await page.getByRole('button', { name: /Start My Business/ }).click();
+    await page.waitForSelector('#step-context.active', { state: 'attached', timeout: 5000 });
     await expect(page.getByRole('heading', { name: /How do you work?/ })).toBeVisible();
     await expect(page.locator('[data-testid="persona-tutor"]')).toBeVisible();
     await expect(page.locator('[data-testid="persona-baker"]')).toBeVisible();
@@ -83,6 +86,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {
     await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.waitForSelector('#step-instant.active', { state: 'attached', timeout: 5000 });
 
     const generateBtn = page.getByRole('button', { name: /Next/ });
     const bioInput = page.locator('#instant-bio');
