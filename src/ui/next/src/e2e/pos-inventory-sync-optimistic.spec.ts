@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
+test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {
     // Navigate to POS terminal
     await page.goto('/pos/terminal');
