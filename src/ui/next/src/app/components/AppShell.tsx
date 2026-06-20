@@ -125,6 +125,10 @@ function NavLink({ item }: { item: NavItem }) {
     return <WithTooltip id="dashboard-tooltip" defaultText="View your daily sales and overall business health.">{link}</WithTooltip>;
   }
 
+  if (item.href === "/changelog") {
+    return <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest updates.">{link}</WithTooltip>;
+  }
+
   if (item.href === "/inventory") {
     return <WithTooltip id="inventory-tooltip" defaultText="Manage your inventory, prices, and stock levels.">{link}</WithTooltip>;
   }
