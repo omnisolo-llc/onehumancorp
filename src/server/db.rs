@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::env;
+
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -168,7 +168,7 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| {
                 let cfg = crate::config::get();
                 cfg.database_url.clone().unwrap_or_else(|| {
@@ -420,7 +420,7 @@ impl DB {
             }
 
             let mut attempt = 0;
-            let max_attempts = env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
+            let max_attempts = std::env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
                 .ok()
                 .and_then(|raw| raw.parse::<u32>().ok())
                 .unwrap_or(30);
@@ -2290,15 +2290,15 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
 #[cfg(test)]
 mod e2e_search_workspace_tests {
     use super::*;
-    use std::env;
+
 
     #[tokio::test]
     async fn test_search_workspace_parity() {
-        if env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2428,3 +2428,4 @@ mod e2e_search_workspace_tests {
         }
     }
 }
+// Proactive optimization: remove unused dead code.
