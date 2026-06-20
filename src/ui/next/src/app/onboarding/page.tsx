@@ -721,7 +721,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                   className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
-                  onClick={() => { setStep(-1); syncStateToBackend({ step: -1 }); }}
+                  onClick={() => { setBio(""); setStep(-1); syncStateToBackend({ step: -1, bio: "" }); }}
                 >
                   Instant Build
                 </button>
