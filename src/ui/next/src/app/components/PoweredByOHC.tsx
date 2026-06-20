@@ -39,17 +39,17 @@ export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
   return (
     <div
       ref={containerRef}
-      className="powered-by-footer flex flex-col justify-center items-center mt-8 pb-4 relative"
+      className="powered-by-footer flex flex-col justify-center items-center mt-8 pb-4 relative z-50"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {isHovered && (
         <div
-          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-xl shadow-xl z-50 text-center animate-fade-in transition-all duration-300"
+          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[9999] text-center animate-fade-in transition-all duration-300"
         >
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/70 border-b border-r border-white/50 transform rotate-45 backdrop-blur-xl z-40"></div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/70 border-b border-r border-white/50 transform rotate-45 backdrop-blur-xl z-[9998]"></div>
 
-          <div className="relative z-50">
+          <div className="relative z-[9999]">
             <div className="flex justify-center mb-2">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
                 <span className="text-lg">⚡</span>
