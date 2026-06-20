@@ -772,12 +772,15 @@ export default function OnboardingWizard() {
 
                 <div className="flex flex-col gap-2 shrink-0">
                   <input
-                    type="text"
+                    type="url"
                     id="chat-image-url"
                     value={instantImageUrl}
                     onChange={(e) => setInstantImageUrl(e.target.value)}
                     className="glassmorphism w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
                     placeholder="Image URL (Optional)"
+                    inputMode="url"
+                    autoComplete="url"
+                    enterKeyHint="next"
                   />
                   <div className="flex gap-2 w-full">
                     <input
@@ -790,6 +793,7 @@ export default function OnboardingWizard() {
                       }}
                       className="glassmorphism w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
                       placeholder="Type a message..."
+                      enterKeyHint="send"
                     />
                     <button
                       id="chat-send-btn"
@@ -828,6 +832,7 @@ export default function OnboardingWizard() {
                     setBio(e.target.value);
                     if (error) setError('');
                   }}
+                  enterKeyHint="done"
                 />
 
                 <input
@@ -838,6 +843,9 @@ export default function OnboardingWizard() {
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) => setInstantImageUrl(e.target.value)}
+                  inputMode="url"
+                  autoComplete="url"
+                  enterKeyHint="next"
                 />
 
                 <div className="mt-4">
@@ -901,6 +909,10 @@ export default function OnboardingWizard() {
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className={`w-full p-3 sm:p-4 border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
+                        inputMode="text"
+                        autoComplete="organization"
+                        autoCapitalize="words"
+                        enterKeyHint="next"
                       />
                     </div>
                   </div>
@@ -1344,6 +1356,9 @@ export default function OnboardingWizard() {
                         }}
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        inputMode="text"
+                        autoComplete="off"
+                        enterKeyHint="next"
                       />
                       {validationErrors.adminName && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
@@ -1351,27 +1366,25 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
-
-                        autoCapitalize="none"
-
-                        autoComplete="email"
-                        value={adminEmail}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAdminEmail(val);
-                          if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
-                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
-                          }
-                        }}
-                        placeholder="you@example.com"
-
-
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                      />
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    inputMode="email"
+                    enterKeyHint="next"
+                    value={adminEmail}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdminEmail(val);
+                      if (!val.trim()) {
+                        setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                        setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
+                      } else {
+                        setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                      }
+                    }}
+                    placeholder="you@example.com"
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                  />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
                     <div>

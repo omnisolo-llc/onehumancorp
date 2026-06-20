@@ -25,7 +25,7 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
         width: 100%;
-        max-width: min(480px, calc(100vw - 20px));
+        max-width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
         max-height: calc(100vh - 40px);
@@ -66,15 +66,13 @@
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px;
+        min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
       }
 
-      select, textarea, input {
-        border-radius: 8px;
-      }
       select, textarea, input {
         border-radius: 8px;
       }
@@ -509,6 +507,9 @@
         text-align: left;
       }
       .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -568,7 +569,10 @@
         justify-content: center;
         padding-bottom: 10px;
       }
-      .persona-chip { min-height: 44px;
+      .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box; min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
         min-height: 44px !important;
@@ -706,6 +710,9 @@
           background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
@@ -741,13 +748,16 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option, .persona-chip { min-height: 44px;
+        input, select, textarea, button, .radio-option, .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box; min-height: 44px;
           min-height: 44px !important;
         }
       }
 
             @media (max-width: 375px) {
-        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
+        .container { padding: 16px; margin: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
         .context-card { padding: 12px; min-height: 44px; }
         .work-context-cards { grid-template-columns: 1fr; }
         .radio-group { grid-template-columns: 1fr; } /* Added if it was a grid */
@@ -762,6 +772,9 @@
           transform: scale(1.2);
         }
         .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           padding: 8px 12px;
           font-size: 14px;
         }
@@ -772,6 +785,9 @@
           font-size: 13px;
         }
         .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           padding: 6px 12px;
           font-size: 12px;
           min-height: 44px;
@@ -954,7 +970,7 @@
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="glassmorphism" style="background: #0066FF; color: white; border: none; min-height: 44px; min-width: 44px; margin-top: 10px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
@@ -967,7 +983,7 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; padding: 14px;" enterkeyhint="done"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
@@ -1112,7 +1128,7 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" inputmode="text" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
         <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" enterkeyhint="next" />
@@ -1250,7 +1266,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" enterkeyhint="next" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" inputmode="text" autocomplete="off" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
@@ -1882,10 +1898,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               generateStorefrontBtn.disabled = true;
           }
           instantBioInputEl.addEventListener('input', () => {
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantBioInputEl.style.borderColor = '';
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
-                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+                  instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
               }
               if (generateStorefrontBtn) {
                   generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
@@ -2089,14 +2107,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.classList.add('animate-shake');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   return;
               }
 
               instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
+              instantBioInputEl.style.borderColor = '';
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
@@ -2215,8 +2237,9 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   const errorMsg = err.message || "Network Error: Failed to fetch";
                   instantErrorEl.innerText = errorMsg;
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   generateStorefrontBtn.disabled = false;
                   generateStorefrontBtn.innerText = "Next";
               }

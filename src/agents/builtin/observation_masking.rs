@@ -181,7 +181,8 @@ impl JetBrainsObservationMasker {
                                             "[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]",
                                             bytes, tr.tool_call_id
                                         );
-                                        tr.content = serde_json::json!({ "error": raw_msg }).to_string();
+                                        tr.content =
+                                            serde_json::json!({ "error": raw_msg }).to_string();
                                     }
                                     continue; // Treated as JSON, don't fall back to raw string masking
                                 }

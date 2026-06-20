@@ -1079,7 +1079,7 @@ pub async fn bench_ai_job_dispatch_latency() {
     println!("Benchmarking AI Job Dispatch Latency...");
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue, sqlite_queue::SQLiteTaskQueue};
+    use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue};
 
     let (queue, is_postgres): (std::sync::Arc<dyn crate::orchestration::queue::queue::TaskQueue>, bool) = if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -1114,7 +1114,7 @@ pub async fn bench_ai_job_dispatch_latency() {
     let duration = start_sim.elapsed();
     println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
 
-    let start_sim = std::time::Instant::now();
+    let _start_sim = std::time::Instant::now();
     for _ in 0..100 {
         queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap();
     }

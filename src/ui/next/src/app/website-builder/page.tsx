@@ -650,7 +650,8 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 'instant-build' && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Setup Assistant</h1>
+<h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h2>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <textarea
                       value={bio}
