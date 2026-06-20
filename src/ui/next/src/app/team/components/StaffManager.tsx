@@ -33,7 +33,7 @@ export default function StaffManager() {
         setStaff(data.staff || []);
       }
     } catch (e) {
-      console.error("Failed to fetch staff", e);
+      console.warn("Failed to fetch staff", e);
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function StaffManager() {
         setRole('Cashier');
       }
     } catch (e) {
-      console.error("Failed to add staff", e);
+      console.warn("Failed to add staff", e);
     } finally {
       setIsSubmitting(false);
     }

@@ -46,7 +46,7 @@ export default function SettingsPage() {
              delivery_fee: data.delivery_fee || 8.50,
            });
         })
-        .catch(e => console.error("Failed to load delivery settings", e)),
+        .catch(e => console.warn("Failed to load delivery settings", e)),
 
       fetch("/api/assistant/settings")
         .then(res => res.json())
@@ -55,7 +55,7 @@ export default function SettingsPage() {
             setAgentName(data.settings.agentName);
           }
         })
-        .catch(e => console.error("Failed to load assistant settings", e)),
+        .catch(e => console.warn("Failed to load assistant settings", e)),
 
       fetch("/api/settings/voice")
         .then(res => res.json())
@@ -69,7 +69,7 @@ export default function SettingsPage() {
             });
           }
         })
-        .catch(e => console.error("Failed to load voice settings", e))
+        .catch(e => console.warn("Failed to load voice settings", e))
     ]).finally(() => {
       setIsLoading(false);
     });
@@ -85,7 +85,7 @@ export default function SettingsPage() {
         body: JSON.stringify(newSettings),
       });
     } catch (e) {
-      console.error("Failed to save delivery settings", e);
+      console.warn("Failed to save delivery settings", e);
     }
   };
 
@@ -138,7 +138,7 @@ export default function SettingsPage() {
           body: JSON.stringify({ phone, ...newPrefs }),
         });
       } catch (e) {
-        console.error("Failed to save preferences", e);
+        console.warn("Failed to save preferences", e);
       }
     }
   };
@@ -154,7 +154,7 @@ export default function SettingsPage() {
         body: JSON.stringify(newSettings),
       });
     } catch (e) {
-      console.error("Failed to save voice settings", e);
+      console.warn("Failed to save voice settings", e);
     }
   };
 
@@ -167,7 +167,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ agentName: value }),
       });
     } catch (e) {
-      console.error("Failed to save agent settings", e);
+      console.warn("Failed to save agent settings", e);
     }
   };
 
@@ -181,7 +181,7 @@ export default function SettingsPage() {
         handleVoiceSettingChange('voice_receptionist_number', data.number);
       }
     } catch (e) {
-      console.error("Failed to provision voice number", e);
+      console.warn("Failed to provision voice number", e);
     }
   };
 

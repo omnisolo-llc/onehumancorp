@@ -31,7 +31,7 @@ export default function AiTimeSavingsWidget() {
           setSavingsData(data);
         }
       })
-      .catch(err => console.error("Error fetching time savings:", err));
+      .catch(err => console.warn("Error fetching time savings:", err));
   }, []);
 
   const handleShareAndClaim = async () => {
@@ -57,11 +57,11 @@ export default function AiTimeSavingsWidget() {
           localStorage.setItem('has_pro', 'true');
         }
       } else {
-        console.error('Failed to claim trial extension');
+        console.warn('Failed to claim trial extension');
         alert("Failed to claim trial extension. Please try again.");
       }
     } catch (error) {
-      console.error('Error claiming trial extension:', error);
+      console.warn('Error claiming trial extension:', error);
       alert("Error claiming trial extension. Please try again.");
     } finally {
       setIsClaiming(false);

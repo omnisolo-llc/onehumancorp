@@ -21,7 +21,7 @@ export default function ChangelogPage() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load changelog", err);
+        console.warn("Failed to load changelog", err);
         setLoading(false);
       });
   }, []);

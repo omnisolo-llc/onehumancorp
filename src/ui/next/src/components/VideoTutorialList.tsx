@@ -29,7 +29,7 @@ export function VideoTutorialList({
         setFetchedLoading(false);
       })
       .catch(err => {
-        console.error('Failed to load video tutorials', err);
+        console.warn('Failed to load video tutorials', err);
         setFetchedLoading(false);
       });
   }, [initialVideos]);

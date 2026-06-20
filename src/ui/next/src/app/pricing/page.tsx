@@ -24,7 +24,7 @@ export default function PricingPage() {
           setCurrentPlan(json.current_plan);
         }
       } catch (error) {
-        console.error('Failed to fetch plan data:', error);
+        console.warn('Failed to fetch plan data:', error);
       } finally {
         setLoading(false);
       }
@@ -53,7 +53,7 @@ export default function PricingPage() {
         window.location.href = data.url;
       }
     } catch (error) {
-      console.error('Upgrade error:', error);
+      console.warn('Upgrade error:', error);
       alert('Failed to initiate billing portal. Please try again.');
     }
   };
@@ -79,7 +79,7 @@ export default function PricingPage() {
         window.location.href = data.checkout_url;
       }
     } catch (error) {
-      console.error('Error upgrading plan:', error);
+      console.warn('Error upgrading plan:', error);
       alert('Failed to initiate upgrade. Please try again.');
     }
   };

@@ -105,7 +105,7 @@ export default function TriagePage() {
 
       setTimeout(() => setActionStatus(""), 3000);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setActionStatus("Error updating action.");
     } finally {
       setProcessingId(null);

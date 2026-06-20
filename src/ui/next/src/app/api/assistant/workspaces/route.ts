@@ -32,7 +32,7 @@ export async function GET(request?: Request) {
       return NextResponse.json({ workspaces, deleted: [] });
     }
   } catch (error) {
-    console.error('Failed to fetch workspaces from backend:', error);
+    console.warn('Failed to fetch workspaces from backend:', error);
   }
 
   return NextResponse.json(listWorkspaces());

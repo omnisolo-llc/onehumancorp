@@ -54,7 +54,7 @@ export default function LinkInBioGeneratorPage() {
           setLinks(data.links);
         }
       } catch (err) {
-        console.error("Failed to load Link-in-Bio config", err);
+        console.warn("Failed to load Link-in-Bio config", err);
       }
     };
     fetchConfig();
@@ -81,7 +81,7 @@ export default function LinkInBioGeneratorPage() {
       }
       alert('Changes published successfully!');
     } catch (err) {
-      console.error("Failed to publish", err);
+      console.warn("Failed to publish", err);
       alert('Failed to publish changes.');
     } finally {
       setPublishing(false);

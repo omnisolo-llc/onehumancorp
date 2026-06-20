@@ -27,11 +27,11 @@ export default function TrialExtensionPage() {
       if (response.ok) {
         setHasClaimed(true);
       } else {
-        console.error('Failed to claim trial extension');
+        console.warn('Failed to claim trial extension');
         alert("Failed to claim trial extension. Please try again.");
       }
     } catch (error) {
-      console.error('Error claiming trial extension:', error);
+      console.warn('Error claiming trial extension:', error);
       alert("Error claiming trial extension. Please try again.");
     } finally {
       setIsClaiming(false);

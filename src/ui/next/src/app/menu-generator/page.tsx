@@ -42,10 +42,10 @@ export default function MenuGeneratorPage() {
         const publicUrl = `${window.location.origin}${data.url}`;
         setMenuLink(publicUrl);
       } else {
-        console.error("Failed to generate menu");
+        console.warn("Failed to generate menu");
       }
     } catch (error) {
-      console.error("Error generating menu:", error);
+      console.warn("Error generating menu:", error);
     } finally {
       setIsGenerating(false);
     }

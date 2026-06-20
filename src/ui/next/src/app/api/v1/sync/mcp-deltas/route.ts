@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: errorText }, { status: res.status });
     }
   } catch (err: any) {
-    console.error("Failed to forward MCP deltas:", err);
+    console.warn("Failed to forward MCP deltas:", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

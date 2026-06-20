@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(fallbackChangelog, { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
-      console.error("Failed to fetch changelog from backend:", e);
+      console.warn("Failed to fetch changelog from backend:", e);
     }
     return NextResponse.json(fallbackChangelog, { status: 200 });
   }

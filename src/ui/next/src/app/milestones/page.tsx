@@ -36,7 +36,7 @@ export default function MilestonesPage() {
           }
         }
       } catch (e) {
-        console.error("Failed to fetch milestones", e);
+        console.warn("Failed to fetch milestones", e);
       } finally {
         setIsLoading(false);
       }
@@ -157,7 +157,7 @@ export default function MilestonesPage() {
                                             window.URL.revokeObjectURL(url);
                                             document.body.removeChild(a);
                                         } catch (err) {
-                                            console.error("Failed to download milestone card", err);
+                                            console.warn("Failed to download milestone card", err);
                                         }
                                     }}
                                     className="w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm bg-indigo-600 text-white hover:bg-indigo-700 flex items-center justify-center gap-2"

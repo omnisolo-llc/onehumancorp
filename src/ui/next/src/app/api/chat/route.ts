@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       link: data.link
     });
   } catch (error) {
-    console.error("Failed to connect to backend AI agent:", error);
+    console.warn("Failed to connect to backend AI agent:", error);
     return NextResponse.json({
       reply: "I'm having trouble connecting to my brain right now. Please try again later."
     });

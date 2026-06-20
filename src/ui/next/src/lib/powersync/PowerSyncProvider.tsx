@@ -65,7 +65,7 @@ export const PowerSyncProvider = ({
     };
 
     init().catch((err) => {
-      console.error(err);
+      console.warn(err);
       setError(err instanceof Error ? err : new Error('Failed to initialize PowerSync'));
     });
 

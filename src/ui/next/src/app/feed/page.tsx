@@ -55,7 +55,7 @@ export default function FeedPage() {
         try {
           const item = JSON.parse(event.data);
           if (item.error) {
-             console.error("Agent feed WS error:", item.error);
+             console.warn("Agent feed WS error:", item.error);
              return;
           }
 
@@ -71,7 +71,7 @@ export default function FeedPage() {
              setItems((current) => current.filter((existing) => existing.id !== item.id));
           }
         } catch (err) {
-          console.error('Failed to parse websocket feed event:', err);
+          console.warn('Failed to parse websocket feed event:', err);
         }
       };
 
@@ -188,7 +188,7 @@ export default function FeedPage() {
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
-      console.error(err);
+      console.warn(err);
     } finally {
       setLoading(false);
     }

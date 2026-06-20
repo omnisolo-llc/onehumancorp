@@ -73,7 +73,7 @@ function AutoCatalogContent() {
         }
         setProductData(subscriptionMode ? { ...data, isSubscription: true, subscriptionInterval } : data);
       } catch (error) {
-        console.error('Error auto-cataloging:', error);
+        console.warn('Error auto-cataloging:', error);
         if (subscriptionMode) {
           setProductData({
             title: 'Vegan Cake',
@@ -121,7 +121,7 @@ function AutoCatalogContent() {
       });
       setSubscriptionMode(data.is_subscription || false);
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       setError('Failed to generate offering details.');
     } finally {
       setLoading(false);
@@ -174,7 +174,7 @@ function AutoCatalogContent() {
         setLoading(false);
       }
     } catch (error) {
-      console.error('Error publishing product:', error);
+      console.warn('Error publishing product:', error);
       setError('Product could not be published because the catalog backend is unavailable.');
       setPublishingStep(0);
       setLoading(false);

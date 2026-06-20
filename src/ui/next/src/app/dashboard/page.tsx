@@ -140,7 +140,7 @@ export default function Dashboard() {
         setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 
@@ -195,7 +195,7 @@ export default function Dashboard() {
           setOfflineQueueCount(remainingQueue.length);
         }
       } catch (e) {
-        console.error("Sync failed", e);
+        console.warn("Sync failed", e);
       } finally {
         setIsSyncing(false);
       }
@@ -579,9 +579,9 @@ export default function Dashboard() {
                      });
                      if (!res.ok) {
                          // Rollback if needed
-                         console.error("Failed to approve");
+                         console.warn("Failed to approve");
                      }
-                 } catch (e) { console.error(e); }
+                 } catch (e) { console.warn(e); }
                }}
                onDismiss={async (id) => {
                  try {
@@ -596,9 +596,9 @@ export default function Dashboard() {
                          body: JSON.stringify({ action: 'dismiss', responseId: id })
                      });
                      if (!res.ok) {
-                         console.error("Failed to dismiss");
+                         console.warn("Failed to dismiss");
                      }
-                 } catch (e) { console.error(e); }
+                 } catch (e) { console.warn(e); }
                }}
              />
         ))}

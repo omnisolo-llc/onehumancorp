@@ -56,7 +56,7 @@ export default function TeamChatPage() {
           body: JSON.stringify({ approved: true })
         });
       } catch (e) {
-        console.error("Failed to approve action", e);
+        console.warn("Failed to approve action", e);
       }
     }
   };

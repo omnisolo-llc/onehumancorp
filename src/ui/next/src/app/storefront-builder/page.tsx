@@ -43,7 +43,7 @@ export default function StorefrontBuilderPage() {
       try {
         setBlocks(JSON.parse(savedBlocks));
       } catch (e) {
-        console.error("Failed to parse saved blocks", e);
+        console.warn("Failed to parse saved blocks", e);
       }
     }
 
@@ -74,7 +74,7 @@ export default function StorefrontBuilderPage() {
                 (window as any)._ohcSaveMsgTimer = msgTimer;
             }
         })
-        .catch(err => console.error('Failed to sync builder state', err));
+        .catch(err => console.warn('Failed to sync builder state', err));
       }, 1000); // debounce 1s
 
       return () => {
@@ -99,7 +99,7 @@ export default function StorefrontBuilderPage() {
         if (data.builderState.status) setStatus(data.builderState.status);
       }
     })
-    .catch(err => console.error('Failed to load builder state', err));
+    .catch(err => console.warn('Failed to load builder state', err));
   }, []);
 
   const updateBio = (newBio: string) => {
@@ -164,7 +164,7 @@ export default function StorefrontBuilderPage() {
       localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
-      console.error("Failed to generate storefront", error);
+      console.warn("Failed to generate storefront", error);
       updateStatus("idle");
     }
   };
@@ -209,7 +209,7 @@ export default function StorefrontBuilderPage() {
       setChatMessage("");
       updateStatus("draft");
     } catch (error) {
-      console.error("Failed to update storefront via agent", error);
+      console.warn("Failed to update storefront via agent", error);
       updateStatus("draft");
     }
   };
@@ -254,10 +254,10 @@ export default function StorefrontBuilderPage() {
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {
-        console.error('Failed to publish');
+        console.warn('Failed to publish');
       }
     } catch (error) {
-      console.error('Error publishing:', error);
+      console.warn('Error publishing:', error);
     }
   };
 

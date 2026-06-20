@@ -18,14 +18,14 @@ export async function POST(request: Request) {
         });
 
         if (!res.ok) {
-            console.error('Failed to create billing portal session', res.status);
+            console.warn('Failed to create billing portal session', res.status);
             return NextResponse.json({ error: 'Failed to create billing portal session' }, { status: res.status });
         }
 
         const data = await res.json();
         return NextResponse.json(data);
     } catch (error) {
-        console.error('Error creating billing portal session:', error);
+        console.warn('Error creating billing portal session:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

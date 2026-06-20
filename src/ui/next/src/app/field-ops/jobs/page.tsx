@@ -49,7 +49,7 @@ export default function FieldOpsJobsPage() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load appointments", err);
+        console.warn("Failed to load appointments", err);
         setLoading(false);
       });
 
@@ -103,7 +103,7 @@ export default function FieldOpsJobsPage() {
             }
           }
         })
-        .catch((err) => console.error("Optimization failed", err));
+        .catch((err) => console.warn("Optimization failed", err));
     }
   };
 
@@ -134,7 +134,7 @@ export default function FieldOpsJobsPage() {
         setDelayingJobId(null);
       })
       .catch((err) => {
-        console.error("Running late failed", err);
+        console.warn("Running late failed", err);
         setDelayingJobId(null);
       });
   };
@@ -158,7 +158,7 @@ export default function FieldOpsJobsPage() {
           }),
         ),
       ).catch((err) =>
-        console.error("Failed to persist updated schedule", err),
+        console.warn("Failed to persist updated schedule", err),
       );
 
       setProposedRoute(null);

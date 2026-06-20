@@ -29,7 +29,7 @@ export default function StoreWrapPage() {
           customers: data.active_customers || 0
         });
       })
-      .catch(e => console.error("Failed to fetch wrap-up metrics", e));
+      .catch(e => console.warn("Failed to fetch wrap-up metrics", e));
     }
   }, []);
 

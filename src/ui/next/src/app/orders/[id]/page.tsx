@@ -36,7 +36,7 @@ export default function OrderDetailsPage() {
         setRates(data.rates);
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     } finally {
       setLoadingRates(false);
     }
@@ -59,7 +59,7 @@ export default function OrderDetailsPage() {
         setStatus('shipped');
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     } finally {
       setPurchasing(false);
     }
@@ -83,7 +83,7 @@ export default function OrderDetailsPage() {
         setReceiptSent(true);
       }
     } catch (e) {
-      console.error('Failed to send receipt', e);
+      console.warn('Failed to send receipt', e);
     } finally {
       setSendingReceipt(false);
     }

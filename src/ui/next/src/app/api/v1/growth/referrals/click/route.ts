@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error recording referral click:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error recording referral click:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
           method: 'POST',
           headers,
           body: JSON.stringify({ id: ref })
-        }).catch(err => console.error("Error recording referral click on GET:", err));
+        }).catch(err => console.warn("Error recording referral click on GET:", err));
     }
 
     // Redirect to the target
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
-    console.error("Error redirecting referral click:", error);
+    console.warn("Error redirecting referral click:", error);
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 }

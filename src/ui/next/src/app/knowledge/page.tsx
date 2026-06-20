@@ -28,7 +28,7 @@ export default function KnowledgePage() {
         })));
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 
@@ -47,7 +47,7 @@ export default function KnowledgePage() {
       });
       fetchDocuments();
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 
@@ -82,7 +82,7 @@ export default function KnowledgePage() {
       });
       await fetchDocuments();
     } catch (error) {
-      console.error(error);
+      console.warn(error);
     } finally {
       setIsSyncing(false);
       setIsReady(true);

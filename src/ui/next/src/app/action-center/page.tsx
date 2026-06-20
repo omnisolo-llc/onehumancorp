@@ -36,7 +36,7 @@ export default function ActionCenterPage() {
         setApprovals(advisoryApprovals);
       }
     } catch (error) {
-      console.error("Failed to fetch approvals", error);
+      console.warn("Failed to fetch approvals", error);
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function ActionCenterPage() {
         fetchApprovals();
       }
     } catch (error) {
-      console.error("Failed to approve", error);
+      console.warn("Failed to approve", error);
       setActionStatus("Error approving action.");
       fetchApprovals();
     }
@@ -90,7 +90,7 @@ export default function ActionCenterPage() {
         fetchApprovals();
       }
     } catch (error) {
-      console.error("Failed to dismiss", error);
+      console.warn("Failed to dismiss", error);
       setActionStatus("Error dismissing action.");
       fetchApprovals();
     }

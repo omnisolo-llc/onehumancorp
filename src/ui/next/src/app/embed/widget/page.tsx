@@ -27,10 +27,10 @@ function WidgetContent() {
             if (response.ok) {
                 setSubmitted(true);
             } else {
-                console.error('Failed to submit form');
+                console.warn('Failed to submit form');
             }
         } catch (error) {
-            console.error('Error submitting form', error);
+            console.warn('Error submitting form', error);
         }
     };
 

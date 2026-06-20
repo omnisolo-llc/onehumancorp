@@ -42,10 +42,10 @@ export default function AiUsagePaywallPage() {
           const costData = await costRes.json();
           setData(costData);
         } else {
-          console.error("Failed to fetch cost data:", costRes.status);
+          console.warn("Failed to fetch cost data:", costRes.status);
         }
       } catch (err) {
-        console.error("Failed to fetch cost data:", err);
+        console.warn("Failed to fetch cost data:", err);
       } finally {
         setLoading(false);
       }

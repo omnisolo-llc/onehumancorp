@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Failed to generate store" }, { status: 500 });
     }
   } catch (error) {
-    console.error("Error generating zero-click store:", error);
+    console.warn("Error generating zero-click store:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

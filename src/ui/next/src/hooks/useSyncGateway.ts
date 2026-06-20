@@ -35,7 +35,7 @@ export function useSyncGateway({ topics, enabled = true }: UseSyncGatewayOptions
         const data = JSON.parse(event.data);
         setLastMessage(data);
       } catch (e) {
-        console.error('Failed to parse sync message', e);
+        console.warn('Failed to parse sync message', e);
       }
     };
 
@@ -46,7 +46,7 @@ export function useSyncGateway({ topics, enabled = true }: UseSyncGatewayOptions
     };
 
     ws.onerror = (error) => {
-      console.error('Sync WebSocket error', error);
+      console.warn('Sync WebSocket error', error);
       ws.close();
     }
   }, [topics, enabled]);

@@ -30,7 +30,7 @@ export default function MyPlanPage() {
           setData(json);
         }
       } catch (error) {
-        console.error('Failed to fetch plan data:', error);
+        console.warn('Failed to fetch plan data:', error);
       } finally {
         setLoading(false);
       }
@@ -66,7 +66,7 @@ export default function MyPlanPage() {
         window.location.href = data.url;
       }
     } catch (error) {
-      console.error('Billing portal error:', error);
+      console.warn('Billing portal error:', error);
       alert('Failed to initiate billing portal. Please try again.');
     }
   };

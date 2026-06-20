@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: errorText }, { status: res.status });
     }
   } catch (err: any) {
-    console.error("Failed to forward offline pos terminal transactions:", err);
+    console.warn("Failed to forward offline pos terminal transactions:", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

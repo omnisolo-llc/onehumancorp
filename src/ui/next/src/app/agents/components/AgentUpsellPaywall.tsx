@@ -33,7 +33,7 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
         setReferralLink(fallbackReferralLink());
       }
     } catch (e) {
-      console.error("Failed to generate referral link", e);
+      console.warn("Failed to generate referral link", e);
       setReferralLink(fallbackReferralLink());
     } finally {
       setIsGenerating(false);

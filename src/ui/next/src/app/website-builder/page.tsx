@@ -63,10 +63,10 @@ export default function WebsiteBuilderPage() {
         setSaveMessage("Draft Saved!");
         setTimeout(() => setSaveMessage(""), 3000);
       } else {
-        console.error('Failed to save draft response not ok');
+        console.warn('Failed to save draft response not ok');
       }
     } catch (e) {
-      console.error('Failed to save draft', e);
+      console.warn('Failed to save draft', e);
     } finally {
       setStatus("idle");
     }
@@ -114,7 +114,7 @@ export default function WebsiteBuilderPage() {
             localState = JSON.parse(localStr).state;
           }
         } catch (e) {
-          console.error("Failed to parse local storage for comparison", e);
+          console.warn("Failed to parse local storage for comparison", e);
         }
 
         const localStep = typeof localState?.wizardStep === 'number' ? localState.wizardStep : 0;
@@ -144,7 +144,7 @@ export default function WebsiteBuilderPage() {
         }
       }
     })
-    .catch(err => console.error('Failed to load builder state', err))
+    .catch(err => console.warn('Failed to load builder state', err))
     .finally(() => {
       setIsLoaded(true);
     });
@@ -187,7 +187,7 @@ export default function WebsiteBuilderPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId },
           body: JSON.stringify(payload)
-        }).catch(err => console.error('Failed to sync builder state', err));
+        }).catch(err => console.warn('Failed to sync builder state', err));
       }, 1000); // debounce 1s
 
       return () => clearTimeout(timer);
@@ -223,7 +223,7 @@ export default function WebsiteBuilderPage() {
       localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
-      console.error("Failed to generate storefront", error);
+      console.warn("Failed to generate storefront", error);
       updateStatus("idle");
     }
   };
@@ -277,10 +277,10 @@ export default function WebsiteBuilderPage() {
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {
-        console.error('Failed to publish');
+        console.warn('Failed to publish');
       }
     } catch (error) {
-      console.error('Error publishing:', error);
+      console.warn('Error publishing:', error);
     }
   };
 
@@ -637,7 +637,7 @@ export default function WebsiteBuilderPage() {
                             }
                             setStatus('live');
                         } catch (err) {
-                          console.error(err);
+                          console.warn(err);
                           setStatus('live'); // Fail open for the wizard flow so users don't get stuck just like the instant-build fallback
                         }
                       }}
@@ -739,11 +739,11 @@ export default function WebsiteBuilderPage() {
                             }
                             setStatus('live');
                           } else {
-                            console.error('Failed to generate storefront:', data);
+                            console.warn('Failed to generate storefront:', data);
                             finishWithFallback();
                           }
                         } catch (err) {
-                          console.error(err);
+                          console.warn(err);
                           finishWithFallback();
                         } finally {
                           window.clearTimeout(abortTimeout);

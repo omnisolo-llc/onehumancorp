@@ -41,10 +41,10 @@ export default function IncidentIntakePage() {
         // Redirect back to dashboard to see the feed
         router.push("/dashboard");
       } else {
-        console.error("Failed to submit incident");
+        console.warn("Failed to submit incident");
       }
     } catch (err) {
-      console.error(err);
+      console.warn(err);
     } finally {
       setIsSubmitting(false);
     }

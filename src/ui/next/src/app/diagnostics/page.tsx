@@ -27,7 +27,7 @@ export default function DiagnosticsPage() {
           setMetricsData(metricsJson);
         }
       } catch (err) {
-        console.error('Failed to load diagnostics', err);
+        console.warn('Failed to load diagnostics', err);
       } finally {
         setLoading(false);
       }

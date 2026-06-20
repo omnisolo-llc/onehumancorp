@@ -111,17 +111,17 @@ export default function CostDashboardPage() {
             const result = await costRes.json();
             setData(result);
         } else {
-            console.error("Failed to fetch cost data:", costRes.status);
+            console.warn("Failed to fetch cost data:", costRes.status);
         }
 
         if (planRes.ok) {
             const planResult = await planRes.json();
             setMyPlanData(planResult);
         } else {
-            console.error("Failed to fetch plan data:", planRes.status);
+            console.warn("Failed to fetch plan data:", planRes.status);
         }
       } catch (err) {
-        console.error("Error fetching cost data", err);
+        console.warn("Error fetching cost data", err);
       } finally {
         setLoading(false);
       }

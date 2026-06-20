@@ -27,7 +27,7 @@ export default function NewServicePage() {
          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenant, 'X-User-ID': userId },
          body: JSON.stringify({ services: [{ title, description, price }] })
       });
-    } catch (e) { console.error(e); }
+    } catch (e) { console.warn(e); }
     router.push('/dashboard');
   };
 

@@ -15,7 +15,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ reached: false });
     }
   } catch (err) {
-    console.error('Error fetching milestones:', err);
+    console.warn('Error fetching milestones:', err);
     return NextResponse.json({ reached: false, error: 'Database error' }, { status: 500 });
   }
 }

@@ -142,7 +142,7 @@ export default function AgentsPage() {
         setFeed(feedData.pending_approvals || []);
         setWorkflows(workflowsData.workflows || []);
       } catch (err) {
-        console.error('Failed to fetch initial agent data concurrently:', err);
+        console.warn('Failed to fetch initial agent data concurrently:', err);
       }
     }
     fetchAll();
@@ -159,7 +159,7 @@ export default function AgentsPage() {
           setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         }
       } catch (err) {
-        console.error('Failed to parse agent event:', err);
+        console.warn('Failed to parse agent event:', err);
       }
     };
     events.onerror = () => events.close();
@@ -235,7 +235,7 @@ export default function AgentsPage() {
         setApprovals((current) => current.filter((item) => item.id !== id));
       }
     } catch (err) {
-      console.error('Failed to process approval:', err);
+      console.warn('Failed to process approval:', err);
     }
   }
   return (
@@ -1170,7 +1170,7 @@ function MemoryPanel() {
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
     setLoading(false);
   };
@@ -1188,7 +1188,7 @@ function MemoryPanel() {
       });
       fetchMemories();
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 

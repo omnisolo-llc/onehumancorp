@@ -32,7 +32,7 @@ export async function GET(request?: Request) {
       });
     }
   } catch (error) {
-    console.error('Failed to fetch real billing data from backend:', error);
+    console.warn('Failed to fetch real billing data from backend:', error);
   }
 
   return NextResponse.json(getBilling());

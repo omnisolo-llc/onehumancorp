@@ -23,14 +23,14 @@ export default function HelpCenterPage() {
     fetch(url)
       .then(res => res.json())
       .then(data => setArticles(Array.isArray(data) ? data : []))
-      .catch(console.error);
+      .catch(console.warn);
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
     fetch('/api/videos')
       .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))
-      .catch(console.error);
+      .catch(console.warn);
   }, []);
 
   const filteredArticles = articles.filter(a => a.category !== "Advanced");

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         }),
       });
     } catch (e) {
-      console.error('Failed to notify backend of work intake:', e);
+      console.warn('Failed to notify backend of work intake:', e);
     }
 
     const html = `

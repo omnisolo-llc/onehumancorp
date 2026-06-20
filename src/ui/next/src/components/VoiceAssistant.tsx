@@ -43,7 +43,7 @@ export function VoiceAssistant() {
       setStatus("listening");
       setTranscription("");
     } catch (err) {
-      console.error("Failed to start recording:", err);
+      console.warn("Failed to start recording:", err);
       setStatus("error");
     }
   }, []);
@@ -78,7 +78,7 @@ export function VoiceAssistant() {
         setTranscription("");
       }, 5000);
     } catch (err) {
-      console.error("Error sending voice command:", err);
+      console.warn("Error sending voice command:", err);
       setStatus("error");
       setTimeout(() => setStatus("idle"), 3000);
     }

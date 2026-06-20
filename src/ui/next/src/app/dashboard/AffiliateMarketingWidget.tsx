@@ -16,7 +16,7 @@ export default function AffiliateMarketingWidget() {
           setStats(data);
         }
       } catch (error) {
-        console.error("Failed to fetch affiliate stats", error);
+        console.warn("Failed to fetch affiliate stats", error);
       } finally {
         setIsLoading(false);
       }

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(fallbackVideos, { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
-      console.error("Failed to fetch videos from backend:", e);
+      console.warn("Failed to fetch videos from backend:", e);
     }
     return NextResponse.json(fallbackVideos, { status: 200 });
   }

@@ -24,7 +24,7 @@ export default function DiscoveryReportPage() {
           setReports([]);
         }
       } catch (err) {
-        console.error("Failed to fetch discovery reports:", err);
+        console.warn("Failed to fetch discovery reports:", err);
         setReports([]);
       } finally {
         setLoading(false);

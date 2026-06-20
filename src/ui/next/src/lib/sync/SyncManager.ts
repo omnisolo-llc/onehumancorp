@@ -30,7 +30,7 @@ export class SyncManager {
       setTimeout(() => this.connectWebSocket(), 5000);
     };
     ws.onerror = (err) => {
-      console.error('Sync WebSocket error', err);
+      console.warn('Sync WebSocket error', err);
       ws.close();
     };
   }
@@ -224,7 +224,7 @@ export class SyncManager {
              }
           }
         } catch (e) {
-          console.error("Failed to parse POS Sync response", e);
+          console.warn("Failed to parse POS Sync response", e);
         }
       }
 
@@ -281,7 +281,7 @@ export class SyncManager {
         this.retryDelayMs = 1000; // Reset delay on success
       }
     } catch (e) {
-      console.error('Failed to sync offline queue:', e);
+      console.warn('Failed to sync offline queue:', e);
       if (retryCount < this.maxRetries) {
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
         setTimeout(() => {

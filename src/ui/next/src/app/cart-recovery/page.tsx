@@ -50,7 +50,7 @@ export default function CartRecoveryPage() {
         setIsGenerating(false);
         setIsSent(false);
     } catch (e) {
-        console.error(e);
+        console.warn(e);
         setIsGenerating(false);
     }
   };
@@ -91,7 +91,7 @@ export default function CartRecoveryPage() {
       });
       setIsSent(true);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
 
       setIsSent(true);
     }

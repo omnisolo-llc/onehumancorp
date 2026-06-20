@@ -72,7 +72,7 @@ export default function BuilderPage() {
       setGeoScore(data.generative_score);
       setGeoRecs(data.recommendations);
     } catch (error) {
-      console.error("Failed to analyze GEO score", error);
+      console.warn("Failed to analyze GEO score", error);
     }
   };
 
@@ -85,7 +85,7 @@ export default function BuilderPage() {
       });
       setSeoApplied(true);
     } catch (error) {
-      console.error("Failed to apply Auto SEO", error);
+      console.warn("Failed to apply Auto SEO", error);
     }
   };
 
@@ -129,7 +129,7 @@ export default function BuilderPage() {
       setBlocks(newBlocks);
       setStatus("selection");
     } catch (error) {
-      console.error("Failed to generate storefront", error);
+      console.warn("Failed to generate storefront", error);
       setStatus("idle");
     }
   };
@@ -175,10 +175,10 @@ export default function BuilderPage() {
         setStatus("live");
         setLiveUrl(`/bio/${data.domain || 'myshop'}`);
       } else {
-        console.error('Failed to publish');
+        console.warn('Failed to publish');
       }
     } catch (error) {
-      console.error('Error publishing:', error);
+      console.warn('Error publishing:', error);
     }
   };
 

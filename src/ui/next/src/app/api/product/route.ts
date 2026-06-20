@@ -23,7 +23,7 @@ export async function POST(request: Request) {
             }
         });
     } catch (error) {
-        console.error('Product create backend unavailable:', error);
+        console.warn('Product create backend unavailable:', error);
         return NextResponse.json({
             error: 'BACKEND_UNAVAILABLE',
             message: 'Product creation requires the catalog backend.'

@@ -39,7 +39,7 @@ export default function ApprovalInbox({
         }),
       });
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setReviewAll(!newValue); // Revert on failure
     }
   };

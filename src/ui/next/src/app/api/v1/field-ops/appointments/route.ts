@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: res.status });
     }
   } catch (error) {
-    console.error('Failed to fetch appointments from backend:', error);
+    console.warn('Failed to fetch appointments from backend:', error);
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to update appointment' }, { status: res.status });
     }
   } catch (error) {
-    console.error('Failed to update appointment in backend:', error);
+    console.warn('Failed to update appointment in backend:', error);
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 }

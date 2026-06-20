@@ -31,7 +31,7 @@ export default function Wrapped() {
           });
         }
       } catch (err) {
-        console.error("Failed to fetch wrapped metrics", err);
+        console.warn("Failed to fetch wrapped metrics", err);
       } finally {
         setLoading(false);
       }

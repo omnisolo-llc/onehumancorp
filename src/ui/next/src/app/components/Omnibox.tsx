@@ -59,7 +59,7 @@ export function Omnibox() {
           setResults([]);
         }
       } catch (err) {
-        console.error("Search error", err);
+        console.warn("Search error", err);
       } finally {
         setLoading(false);
       }

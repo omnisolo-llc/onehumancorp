@@ -35,7 +35,7 @@ export default function EmailSignatureGeneratorPage() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }).catch(err => {
-        console.error('Failed to copy: ', err);
+        console.warn('Failed to copy: ', err);
         // Fallback for some browsers
         navigator.clipboard.writeText(signatureHtml);
       });

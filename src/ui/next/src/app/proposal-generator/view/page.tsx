@@ -18,7 +18,7 @@ function ProposalViewContent() {
         const decoded = JSON.parse(decodeURIComponent(utf8Encoded));
         setData(decoded);
       } catch (e) {
-        console.error("Failed to decode proposal data");
+        console.warn("Failed to decode proposal data");
       }
     }
   }, [searchParams]);

@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       return new NextResponse("Not Found", { status: backendRes.status });
     }
   } catch (error) {
-    console.error("Error fetching milestone card:", error);
+    console.warn("Error fetching milestone card:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

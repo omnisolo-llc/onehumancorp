@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ error: "Failed to load prep forecast" }, { status: 500 });
   } catch (e) {
-    console.error("Prep forecast API error:", e);
+    console.warn("Prep forecast API error:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

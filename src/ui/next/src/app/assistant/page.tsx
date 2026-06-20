@@ -196,7 +196,7 @@ export default function AssistantPage() {
           setAgentName(data.settings.agentName);
         }
       } catch (settingsError) {
-        console.error(settingsError);
+        console.warn(settingsError);
       }
     }
 

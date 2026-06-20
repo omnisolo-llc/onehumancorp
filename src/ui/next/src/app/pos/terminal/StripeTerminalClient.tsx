@@ -45,7 +45,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: sessionId, status: 'OFFLINE' })
-            }).catch(console.error);
+            }).catch(console.warn);
           }
         }
       });
@@ -62,7 +62,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
           body: JSON.stringify({ session_id: sessionId }),
           keepalive: true
-        }).catch(console.error);
+        }).catch(console.warn);
       }
     };
   }, [sessionId]);
@@ -74,7 +74,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
-        }).catch(console.error);
+        }).catch(console.warn);
       }
     };
     const handleOffline = async () => {
@@ -139,11 +139,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              localStorage.setItem('ohc_active_terminal_session_id', data.session_id);
           }
         } else {
-          console.error("Failed to start terminal session:", data.error_message);
+          console.warn("Failed to start terminal session:", data.error_message);
           setStatus("Connected, but session start failed: " + data.error_message);
         }
       } catch (err) {
-        console.error("Failed to start terminal session", err);
+        console.warn("Failed to start terminal session", err);
         setStatus("Connected, but session start failed");
       }
     }

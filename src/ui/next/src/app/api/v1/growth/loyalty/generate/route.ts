@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ embed_code: embedCode });
   } catch (error) {
-    console.error("Error generating loyalty program snippet:", error);
+    console.warn("Error generating loyalty program snippet:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

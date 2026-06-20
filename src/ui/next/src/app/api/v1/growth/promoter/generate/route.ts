@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         });
     }
   } catch (error) {
-    console.error("Error generating promoter posts:", error);
+    console.warn("Error generating promoter posts:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

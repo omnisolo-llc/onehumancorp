@@ -51,7 +51,7 @@ export default function WorkIntakeWidgetPage() {
         setIsUnlocking(false);
       }, 1500);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setIsUnlocking(false);
     }
   };

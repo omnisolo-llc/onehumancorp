@@ -24,7 +24,7 @@ export default function CustomerSubscriptionPortal() {
           setSubscription(data);
         }
       } catch (err) {
-        console.error("Failed to fetch subscription", err);
+        console.warn("Failed to fetch subscription", err);
       } finally {
         setLoading(false);
       }
@@ -81,7 +81,7 @@ export default function CustomerSubscriptionPortal() {
         setActionStatus({ message: 'Failed to update subscription.', type: 'error' });
       }
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       setActionStatus({ message: 'An error occurred.', type: 'error' });
     } finally {
       setIsProcessing(false);

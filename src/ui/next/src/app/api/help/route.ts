@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(fallbackArticles, { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
-      console.error("Failed to fetch help from backend:", e);
+      console.warn("Failed to fetch help from backend:", e);
     }
     return NextResponse.json(fallbackArticles, { status: 200 });
   }

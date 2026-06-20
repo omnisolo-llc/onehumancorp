@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
     return res;
   } catch (e: any) {
-    console.error(`${e.message}`);
+    console.warn(`${e.message}`);
     return new Response(`Failed to generate the image`, {
       status: 500,
     });

@@ -17,7 +17,7 @@ export default function FinancePage() {
                 setInvoices(data.invoices || []);
             }
         } catch (e) {
-            console.error("Failed to fetch invoices", e);
+            console.warn("Failed to fetch invoices", e);
         } finally {
             setLoading(false);
         }

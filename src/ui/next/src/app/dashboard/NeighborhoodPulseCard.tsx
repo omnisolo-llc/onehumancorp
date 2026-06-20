@@ -19,7 +19,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
           setNeighbors(data.neighbors.map((id: string) => ({ id, name: id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) })));
         }
       } catch (e) {
-        console.error('Failed to fetch neighbors', e);
+        console.warn('Failed to fetch neighbors', e);
       } finally {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
         alert('Failed to send invitation');
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       alert('Error occurred while inviting');
     }
   };

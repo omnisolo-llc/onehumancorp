@@ -38,7 +38,7 @@ export default function KitchenView() {
            setMenu(data.items || data || []);
         }
       } catch (err) {
-        console.error("Failed to fetch kitchen data", err);
+        console.warn("Failed to fetch kitchen data", err);
       }
     };
 

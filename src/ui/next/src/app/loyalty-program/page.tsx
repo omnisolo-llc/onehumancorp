@@ -42,7 +42,7 @@ export default function LoyaltyProgramPage() {
       const data = await response.json();
       setGeneratedDraft(data.message);
     } catch (error) {
-      console.error("Failed to generate draft", error);
+      console.warn("Failed to generate draft", error);
       setGeneratedDraft("Failed to generate email draft. Please try again.");
     } finally {
       setIsGenerating(false);

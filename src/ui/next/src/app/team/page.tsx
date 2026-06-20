@@ -44,7 +44,7 @@ export default function TeamPage() {
         setApprovals(data.pending_approvals || []);
       }
     } catch (error) {
-      console.error("Failed to fetch approvals", error);
+      console.warn("Failed to fetch approvals", error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function TeamPage() {
       });
       if (!response.ok) fetchApprovals();
     } catch (error) {
-      console.error("Failed to approve", error);
+      console.warn("Failed to approve", error);
       fetchApprovals();
     }
   };
@@ -93,7 +93,7 @@ export default function TeamPage() {
       });
       if (!response.ok) fetchApprovals();
     } catch (error) {
-      console.error("Failed to reject", error);
+      console.warn("Failed to reject", error);
       fetchApprovals();
     }
   };

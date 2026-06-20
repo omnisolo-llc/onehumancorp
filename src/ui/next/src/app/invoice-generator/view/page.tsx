@@ -40,7 +40,7 @@ function InvoiceContent() {
         }
         setInvoiceId(Math.abs(hash).toString().substring(0, 6).padStart(4, '0'));
       } catch (err) {
-        console.error("Failed to parse invoice data", err);
+        console.warn("Failed to parse invoice data", err);
         setError(true);
       }
     } else {

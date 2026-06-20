@@ -102,7 +102,7 @@ function QuotingContent() {
         });
       }
     } catch (err) {
-      console.error('Failed to accept quote:', err);
+      console.warn('Failed to accept quote:', err);
       alert('Your changes have been saved offline and will sync when reconnected.');
     }
   };

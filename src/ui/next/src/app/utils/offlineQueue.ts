@@ -18,7 +18,7 @@ function getIndexedDB(): Promise<IDBDatabase> {
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = (event) => {
       if (process.env.NODE_ENV !== 'test') {
-        console.error("IndexedDB error", event);
+        console.warn("IndexedDB error", event);
       }
       reject(request.error);
     };
@@ -62,7 +62,7 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error("Failed to enqueue action to fallback IndexedDB", err);
+      console.warn("Failed to enqueue action to fallback IndexedDB", err);
     }
   }
 }
@@ -98,7 +98,7 @@ export async function getActions(): Promise<OfflineAction[]> {
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error("Failed to get actions from fallback IndexedDB", err);
+      console.warn("Failed to get actions from fallback IndexedDB", err);
     }
     return [];
   }
@@ -128,7 +128,7 @@ export async function removeAction(id: string): Promise<void> {
     });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error("Failed to remove action from fallback IndexedDB", err);
+      console.warn("Failed to remove action from fallback IndexedDB", err);
     }
   }
 }

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ embed_code: embedCode });
   } catch (error) {
-    console.error("Error generating discount share snippet:", error);
+    console.warn("Error generating discount share snippet:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

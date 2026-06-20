@@ -31,7 +31,7 @@ export default function AbandonedCartPage() {
         setResult('Error generating campaign.');
       }
     } catch (error) {
-      console.error(error);
+      console.warn(error);
       setResult('Error generating campaign.');
     } finally {
       setIsGenerating(false);

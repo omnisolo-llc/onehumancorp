@@ -35,7 +35,7 @@ export default function CalendarPage() {
         setIsLoading(false);
       })
       .catch(err => {
-         console.error(err);
+         console.warn(err);
          setError("Failed to load appointments. Please try again later.");
          setIsLoading(false);
       });

@@ -67,7 +67,7 @@ function InboxWorkspace({
           setPendingApprovals(data.pending_approvals || []);
         }
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
     }
     fetchApprovals();
@@ -119,7 +119,7 @@ function InboxWorkspace({
         setActionStatus("Failed to approve and send message.");
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setActionStatus("Error approving message.");
     }
   }

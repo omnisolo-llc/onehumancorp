@@ -32,7 +32,7 @@ export function VoiceAssistantFAB() {
       mediaRecorder.start();
       setIsListening(true);
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.warn('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
     }
   };
@@ -67,7 +67,7 @@ export function VoiceAssistantFAB() {
       window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: result }));
 
     } catch (error) {
-      console.error('Error processing voice command:', error);
+      console.warn('Error processing voice command:', error);
     } finally {
       setIsProcessing(false);
     }

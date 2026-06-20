@@ -34,7 +34,7 @@ export function DashboardViralInviteWidget() {
         setReferralLink(data.invite_link || `https://ohc.app/invite/${tenantId}`);
       }
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       setReferralLink(`https://ohc.app/invite/${tenantId}`);
     }
     setLoading(false);

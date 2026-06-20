@@ -50,7 +50,7 @@ export default function PromoterPage() {
         setGeneratedPosts(data);
       }
     } catch (error) {
-      console.error("Failed to generate posts", error);
+      console.warn("Failed to generate posts", error);
     } finally {
       setIsGenerating(false);
     }
@@ -64,7 +64,7 @@ export default function PromoterPage() {
         setCopiedState(prev => ({ ...prev, [platform]: false }));
       }, 2000);
     } catch (err) {
-      console.error('Failed to copy text', err);
+      console.warn('Failed to copy text', err);
     }
   };
 

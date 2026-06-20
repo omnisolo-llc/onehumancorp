@@ -33,7 +33,7 @@ function VCardContent() {
         const decodedData = JSON.parse(decodeURIComponent(utf8Encoded));
         setCardData(decodedData);
       } catch (err) {
-        console.error("Failed to parse vcard data", err);
+        console.warn("Failed to parse vcard data", err);
         setError(true);
       }
     } else {

@@ -125,7 +125,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           }
         }
       } catch (err) {
-        console.error("Failed to sync offline actions", err);
+        console.warn("Failed to sync offline actions", err);
       }
     };
 
@@ -283,12 +283,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 });
               }
             } catch (e) {
-              console.error("Error parsing SSE event", e);
+              console.warn("Error parsing SSE event", e);
             }
           };
 
           eventSource.onerror = (error) => {
-            console.error("SSE connection error", error);
+            console.warn("SSE connection error", error);
             eventSource.close();
           };
 
@@ -301,7 +301,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         if (mounted) {
           setError(err.message || "Failed to load feed");
         }
-        console.error("Failed to load activity", err);
+        console.warn("Failed to load activity", err);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -331,7 +331,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         try {
           const data = JSON.parse(event.data);
           if (data.error) {
-             console.error("Agent feed WS error:", data.error);
+             console.warn("Agent feed WS error:", data.error);
              return;
           }
 
@@ -383,7 +383,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               }
           }
         } catch (err) {
-          console.error('Failed to parse websocket feed event:', err);
+          console.warn('Failed to parse websocket feed event:', err);
         }
       };
 
@@ -393,7 +393,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       };
 
       ws.onerror = (err) => {
-        console.error("Websocket error:", err);
+        console.warn("Websocket error:", err);
       };
     };
 
@@ -421,7 +421,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       // Optimistic UI update
       setTriageItems(prev => prev.filter(i => i.id !== id));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 
@@ -482,7 +482,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             }
         }
       } catch (e) {
-        console.error("Failed to restore state", e);
+        console.warn("Failed to restore state", e);
       }
       setError(err.message || "Action failed");
     }

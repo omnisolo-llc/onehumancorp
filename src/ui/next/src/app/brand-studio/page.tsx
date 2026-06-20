@@ -90,7 +90,7 @@ export default function BrandStudioPage() {
       setPublishStatus("");
       setStatus("ready");
     } catch (error) {
-      console.error(error);
+      console.warn(error);
       setStatus("error");
     }
   };
@@ -108,7 +108,7 @@ export default function BrandStudioPage() {
       const site = await response.json();
       setPublishStatus(`Published domain: ${site.domain ?? "Website published"}`);
     } catch (error) {
-      console.error(error);
+      console.warn(error);
       setPublishStatus("Could not publish the website.");
     }
   };

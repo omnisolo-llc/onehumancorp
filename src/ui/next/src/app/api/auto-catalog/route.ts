@@ -28,7 +28,7 @@ export async function POST(request: Request) {
             }
         });
     } catch (error) {
-        console.error('Auto-catalog service unavailable:', error);
+        console.warn('Auto-catalog service unavailable:', error);
         return NextResponse.json({
             error: 'AUTO_CATALOG_UNAVAILABLE',
             message: 'Auto-catalog requires a reachable catalog extraction service.'

@@ -19,7 +19,7 @@ export default function SubscriptionsPage() {
         if (data.subscribers) setSubscribers(data.subscribers);
         if (data.batches) setBatches(data.batches);
       })
-      .catch(err => console.error('Failed to fetch subscriptions:', err))
+      .catch(err => console.warn('Failed to fetch subscriptions:', err))
       .finally(() => setLoading(false));
   }, []);
 

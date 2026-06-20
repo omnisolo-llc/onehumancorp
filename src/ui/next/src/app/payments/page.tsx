@@ -19,7 +19,7 @@ export default function PaymentLedger() {
         setRevenue(data.total_revenue);
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 
@@ -68,7 +68,7 @@ export default function PaymentLedger() {
         setStatus("Failed");
       }
     } catch (e) {
-      console.error(e);
+      console.warn(e);
       setStatus("Error");
     }
   };

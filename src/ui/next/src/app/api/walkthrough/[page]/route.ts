@@ -24,7 +24,7 @@ export async function GET(
 
     return NextResponse.json(mappedData);
   } catch (error) {
-    console.error(`Failed to fetch walkthrough for page ${page}:`, error);
+    console.warn(`Failed to fetch walkthrough for page ${page}:`, error);
     return NextResponse.json([], { status: 200 }); // Graceful fallback
   }
 }

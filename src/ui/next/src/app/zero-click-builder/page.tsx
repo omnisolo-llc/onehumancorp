@@ -59,7 +59,7 @@ export default function ZeroClickBuilderPage() {
         setGeneratedStore(data);
       }, 1000);
     } catch (error) {
-      console.error("Error generating store:", error);
+      console.warn("Error generating store:", error);
       setIsGenerating(false);
       clearInterval(interval);
       alert("Something went wrong. Please try again.");

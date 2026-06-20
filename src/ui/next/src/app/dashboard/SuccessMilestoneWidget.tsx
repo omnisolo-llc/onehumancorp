@@ -21,7 +21,7 @@ export function SuccessMilestoneWidget() {
           setMilestone(data);
         }
       })
-      .catch(err => console.error("Failed to fetch milestone", err));
+      .catch(err => console.warn("Failed to fetch milestone", err));
   }, []);
 
   if (!milestone) return null;

@@ -12,14 +12,14 @@ export async function GET(request: Request) {
         });
 
         if (!response.ok) {
-            console.error('Failed to fetch department tier usage from backend', response.status);
+            console.warn('Failed to fetch department tier usage from backend', response.status);
             return NextResponse.json({ error: 'Failed to fetch from backend' }, { status: response.status });
         }
 
         const data = await response.json();
         return NextResponse.json(data);
     } catch (error) {
-        console.error('Error proxying department tier usage to backend', error);
+        console.warn('Error proxying department tier usage to backend', error);
         return NextResponse.json({ error: 'Error proxying to backend' }, { status: 500 });
     }
 }

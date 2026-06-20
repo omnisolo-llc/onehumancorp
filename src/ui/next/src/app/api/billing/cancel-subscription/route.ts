@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-        console.error('Failed to cancel subscription on backend', res.status);
+        console.warn('Failed to cancel subscription on backend', res.status);
         return NextResponse.json({ error: 'Failed to cancel subscription' }, { status: res.status });
     }
 

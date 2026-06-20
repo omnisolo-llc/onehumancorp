@@ -15,7 +15,7 @@ export default function DailyWorkFeed() {
         setItems(data.items || []);
       }
     } catch (err) {
-      console.error("Failed to fetch daily work feed", err);
+      console.warn("Failed to fetch daily work feed", err);
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export default function DailyWorkFeed() {
         body: JSON.stringify({ action_status: actionStatus }),
       });
     } catch (err) {
-      console.error("Failed to process action", err);
+      console.warn("Failed to process action", err);
       // Optional: Re-fetch or revert on error
       fetchFeed();
     }

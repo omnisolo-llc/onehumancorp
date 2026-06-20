@@ -23,7 +23,7 @@ export async function POST(request: Request) {
             }
         });
     } catch (error) {
-        console.error('Offering generation backend unavailable:', error);
+        console.warn('Offering generation backend unavailable:', error);
         return NextResponse.json({
             error: 'BACKEND_UNAVAILABLE',
             message: 'Offering generation requires the catalog backend.'

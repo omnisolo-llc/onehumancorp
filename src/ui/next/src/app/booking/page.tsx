@@ -44,7 +44,7 @@ function BookingForm() {
           setAvailableSlots([]);
         }
       } catch (err) {
-        console.error("Failed to fetch slots", err);
+        console.warn("Failed to fetch slots", err);
         setAvailableSlots([]);
       } finally {
         setIsLoadingSlots(false);
@@ -85,7 +85,7 @@ function BookingForm() {
       }
       setSubmitted(true);
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       alert("Failed to create booking request.");
     }
   };

@@ -70,7 +70,7 @@ try {
 
       setTriageItems(prev => prev.filter(i => i.id !== id));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   };
 

@@ -114,10 +114,10 @@ export default function POSTerminal() {
               if (sessionData.success) {
                 setSessionId(sessionData.session_id);
               } else {
-                console.error("Failed to start terminal session", sessionData.error_message);
+                console.warn("Failed to start terminal session", sessionData.error_message);
               }
             } catch(e) {
-               console.error("Failed to fetch session", e);
+               console.warn("Failed to fetch session", e);
             }
 
           } else {
@@ -125,7 +125,7 @@ export default function POSTerminal() {
             setPin('');
           }
         } catch (e) {
-           console.error("Auth failed, falling back to offline", e);
+           console.warn("Auth failed, falling back to offline", e);
            const staff = { id: 'staff_1', name: 'Offline Manager (Fallback)', role: 'Manager' };
            setActiveStaff(staff);
            setLocked(false);
@@ -153,7 +153,7 @@ export default function POSTerminal() {
       const data = await res.json();
       setInventory(data.inventory || []);
     } catch (e) {
-      console.error("Failed to load inventory", e);
+      console.warn("Failed to load inventory", e);
       setInventory([]);
     }
   };

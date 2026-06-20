@@ -31,7 +31,7 @@ export default function FulfillmentHub() {
         setAwaitingPickup(data.awaiting_pickup || []);
       }
     } catch (e) {
-      console.error('Failed to fetch orders', e);
+      console.warn('Failed to fetch orders', e);
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export default function FulfillmentHub() {
         fetchOrders(); // refresh queue
       }
     } catch (e) {
-      console.error('Failed to execute action', e);
+      console.warn('Failed to execute action', e);
     }
   };
 

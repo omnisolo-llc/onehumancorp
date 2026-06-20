@@ -26,7 +26,7 @@ export function ViralLoopPerformanceWidget() {
           setPendingRewards(0);
         }
       } catch (err) {
-        console.error("Failed to fetch viral loop metrics", err);
+        console.warn("Failed to fetch viral loop metrics", err);
       }
     }
 

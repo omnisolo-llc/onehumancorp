@@ -69,7 +69,7 @@ export default function PipelinePage() {
         )
       );
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }
 

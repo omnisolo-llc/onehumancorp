@@ -110,7 +110,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ wizardState })
       });
     } catch (err) {
-      console.error('Failed to sync onboarding state', err);
+      console.warn('Failed to sync onboarding state', err);
     }
   };
   const [validationError, setValidationError] = useState('');
@@ -176,7 +176,7 @@ export default function OnboardingWizard() {
       setSaveMessage('Draft Saved!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err: any) {
-      console.error(err);
+      console.warn(err);
       setError(err.message || 'An error occurred saving draft');
     } finally {
       setIsLoading(false);
@@ -222,7 +222,7 @@ export default function OnboardingWizard() {
         initialStateLoaded.current = true;
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err))
+    .catch(err => console.warn('Failed to load onboarding state', err))
     .finally(() => {
       initialStateLoaded.current = true;
       setIsLoaded(true);
@@ -266,7 +266,7 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      }).catch(err => console.error('Failed to sync onboarding state', err));
+      }).catch(err => console.warn('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
@@ -329,7 +329,7 @@ export default function OnboardingWizard() {
         firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
       }); // Go to review step
     } catch (err: any) {
-      console.error(err);
+      console.warn(err);
       setError(err.message || 'An error occurred processing details');
       setStep(1); syncStateToBackend({ step: 1 });
       setChatStep(3); syncStateToBackend({ chatStep: 3 });
@@ -431,7 +431,7 @@ export default function OnboardingWizard() {
            localStorage.setItem('tenant', result.organization_id);
         }
         setStep(5);
-        fetch(`${backendUrl}/api/onboarding/launch`, { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
+        fetch(`${backendUrl}/api/onboarding/launch`, { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.warn);
 
         // Optional, but required by E2E test
         if (typeof window !== 'undefined' && window.location.href.includes('setup.html')) {
@@ -439,7 +439,7 @@ export default function OnboardingWizard() {
         }
       }
     } catch (err: any) {
-      console.error(err);
+      console.warn(err);
       setError(err.message || 'Failed to send chat message');
     } finally {
       setIsLoading(false);
@@ -494,7 +494,7 @@ export default function OnboardingWizard() {
         handleStartOnboarding(intakeData);
       }, 100);
     } catch (err: any) {
-      console.error(err);
+      console.warn(err);
       setError(err.message || 'Failed to generate your business');
       setStep(-1); syncStateToBackend({ step: -1 });
     } finally {
@@ -550,10 +550,10 @@ export default function OnboardingWizard() {
           localStorage.setItem('tenant', result.organization_id);
         }
         setStep(5); syncStateToBackend({ step: 5 });
-        fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
+        fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.warn);
         return;
       } catch (err: any) {
-        console.error(err);
+        console.warn(err);
         setError(err.message || 'Failed to start onboarding');
         setStep(3); syncStateToBackend({ step: 3 });
         setIsLoading(false);
@@ -631,10 +631,10 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant', result.organization_id);
       }
       setStep(5); syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
-      fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
+      fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.warn);
 
     } catch (err: any) {
-      console.error(err);
+      console.warn(err);
       setError(err.message || 'Failed to start onboarding');
       setStep(3); syncStateToBackend({ step: 3 });
     } finally {

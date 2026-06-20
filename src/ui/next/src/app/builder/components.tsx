@@ -243,7 +243,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ referrer_id: tenantId, source: 'footer_widget' })
-            }).catch(err => console.error('Failed to track referral click:', err));
+            }).catch(err => console.warn('Failed to track referral click:', err));
           }}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >

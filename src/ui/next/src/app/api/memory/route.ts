@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     });
 
     if (!res.ok) {
-       console.error("Backend GET failed:", res.status, res.statusText);
+       console.warn("Backend GET failed:", res.status, res.statusText);
        // Instead of returning mock data, return the real error
        return NextResponse.json({ error: "Backend error", status: res.statusText }, { status: res.status });
     }

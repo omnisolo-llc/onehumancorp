@@ -39,7 +39,7 @@ export function WrappedWidget() {
           setData(result);
         }
       })
-      .catch(err => console.error("Failed to fetch wrapped data", err))
+      .catch(err => console.warn("Failed to fetch wrapped data", err))
       .finally(() => setIsLoading(false));
   }, []);
 

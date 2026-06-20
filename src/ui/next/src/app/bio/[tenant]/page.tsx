@@ -45,7 +45,7 @@ export default function LinkInBioPublicPage() {
                     }
                 }
             } catch (e) {
-                console.error("Error loading bio data:", e);
+                console.warn("Error loading bio data:", e);
                 // Fallback to localStorage on network error
                 if (typeof localStorage !== 'undefined') {
                     const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
