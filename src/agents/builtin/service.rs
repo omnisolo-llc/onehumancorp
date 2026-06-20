@@ -201,7 +201,7 @@ impl AgentServiceImpl {
                             Arc::new(ConsolidationWorker::new(
                                 repo.clone(),
                                 Duration::from_secs(3600),
-                                180,
+                                180, None,
                             ))
                             .spawn_background_task(),
                         );
@@ -219,7 +219,7 @@ impl AgentServiceImpl {
                             Arc::new(ConsolidationWorker::new(
                                 repo.clone(),
                                 Duration::from_secs(3600),
-                                180,
+                                180, None,
                             ))
                             .spawn_background_task(),
                         );
