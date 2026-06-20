@@ -3494,6 +3494,38 @@ pub async fn simulate_agent_feed_item_handler(
         cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
         cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
     }
+    if let Some(cache) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
+        cache.invalidate(&format!("ui_unified_agent_feed:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_unified_agent_feed:{}:mobile:true", tenant_id)).await;
+    }
+    if let Some(cache) = UI_UNIFIED_FEED_CACHE.get() {
+        cache.invalidate(&format!("ui_unified_feed:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_unified_feed:{}:mobile:true", tenant_id)).await;
+    }
+
+    let cache = crate::api::agent_feed::get_agent_feed_cache();
+    cache.invalidate_by_tag(&format!("agent_feed_tenant:{}", tenant_id)).await;
+
+    // Publish to Redis Pub/Sub for WebSockets
+    if let Some(client) = get_redis_client() {
+        let topic = format!("agent_feed:{}", tenant_id);
+        let payload_json = serde_json::json!({
+            "id": item_id,
+            "tenant_id": tenant_id,
+            "event_source": "Simulated Webhook",
+            "context_payload": {"description": "A new simulated event needs your attention."},
+            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."},
+            "lifecycle_state": "PENDING_APPROVAL",
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "updated_at": chrono::Utc::now().to_rfc3339()
+        }).to_string();
+
+        tokio::spawn(async move {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_json).query_async(&mut conn).await;
+            }
+        });
+    }
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": item_id }))).into_response()
 }
