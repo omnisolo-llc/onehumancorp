@@ -24,7 +24,7 @@ impl Department for OperationsAgent {
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
-            "InventoryConflictEvent".to_string(),
+            "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
             "pos_sales".to_string(),
         ]
@@ -115,7 +115,7 @@ impl Department for OperationsAgent {
                     new_payload,
                 ).await.map(|_| ());
             },
-            "InventoryConflictEvent" => {
+            "inventory.sync.conflict" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
