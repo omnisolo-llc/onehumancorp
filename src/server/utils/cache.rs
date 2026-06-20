@@ -200,25 +200,21 @@ where
 
         if local.len() >= self.max_local_capacity && !local.contains_key(key) {
             let mut removed_keys = Vec::new();
-            let mut sampled_keys = Vec::new();
             let mut has_expired = false;
 
-            // Use random sampling instead of full scan for O(1) probabilistic LFU eviction
-            // taking 10 items is an industry standard approach for probabilistic eviction
-            let mut sample_count = 0;
+            let mut least_accessed_key = None;
+            let mut lowest_access_count = u64::MAX;
+
             for item in local.iter() {
                 if item.expiry <= now {
                     removed_keys.push(item.key().clone());
                     has_expired = true;
-                } else if sample_count < 10 {
-                    sampled_keys.push((item.key().clone(), item.access_count.load(Ordering::Relaxed)));
-                    sample_count += 1;
-                }
-
-                if sample_count >= 10 && has_expired {
-                    break;
-                } else if sample_count >= 10 {
-                    break;
+                } else {
+                    let count = item.access_count.load(Ordering::Relaxed);
+                    if count < lowest_access_count {
+                        lowest_access_count = count;
+                        least_accessed_key = Some(item.key().clone());
+                    }
                 }
             }
 
@@ -228,9 +224,9 @@ where
                 }
             } else {
                 if local.len() >= self.max_local_capacity {
-                    if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
-                        local.remove(&least_accessed_key);
-                        removed_keys.push(least_accessed_key);
+                    if let Some(key_to_remove) = least_accessed_key {
+                        local.remove(&key_to_remove);
+                        removed_keys.push(key_to_remove);
                     }
                 }
             }
