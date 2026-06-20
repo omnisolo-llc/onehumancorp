@@ -319,7 +319,7 @@ oci.pull(
 oci.pull(
     name = "nginx_alpine",
     digest = "sha256:3bcf852aed06467cf075c6105892e4d5a6ebbbafa0ce22d35062db9e90ddef4c",
-    image = "index.docker.io/library/nginx",
+    image = "mirror.gcr.io/library/nginx",
     platforms = [
         "linux/amd64",
         "linux/arm64/v8",
