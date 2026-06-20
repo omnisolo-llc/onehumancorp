@@ -348,18 +348,12 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
-        // GC expired entries
-        let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1"
-        } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
-        };
 
         let now = chrono::Utc::now();
         if should_bypass {
-            sqlx::query(query).bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         }
 
         Ok(())
