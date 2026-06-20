@@ -50,7 +50,7 @@ impl UserRepository for SqliteUserRepository {
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, json($5), $6, $7, $8, $9, $10)
             "#
         )
         .bind(&user.id)
@@ -262,13 +262,13 @@ impl UserRepository for SqliteUserRepository {
 
         let query = if should_bypass {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=json($5), active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=json($5), active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#
@@ -512,7 +512,7 @@ mod tests {
             let res = repo.get_by_id("dummy_id", "system").await;
             if is_multitenant {
                 assert!(res.is_err(), "Must reject system id in multitenant mode");
-                assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+                assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
             }
         }).await;
     }
