@@ -215,7 +215,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+    async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -241,7 +241,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                     .bind("job_failed")
                     .bind("job_queue")
                     .bind(&payload_str)
-                    .bind(_reason)
+                    .bind(reason)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;

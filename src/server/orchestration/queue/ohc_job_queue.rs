@@ -134,7 +134,15 @@ impl OHCJobQueue {
         Ok(result.rows_affected())
     }
 
+
+
     pub async fn fail(&self, job_id: &str, max_retries: i32) -> Result<(), String> {
+        self.fail_with_reason(job_id, max_retries, "Max retries exceeded").await
+    }
+
+
+
+    pub async fn fail_with_reason(&self, job_id: &str, max_retries: i32, reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -160,11 +168,18 @@ impl OHCJobQueue {
                     .bind("job_failed")
                     .bind("job_queue")
                     .bind(&payload_str)
-                    .bind("Max retries exceeded")
+                    .bind(reason)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+
+                let fail_status = if reason.contains("Rate Limit") || reason.contains("unavailable") || reason.contains("Timeout") || reason.contains("PAUSED") {
+                    "PAUSED"
+                } else {
+                    "FAILED"
+                };
+                sqlx::query("UPDATE ohc_job_queue SET status = $1, retry_count = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                    .bind(fail_status)
                     .bind(next_retry)
                     .bind(job_id)
                     .execute(&mut *tx)
