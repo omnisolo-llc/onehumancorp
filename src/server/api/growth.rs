@@ -335,6 +335,8 @@ where
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
+        .route("/lead-magnet/capture", post(handle_lead_magnet_capture))
+
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
@@ -3361,4 +3363,33 @@ async fn handle_generate_viral_waitlist(
     Ok(Json(WaitlistGenerateResponse {
         success: true,
     }))
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LeadMagnetCaptureRequest {
+    pub tenant_id: String,
+    pub email: String,
+    pub source: Option<String>,
+    pub campaign: Option<String>,
+}
+
+async fn handle_lead_magnet_capture(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<LeadMagnetCaptureRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Record lead capture in the CRM/Hub
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.lead_captured",
+        "tenant_id": req.tenant_id,
+        "email": req.email,
+        "source": req.source.unwrap_or_else(|| "lead_magnet_embed".to_string()),
+        "campaign": req.campaign.unwrap_or_else(|| "unknown".to_string()),
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Lead captured successfully"
+    })))
 }
