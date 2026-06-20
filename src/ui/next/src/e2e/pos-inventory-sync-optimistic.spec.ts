@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
+test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {
     // Navigate to POS terminal
     await page.goto('/pos/terminal');
@@ -15,7 +15,7 @@ test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
     await page.getByRole('button', { name: '4', exact: true }).click();
 
     // Wait for the dashboard to load
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
 
     // Wait for the product catalog to be populated
     await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
@@ -53,7 +53,7 @@ test.describe.skip('POS Inventory Sync - Optimistic UI', () => {
     await page.getByRole('button', { name: '3', exact: true }).click();
     await page.getByRole('button', { name: '4', exact: true }).click();
 
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
 
     // Ensure product catalog is populated
     await expect(page.getByText('Vegan Celebration Cake')).toBeVisible({ timeout: 5000 });
