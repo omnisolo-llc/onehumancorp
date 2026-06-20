@@ -133,13 +133,14 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let query_str = format!(
             "SELECT id, parent_task_id, job_type, payload, status, retry_count, max_retries, next_retry_at, locked_until, created_at, updated_at, tenant_id
              FROM ohc_job_queue
-             WHERE status = 'PENDING' AND datetime(next_retry_at) <= CURRENT_TIMESTAMP AND job_type IN ({})
+             WHERE status = 'PENDING' AND next_retry_at <= ? AND job_type IN ({})
              ORDER BY next_retry_at ASC, created_at ASC
              LIMIT 1",
             role_placeholders
         );
 
         let mut query = sqlx::query(&query_str);
+        query = query.bind(chrono::Utc::now());
         for role in &roles {
             query = query.bind(role);
         }
