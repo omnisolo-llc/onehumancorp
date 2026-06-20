@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 
 export default function ProposalGeneratorPage() {
   const [clientName, setClientName] = useState('');
@@ -54,9 +54,9 @@ export default function ProposalGeneratorPage() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Proposal Generator 📝</h1>
          <div className="flex items-center gap-3">
-             <Link href="/dashboard" className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+             <a href="/dashboard" className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
-             </Link>
+             </a>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -148,9 +148,9 @@ export default function ProposalGeneratorPage() {
             </div>
 
             <div className="mt-6">
-              <Link href={shareLink} target="_blank" className="text-indigo-600 hover:text-indigo-800 font-medium underline">
+              <a href={shareLink} target="_blank" className="text-indigo-600 hover:text-indigo-800 font-medium underline">
                 Preview Proposal
-              </Link>
+              </a>
             </div>
           </div>
         )}

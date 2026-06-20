@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server';
 import { getBilling } from '../store';
 
-export async function GET(request?: Request) {
+export async function GET(request: Request) {
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
     const tenantId = request?.headers?.get('x-tenant-id') || 'storefront';

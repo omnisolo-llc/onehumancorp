@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { optimizeImage } from "../../../lib/utils/imageOptimization";
-import Link from 'next/link';
+
 import { useSearchParams } from 'next/navigation';
 
 export default function AutoCatalogPage() {
@@ -187,9 +187,9 @@ function AutoCatalogContent() {
          <div className="text-6xl mb-4">🎉</div>
          <h1 className="text-2xl font-bold mb-2">Product Published!</h1>
          <p className="text-gray-600 mb-6 text-center">Your new product is now live on your storefront.</p>
-         <Link href="/dashboard" className="w-full max-w-xs py-3 bg-gray-900 text-white rounded-xl font-bold shadow-md hover:bg-black text-center">
+         <a href="/dashboard" className="w-full max-w-xs py-3 bg-gray-900 text-white rounded-xl font-bold shadow-md hover:bg-black text-center">
             Return to Dashboard
-         </Link>
+         </a>
       </div>
     );
   }
@@ -209,7 +209,7 @@ function AutoCatalogContent() {
         </div>
       )}
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
+        <a href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</a>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>
       </div>
 

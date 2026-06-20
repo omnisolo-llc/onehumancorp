@@ -284,9 +284,9 @@ export default function CampaignOrchestrationPage() {
                   >
                     {submitting && selected === workflow.key ? "Working..." : workflow.methodLabel}
                   </button>
-                  <Link href={workflow.href} className="app-button min-h-[44px]">
+                  <a href={workflow.href} className="app-button min-h-[44px]">
                     {workflow.linkLabel}
-                  </Link>
+                  </a>
                 </div>
               </div>
             ))}
@@ -315,12 +315,12 @@ export default function CampaignOrchestrationPage() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={activeWorkflow.href} className="app-button primary min-h-[44px]">
+              <a href={activeWorkflow.href} className="app-button primary min-h-[44px]">
                 Continue in workflow
-              </Link>
-              <Link href="/dashboard" className="app-button min-h-[44px]">
+              </a>
+              <a href="/dashboard" className="app-button min-h-[44px]">
                 Back to Dashboard
-              </Link>
+              </a>
             </div>
           </div>
         </div>

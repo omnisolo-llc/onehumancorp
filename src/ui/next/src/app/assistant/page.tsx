@@ -215,14 +215,14 @@ export default function AssistantPage() {
       setResourceLoading(section);
       setResourceError('');
       try {
-        const response = await fetch(config.endpoint);
+        const response = await fetch(config?.endpoint || "");
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `${config.title} unavailable`);
+        if (!response.ok) throw new Error(data.error || `${config?.title} unavailable`);
         if (mounted) {
           setResourceData((current) => ({ ...current, [section]: data }));
         }
       } catch (loadError: any) {
-        if (mounted) setResourceError(loadError.message || `${config.title} unavailable`);
+        if (mounted) setResourceError(loadError.message || `${config?.title} unavailable`);
       } finally {
         if (mounted) setResourceLoading('');
       }
@@ -328,9 +328,9 @@ export default function AssistantPage() {
   async function refreshResource(targetSection: Section) {
     const config = resourceConfig[targetSection];
     if (!config) return;
-    const response = await fetch(config.endpoint);
+    const response = await fetch(config?.endpoint || "");
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `${config.title} unavailable`);
+    if (!response.ok) throw new Error(data.error || `${config?.title} unavailable`);
     setResourceData((current) => ({ ...current, [targetSection]: data }));
   }
 
@@ -836,7 +836,7 @@ function resourceBlocks(data: any, rootKeys: string[]) {
        items = value.map(v => typeof v === 'object' && v !== null ? { ...v, id: v.id || v.name || key } : v);
     } else if (value && typeof value === 'object') {
        // if it's an object, flatten it safely to include its fields explicitly
-       const flatItem = { id: key, name: key };
+       const flatItem: any = { id: key, name: key };
        for (const [k, v] of Object.entries(value)) {
           flatItem[k] = typeof v === 'number' || typeof v === 'boolean' ? String(v) : v;
        }

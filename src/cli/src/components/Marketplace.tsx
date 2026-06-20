@@ -33,7 +33,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onBack }) => {
 
       {loading && (
         <Box marginTop={1}>
-          <Text color="yellow"><Spinner type="dots" /> Fetching Pre-built Agents...</Text>
+          <Text color="yellow">{Spinner({ type: "dots" }) as any} Fetching Pre-built Agents...</Text>
         </Box>
       )}
 

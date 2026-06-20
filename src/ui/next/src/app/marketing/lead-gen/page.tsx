@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+
 
 export default function LeadGenCampaignPage() {
   const [budget, setBudget] = useState('');
@@ -51,9 +51,9 @@ export default function LeadGenCampaignPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center font-inter">
       <div className="w-full max-w-md mx-auto glassmorphism p-8 rounded-2xl border border-white/50 shadow-xl">
         <div className="mb-6">
-          <Link href="/dashboard" className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+          <a href="/dashboard" className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors">
             &larr; Back to Dashboard
-          </Link>
+          </a>
         </div>
 
         <div className="text-center mb-8">
@@ -74,9 +74,9 @@ export default function LeadGenCampaignPage() {
             <p className="text-sm mb-4">
               Our Marketing & Advertising agent is now actively seeking leads within {radius} miles of {zipCode}. We'll notify you when a booking is made.
             </p>
-            <Link href="/dashboard" className="inline-block px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
+            <a href="/dashboard" className="inline-block px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
               Return to Dashboard
-            </Link>
+            </a>
           </div>
         ) : (
           <div className="space-y-6">

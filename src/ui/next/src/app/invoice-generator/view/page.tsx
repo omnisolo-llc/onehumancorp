@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+
 import { PoweredByOHC } from '../../components/PoweredByOHC';
 
 function InvoiceContent() {
@@ -111,7 +111,7 @@ function InvoiceContent() {
         {/* Viral Growth Loop Footer */}
         <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
           <PoweredByOHC tenantId={tenant} />
-          <Link
+          <a
             href={`/onboarding?ref=${tenant}&source=invoice_generator`}
             target="_blank"
             className="inline-flex flex-col items-center gap-1 group mt-2"
@@ -119,7 +119,7 @@ function InvoiceContent() {
             <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
               Create your own professional invoices for free
             </span>
-          </Link>
+          </a>
         </div>
       </main>
 

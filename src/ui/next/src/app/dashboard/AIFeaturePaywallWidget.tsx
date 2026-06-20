@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 
 export function AIFeaturePaywallWidget() {
   const [unlocked, setUnlocked] = useState(false);
@@ -68,9 +68,9 @@ export function AIFeaturePaywallWidget() {
                    You have 7 days of free access to Smart Cross-Selling and Deep Insights.
                  </p>
               </div>
-              <Link href="/analytics" className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+              <a href="/analytics" className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
                 View Insights
-              </Link>
+              </a>
             </div>
           </div>
       );
@@ -95,9 +95,9 @@ export function AIFeaturePaywallWidget() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 items-center">
-             <Link href="/pricing" className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold rounded-xl hover:bg-black dark:hover:bg-gray-100 transition-colors shadow-sm text-center">
+             <a href="/pricing" className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold rounded-xl hover:bg-black dark:hover:bg-gray-100 transition-colors shadow-sm text-center">
                 Upgrade to Pro ($79/mo)
-             </Link>
+             </a>
              <span className="text-gray-400 font-medium text-sm">or</span>
 
              {!referralLink ? (

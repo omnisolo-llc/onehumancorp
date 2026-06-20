@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 
 export default function InvoiceGeneratorPage() {
   const [clientName, setClientName] = useState('');
@@ -54,9 +54,9 @@ export default function InvoiceGeneratorPage() {
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Invoice Generator</h1>
-        <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
+        <a href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
-        </Link>
+        </a>
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -171,13 +171,13 @@ export default function InvoiceGeneratorPage() {
                 >
                   {copied ? 'Copied!' : 'Copy Link'}
                 </button>
-                <Link
+                <a
                   href={shareLink}
                   target="_blank"
                   className="px-6 py-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold rounded-lg transition-colors text-sm whitespace-nowrap text-center"
                 >
                   Preview Invoice
-                </Link>
+                </a>
               </div>
             </div>
           )}

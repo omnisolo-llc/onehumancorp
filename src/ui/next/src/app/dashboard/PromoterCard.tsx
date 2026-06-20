@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
+
 
 export function PromoterCard() {
   return (
@@ -18,12 +18,12 @@ export function PromoterCard() {
               <p className="text-sm text-gray-600 mt-1">Let OHC's AI write engaging social media posts to drive traffic to your storefront.</p>
             </div>
           </div>
-          <Link
+          <a
             href="/promoter"
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             Create Posts
-          </Link>
+          </a>
         </div>
       </div>
     </div>

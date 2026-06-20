@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 import { useRouter } from 'next/navigation';
 
 export default function DigitalBusinessCardGeneratorPage() {
@@ -83,9 +83,9 @@ export default function DigitalBusinessCardGeneratorPage() {
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] dark:bg-[#121212]">
       <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-40 bg-white/65 dark:bg-black/65 backdrop-blur-md border-gray-200 dark:border-gray-800">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-white tracking-tight">Digital Business Card Generator</h1>
-        <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-800 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors dark:text-white">
+        <a href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-800 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors dark:text-white">
           Back to Dashboard
-        </Link>
+        </a>
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-8">
@@ -327,13 +327,13 @@ export default function DigitalBusinessCardGeneratorPage() {
                   </button>
                 </div>
                 <div className="mt-3 flex justify-center">
-                  <Link
+                  <a
                     href={shareLink}
                     target="_blank"
                     className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                   >
                     Open in new tab <span aria-hidden="true">&rarr;</span>
-                  </Link>
+                  </a>
                 </div>
               </div>
             )}

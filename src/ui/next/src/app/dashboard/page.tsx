@@ -348,7 +348,7 @@ export default function Dashboard() {
 
   return (
     <>
-    <AIPaywallWidget remainingActions={remainingActions} />
+    <AIPaywallWidget remainingActions={remainingActions || 0} />
     <AppShell
       title="Dashboard"
       subtitle="Network-style command center for database-backed store operations."
@@ -462,7 +462,7 @@ export default function Dashboard() {
         </div>
         <div className="app-panel-body">
           <p className="app-list-subtitle mb-3">Turn your sales, products, and milestones into a referral-friendly recap.</p>
-          <Link href="/wrapped" className="app-button min-h-[44px]">View Your Wrapped 🎁</Link>
+          <a href="/wrapped" className="app-button min-h-[44px]">View Your Wrapped 🎁</a>
         </div>
       </section>
 
@@ -532,7 +532,7 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
+          <a href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
                 <span aria-hidden="true">A</span>
@@ -545,7 +545,7 @@ export default function Dashboard() {
                 →
               </div>
             </div>
-          </Link>
+          </a>
         </div>
 
         <PromoterCard />
@@ -632,7 +632,7 @@ export default function Dashboard() {
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Live performance, orders, and inbox activity.</p>
             </div>
-            <Link href="/business-analytics" className="app-button min-h-[44px]">Business Analytics</Link>
+            <a href="/business-analytics" className="app-button min-h-[44px]">Business Analytics</a>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
@@ -672,7 +672,7 @@ export default function Dashboard() {
                 <div className="app-panel-title">Operations Map</div>
                 <div className="app-list-subtitle">Live database state across the store workflow.</div>
               </div>
-              <Link href="/orders" className="app-button min-h-[44px]">Open Orders</Link>
+              <a href="/orders" className="app-button min-h-[44px]">Open Orders</a>
             </div>
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -698,10 +698,10 @@ export default function Dashboard() {
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
-              <Link href="/inventory" className="app-button min-h-[44px]">Inventory</Link>
+              <a href="/inventory" className="app-button min-h-[44px]">Inventory</a>
             </div>
             <div className="app-list">
-                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map((approval: any) => (
                 <div key={approval.id} data-testid={`${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm-card`} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
@@ -714,7 +714,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex gap-2 w-full mt-1">
                     <button type="button" data-testid={`approve-${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm`} className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
-                    <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
+                    <a href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</a>
                   </div>
                 </div>
               ))}
@@ -757,7 +757,7 @@ export default function Dashboard() {
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
-              <Link href="/orders" className="app-button min-h-[44px]">View All</Link>
+              <a href="/orders" className="app-button min-h-[44px]">View All</a>
             </div>
             {orders.length === 0 ? (
               <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
@@ -775,7 +775,7 @@ export default function Dashboard() {
                   <tbody>
                     {orders.slice(0, 8).map((order) => (
                       <tr key={order.id}>
-                        <td><Link href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</Link></td>
+                        <td><a href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</a></td>
                         <td>{order.customer_name || "Unknown"}</td>
                         <td>{money(order.total_amount)}</td>
                         <td><span className={`app-badge ${statusTone(order.status)}`}>{order.status || "Unknown"}</span></td>
@@ -790,7 +790,7 @@ export default function Dashboard() {
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
-              <Link href="/inbox" className="app-button min-h-[44px]">Open Inbox</Link>
+              <a href="/inbox" className="app-button min-h-[44px]">Open Inbox</a>
             </div>
             <div className="app-list">
               {messages.length === 0 ? (
@@ -816,70 +816,70 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/feed" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/feed" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
                 <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Campaign Orchestration</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
-            </Link>
+            </a>
 
-            <Link href="/upgrade-roi" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/upgrade-roi" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pro Plan ROI Calculator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
-            </Link>
+            </a>
 
-            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
-            </Link>
+            </a>
 
-            <Link href="/affiliate-badge-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/affiliate-badge-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
                 <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Viral</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Affiliate Badge Builder</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create an embeddable badge to grow your affiliate network.</p>
-            </Link>
+            </a>
 
-            <Link href="/finance" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/finance" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Finance</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Finance & Invoicing</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage cash flow, invoices, and automated payment follow-ups.</p>
-            </Link>
+            </a>
 
-            <Link href="/invoice-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/invoice-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
                 <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
-            </Link>
+            </a>
 
-            <Link href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Proposal Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create smart, shareable proposals with an interactive approval flow to win clients faster.</p>
-            </Link>
+            </a>
 
-            <Link href="/milestones" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/milestones" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform" aria-hidden="true">🏆</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
@@ -887,197 +887,197 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Milestones</h3>
 
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
-            </Link>
+            </a>
 
-            <Link href="/loyalty-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/loyalty-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Loyalty</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
-            </Link>
+            </a>
 
-            <Link href="/customer-referral-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/customer-referral-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Referral Program</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
-            </Link>
+            </a>
 
-            <Link href="/share-cards" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/share-cards" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Share Cards</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
-            </Link>
+            </a>
 
-            <Link href="/storefront-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/storefront-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
-            </Link>
+            </a>
 
-            <Link href="/embed-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/embed-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔌</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Embed</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
-            </Link>
+            </a>
 
-            <Link href="/subscriptions" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/subscriptions" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
                 <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Subscriptions & Fulfillments</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
-            </Link>
+            </a>
 
-            <Link href="/social-proof-nudge" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/social-proof-nudge" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Proof Nudge</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
-            </Link>
+            </a>
 
-            <Link href="/work-intake-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/work-intake-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📋</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Work-Intake Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a smart lead capture form with a viral loop directly on your site.</p>
-            </Link>
+            </a>
 
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
-            </Link>
+            </a>
 
-            <Link href="/whatsapp-link-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/whatsapp-link-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💬</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Social</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">WhatsApp Link Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create shareable WhatsApp links to start conversations instantly.</p>
-            </Link>
+            </a>
 
-            <Link href="/giveaway" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/giveaway" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Viral</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Giveaway Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
-            </Link>
+            </a>
 
-            <Link href="/share-to-unlock-generator" id="share-to-unlock-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/share-to-unlock-generator" id="share-to-unlock-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Share-to-Unlock Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Require customers to share your page on social media to reveal a discount code.</p>
-            </Link>
+            </a>
 
-            <Link href="/win-back" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/win-back" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💌</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Retain</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Win-back</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Re-engage inactive customers with AI-generated email campaigns.</p>
-            </Link>
+            </a>
 
-            <Link href="/review-campaigns" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/review-campaigns" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⭐️</div>
                 <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Reviews</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Automated Reviews</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate highly-converting, personalized review request emails.</p>
-            </Link>
+            </a>
 
-            <Link href="/seasonal-promo" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/seasonal-promo" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">✨</div>
                 <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">Promo</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Seasonal Promo Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create AI campaigns and promo codes for special occasions instantly.</p>
-            </Link>
+            </a>
 
-            <Link href="/cart-recovery" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/cart-recovery" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🛒</div>
                 <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Recover</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Cart Recovery</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Recover abandoned carts with personalized AI follow-ups.</p>
-            </Link>
+            </a>
 
-            <Link href="/flash-sale-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/flash-sale-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
                 <div className="text-red-600 dark:text-red-400 font-semibold text-sm bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full">Urgency</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Flash Sale Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create high-converting flash sale countdown widgets.</p>
-            </Link>
+            </a>
 
 
-            <Link href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Discount Code Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create discount code widgets for your customers.</p>
-            </Link>
+            </a>
 
-            <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
-            </Link>
+            </a>
 
-            <Link href="/field-ops/jobs" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/field-ops/jobs" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
-            </Link>
+            </a>
 
-            <Link href="/settings" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <a href="/settings" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>
                 <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">Config</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Settings</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account and preferences.</p>
-            </Link>
+            </a>
           </div>
         </section>
       </main>

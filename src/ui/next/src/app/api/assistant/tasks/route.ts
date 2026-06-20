@@ -21,7 +21,7 @@ async function upstreamJson(response: Response, fallbackMessage: string) {
   return NextResponse.json(data);
 }
 
-export async function GET(request?: Request) {
+export async function GET(request: Request) {
   try {
     const response = await fetch(`${backendUrl()}/api/assistant/tasks`, {
       headers: backendHeaders(request),

@@ -25,6 +25,8 @@ export default function ApiDocsPage() {
       });
   }, []);
 
+  const SwaggerElement = SwaggerUI as any;
+
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center">
       <style dangerouslySetInnerHTML={{__html: `
@@ -51,7 +53,7 @@ export default function ApiDocsPage() {
       {mounted && !loading && spec && (
         <div className="w-full max-w-6xl flex flex-col h-full bg-white/60 backdrop-blur-[40px] saturate-[210%] rounded-2xl p-4 sm:p-6 overflow-x-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/40">
           <div className="overflow-x-auto w-full max-w-[calc(100vw-32px)] sm:max-w-none">
-            <SwaggerUI spec={spec} />
+            <SwaggerElement spec={spec} />
           </div>
         </div>
       )}

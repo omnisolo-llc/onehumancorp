@@ -294,7 +294,7 @@ export default function HybridLandingPage() {
               </li>
             </ul>
 
-            <Link
+            <a
               href="/dashboard"
               className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
             >
@@ -312,7 +312,7 @@ export default function HybridLandingPage() {
                   d="M14 5l7 7m0 0l-7 7m7-7H3"
                 />
               </svg>
-            </Link>
+            </a>
             <p className="text-center text-sm text-gray-500 mt-4 font-medium">
               No credit card required
             </p>

@@ -107,10 +107,10 @@ function NavLink({ item }: { item: NavItem }) {
   const active = pathname === item.href || (pathname || "").startsWith(`${item.href}/`);
 
   const link = (
-    <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>
+    <a className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>
       <span className="app-nav-marker"><ShellIcon name={item.icon} /></span>
       <span>{item.label}</span>
-    </Link>
+    </a>
   );
 
   if (item.href === "/kairos") {
@@ -188,19 +188,19 @@ export function AppShell({
               ))}
             </div>
             {actions.map((action) => (
-              <Link
+              <a
                 key={action.href}
                 href={action.href}
                 className={action.primary ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
               >
                 <ShellIcon name={actionIcon(action)} />
                 {action.label}
-              </Link>
+              </a>
             ))}
             <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link href="/help" className="app-button min-h-[44px]" aria-label="Help Center" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
+              <a href="/help" className="app-button min-h-[44px]" aria-label="Help Center" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
-              </Link>
+              </a>
             </WithTooltip>
           </div>
         </header>

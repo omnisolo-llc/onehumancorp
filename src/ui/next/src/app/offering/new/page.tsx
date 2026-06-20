@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+
 import { useRouter } from 'next/navigation';
 
 export default function NewOfferingPage() {
@@ -48,7 +48,7 @@ export default function NewOfferingPage() {
   return (
     <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter">
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
+        <a href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</a>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Offering</h1>
       </div>
 

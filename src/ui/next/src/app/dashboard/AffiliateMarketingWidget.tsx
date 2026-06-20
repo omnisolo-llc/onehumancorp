@@ -57,9 +57,9 @@ export default function AffiliateMarketingWidget() {
             </div>
           </div>
 
-          <Link href="/referrals" className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-center rounded-lg text-sm font-semibold transition-colors">
+          <a href="/referrals" className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-center rounded-lg text-sm font-semibold transition-colors">
             Manage Affiliates
-          </Link>
+          </a>
         </>
       )}
     </div>

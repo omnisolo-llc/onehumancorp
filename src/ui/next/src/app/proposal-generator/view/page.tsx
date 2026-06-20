@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import Link from 'next/link';
+
 import { useSearchParams } from 'next/navigation';
 import { PoweredByOHC } from '../../components/PoweredByOHC';
 
@@ -81,7 +81,7 @@ function ProposalViewContent() {
         {/* Viral Growth Loop Footer */}
         <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
           <PoweredByOHC tenantId={tenant} />
-          <Link
+          <a
             href={`/onboarding?ref=${tenant}&source=proposal_generator`}
             target="_blank"
             className="inline-flex flex-col items-center gap-1 group mt-3"
@@ -89,7 +89,7 @@ function ProposalViewContent() {
             <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-800 transition-colors bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100 hover:border-indigo-200">
               Create your own professional proposals for free →
             </span>
-          </Link>
+          </a>
         </div>
       </main>
 

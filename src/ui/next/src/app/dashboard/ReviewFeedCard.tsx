@@ -77,7 +77,7 @@ export function ReviewFeedCard({ review, response, onApprove, onDismiss }: Revie
           {isEditing ? (
             <Textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e: any) => setContent(e.target.value)}
               className="text-sm w-full min-h-[80px]"
             />
           ) : (

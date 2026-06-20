@@ -93,7 +93,7 @@ export default function OrdersPage() {
                     <td>{order.customer_name || "Unknown"}</td>
                     <td>{money(order.total_amount)}</td>
                     <td><span className={`app-badge ${badgeTone(order.status)}`}>{order.status || "Unknown"}</span></td>
-                    <td><Link href={`/orders/${order.id}`} className="app-button">View</Link></td>
+                    <td><a href={`/orders/${order.id}`} className="app-button">View</a></td>
                   </tr>
                 ))}
               </tbody>

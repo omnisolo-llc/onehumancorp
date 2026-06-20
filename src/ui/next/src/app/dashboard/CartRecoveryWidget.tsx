@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 
 export function CartRecoveryWidget() {
   const [metrics, setMetrics] = useState({
@@ -67,9 +67,9 @@ export function CartRecoveryWidget() {
       </div>
 
       <div className="mt-6">
-        <Link href="/cart-recovery" className="inline-flex items-center text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline group-hover:text-blue-700">
+        <a href="/cart-recovery" className="inline-flex items-center text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline group-hover:text-blue-700">
           Configure Agent <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
-        </Link>
+        </a>
       </div>
     </div>
   );

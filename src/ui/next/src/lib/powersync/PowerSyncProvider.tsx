@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PowerSyncDatabase } from '@powersync/web';
 import { PowerSyncContext } from '@powersync/react';
 import { AppSchema } from './AppSchema';
+import { getPowerSyncDB } from './db';
 
 class BackendConnector {
   async fetchCredentials() {
@@ -30,8 +31,6 @@ function browserSupportsPowerSync() {
   return isPowerSyncSupportedForLocation(window.isSecureContext, window.location.hostname);
 }
 
-import { getPowerSyncInstance } from './db';
-
 export const PowerSyncProvider = ({
   children,
   fallback,
@@ -50,9 +49,9 @@ export const PowerSyncProvider = ({
     if (!supported) return;
     let _powerSync: PowerSyncDatabase;
     const init = async () => {
-      _powerSync = getPowerSyncInstance();
+      _powerSync = await getPowerSyncDB();
 
-      await _powerSync.init();
+      // await _powerSync.init(); // already initialized in getPowerSyncDB
 
       const connector = new BackendConnector();
       _powerSync.connect(connector);
@@ -82,9 +81,12 @@ export const PowerSyncProvider = ({
     return fallback || <div>Loading local database...</div>;
   }
 
+  // Workaround for types:
+  const Provider = PowerSyncContext.Provider as unknown as React.ComponentType<{value: PowerSyncDatabase, children: React.ReactNode}>;
+
   return (
-    <PowerSyncContext.Provider value={powerSync}>
+    <Provider value={powerSync}>
       {children}
-    </PowerSyncContext.Provider>
+    </Provider>
   );
 };

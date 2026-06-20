@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
+
 import { VideoTutorialList } from '../../../components/VideoTutorialList';
 
 export default function VideoTutorialsPage() {
@@ -9,12 +9,12 @@ export default function VideoTutorialsPage() {
     <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <Link href="/help" className="text-blue-600 hover:text-blue-800 flex items-center gap-2 font-medium">
+          <a href="/help" className="text-blue-600 hover:text-blue-800 flex items-center gap-2 font-medium">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Help Center
-          </Link>
+          </a>
         </div>
 
         <div className="text-center mb-8">

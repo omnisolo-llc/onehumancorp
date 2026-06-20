@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import {
   automations,
@@ -244,9 +244,9 @@ export default function AgentsPage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <Link href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
+              <a href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
                 ← Back to Dashboard
-              </Link>
+              </a>
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1>
               <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
@@ -331,9 +331,9 @@ export default function AgentsPage() {
           <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
             <h2 className="text-2xl font-bold text-zinc-950 dark:text-white">Upgrade to Pro</h2>
             <p className="mt-2 text-sm text-zinc-650 dark:text-zinc-400">Unlock advanced model routing, connector automation, and higher agent budgets.</p>
-            <Link href="/pricing" className="mt-4 block rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white transition-colors">
+            <a href="/pricing" className="mt-4 block rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white transition-colors">
               Upgrade to Pro
-            </Link>
+            </a>
             <button
               type="button"
               onClick={() => {

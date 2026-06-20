@@ -43,9 +43,9 @@ export default function BookingWidgetBuilder() {
       {/* Top Nav */}
       <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+            <a href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </Link>
+            </a>
             <h1 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
                 Booking Widget
                 <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">New Growth Loop</span>

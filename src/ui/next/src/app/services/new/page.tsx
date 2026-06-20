@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+
 import { useRouter } from 'next/navigation';
 
 export default function NewServicePage() {
@@ -47,9 +47,9 @@ export default function NewServicePage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center mb-6">
-        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
+        <a href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
           &lt; Back
-        </Link>
+        </a>
         <h1 className="text-2xl font-bold">Add Service</h1>
       </div>
 

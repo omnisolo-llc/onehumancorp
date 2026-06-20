@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+
 import { useParams } from 'next/navigation';
 
 export default function HelpArticlePage() {
@@ -30,7 +30,7 @@ export default function HelpArticlePage() {
         <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-4 font-outfit">Oops!</h1>
             <p className="text-gray-600 mb-8">{error}</p>
-            <Link href="/help" className="text-blue-600 font-medium hover:underline">← Back to Help Center</Link>
+            <a href="/help" className="text-blue-600 font-medium hover:underline">← Back to Help Center</a>
         </div>
       </div>
     );
@@ -48,10 +48,10 @@ export default function HelpArticlePage() {
     <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-            <Link href="/help" className="text-blue-600 font-medium hover:underline inline-flex items-center">
+            <a href="/help" className="text-blue-600 font-medium hover:underline inline-flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 Back to Help Center
-            </Link>
+            </a>
         </div>
 
         <article className="app-card backdrop-blur-[20px] saturate-200 p-8 sm:p-12 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+
 
 type Mission = {
   id: string;
@@ -35,9 +35,9 @@ export default function MissionTrackPage() {
         {/* Header */}
         <header className="px-5 pt-10 pb-4 bg-white/70 sticky top-0 z-20 border-b border-gray-200">
           <div className="flex justify-between items-center mb-4">
-            <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]">
+            <a href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            </Link>
+            </a>
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2.5 py-1 rounded-full">Nova Track</span>
           </div>
           <h1 className="text-3xl font-extrabold font-outfit text-gray-900 tracking-tight">Mission Control</h1>

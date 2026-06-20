@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+
 
 export default function TrialExtensionPage() {
   const [isClaiming, setIsClaiming] = useState(false);
@@ -42,9 +42,9 @@ export default function TrialExtensionPage() {
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism backdrop-blur-md border-white/40">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Interactive Trial Extension</h1>
-        <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
+        <a href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
-        </Link>
+        </a>
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
@@ -93,9 +93,9 @@ export default function TrialExtensionPage() {
                 Thank you for sharing! Your Pro trial has been successfully extended by 7 days. Enjoy the extra time to explore everything OneHumanCorp has to offer.
               </p>
 
-              <Link href="/dashboard" className="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">
+              <a href="/dashboard" className="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">
                 Return to Dashboard
-              </Link>
+              </a>
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-function haversineDistance(coords1, coords2) {
-  function toRad(x) {
+function haversineDistance(coords1: any, coords2: any) {
+  function toRad(x: any) {
     return x * Math.PI / 180;
   }
 

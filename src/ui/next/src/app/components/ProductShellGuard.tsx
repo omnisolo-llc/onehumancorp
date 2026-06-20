@@ -155,8 +155,8 @@ function titleFromPath(pathname: string) {
 
 function routeConfig(pathname: string | null) {
   if (!pathname) return null;
-  if ([...routesWithOwnShell].some((route) => matchesRoute(pathname, route))) return null;
-  if ([...standaloneRoutes].some((route) => matchesRoute(pathname, route))) return null;
+  if (Array.from(routesWithOwnShell).some((route) => matchesRoute(pathname, route))) return null;
+  if (Array.from(standaloneRoutes).some((route) => matchesRoute(pathname, route))) return null;
 
   const route = Object.keys(shellRoutes)
     .sort((a, b) => b.length - a.length)
