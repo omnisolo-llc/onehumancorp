@@ -891,8 +891,8 @@
 
 
 
-      <section aria-label="Unified Agent Feed" id="unified-agent-feed-section" style="order: -1;">
-        <div class="ohc-growth-card app-panel" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
+      <section aria-label="Unified Agent Feed" class="unified-agent-feed-container" style="order: -1;">
+        <div class="ohc-growth-card app-panel" id="unified-agent-feed-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
           <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">Command Center</h2>
           <p style="color: #555; margin-bottom: 20px; font-size: 14px; font-weight: 500;">AI-prepared actions and drafts that need your approval.</p>
           <div class="triage-tab-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 12px;">
@@ -1657,7 +1657,7 @@
 
 
 
-      const triageSection = document.getElementById('triage-section');
+      const unifiedAgentFeedSection = document.getElementById('unified-agent-feed-section');
       const triageQueue = document.getElementById('triage-queue');
       let currentTriageTab = 'proposals';
       let agentFeedItems = [];
@@ -1671,11 +1671,11 @@
 
       async function loadUnifiedFeed() {
         if (window.innerWidth <= 768) {
-          triageSection.style.display = 'block';
+          unifiedAgentFeedSection.style.display = 'block';
           // Ensure we scroll to it or prioritize it
-          triageSection.scrollIntoView({ behavior: 'smooth' });
+          unifiedAgentFeedSection.scrollIntoView({ behavior: 'smooth' });
         } else {
-          triageSection.style.display = 'block';
+          unifiedAgentFeedSection.style.display = 'block';
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
