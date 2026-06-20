@@ -1,7 +1,7 @@
 use super::*;
 use std::sync::Arc;
 use crate::db::DB;
-use ::server_common::auth_utils::Claims;
+use ::server_common::Claims;
 use axum::{
     extract::{State, Path},
     Extension,

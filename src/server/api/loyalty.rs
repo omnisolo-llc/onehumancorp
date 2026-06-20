@@ -7,7 +7,7 @@ use axum::{
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::db::DB;
-use ::server_common::auth_utils::Claims;
+use ::server_common::Claims;
 use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -196,9 +196,78 @@ pub async fn earn_points_handler(
     }
 }
 
-    .route("/points/redeem", axum::routing::post(redeem_reward_handler))
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RedeemRewardRequest {
+    pub account_id: String,
+    pub reward_id: String,
+    pub points_cost: i32,
+    pub punches_cost: i32,
 }
-pub fn router() -> axum::Router {
+
+pub async fn redeem_reward_handler(
+    State(db): State<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<RedeemRewardRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_default();
+    if tenant_id.is_empty() {
+        return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response();
+    }
+
+    let mut tx = match db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Failed to begin transaction: {}", e)}))).into_response(),
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Failed to set org context: {}", e)}))).into_response();
+    }
+
+    // Update account balance
+    match sqlx::query(
+        "UPDATE customer_loyalty_accounts SET points_balance = points_balance - $1, punches = punches - $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4 AND points_balance >= $1 AND punches >= $2"
+    )
+    .bind(payload.points_cost)
+    .bind(payload.punches_cost)
+    .bind(&payload.account_id)
+    .bind(&tenant_id)
+    .execute(&mut *tx)
+    .await {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Insufficient points or punches"}))).into_response();
+            }
+        },
+        Err(e) => {
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Failed to update account: {}", e)}))).into_response();
+        }
+    }
+
+    let tx_id = uuid::Uuid::new_v4().to_string();
+
+    // Insert transaction
+    if let Err(e) = sqlx::query(
+        "INSERT INTO loyalty_transactions (id, tenant_id, account_id, transaction_type, points, punches, reason) VALUES ($1, $2, $3, 'redeem', $4, $5, $6)"
+    )
+    .bind(&tx_id)
+    .bind(&tenant_id)
+    .bind(&payload.account_id)
+    .bind(-payload.points_cost)
+    .bind(-payload.punches_cost)
+    .bind(format!("Redeemed reward {}", payload.reward_id))
+    .execute(&mut *tx)
+    .await {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Failed to create transaction: {}", e)}))).into_response();
+    }
+
+    if let Err(e) = tx.commit().await {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Failed to commit transaction: {}", e)}))).into_response();
+    }
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({"status": "success"}))).into_response()
+}
+
+pub fn router() -> axum::Router<Arc<DB>> {
     axum::Router::new()
         .route("/programs", axum::routing::post(create_program_handler))
         .route("/accounts/:customer_id", axum::routing::get(get_customer_account_handler))
