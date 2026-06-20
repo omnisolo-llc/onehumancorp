@@ -3,7 +3,7 @@ backend:
     enabled: true
     maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 75
     targetMemoryUtilizationPercentage: 80
   headless: false
   image: onehumancorp/server:latest
