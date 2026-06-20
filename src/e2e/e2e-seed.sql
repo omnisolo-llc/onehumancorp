@@ -554,3 +554,7 @@ VALUES
 INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-pos-sync', 'e2e-tenant', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb);
+-- Add a 40.02 product to pos e2e tenant
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+VALUES
+  ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb);

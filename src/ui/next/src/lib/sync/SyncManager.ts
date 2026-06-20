@@ -95,7 +95,7 @@ export class SyncManager {
           currency: m.currency || 'usd',
           payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-          device_signature: m.device_signature || 'mock_secure_enclave_signature_123'
+          device_signature: m.device_signature || `sig_offline_mock_${m.id}`
         };
       });
 

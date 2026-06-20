@@ -53,6 +53,23 @@ impl Tracker {
         self.auditor = Some(auditor);
     }
 
+    fn fail_open_status() -> RateLimitStatus {
+        tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
+        RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        }
+    }
+
+    fn allow_status() -> RateLimitStatus {
+        RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        }
+    }
+
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
         if let Some(auditor) = &self.auditor {
             if let Some(aid) = agent_id {
@@ -62,21 +79,10 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
-                Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
-                        user_message: None,
-                    })
-                }
+                Err(_) => Ok(Self::fail_open_status()),
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
-                user_message: None,
-            })
+            Ok(Self::allow_status())
         }
     }
 
@@ -84,21 +90,10 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_product_quota(tenant_id).await {
                 Ok(status) => Ok(status),
-                Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
-                        user_message: None,
-                    })
-                }
+                Err(_) => Ok(Self::fail_open_status()),
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
-                user_message: None,
-            })
+            Ok(Self::allow_status())
         }
     }
 
@@ -120,21 +115,10 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_action(tenant_id, agent_id).await {
                 Ok(status) => Ok(status),
-                Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
-                        user_message: None,
-                    })
-                }
+                Err(_) => Ok(Self::fail_open_status()),
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
-                user_message: None,
-            })
+            Ok(Self::allow_status())
         }
     }
 
@@ -142,21 +126,10 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_agent_quota(tenant_id).await {
                 Ok(status) => Ok(status),
-                Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
-                    Ok(RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
-                        user_message: None,
-                    })
-                }
+                Err(_) => Ok(Self::fail_open_status()),
             }
         } else {
-            Ok(RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
-                user_message: None,
-            })
+            Ok(Self::allow_status())
         }
     }
 

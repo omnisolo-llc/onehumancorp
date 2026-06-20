@@ -61,9 +61,9 @@ describe('PromoterPage', () => {
 
     // Wait for results
     await waitFor(() => {
-      expect(screen.getByText('IG Content ⚡ Powered by OHC')).toBeInTheDocument();
-      expect(screen.getByText('TW Content ⚡ Powered by OHC')).toBeInTheDocument();
-      expect(screen.getByText('EM Content ⚡ Powered by OHC')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => content.includes('IG Content') && content.includes('⚡ Powered by OHC'))).toBeInTheDocument();
+      expect(screen.getByText((content, element) => content.includes('TW Content') && content.includes('⚡ Powered by OHC'))).toBeInTheDocument();
+      expect(screen.getByText((content, element) => content.includes('EM Content') && content.includes('⚡ Powered by OHC'))).toBeInTheDocument();
     });
 
     // Verify fetch was called correctly
@@ -90,14 +90,14 @@ describe('PromoterPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Generate Posts/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('IG Content')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => content.includes('IG Content') && content.includes('⚡ Powered by OHC'))).toBeInTheDocument();
     });
 
     const copyBtn = screen.getByTestId('copy-instagram');
     fireEvent.click(copyBtn);
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('IG Content');
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('IG Content\n\n⚡ Powered by OHC');
       expect(copyBtn).toHaveTextContent('Copied!');
     });
   });
