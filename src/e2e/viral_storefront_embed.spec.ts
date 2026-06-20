@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Viral Storefront Embed', () => {
   test('should generate and allow copying of the viral storefront embed code', async ({ page }) => {
