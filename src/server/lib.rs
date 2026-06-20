@@ -2545,8 +2545,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
-    consolidation_worker.start();
+    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb))); let _ = consolidation_worker.clone().spawn_background_task();
+    let _ = consolidation_worker.clone().spawn_background_task();
 
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
@@ -6431,7 +6431,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
-        .nest("/api/v1/shipping", api::shipping::router())
+        .nest("/api/v1/shipping", api::shipping::router(hub.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))

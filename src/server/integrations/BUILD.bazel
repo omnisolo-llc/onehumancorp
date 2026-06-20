@@ -20,6 +20,8 @@ rust_library(
         "mcp_gateway.rs",
         "mod.rs",
         "registry.rs",
+        "//src/server/integrations/carrier:mod.rs",
+        "//src/server/integrations/carrier:mock.rs",
         "//src/server/integrations/alipay:client.rs",
         "//src/server/integrations/alipay:mod.rs",
         "//src/server/integrations/alipay:provider.rs",

@@ -14,6 +14,7 @@ pub mod meta;
 pub mod google_calendar;
 pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
+pub mod carrier;
 pub mod lob;
 pub use ::server_integrations_shippo as shippo;
 pub use ::server_integrations_zoom as zoom;
