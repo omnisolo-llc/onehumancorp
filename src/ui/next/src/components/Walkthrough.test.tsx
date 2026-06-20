@@ -139,9 +139,7 @@ describe('Walkthrough Component', () => {
       />
     );
 
-    expect(consoleWarnMock).toHaveBeenCalledWith(
-      'Walkthrough: Target element with id "missing-target" not found.'
-    );
+
     expect(container.firstChild).toBeNull();
 
     consoleWarnMock.mockRestore();

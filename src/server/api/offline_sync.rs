@@ -284,7 +284,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -302,7 +302,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")

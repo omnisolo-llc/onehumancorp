@@ -114,10 +114,16 @@ impl PromptCache {
             .map(|kv| (kv.key().clone(), kv.value().created_at))
             .collect();
 
-        entries.sort_unstable_by_key(|(_, time)| *time);
-
-        for (key, _) in entries.into_iter().take(to_remove) {
-            self.cache.remove(&key);
+        // Use select_nth_unstable_by_key for O(N) performance instead of O(N log N) sorting
+        if entries.len() > to_remove {
+            let (to_remove_slice, _, _) = entries.select_nth_unstable_by_key(to_remove, |(_, time)| *time);
+            for (key, _) in to_remove_slice.iter() {
+                self.cache.remove(key);
+            }
+        } else {
+            for (key, _) in entries.into_iter() {
+                self.cache.remove(&key);
+            }
         }
     }
 
