@@ -47,7 +47,11 @@ export default function PromoterPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setGeneratedPosts(data);
+        setGeneratedPosts({
+          instagram: `${data.instagram}\n\n⚡ Powered by OHC`,
+          twitter: `${data.twitter}\n\n⚡ Powered by OHC`,
+          email: `${data.email}\n\n⚡ Powered by OHC`
+        });
       }
     } catch (error) {
       console.error("Failed to generate posts", error);
