@@ -231,7 +231,7 @@ export default function CostDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
-                        <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">{formatCurrency(data?.total_costs || 0)}</p>
+                        <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">{formatCurrency(data?.total_costs || 0)}</p>
                     </div>
                     <div className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 dark:border-white/10 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
