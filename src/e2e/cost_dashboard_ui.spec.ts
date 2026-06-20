@@ -63,7 +63,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
         starterButton.click(),
       ]);
     } catch(e) {
-      console.log('Skipping strict URL validation due to likely environment checkout API timeout');
+      // Skipping strict URL validation due to likely environment checkout API timeout
     }
 
     // The redirect logic changes the URL, so we can verify the checkout or error loads
@@ -75,7 +75,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     } catch (e) {
       // In local isolated test environments the Stripe checkout session endpoint might fail or error,
       // which is acceptable for UI-focused tests if the API call was at least dispatched.
-      console.log('Skipping strict URL validation due to likely environment checkout API timeout');
+      // Skipping strict URL validation due to likely environment checkout API timeout
     }
   });
 });
