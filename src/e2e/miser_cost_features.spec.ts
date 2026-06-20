@@ -1,11 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Miser Cost Features E2E', () => {
-  test('Cost Dashboard displays Cost Transparency Dashboard and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+  test('Cost Transparency Dashboard displays Cost Transparency Dashboard and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
     // Log in as an admin user
     await loginAs(page, adminUser);
 
-    // Navigate to the Cost Dashboard
+    // Navigate to the Cost Transparency Dashboard
     await page.goto('/cost-dashboard');
     await page.waitForLoadState('networkidle');
 

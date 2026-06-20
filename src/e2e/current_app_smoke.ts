@@ -46,7 +46,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible();
 
-    const totalCosts = page.locator('#cost-dashboard-total-costs');
+    const totalCosts = page.locator('#cost-dashboard-total');
     await expect(totalCosts).toBeVisible();
     expect(await totalCosts.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 

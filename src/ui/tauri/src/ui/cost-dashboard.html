@@ -283,11 +283,11 @@
                </div>
                <div class="metric-box">
                   <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</h2>
-                  <div class="stat-value" id="cost-dashboard-total-costs" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">$0.00</div>
                </div>
                <div class="metric-box">
                   <div class="stat-title">Projected Monthly Cost</div>
-                  <div class="stat-value" id="cost-dashboard-projected-cost" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-projected" style="font-size: 20px;">$0.00</div>
                </div>
             </div>
 
@@ -446,8 +446,8 @@
             if (costRes.ok) {
                 const costData = await costRes.json();
                 document.getElementById('cost-dashboard-revenue').innerText = formatCents(costData.total_revenue || 0);
-                document.getElementById('cost-dashboard-total-costs').innerText = formatCents(costData.total_costs || 0);
-                document.getElementById('cost-dashboard-projected-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
+                document.getElementById('cost-dashboard-total').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('cost-dashboard-projected').innerText = formatCents(costData.projected_monthly_cost || 0);
 
                 if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';

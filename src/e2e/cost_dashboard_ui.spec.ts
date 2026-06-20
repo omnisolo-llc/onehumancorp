@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures';
 
-test.describe('Cost Dashboard & Plan Limits UI', () => {
+test.describe('Cost Transparency Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
-    // Navigate to the Cost Dashboard directly
+    // Navigate to the Cost Transparency Dashboard directly
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible

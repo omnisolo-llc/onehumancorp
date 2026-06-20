@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('My Plan and Cost Dashboard Screens', () => {
+test.describe('My Plan and Cost Transparency Dashboard Screens', () => {
   test('My Plan screen routes to Pricing correctly', async ({ page }) => {
     // Navigate to My Plan
     await page.goto('/plan');
@@ -16,7 +16,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await expect(page.url()).toContain('/pricing');
   });
 
-  test('My Plan screen routes to Cost Dashboard correctly', async ({ page }) => {
+  test('My Plan screen routes to Cost Transparency Dashboard correctly', async ({ page }) => {
     await page.goto('/plan');
 
     // Verify detailed costs routing
@@ -26,16 +26,16 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await expect(page.url()).toContain('/cost-dashboard');
   });
 
-  test('Cost Dashboard screen metrics are visible', async ({ page }) => {
-    // Go directly to Cost Dashboard
+  test('Cost Transparency Dashboard screen metrics are visible', async ({ page }) => {
+    // Go directly to Cost Transparency Dashboard
     await page.goto('/cost-dashboard');
 
     // Check core metric elements visibility
-    await expect(page.locator('h1', { hasText: 'Cost Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Verify elements by id or text mapped to their metrics
     await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-projected-cost')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-total')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-projected')).toBeVisible();
   });
 });
