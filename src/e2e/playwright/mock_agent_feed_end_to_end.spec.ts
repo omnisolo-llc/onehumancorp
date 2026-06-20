@@ -108,5 +108,39 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
     const emptyStateText = page.locator('text=No recent activity found.');
     // It might be empty, or have activities if we share tenant DB. Either way, it shouldn't crash.
     await expect(emptyStateText.or(page.locator('text=APPROVED').first())).toBeVisible({ timeout: 15000 });
+    });
+
+  test('Scenario 6: Real-time update via WebSocket pushes to UI without refresh', async ({ page, request }) => {
+    const tenantId = 'e2e-tenant-ws-test';
+
+    // 1. Go to dashboard and wait for it to load
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    // Check it loaded correctly (e.g. Activity tab is visible)
+    const activityTab = page.locator('button:has-text("Activity")');
+    await expect(activityTab).toBeVisible({ timeout: 15000 });
+
+    // We expect no simulated card initially for this specific message.
+    const simulatedCardText = page.locator('text=A realtime event needs your attention.');
+    await expect(simulatedCardText).not.toBeVisible();
+
+    // 2. Simulate an event via API (while dashboard is already open and WebSocket is supposedly connected)
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    expect(response.ok()).toBeTruthy();
+
+    // Wait and verify if we see the normal simulated event. Wait, the simulate endpoint creates "A new simulated event needs your attention.".
+    // Let's look for that string.
+    const newSimulatedCardText = page.locator('text=A new simulated event needs your attention.').first();
+
+    // 3. Verify it shows up without page refresh
+    await expect(newSimulatedCardText).toBeVisible({ timeout: 15000 });
+
+    // 4. Click approve to clear it
+    const card = page.locator('text=A new simulated event needs your attention.').locator('..').locator('..');
+    const approveButton = card.locator('button', { hasText: 'Approve' }).first();
+    await expect(approveButton).toBeVisible();
+
+    await approveButton.click();
+    await expect(newSimulatedCardText).not.toBeVisible({ timeout: 15000 });
   });
 });
