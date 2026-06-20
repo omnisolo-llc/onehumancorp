@@ -1688,12 +1688,66 @@
           // Adjust logic to match new ui triage shape if necessary
           agentFeedItems = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
           renderTriageItems(agentFeedItems);
+          connectAgentFeedWebSocket();
         } catch (err) {
           console.error("Unified Feed load error:", err);
           triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading agent feed items.</div>';
         }
       }
 
+
+
+
+      let activeAgentFeedWs = null;
+      function connectAgentFeedWebSocket() {
+        if (activeAgentFeedWs && (activeAgentFeedWs.readyState === WebSocket.CONNECTING || activeAgentFeedWs.readyState === WebSocket.OPEN)) {
+            return;
+        }
+
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = localStorage.getItem('token') || '';
+        const wsUrl = `${protocol}//${window.location.host}/api/v1/feed/ws`;
+
+        let ws;
+        try {
+            ws = new WebSocket(wsUrl, ["access_token", token]);
+        } catch(e) {
+            ws = new WebSocket(wsUrl);
+        }
+
+        activeAgentFeedWs = ws;
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.error) {
+                console.error("WS Error:", data.error);
+                return;
+            }
+
+            const exists = agentFeedItems.find(i => i.id === data.id);
+            if (!exists) {
+                agentFeedItems.unshift(data);
+                renderTriageItems(agentFeedItems);
+            } else {
+                Object.assign(exists, data);
+                renderTriageItems(agentFeedItems);
+            }
+          } catch(e) {
+            console.error("Error parsing WS message:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          activeAgentFeedWs = null;
+          setTimeout(connectAgentFeedWebSocket, 5000);
+        };
+      }
+
+
+      // Call it after loading initial items
+      connectAgentFeedWebSocket();
 
       function renderTriageItems(items) {
         if (currentTriageTab === 'proposals') {
