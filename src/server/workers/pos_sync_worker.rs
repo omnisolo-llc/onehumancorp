@@ -412,7 +412,7 @@ impl PosSyncWorker {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use sqlx::postgres::PgPoolOptions;
+
 
     #[tokio::test]
     async fn test_pos_sync_worker_logic() {

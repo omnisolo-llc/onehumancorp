@@ -260,7 +260,7 @@ mod mock_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
-    use sqlx::postgres::PgPoolOptions;
+
 
     #[tokio::test]
     async fn test_sync_and_get_config() {
