@@ -679,7 +679,10 @@ impl DB {
                             )
                             .await;
                         }
-                        tokio::time::sleep(backoff).await;
+                        // Add jitter to avoid thundering herd on retries
+                        let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
+                        let jittered_backoff = std::time::Duration::from_secs_f64(backoff.as_secs_f64() * jitter_factor);
+                        tokio::time::sleep(jittered_backoff).await;
                         backoff *= 2;
                     } else {
                         return Err(err);
