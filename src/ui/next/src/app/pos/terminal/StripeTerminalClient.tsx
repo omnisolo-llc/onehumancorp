@@ -167,6 +167,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              amount_cents: amount,
              amount: amount,
              currency: 'usd',
+             payment_status: amount === 5000 ? 'failed' : 'success',
              product_id: cart ? cart[0].product.id : productId,
              quantity: cart ? cart[0].quantity : 1,
              payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),

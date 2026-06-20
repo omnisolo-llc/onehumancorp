@@ -278,7 +278,7 @@ export default function POSTerminal() {
              </div>
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
              <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
-             {isOffline && <p className="text-orange-500 font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
+             {isOffline && <p className="text-amber-500 font-bold text-xs mt-2 bg-amber-50 inline-block px-2 py-1 rounded">{t('Offline - Saving locally')}</p>}
            </div>
 
            <div className="flex justify-center mb-8">
@@ -335,7 +335,7 @@ export default function POSTerminal() {
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
             {isOffline ? (
-              <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
+              <span className="inline-block mt-1 text-amber-800 font-bold text-xs bg-amber-100 px-2 py-1 rounded border border-amber-200 shadow-sm">{t('Offline - Saving locally')}</span>
             ) : (
               <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
             )}

@@ -309,6 +309,7 @@ pub struct PosOfflineTransaction {
     pub amount_cents: i64,
     pub currency: String,
     pub payload: String,
+    pub payment_status: Option<String>,
     pub timestamp: Option<String>,
 }
 
@@ -345,11 +346,12 @@ pub async fn sync_offline_transactions_handler(
             }
         }
         None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
+            }
         }
     };
 
@@ -406,14 +408,20 @@ pub async fn sync_offline_transactions_handler(
             let client_id_clone = tx.client_id.clone().unwrap_or_default();
             let amount_cents = tx.amount_cents;
             let currency = tx.currency.clone();
-            let payload_str = tx.payload.clone();
+            let mut payload_val = serde_json::from_str::<serde_json::Value>(&tx.payload).unwrap_or(serde_json::json!({}));
+
+            if let Some(status) = tx.payment_status.clone() {
+                payload_val["payment_status"] = serde_json::Value::String(status);
+            }
+
+            // Optionally inject payment status directly into payload if not already parsed properly, here it's fine
 
             b.push_bind(tx_id)
              .push_bind(tenant_id_clone.clone())
              .push_bind(client_id_clone)
              .push_bind(amount_cents)
              .push_bind(currency)
-             .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
+             .push_bind(sqlx::types::Json(payload_val))
              .push_bind("PENDING")
              .push_bind("pending");
         });

@@ -186,6 +186,24 @@ impl PosSyncWorker {
                     }
                 }
 
+                if is_conflict {
+                    let _shortage = quantity_deducted - stock as i64;
+                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'backordered') ON CONFLICT DO NOTHING")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&job.tenant_id)
+                    .bind(customer_id)
+                    .bind((amount_cents as f64) / 100.0)
+                    .execute(&mut *tx).await;
+                }
+
+                let payment_status = payload.get("payment_status").and_then(|v| v.as_str()).unwrap_or("success");
+                if payment_status == "failed" {
+                    let ai_task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({"transaction_id": transaction_id, "customer_id": customer_id, "amount_cents": amount_cents}).to_string();
+                    let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'cs', 'POSPaymentFailed', $3::jsonb, 'PENDING')")
+                    .bind(&ai_task_id).bind(&job.tenant_id).bind(&ai_payload).execute(&mut *tx).await;
+                }
+
                 let cache = crate::builder::edge::get_edge_cache();
                 let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
@@ -371,6 +389,23 @@ impl PosSyncWorker {
                                         tracing::error!("Failed to update pos_terminal_sessions: {}", e);
                                     }
                                 }
+
+                                let _shortage = qty as i32 - stock;
+                                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'backordered') ON CONFLICT DO NOTHING")
+                                .bind(uuid::Uuid::new_v4().to_string())
+                                .bind(&job.tenant_id)
+                                .bind(customer_id)
+                                .bind(total_amount)
+                                .execute(&mut *tx).await;
+                            }
+
+                            let payment_status = payload.get("payment_status").and_then(|v| v.as_str()).unwrap_or("success");
+                            if payment_status == "failed" {
+                                let ai_task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({"transaction_id": transaction_id, "customer_id": customer_id, "amount_cents": amount_cents}).to_string();
+
+                                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'cs', 'POSPaymentFailed', $3::jsonb, 'PENDING')")
+                                .bind(&ai_task_id).bind(&job.tenant_id).bind(&ai_payload).execute(&mut *tx).await;
                             }
 
                             let cache = crate::builder::edge::get_edge_cache();
