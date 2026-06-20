@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -63,7 +63,7 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn create_payment_intent(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<CreatePaymentIntentRequest>,
 ) -> impl IntoResponse {
@@ -102,7 +102,7 @@ async fn create_payment_intent(
 }
 
 async fn stripe_webhook(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
     if payload.type_field != "payment_intent.succeeded" {
@@ -212,7 +212,7 @@ async fn stripe_webhook(
 }
 
 async fn get_balance(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
