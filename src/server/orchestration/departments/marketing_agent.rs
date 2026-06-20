@@ -240,7 +240,39 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+        if event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+            if !product_id.is_empty() {
+                use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClient};
+                let seo_client = RuntimeSeoClient;
+                if let Ok((seo_title, seo_description, seo_schema)) = seo_client.generate_seo_metadata(name, description, "Product", price).await {
+                    if let Ok(orchestrator) = self.orchestrator() {
+                        if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                            if let Ok(product_uuid) = uuid::Uuid::parse_str(product_id) {
+                                let pool = orchestrator.db().pool.clone();
+                                let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{seo_schema}', $3) WHERE id = $4 AND tenant_id = $5")
+                                    .bind(&seo_title)
+                                    .bind(&seo_description)
+                                    .bind(&seo_schema)
+                                    .bind(product_uuid)
+                                    .bind(tenant_uuid)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+            }
+        }
+
+        if event.event_type == "tenant.website.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,

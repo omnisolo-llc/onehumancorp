@@ -58,31 +58,70 @@ async fn get_storefront_product(
         }
     }
 
-    // In a real scenario we might render directly here if it's missing,
-    // but the builder edge regenerate_cache logic expects a site_id.
-    // Let's find the primary site for this tenant.
-    let site_id_res = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
+    // Fetch product details for edge rendering
+    let tenant_id_str_q = tenant_id.to_string();
+    let product_id_str_q = product_id.to_string();
+    let product_res = sqlx::query(
+        "SELECT name, description, price, seo_title, seo_description, metadata FROM products WHERE tenant_id = $1 AND id = $2"
     )
-    .bind(tenant_id)
+    .bind(tenant_id_str_q)
+    .bind(product_id_str_q)
     .fetch_one(&state.pool)
     .await;
 
-    if let Ok(site_id) = site_id_res {
-        // Just call regenerate_cache from builder edge
-        if let Ok((html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
-            let mut response = Html(html).into_response();
-            if !tags.is_empty() {
-                if let Ok(cache_tag) = tags.join(", ").parse() {
-                    response.headers_mut().insert("Cache-Tag", cache_tag);
-                }
-            }
-            response.headers_mut().insert(
-                axum::http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-            );
-            return Ok(response);
-        }
+    if let Ok(product) = product_res {
+        use sqlx::Row;
+        let p_name: Option<String> = product.try_get("name").unwrap_or(None);
+        let p_desc: Option<String> = product.try_get("description").unwrap_or(None);
+        let p_price: Option<f64> = product.try_get("price").unwrap_or(None);
+        let p_seo_title: Option<String> = product.try_get("seo_title").unwrap_or(None);
+        let p_seo_desc: Option<String> = product.try_get("seo_description").unwrap_or(None);
+        let p_metadata: Option<serde_json::Value> = product.try_get("metadata").unwrap_or(None);
+
+        let fallback_name = p_name.unwrap_or_else(|| "Unknown Product".to_string());
+        let fallback_desc = p_desc.unwrap_or_else(|| "".to_string());
+        let title = p_seo_title.unwrap_or(fallback_name);
+        let description = p_seo_desc.unwrap_or(fallback_desc);
+        let price = p_price.unwrap_or(0.0);
+
+        let seo_schema = if let Some(metadata) = p_metadata {
+            metadata.get("seo_schema").cloned().unwrap_or_else(|| serde_json::json!({}))
+        } else {
+            serde_json::json!({})
+        };
+
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html>
+<head>
+    <title>{}</title>
+    <meta name="description" content="{}">
+    <script type="application/ld+json">
+{}
+    </script>
+</head>
+<body>
+    <h1>{}</h1>
+    <p>{}</p>
+    <p>Price: ${}</p>
+</body>
+</html>"#,
+            crate::builder::edge::escape_html(&title),
+            crate::builder::edge::escape_html(&description),
+            seo_schema,
+            crate::builder::edge::escape_html(&title),
+            crate::builder::edge::escape_html(&description),
+            price
+        );
+
+        cache.set_with_tags(&cache_key, html.clone(), vec![format!("tenant-id:{}", tenant_id), format!("entity:product:{}", product_id)], std::time::Duration::from_secs(3600)).await;
+
+        let mut response = Html(html).into_response();
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        );
+        return Ok(response);
     }
 
     // Fallback simple HTML

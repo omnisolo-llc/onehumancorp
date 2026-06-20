@@ -30,6 +30,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     let text = await res.text();
     // Validating fallback SEO or html tags
     expect(text).toContain('<!DOCTYPE html>');
+    expect(text).toContain('<script type="application/ld+json">');
   });
 
   test('handles edge cache miss dynamically and creates fallback', async ({ request, page }) => {
