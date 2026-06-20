@@ -619,13 +619,7 @@ body {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card,
-.app-shell [class*="rounded-[12px]"],
-.app-shell [class*="rounded-[16px]"],
-.app-shell [class*="rounded-[24px]"],
-.app-shell [class*="rounded-xl"],
-.app-shell [class*="rounded-2xl"] {
-  border-radius: 16px !important;
-}
+
 
 .app-shell [class*="bg-gradient"] {
   background-image: none !important;
@@ -662,17 +656,11 @@ select {
   border-radius: 8px;
 }
 
-button {
+button, .app-button, .charge-btn {
   border-radius: 8px;
 }
 
-.app-button {
-  border-radius: 8px;
-}
 
-.charge-btn {
-  border-radius: 8px;
-}
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.65);
@@ -1029,3 +1017,7 @@ select {
   min-height: 44px;
   min-width: 44px;
 }
+
+
+
+.rounded-full { border-radius: 9999px !important; }
