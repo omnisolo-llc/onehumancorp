@@ -6312,6 +6312,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
+        .nest("/api/v1/recovery", api::recovery::router().with_state(api::recovery::AppState { pool: std::sync::Arc::new(db.pool.clone()) }))
         .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
