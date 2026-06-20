@@ -47,6 +47,9 @@ exports_files(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
+        "v1.rs",
+        "v1/mcp/mod.rs",
+        "v1/mcp/routes.rs",
     ],
     visibility = ["//visibility:public"],
 )
