@@ -206,6 +206,43 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "lead_recovery" && (
+                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5 text-orange-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Missed Lead Detected
+                      </div>
+                      <div className="text-xs text-orange-700 font-medium">
+                        {payload?.description || "A potential customer hasn't received a follow-up in over 2 hours."}
+                      </div>
+
+                      <div className="app-card p-3 rounded-lg border border-orange-100 relative mt-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
+                          AI Draft
+                        </div>
+                        <p className="text-xs text-gray-700 italic">
+                          "{payload?.draft_reply || 'Hi there! Just checking in to see if you still needed help with this?'}"
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
+                          Customer Relationship
+                        </span>
+                        <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
+                          SMS
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "legal_compliance" && (
                     <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
