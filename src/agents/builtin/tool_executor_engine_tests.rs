@@ -65,7 +65,7 @@ mod tests {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
 
         let res = handle.await.unwrap();
 
@@ -126,7 +126,7 @@ mod tests {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
 
         let res = handle.await.unwrap();
 
@@ -159,7 +159,7 @@ mod tests {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
 
         let res = handle.await.unwrap();
 
@@ -435,7 +435,7 @@ mod tests {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
 
         let res = handle.await.unwrap();
 
@@ -499,7 +499,7 @@ mod additional_transient_tests {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
 
         let res = handle.await.unwrap();
 
