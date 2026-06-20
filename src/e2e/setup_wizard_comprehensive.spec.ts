@@ -5,7 +5,7 @@ import * as fs from 'fs';
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join('/app', 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -58,7 +58,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await bioInput.fill("Temporary text");
 
     // Click Back to Step 0
-    await page.locator('#step-instant').getByRole('button', { name: /Back/ }).click();
+    await page.getByRole('button', { name: /Back/ }).click();
 
     // Ensure we are back on Step 0
     await expect(page.getByRole('heading', { name: /10-Minute Setup Wizard/ })).toBeVisible();
@@ -70,6 +70,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     // re-initialization it stays. We should ensure the app handles persistence or not.
     // For this test, we verify the user can edit it.
     await expect(bioInput).toBeVisible();
+    await expect(bioInput).toHaveValue("");
     await bioInput.fill("New text");
     await expect(bioInput).toHaveValue("New text");
   });

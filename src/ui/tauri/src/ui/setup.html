@@ -954,7 +954,7 @@
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-secondary" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
