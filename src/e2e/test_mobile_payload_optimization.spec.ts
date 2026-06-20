@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Mobile Payload Optimization Audit', () => {
-  test('Verify mobile_optimized payload trimming for UI Triage', async ({ page }) => {
+  test('Verify mobile_optimized payload trimming for UI Triage', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Navigate to the mobile version of the dashboard
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/dashboard');
@@ -19,28 +20,32 @@ test.describe('Mobile Payload Optimization Audit', () => {
     }
   });
 
-  test('Verify mobile_optimized payload trimming for get_dashboard', async ({ page, request }) => {
+  test('Verify mobile_optimized payload trimming for get_dashboard', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Check the raw response payload if possible, or just ensure it doesn't crash on mobile
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');
     await expect(page.locator('text=Growth & Virality')).toBeVisible();
   });
 
-  test('Verify parallel execution of unified feed on mobile', async ({ page }) => {
+  test('Verify parallel execution of unified feed on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');
     // Ensure all blocks loaded correctly
     await expect(page.locator('text=Inbox Activity').last()).toBeVisible();
   });
 
-  test('Verify parallel execution of unified feed on desktop', async ({ page }) => {
+  test('Verify parallel execution of unified feed on desktop', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/dashboard');
     // Ensure all blocks loaded correctly
     await expect(page.locator('text=Inbox Activity').last()).toBeVisible();
   });
 
-  test('Verify LFU hybrid caching eviction logic visually', async ({ page }) => {
+  test('Verify LFU hybrid caching eviction logic visually', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // Refresh page multiple times to simulate hot cache
     await page.goto('/dashboard');
     await page.reload();
