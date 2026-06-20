@@ -55,31 +55,37 @@ impl InvoiceService for InvoiceServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut saved_items = Vec::new();
-        for item in req.line_items {
-            let item_id = uuid::Uuid::new_v4().to_string();
-            sqlx::query(
-                "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)"
-            )
-            .bind(&item_id)
-            .bind(&req.tenant_id)
-            .bind(&invoice_id)
-            .bind(&item.description)
-            .bind(item.quantity)
-            .bind(item.unit_price)
-            .bind(item.amount)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        if !req.line_items.is_empty() {
+            let mut query_builder = sqlx::QueryBuilder::new(
+                "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) "
+            );
 
-            saved_items.push(InvoiceLineItem {
-                id: item_id,
-                invoice_id: invoice_id.clone(),
-                description: item.description,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                amount: item.amount,
+            let tenant_id = req.tenant_id.clone();
+            let inv_id = invoice_id.clone();
+
+            query_builder.push_values(req.line_items, |mut b, item| {
+                let item_id = uuid::Uuid::new_v4().to_string();
+
+                b.push_bind(item_id.clone())
+                 .push_bind(tenant_id.clone())
+                 .push_bind(inv_id.clone())
+                 .push_bind(item.description.clone())
+                 .push_bind(item.quantity)
+                 .push_bind(item.unit_price)
+                 .push_bind(item.amount);
+
+                saved_items.push(InvoiceLineItem {
+                    id: item_id,
+                    invoice_id: inv_id.clone(),
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    amount: item.amount,
+                });
             });
+
+            let query = query_builder.build();
+            query.execute(&mut *tx).await.map_err(|e| Status::internal(e.to_string()))?;
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
