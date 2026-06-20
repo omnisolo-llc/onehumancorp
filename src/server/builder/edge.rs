@@ -40,7 +40,7 @@ pub struct EdgeWorkerState {
     pub pool: PgPool,
 }
 
-fn escape_html(s: &str) -> String {
+pub fn escape_html(s: &str) -> String {
     s.replace("&", "&amp;")
      .replace("<", "&lt;")
      .replace(">", "&gt;")

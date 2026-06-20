@@ -53,7 +53,7 @@ export default function MenuGeneratorPage() {
 
   const handleCopy = () => {
     if (navigator.clipboard && menuLink) {
-      navigator.clipboard.writeText(menuLink);
+      navigator.clipboard.writeText(`${menuLink}\n\n⚡ Powered by OHC`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
