@@ -156,8 +156,40 @@ pub async fn handle_omnichannel_webhook(
     // 1. Resolve Identity
     let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id).await;
 
-    // 2. Persist Message into inbox_messages
+    // 2. Translate and Persist Message
     let inbox_id = Uuid::new_v4().to_string();
+    let mut final_content = message.clone();
+    let mut target_lang = "English".to_string();
+
+    if let Ok(translation) = crate::api::agents::translation::translate_inbox_message_with_llm(tenant_id, channel, message, "English").await {
+        final_content = translation.translated_content;
+        if let Some(src) = translation.source_language {
+            if src != "en" { target_lang = "English".to_string(); }
+        }
+    }
+
+    // Simulate intercepting orders for the Kitchen Display System (KDS)
+    if final_content.to_lowercase().contains("order") || final_content.to_lowercase().contains("want") {
+        match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status, created_at, notes, translated_notes) VALUES ($1, $2, 0, 'pending', NOW(), $3, $4)")
+                    .bind(Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(message)
+                    .bind(&final_content)
+                    .execute(&state.db.pool).await;
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status, created_at, notes, translated_notes) VALUES (?, ?, 0, 'pending', CURRENT_TIMESTAMP, ?, ?)")
+                    .bind(Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(message)
+                    .bind(&final_content)
+                    .execute(sqlite_pool).await;
+            }
+        }
+    }
+
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query(
@@ -167,7 +199,7 @@ pub async fn handle_omnichannel_webhook(
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
-            .bind(message)
+            .bind(&final_content)
             .bind(sender_id)
             .execute(&state.db.pool)
             .await;
@@ -180,7 +212,7 @@ pub async fn handle_omnichannel_webhook(
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
-                .bind(message)
+                .bind(&final_content)
                 .bind(sender_id)
                 .bind(&customer_id)
                 .execute(&state.db.pool)
@@ -198,7 +230,7 @@ pub async fn handle_omnichannel_webhook(
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
-            .bind(message)
+            .bind(&final_content)
             .bind(sender_id)
             .execute(sqlite_pool)
             .await;
@@ -211,7 +243,7 @@ pub async fn handle_omnichannel_webhook(
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
-                .bind(message)
+                .bind(&final_content)
                 .bind(sender_id)
                 .bind(&customer_id)
                 .execute(sqlite_pool)

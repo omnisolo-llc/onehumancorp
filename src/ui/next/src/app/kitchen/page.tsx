@@ -106,16 +106,24 @@ export default function KitchenView() {
                     {order.items?.map((item: any, idx: number) => <li key={idx} className="text-sm">{item.name || item.product_id}</li>)}
                   </ul>
                   {order.notes && (
-                    <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-medium text-[#FF9500] mb-1">Customer Notes:</p>
-                      <p className="text-sm italic mb-2">"{order.notes}"</p>
-                      {order.translated_notes && (
-                        <>
-                          <p className="text-sm font-medium text-[#0071E3] mb-1 mt-2">AI Translation:</p>
-                          <p className="text-sm font-bold text-lg" dir="rtl">
+                    <div className="grid grid-cols-2 gap-2 bg-[#FF9500]/5 border border-[#FF9500]/20 rounded-lg p-3 mb-4">
+                      <div className="pr-2">
+                        <p className="text-xs font-medium text-gray-500 mb-1 tracking-wider uppercase">Original Input</p>
+                        <p className="text-sm italic text-gray-700">"{order.notes}"</p>
+                      </div>
+                      {order.translated_notes && order.translated_notes !== order.notes ? (
+                        <div className="border-l border-[#FF9500]/20 pl-3">
+                          <p className="text-xs font-bold text-[#0071E3] mb-1 tracking-wider uppercase flex items-center gap-1">
+                            ✨ Translated
+                          </p>
+                          <p className="text-lg font-bold text-gray-900 leading-tight">
                             {order.translated_notes}
                           </p>
-                        </>
+                        </div>
+                      ) : (
+                        <div className="border-l border-[#FF9500]/20 pl-3 flex items-center">
+                          <p className="text-sm text-gray-400 italic">No translation needed</p>
+                        </div>
                       )}
                     </div>
                   )}
