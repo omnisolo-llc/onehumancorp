@@ -728,6 +728,11 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
+        if cfg.enable_actor_model_message_passing {
+            return self.run_actor_model_message_passing(cfg, initial_message, session_tools.to_vec(), on_event).await;
+        }
+
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
 
