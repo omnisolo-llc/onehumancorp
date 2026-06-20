@@ -49,3 +49,7 @@ pub mod payment_ledger;
 
 pub mod field_ops;
 pub mod storefront_delivery;
+pub mod loyalty;
+
+#[cfg(test)]
+pub mod loyalty_test;
