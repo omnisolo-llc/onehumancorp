@@ -40,9 +40,9 @@ impl MessageTriageWorker {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
-                    SELECT id, tenant_id, payload
+                    SELECT id, tenant_id, payload, job_type
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND (job_type = 'message_triage' OR job_type = 'work_triage')
                     ORDER BY next_retry_at ASC, created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -62,7 +62,8 @@ impl MessageTriageWorker {
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    let job_type: String = r.get("job_type");
+                    Some((id, tenant_id, payload, job_type))
                 } else {
                     None
                 };
@@ -73,9 +74,9 @@ impl MessageTriageWorker {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
-                    SELECT id, tenant_id, payload
+                    SELECT id, tenant_id, payload, job_type
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND (job_type = 'message_triage' OR job_type = 'work_triage')
                     ORDER BY next_retry_at ASC, created_at ASC
                     LIMIT 1
                     "#
@@ -94,7 +95,8 @@ impl MessageTriageWorker {
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    let job_type: String = r.get("job_type");
+                    Some((id, tenant_id, payload, job_type))
                 } else {
                     None
                 };
@@ -103,7 +105,33 @@ impl MessageTriageWorker {
             }
         };
 
-        if let Some((job_id, tenant_id, payload)) = job {
+        if let Some((job_id, tenant_id, payload, job_type)) = job {
+            if job_type == "work_triage" {
+                let work_item_id = payload.get("work_item_id").and_then(|v| v.as_str()).unwrap_or("");
+                // Execution Stub: Update daily_work_items to PROCESSED
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("UPDATE daily_work_items SET status = 'APPROVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                            .bind(work_item_id)
+                            .bind(&tenant_id)
+                            .execute(&self.db.pool).await;
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id)
+                            .execute(&self.db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query("UPDATE daily_work_items SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
+                            .bind(work_item_id)
+                            .bind(&tenant_id)
+                            .execute(pool).await;
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&job_id)
+                            .execute(pool).await;
+                    }
+                }
+                return Ok(true);
+            }
+
             let message_id = payload.get("message_id").and_then(|v| v.as_str()).unwrap_or("");
             let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");

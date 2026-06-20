@@ -42,16 +42,28 @@ pub async fn simulate_inbound_signal_handler(
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let _ = sqlx::query(
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to start transaction: {}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+                }
+            };
+
+            if let Err(e) = sqlx::query(
                 "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES ($1, $2, $3, $4, 'PROCESSED')"
             )
             .bind(&signal_id)
             .bind(&tenant_id)
             .bind(&payload.source)
             .bind(sqlx::types::Json(&payload.payload))
-            .execute(&db.pool).await;
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to insert inbound signal: {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
 
-            let _ = sqlx::query(
+            if let Err(e) = sqlx::query(
                 "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
             )
             .bind(&work_item_id)
@@ -60,19 +72,60 @@ pub async fn simulate_inbound_signal_handler(
             .bind(&intent)
             .bind(sqlx::types::Json(&customer_info))
             .bind(sqlx::types::Json(&suggested_actions))
-            .execute(&db.pool).await;
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to insert daily work item: {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
+
+            let job_id = format!("job-{}", Uuid::new_v4());
+            let payload_json = serde_json::json!({
+                "work_item_id": work_item_id,
+                "signal_id": signal_id,
+                "intent": intent,
+                "customer_info": customer_info,
+                "suggested_actions": suggested_actions
+            });
+            if let Err(e) = sqlx::query(
+                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'work_triage', $3, 'PENDING')"
+            )
+            .bind(&job_id)
+            .bind(&tenant_id)
+            .bind(sqlx::types::Json(payload_json))
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to enqueue background job: {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
+
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
         },
         crate::db::DbStore::Sqlite(pool) => {
-            let _ = sqlx::query(
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to start transaction (sqlite): {}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+                }
+            };
+
+            if let Err(e) = sqlx::query(
                 "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES (?, ?, ?, ?, 'PROCESSED')"
             )
             .bind(&signal_id)
             .bind(&tenant_id)
             .bind(&payload.source)
             .bind(serde_json::to_string(&payload.payload).unwrap())
-            .execute(pool).await;
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to insert inbound signal (sqlite): {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
 
-            let _ = sqlx::query(
+            if let Err(e) = sqlx::query(
                 "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')"
             )
             .bind(&work_item_id)
@@ -81,7 +134,36 @@ pub async fn simulate_inbound_signal_handler(
             .bind(&intent)
             .bind(serde_json::to_string(&customer_info).unwrap())
             .bind(serde_json::to_string(&suggested_actions).unwrap())
-            .execute(pool).await;
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to insert daily work item (sqlite): {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
+
+            let job_id = format!("job-{}", Uuid::new_v4());
+            let payload_json = serde_json::json!({
+                "work_item_id": work_item_id,
+                "signal_id": signal_id,
+                "intent": intent,
+                "customer_info": customer_info,
+                "suggested_actions": suggested_actions
+            });
+            if let Err(e) = sqlx::query(
+                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'work_triage', ?, 'PENDING')"
+            )
+            .bind(&job_id)
+            .bind(&tenant_id)
+            .bind(serde_json::to_string(&payload_json).unwrap())
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to enqueue background job (sqlite): {}", e);
+                let _ = tx.rollback().await;
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
+
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction (sqlite): {}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+            }
         }
     }
 
