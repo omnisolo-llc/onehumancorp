@@ -70,7 +70,56 @@ async fn get_storefront_product(
 
     if let Ok(site_id) = site_id_res {
         // Just call regenerate_cache from builder edge
-        if let Ok((html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+        if let Ok((mut html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+            #[derive(sqlx::FromRow)]
+            struct ProductSeoRow {
+                seo_title: Option<String>,
+                seo_description: Option<String>,
+                seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
+            }
+
+            // Check if we have SEO metadata for this product
+            let seo_res = sqlx::query_as::<_, ProductSeoRow>(
+                "SELECT seo_title, seo_description, seo_schema_json FROM products WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(product_id.to_string())
+            .bind(tenant_id.to_string())
+            .fetch_optional(&state.pool)
+            .await;
+
+            if let Ok(Some(row)) = seo_res {
+                if let Some(seo_title) = row.seo_title {
+                    if let Some(start) = html.find("<title>") {
+                        if let Some(end) = html[start..].find("</title>") {
+                            let end = start + end + "</title>".len();
+                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", crate::builder::edge::escape_html(&seo_title), crate::builder::edge::escape_html(&seo_title)));
+                        }
+                    }
+                }
+
+                if let Some(seo_desc) = row.seo_description {
+                    if let Some(start) = html.find("<meta name=\"description\"") {
+                        if let Some(end) = html[start..].find(">") {
+                            let end = start + end + ">".len();
+                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", crate::builder::edge::escape_html(&seo_desc)));
+                        }
+                    } else if let Some(head_end) = html.find("</head>") {
+                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", crate::builder::edge::escape_html(&seo_desc)));
+                    }
+                }
+
+                if let Some(seo_schema) = row.seo_schema_json {
+                    if let Some(start) = html.find("<script type=\"application/ld+json\">") {
+                        if let Some(end) = html[start..].find("</script>") {
+                            let end = start + end + "</script>".len();
+                            html.replace_range(start..end, &format!("<script type=\"application/ld+json\">\n{}\n</script>", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
+                        }
+                    } else if let Some(head_end) = html.find("</head>") {
+                        html.insert_str(head_end, &format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
+                    }
+                }
+            }
+
             let mut response = Html(html).into_response();
             if !tags.is_empty() {
                 if let Ok(cache_tag) = tags.join(", ").parse() {

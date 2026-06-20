@@ -1,6 +1,7 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use std::sync::Arc;
+use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClient};
 
 #[async_trait::async_trait]
 pub trait MarketingCopyClient: Send + Sync {
@@ -147,6 +148,7 @@ pub struct MarketingAgent {
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
     copy_client: Arc<dyn MarketingCopyClient>,
     image_optimizer: Arc<dyn MarketingImageOptimizer>,
+    seo_client: Arc<dyn SeoClient>,
 }
 
 impl MarketingAgent {
@@ -155,6 +157,7 @@ impl MarketingAgent {
             orchestrator,
             Arc::new(RuntimeMarketingCopyClient::from_env()),
             Arc::new(RuntimeMarketingImageOptimizer::from_env()),
+            Arc::new(RuntimeSeoClient),
         )
     }
 
@@ -166,6 +169,7 @@ impl MarketingAgent {
             orchestrator,
             copy_client,
             Arc::new(RuntimeMarketingImageOptimizer::from_env()),
+            Arc::new(RuntimeSeoClient),
         )
     }
 
@@ -173,28 +177,32 @@ impl MarketingAgent {
         orchestrator: Arc<DepartmentOrchestrator>,
         copy_client: Arc<dyn MarketingCopyClient>,
         image_optimizer: Arc<dyn MarketingImageOptimizer>,
+        seo_client: Arc<dyn SeoClient>,
     ) -> Self {
         Self {
             orchestrator: Some(orchestrator),
             copy_client,
             image_optimizer,
+            seo_client,
         }
     }
 
     #[cfg(test)]
-    fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>) -> Self {
-        Self::new_for_test_with_optimizer(copy_client, Arc::new(PassthroughImageOptimizer))
+    fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>, seo_client: Arc<dyn SeoClient>) -> Self {
+        Self::new_for_test_with_optimizer(copy_client, Arc::new(PassthroughImageOptimizer), seo_client)
     }
 
     #[cfg(test)]
     fn new_for_test_with_optimizer(
         copy_client: Arc<dyn MarketingCopyClient>,
         image_optimizer: Arc<dyn MarketingImageOptimizer>,
+        seo_client: Arc<dyn SeoClient>,
     ) -> Self {
         Self {
             orchestrator: None,
             copy_client,
             image_optimizer,
+            seo_client,
         }
     }
 
@@ -240,6 +248,52 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let item_type = event.payload.get("item_type").and_then(|v| v.as_str()).unwrap_or("Product");
+            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+            if !product_id.is_empty() {
+                if let Ok((seo_title, seo_desc, seo_schema)) = self.seo_client.generate_seo_metadata(name, description, item_type, price).await {
+                    if let Ok(orchestrator) = self.orchestrator() {
+                        let pool = orchestrator.db().pool.clone();
+                        let tenant_id_str = event.tenant_id.clone();
+                        let product_id_str = product_id.to_string();
+
+                        // Spawn a task to update DB, invalidate cache, and enqueue publish job
+                        let seo_schema_clone = seo_schema.clone();
+                        tokio::spawn(async move {
+                            if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
+                                // Update DB
+                                let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, seo_schema_json = $3 WHERE tenant_id = $4 AND id = $5")
+                                    .bind(seo_title)
+                                    .bind(seo_desc)
+                                    .bind(seo_schema_clone)
+                                    .bind(tenant_id_str.clone())
+                                    .bind(product_id_str.clone())
+                                    .execute(&pool)
+                                    .await;
+
+                                // Invalidate cache
+                                let cache = crate::builder::edge::get_edge_cache();
+                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+
+                                // Trigger site publish job for all sites for the tenant
+                                if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
+                                    for site in sites {
+                                        let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
         if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
@@ -410,6 +464,7 @@ impl BaseAgent for MarketingAgent {
 mod tests {
     use super::*;
     use std::sync::Arc;
+use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClient};
 
     struct FixedCopyClient;
     struct FixedImageOptimizer;
@@ -430,7 +485,7 @@ mod tests {
 
     #[tokio::test]
     async fn marketing_agent_uses_injected_copy_client_for_product_captions() {
-        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient));
+        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(RuntimeSeoClient));
 
         let caption = agent
             .draft_product_caption("Ceramic Mug", "Handmade stoneware")
@@ -439,11 +494,33 @@ mod tests {
         assert_eq!(caption, "Injected caption from test client");
     }
 
+    struct MockSeoClient;
+    #[async_trait::async_trait]
+    impl SeoClient for MockSeoClient {
+        async fn generate_seo_metadata(&self, name: &str, description: &str, item_type: &str, price: f64) -> Result<(String, String, serde_json::Value), String> {
+            Ok((
+                format!("Mock SEO Title for {}", name),
+                format!("Mock SEO Desc for {}", description),
+                serde_json::json!({"mock": true})
+            ))
+        }
+    }
+
+    #[tokio::test]
+    async fn marketing_agent_uses_injected_seo_client() {
+        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(MockSeoClient));
+
+        // Test SEO client exists and can be called directly
+        let res = agent.seo_client.generate_seo_metadata("Cake", "Tasty cake", "Product", 10.0).await.unwrap();
+        assert_eq!(res.0, "Mock SEO Title for Cake");
+    }
+
     #[tokio::test]
     async fn marketing_agent_uses_injected_vision_optimizer_for_product_images() {
         let agent = MarketingAgent::new_for_test_with_optimizer(
             Arc::new(FixedCopyClient),
             Arc::new(FixedImageOptimizer),
+            Arc::new(RuntimeSeoClient),
         );
 
         let optimized = agent
