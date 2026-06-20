@@ -76,9 +76,6 @@
       select, textarea, input {
         border-radius: 8px;
       }
-      select, textarea, input {
-        border-radius: 8px;
-      }
       input:focus, textarea:focus, select:focus {
         outline: none;
         border-color: #0071E3;
@@ -955,7 +952,7 @@
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="glassmorphism" style="background: #0066FF; color: white; border: none; min-height: 44px; min-width: 44px; margin-top: 10px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
@@ -968,7 +965,7 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; padding: 14px;" enterkeyhint="next"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
