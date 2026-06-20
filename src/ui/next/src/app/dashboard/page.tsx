@@ -809,6 +809,7 @@ export default function Dashboard() {
         </section>
 
         <section className="mt-4">
+          <DashboardViralInviteWidget />
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
