@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Documentation full suite', () => {
   test('Help portal loads properly and search works', async ({ page }) => {
     // Visit help page
-    await page.goto('/help.html');
+    await page.goto('/api/ui/help.html');
 
     // Title should be present
     const title = page.locator('h1');
@@ -27,7 +27,7 @@ test.describe('Documentation full suite', () => {
 
   test('Changelog pulls data dynamically', async ({ page }) => {
     // Visit changelog page
-    await page.goto('/changelog.html');
+    await page.goto('/api/ui/changelog.html');
 
     // Title should be present
     const title = page.locator('h1');
@@ -42,7 +42,7 @@ test.describe('Documentation full suite', () => {
 
   test('API Docs loads Swagger UI', async ({ page }) => {
     // Visit api docs page
-    await page.goto('/api-docs.html');
+    await page.goto('/api/ui/api-docs.html');
 
     // Check for Swagger UI wrapper
     const swaggerUI = page.locator('.swagger-ui');

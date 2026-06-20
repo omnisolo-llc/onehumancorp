@@ -389,7 +389,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('metrics-invites').innerText = data.active_referrals || '0';
+          document.getElementById('metrics-invites').innerText = data.invites_sent || '0';
           document.getElementById('metrics-active').innerText = data.active_referrals || '0';
           document.getElementById('metrics-revenue').innerText = '$' + (data.revenue_from_referrals || 0).toFixed(2);
           document.getElementById('metrics-pending').innerText = '$' + (data.pending_rewards || 0).toFixed(2);

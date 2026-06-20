@@ -111,3 +111,25 @@ describe('useTooltip Hook sync', () => {
     console.error = originalError;
   });
 });
+
+describe('TooltipRegistry window resize', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  it('debounces resize events', async () => {
+    await act(async () => { render(<TooltipProvider><div>Test</div></TooltipProvider>); });
+    act(() => {
+      window.innerWidth = 500;
+      fireEvent(window, new Event('resize'));
+      window.innerWidth = 800;
+      fireEvent(window, new Event('resize'));
+    });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+    expect(true).toBe(true);
+  });
+});

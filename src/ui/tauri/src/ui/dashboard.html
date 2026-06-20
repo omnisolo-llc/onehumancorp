@@ -1443,7 +1443,7 @@
                   try {
                     return await window.__TAURI__.core.invoke("generate_cloud_invite");
                   } catch(e) {
-                    return "https://cloud.ohc.network/invite/fallback";
+                    return "";
                   }
                 } else {
                   return "https://cloud.ohc.network/invite/test-" + Date.now();
@@ -1586,7 +1586,7 @@
             linkContainer.style.display = 'block';
           }).catch((err) => {
             console.error(err);
-            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           });
@@ -1599,12 +1599,12 @@
                 body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
             });
             const data = await res.json();
-            referralLink.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = data.invite_link || "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           } catch(e) {
             console.error(e);
-            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           }
@@ -2016,7 +2016,7 @@
           let bodyPayload;
 
           if (isAgentFeed) {
-             url = `/api/v1/feed/${encodeURIComponent(id)}/state`;
+             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
@@ -2336,7 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.style.display = 'block';
               }).catch((err) => {
                 console.error(err);
-                linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                linkInput.value = "";
                 btn.style.display = 'none';
                 container.style.display = 'block';
               });
@@ -2349,10 +2349,10 @@ document.addEventListener('DOMContentLoaded', () => {
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
                   });
                   const data = await res.json();
-                  linkInput.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+                  linkInput.value = data.invite_link || "";
               } catch(e) {
                   console.error(e);
-                  linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                  linkInput.value = "";
               }
               btn.style.display = 'none';
               container.style.display = 'block';

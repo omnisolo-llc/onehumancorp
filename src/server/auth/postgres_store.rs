@@ -67,7 +67,7 @@ impl UserRepository for PgUserRepository {
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
             "#
         )
         .bind(&user.id)
@@ -321,13 +321,13 @@ impl UserRepository for PgUserRepository {
 
         let query = if should_bypass {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#
@@ -423,18 +423,12 @@ impl UserRepository for PgUserRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        // GC expired entries
-        let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1"
-        } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
-        };
 
         let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -468,7 +462,7 @@ mod security_tests {
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;
-    use sqlx::postgres::PgPoolOptions;
+
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
@@ -503,14 +497,14 @@ mod security_tests {
 
         let repo = PgUserRepository::new(pool.clone());
 
-        // Since we can't reliably override the global `is_multitenant_mode()` inline here
-        // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
-
-        // Cloud multitenant mode should NOT allow bypassing.
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+            let org_id = "system";
+            let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
+            // Ensure the condition strictly evaluates to false when multitenant is true.
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+
             let res = repo.get_by_id("dummy_id", "system").await;
             assert!(res.is_err(), "Must reject system id");
         }).await;
@@ -609,19 +603,7 @@ mod security_tests {
 
         // Ensure multitenant environment is mocked strictly for 'system' context evaluation
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
-            let _dummy_user = User {
-                id: "dummy_id_update".to_string(),
-                username: "dummy_user".to_string(),
-                email: "dummy@example.com".to_string(),
-                password_hash: "hash".to_string(),
-                roles: vec![],
-                active: true,
-                organization_id: Some("system".to_string()),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                oidc_subject: Some("sub".to_string()),
-            };
-            let res = repo.update_user(_dummy_user, "system").await;
+            let res = repo.update_user(dummy_user, "system").await;
             assert!(res.is_err(), "Must reject system org_id");
         }).await;
     }

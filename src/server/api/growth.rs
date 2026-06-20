@@ -1029,6 +1029,17 @@ async fn handle_send_receipt(
     Json(SendReceiptResponse { success: true, message: generated })
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub organization_id: String,
+    pub user_id: String,
+    pub message: String,
+}
 
 #[derive(Deserialize)]
 pub struct LeadGenCampaignRequest {
@@ -1116,20 +1127,6 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails as i32,
     })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZeroClickGenerateResponse {
-    pub name: String,
-    pub url: String,
-    pub products_count: usize,
-    pub organization_id: String,
-    pub user_id: String,
 }
 
 async fn handle_track_visitor(
@@ -1970,6 +1967,14 @@ async fn handle_referral_stats(
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut active_referrals: i64 = 0;
+    let mut invites_sent: i64 = 0;
+
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    if let Ok(count) = tracker.get_total_invites_count(&auth_info.org_id).await {
+        invites_sent = count;
+    }
     let mut revenue_from_referrals: f64 = 0.0;
     let mut pending_rewards: f64 = 0.0;
 
@@ -1987,6 +1992,7 @@ async fn handle_referral_stats(
     }
 
     Ok(Json(serde_json::json!({
+        "invites_sent": invites_sent,
         "active_referrals": active_referrals,
         "revenue_from_referrals": revenue_from_referrals,
         "pending_rewards": pending_rewards,
@@ -2389,9 +2395,8 @@ mod tests {
 
         assert!(res.is_ok());
         let response = res.unwrap().0;
-        assert_eq!(response.name, "Mock Business");
-        assert_eq!(response.url, "mock-business.ohc.app");
-        assert_eq!(response.products_count, 1);
+        assert!(!response.organization_id.is_empty());
+        assert!(!response.user_id.is_empty());
     }
 
     #[tokio::test]
@@ -2898,11 +2903,9 @@ pub async fn handle_zero_click_generate(
     };
 
     Ok(axum::Json(ZeroClickGenerateResponse {
-        name: intake_data.business_name,
-        url,
-        products_count: intake_data.initial_products.len(),
         organization_id: _start_res.organization_id,
         user_id: _start_res.user_id,
+        message: "Storefront generated successfully".to_string()
     }))
 }
 

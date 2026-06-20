@@ -203,7 +203,7 @@
             align-items: flex-start;
         }
 
-        .phone-mockup {
+        .phone-container {
             width: 375px;
             height: 812px;
             background: white;
@@ -358,7 +358,7 @@
     </section>
 
     <section class="preview-section">
-        <div class="phone-mockup">
+        <div class="phone-container">
             <div class="notch"></div>
             <div id="preview-content" class="preview-content">
                 <div class="avatar">✨</div>
@@ -404,16 +404,6 @@
             const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
             if (response.ok) {
                 currentState = await response.json();
-
-                // Keep compatibility with E2E tests that set this localStorage explicitly:
-                try {
-                    const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed.storeName) currentState.store_name = parsed.storeName;
-                        if (parsed.bio) currentState.bio = parsed.bio;
-                    }
-                } catch(e) {}
             }
         } catch(e) {
             console.error("Failed to load bio config", e);
@@ -424,14 +414,6 @@
 
         let saveTimeout;
         function saveState() {
-            // Keep E2E tests happy by saving to localStorage too
-            window.localStorage.setItem(`ohc_bio_${tenant}`, JSON.stringify({
-                storeName: currentState.store_name,
-                bio: currentState.bio,
-                theme: currentState.theme,
-                links: currentState.links
-            }));
-
             // Debounce API call
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {

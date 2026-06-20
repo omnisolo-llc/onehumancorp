@@ -34,6 +34,18 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+        "dispute_resolution" => {
+            tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id);
+            if let Some(msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
+                tracing::info!("Dispute Resolution Engine sent reply: {}", msg);
+            }
+            if let Some(refund) = payload.get("refund_amount").and_then(|v| v.as_f64()) {
+                tracing::info!("Dispute Resolution Engine processed simulated refund: ${}", refund);
+            }
+            if let Some(ops) = payload.get("operational_action").and_then(|v| v.as_str()) {
+                tracing::info!("Dispute Resolution Engine executed operational action: {}", ops);
+            }
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }

@@ -88,15 +88,6 @@ export default function LinkInBioGeneratorPage() {
     }
   };
 
-  // Keep local storage write for backwards-compat during transition if needed,
-  // but main persistence is now the API via handlePublish.
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-        const payload = { storeName, bio, links, theme };
-        localStorage.setItem(`ohc_bio_${tenant}`, JSON.stringify(payload));
-    }
-  }, [storeName, bio, links, theme, tenant]);
-
   const shareLink = `http://localhost:3000/bio/${tenant}`;
 
   const getThemeStyles = () => {

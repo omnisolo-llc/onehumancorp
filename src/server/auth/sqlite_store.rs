@@ -50,7 +50,7 @@ impl UserRepository for SqliteUserRepository {
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, json($5), $6, $7, $8, $9, $10)
             "#
         )
         .bind(&user.id)
@@ -262,13 +262,13 @@ impl UserRepository for SqliteUserRepository {
 
         let query = if should_bypass {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=json($5), active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=json($5), active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#
@@ -348,18 +348,12 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
-        // GC expired entries
-        let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1"
-        } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
-        };
 
         let now = chrono::Utc::now();
         if should_bypass {
-            sqlx::query(query).bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
         }
 
         Ok(())
@@ -506,7 +500,9 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+            let org_id = "system";
+            let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
