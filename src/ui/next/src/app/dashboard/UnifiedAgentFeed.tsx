@@ -107,6 +107,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
     updateOfflineCount();
 
+    window.addEventListener("ohc_queue_updated", updateOfflineCount);
+
     setIsOffline(!navigator.onLine);
 
     const handleOnline = async () => {
@@ -137,6 +139,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      window.removeEventListener("ohc_queue_updated", updateOfflineCount);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
