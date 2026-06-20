@@ -1541,8 +1541,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               inputs.context.forEach(r => {
                   if (r.value === contextVal) {
                       r.checked = true;
-                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-                      r.closest('.radio-option').classList.add('selected');
+                      document.querySelectorAll('.context-card').forEach(el => el.classList.remove('selected'));
+                      r.closest('.context-card').classList.add('selected');
                   }
               });
           }
