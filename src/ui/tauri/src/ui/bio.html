@@ -278,25 +278,9 @@
             const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
             if (response.ok) {
                 data = await response.json();
-            } else {
-                // Try E2E test fallback
-                const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.storeName) data.store_name = parsed.storeName;
-                    if (parsed.bio) data.bio = parsed.bio;
-                }
             }
         } catch(e) {
             console.error("Failed to load from API", e);
-            try {
-                const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.storeName) data.store_name = parsed.storeName;
-                    if (parsed.bio) data.bio = parsed.bio;
-                }
-            } catch(e) {}
         }
 
         // Update UI
