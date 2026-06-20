@@ -132,6 +132,7 @@ pub struct DepartmentOrchestrator {
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
     approval_counter: Counter<u64>,
+    redis_client: Option<redis::Client>,
 }
 
 impl DepartmentOrchestrator {
@@ -156,6 +157,7 @@ impl DepartmentOrchestrator {
             mesh,
             action_counter,
             approval_counter,
+            redis_client: crate::get_redis_client(),
         }
     }
 
@@ -317,26 +319,28 @@ impl DepartmentOrchestrator {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
                     id: Uuid::new_v4().to_string(),
-                    tenant_id,
-                    department,
+                    tenant_id: tenant_id.clone(),
+                    department: department.clone(),
                     description: description.clone(),
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
                     payload: Some(_action_payload),
                 };
+                self.publish_stream_event(&tenant_id, "agent_started", serde_json::json!({"department": format!("{:?}", department), "description": description})).await;
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
                 let req = ApprovalRequest {
                     id: Uuid::new_v4().to_string(),
-                    tenant_id,
-                    department,
+                    tenant_id: tenant_id.clone(),
+                    department: department.clone(),
                     description: description.clone(),
                     status: ApprovalStatus::PendingApproval,
                     action_risk: ActionRisk::DraftForReview,
                     payload: Some(_action_payload),
                 };
+                self.publish_stream_event(&tenant_id, "agent_started", serde_json::json!({"department": format!("{:?}", department), "description": description})).await;
                 self.add_approval_request(req.clone()).await;
 
                 let _ = crate::dispatch_critical_sms(
@@ -345,6 +349,25 @@ impl DepartmentOrchestrator {
                 ).await;
 
                 Ok(req.clone())
+            }
+        }
+    }
+
+    pub async fn publish_stream_event(&self, tenant_id: &str, event_type: &str, payload: serde_json::Value) {
+        if let Some(client) = &self.redis_client {
+            let channel = format!("ohc:stream:{}", tenant_id);
+            let msg = serde_json::json!({
+                "event_type": event_type,
+                "payload": payload,
+                "timestamp": chrono::Utc::now().timestamp_millis(),
+            });
+            if let Ok(msg_str) = serde_json::to_string(&msg) {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg(&channel)
+                        .arg(&msg_str)
+                        .query_async(&mut conn).await;
+                }
             }
         }
     }
