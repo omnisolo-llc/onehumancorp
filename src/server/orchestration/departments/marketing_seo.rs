@@ -8,7 +8,7 @@ pub trait SeoClient: Send + Sync {
     async fn generate_seo_metadata(&self, name: &str, description: &str, item_type: &str, price: f64) -> Result<(String, String, serde_json::Value), String>;
 }
 
-struct RuntimeSeoClient;
+pub struct RuntimeSeoClient;
 
 #[async_trait::async_trait]
 impl SeoClient for RuntimeSeoClient {
