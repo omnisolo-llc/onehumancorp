@@ -965,7 +965,7 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; padding: 14px;" enterkeyhint="next"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; padding: 14px;" enterkeyhint="done"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
@@ -1110,7 +1110,7 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" inputmode="text" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
         <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" enterkeyhint="next" />
@@ -1248,7 +1248,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" enterkeyhint="next" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" inputmode="text" autocomplete="off" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
