@@ -50,6 +50,8 @@ test.describe('Setup Wizard 375px Flow', () => {
         await page.locator('#step-context .next-step-btn').click();
 
         // Categories
+        await page.waitForTimeout(100);
+        await page.waitForFunction(() => (document.querySelector('#business-categories') as HTMLSelectElement)?.options?.length > 1);
         await page.locator('#business-categories').selectOption('Bakery');
         await page.locator('#step-categories .next-step-btn').click();
 

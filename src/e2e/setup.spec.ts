@@ -35,6 +35,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
     await page.waitForTimeout(100);
+    await page.waitForFunction(() => (document.querySelector('#business-categories') as HTMLSelectElement)?.options?.length > 1);
     await categorySelect.selectOption('Bakery');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
@@ -152,6 +153,7 @@ test.describe('OHC Setup Wizard Flow', () => {
 
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
+    await page.waitForFunction(() => (document.querySelector('#business-categories') as HTMLSelectElement)?.options?.length > 1);
     await categorySelect.selectOption('Bakery');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
