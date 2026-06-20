@@ -100,6 +100,7 @@ export default function OnboardingWizard() {
       adminPassword,
       aiAgents,
       aiAutoRespond,
+      instantImageUrl,
       ...overrideState
     };
 
@@ -160,7 +161,8 @@ export default function OnboardingWizard() {
         adminEmail,
         adminPassword,
         aiAgents,
-        aiAutoRespond
+      aiAutoRespond,
+      instantImageUrl
       };
 
       const res = await fetchWithRetry('/api/onboarding/draft', {
@@ -219,6 +221,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.instantImageUrl !== undefined) setInstantImageUrl(data.wizardState.instantImageUrl);
         initialStateLoaded.current = true;
       }
     })
@@ -258,7 +261,8 @@ export default function OnboardingWizard() {
       adminEmail,
       adminPassword,
       aiAgents,
-      aiAutoRespond
+      aiAutoRespond,
+      instantImageUrl
     };
 
     const timer = setTimeout(() => {
@@ -273,7 +277,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessGoal, businessName, whatYouSell, location,
     targetAudience, businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded, instantImageUrl
   ]);
 
   const handleIntake = async () => {
@@ -665,7 +669,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4 font-inter">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism rounded-[16px] shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
