@@ -146,6 +146,8 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
+        finance::create_invoice_draft_tool(),
+        finance::generate_payment_link_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone(), llm.clone()),

@@ -137,9 +137,18 @@ export default function FeedPage() {
     setEditingId(null);
   };
 
+  const [showFinanceModal, setShowFinanceModal] = useState<string | null>(null);
+
   const handleAction = async (id: string, state: string, updatedProposed?: any, updatedContext?: any) => {
     const item = items.find(i => i.id === id);
     if (state === 'APPROVED') {
+      if (item?.proposed_action?.action_type === 'Trigger Finance' && showFinanceModal !== id) {
+        setShowFinanceModal(id);
+        return;
+      }
+      if (item?.proposed_action?.action_type === 'Trigger Finance' && showFinanceModal === id) {
+        setShowFinanceModal(null);
+      }
       if (item?.proposed_action?.action_type === 'Draft Quote') {
         router.push(`/quotes/${item.proposed_action.quote_id}`);
         return;
@@ -239,7 +248,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.proposed_action?.action_type === 'Trigger Finance' ? 'COMPLETED TASK' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -255,6 +264,8 @@ export default function FeedPage() {
                     ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Booking'
                     ? `Drafted Booking for ${item.context_payload?.customer_name || 'Customer'}`
+                    : item.proposed_action?.action_type === 'Trigger Finance'
+                    ? `Task Completed: ${item.context_payload?.task_id || 'Customer'}`
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
@@ -316,6 +327,8 @@ export default function FeedPage() {
                           ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
                           : item.proposed_action?.action_type === 'Draft Booking'
                           ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
+                          : item.proposed_action?.action_type === 'Trigger Finance'
+                          ? (item.context_payload?.context || 'Task marked complete. Generate and send the final invoice?')
                           : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
                       </p>
                     )}
@@ -361,7 +374,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Trigger Finance' ? 'Send to Customer' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}
@@ -382,6 +395,49 @@ export default function FeedPage() {
                     </div>
                   )
                 ) : null}
+                {showFinanceModal === item.id && (
+                  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in" onClick={() => setShowFinanceModal(null)}>
+                    <div className="bg-white dark:bg-[#1D1D1F] w-full sm:max-w-[375px] rounded-t-[24px] sm:rounded-[24px] p-6 shadow-2xl transition-transform duration-300 translate-y-0" onClick={e => e.stopPropagation()}>
+                      <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Send Final Invoice</h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        Task <b>{item.context_payload?.task_id || 'Unknown'}</b> was marked complete.
+                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-6 border border-gray-100 dark:border-gray-700">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-300">Amount Due</span>
+                          <span className="text-lg font-bold text-gray-900 dark:text-white">$150.00</span>
+                        </div>
+                        <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-3"></div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>Labor</span>
+                          <span>$100.00</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
+                          <span>Parts</span>
+                          <span>$50.00</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowFinanceModal(null);
+                          // Proceed to actually approve it
+                          const updatedProposed = { ...item.proposed_action, user_approved: true };
+                          handleAction(item.id, 'APPROVED', updatedProposed, null);
+                        }}
+                        className="w-full min-h-[44px] rounded-[16px] bg-[#0066FF] text-white font-bold hover:bg-[#0052CC] transition-all duration-200 flex items-center justify-center text-[15px]"
+                      >
+                        Send to Customer
+                      </button>
+                      <button
+                        onClick={() => setShowFinanceModal(null)}
+                        className="w-full min-h-[44px] rounded-[16px] mt-3 text-gray-500 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center text-[15px]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

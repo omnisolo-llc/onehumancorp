@@ -20,7 +20,8 @@ impl Department for FinanceAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.payment.received".to_string(),
-            "payment.captured".to_string()
+            "payment.captured".to_string(),
+            "task.completed".to_string()
         ]
     }
 
@@ -38,6 +39,8 @@ impl Department for FinanceAgent {
 
         let action_description = if event.event_type == "payment.captured" {
             "Analyze transaction for split tags and record ledger split".to_string()
+        } else if event.event_type == "task.completed" {
+            "Draft final invoice and prepare payment request using create_invoice_draft and generate_payment_link".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };

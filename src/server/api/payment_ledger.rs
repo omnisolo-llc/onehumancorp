@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -8,7 +8,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::db::DB;
 use crate::hub::Hub;
@@ -35,6 +34,7 @@ pub struct PaymentIntentResponse {
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
+    #[serde(rename = "type")]
     pub type_field: String, // e.g. "payment_intent.succeeded"
     pub data: WebhookData,
 }
@@ -64,7 +64,7 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn create_payment_intent(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<CreatePaymentIntentRequest>,
 ) -> impl IntoResponse {
@@ -102,19 +102,25 @@ async fn create_payment_intent(
     }
 }
 
+use crate::integrations::stripe::webhooks::StripeWebhookEvent;
+use crate::integrations::stripe::webhooks::enqueue_webhook_event;
+
+use serde_json::Value;
+
 async fn stripe_webhook(
-    State(state): State<AppState>,
-    Json(payload): Json<WebhookPayload>,
+    State(_state): State<AppState>,
+    Json(payload): Json<Value>,
 ) -> impl IntoResponse {
-    if payload.type_field != "payment_intent.succeeded" {
+    let r_type = payload.get("type").and_then(|v| v.as_str()).unwrap_or_default();
+    if r_type != "payment_intent.succeeded" {
         return StatusCode::OK.into_response();
     }
 
-    let payment_intent = payload.data.object;
+    let object = payload.get("data").and_then(|d| d.get("object"));
 
     // In a real app we'd verify the signature, for this implementation we rely on the metadata
-    let tenant_id = payment_intent.metadata.get("tenant_id").cloned().unwrap_or_default();
-    let idempotency_key = payment_intent.metadata.get("idempotency_key").cloned().unwrap_or_default();
+    let tenant_id = object.and_then(|o| o.get("metadata")).and_then(|m| m.get("tenant_id")).and_then(|v| v.as_str()).unwrap_or_default().to_string();
+    let idempotency_key = object.and_then(|o| o.get("metadata")).and_then(|m| m.get("idempotency_key")).and_then(|v| v.as_str()).unwrap_or_default().to_string();
 
     if tenant_id.is_empty() || idempotency_key.is_empty() {
         return StatusCode::BAD_REQUEST.into_response();
@@ -122,98 +128,22 @@ async fn stripe_webhook(
 
     let pool = crate::db::get_pool();
 
-    // Check if we already processed it
-    let existing: Option<(String,)> = sqlx::query_as("SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2")
-        .bind(&idempotency_key)
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
+    let event = StripeWebhookEvent {
+        id: payload.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        r#type: Some(r_type.to_string()),
+        data: payload.get("data").map(|d| crate::integrations::stripe::webhooks::StripeWebhookData {
+            object: d.get("object").cloned(),
+        })
+    };
 
-    if let Some((status,)) = existing {
-        if status == "succeeded" {
-            return StatusCode::OK.into_response();
-        }
-    } else {
-        return StatusCode::NOT_FOUND.into_response();
+    match enqueue_webhook_event(&pool, &tenant_id, &event).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
-
-    // Process success
-    let mut tx = pool.begin().await.unwrap();
-
-    let update_res = sqlx::query("UPDATE payment_intents SET status = 'succeeded', stripe_payment_intent_id = $1 WHERE idempotency_key = $2 AND tenant_id = $3")
-        .bind(&payment_intent.id)
-        .bind(&idempotency_key)
-        .bind(&tenant_id)
-        .execute(&mut *tx)
-        .await;
-
-    if update_res.is_err() {
-        let _ = tx.rollback().await;
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    // Update Ledger (Create transaction and entry)
-    let payment_info: (f64, String) = sqlx::query_as("SELECT amount, currency FROM payment_intents WHERE idempotency_key = $1")
-        .bind(&idempotency_key)
-        .fetch_one(&mut *tx)
-        .await.unwrap();
-
-    let tx_id = Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
-        .bind(&tenant_id)
-        .bind(&tx_id)
-        .bind(payment_info.0)
-        .bind(&payment_info.1)
-        .execute(&mut *tx)
-        .await;
-
-    // ensure account exists for tenant
-    let account_id = "default_revenue";
-    let _ = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
-        .bind(&tenant_id)
-        .bind(account_id)
-        .bind(&payment_info.1)
-        .bind(0.0)
-        .execute(&mut *tx)
-        .await;
-
-    let entry_id = Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
-        .bind(&tenant_id)
-        .bind(&entry_id)
-        .bind(&tx_id)
-        .bind(account_id)
-        .bind(payment_info.0)
-        .execute(&mut *tx)
-        .await;
-
-    let _ = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
-        .bind(payment_info.0)
-        .bind(&tenant_id)
-        .bind(account_id)
-        .execute(&mut *tx)
-        .await;
-
-    // Notify Finance Agent
-    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'payment_ledger', 'finance', 'payment_succeeded', $3, 'pending')")
-        .bind(Uuid::new_v4().to_string())
-        .bind(&tenant_id)
-        .bind(serde_json::json!({
-            "event": "payment_succeeded",
-            "amount": payment_info.0,
-            "currency": payment_info.1,
-            "idempotency_key": idempotency_key
-        }))
-        .execute(&mut *tx)
-        .await;
-
-    let _ = tx.commit().await;
-
-    StatusCode::OK.into_response()
 }
 
 async fn get_balance(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;

@@ -119,13 +119,14 @@ Source: {}
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
+If you observe a task was just completed, or a service was fulfilled, you MUST return action_type 'Trigger Finance' with action_payload containing the 'task_id'.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
-    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
+    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Trigger Finance\",
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string, or task_id JSON string.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -274,6 +275,23 @@ Output JSON format:
                         }
                     }
                 }
+            } else if action_type == "Trigger Finance" {
+                let parsed_task_id = if let Ok(json_payload) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                    json_payload.get("task_id").and_then(|v| v.as_str()).unwrap_or(&action_payload).to_string()
+                } else {
+                    action_payload.to_string()
+                };
+
+                // Notify the finance agent
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'message_triage', 'finance', 'task_completed', $3, 'pending')")
+                    .bind(Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(serde_json::json!({
+                        "event": "task.completed",
+                        "task_id": parsed_task_id
+                    }))
+                    .execute(&self.db.pool)
+                    .await;
             } else if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_quote_id = Uuid::new_v4();

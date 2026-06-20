@@ -6,6 +6,76 @@ use tracing::info;
 
 use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
+#[derive(Deserialize)]
+struct CreateInvoiceDraftArgs {
+    task_id: String,
+}
+
+pub struct CreateInvoiceDraftExecutor;
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<CreateInvoiceDraftArgs> for CreateInvoiceDraftExecutor {
+    async fn execute_typed(&self, args: CreateInvoiceDraftArgs) -> Result<String, ToolError> {
+        info!("Drafting invoice for task: {}", args.task_id);
+        Ok(json!({
+            "status": "success",
+            "invoice_id": format!("draft_{}", args.task_id),
+            "message": format!("Drafted invoice for task {}", args.task_id)
+        }).to_string())
+    }
+}
+
+pub fn create_invoice_draft_tool() -> Tool {
+    Tool {
+        name: "create_invoice_draft".to_string(),
+        description: "Drafts an invoice for a specific task.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "The ID of the task to invoice for."}
+            },
+            "required": ["task_id"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(CreateInvoiceDraftExecutor)),
+    }
+}
+
+#[derive(Deserialize)]
+struct GeneratePaymentLinkArgs {
+    invoice_id: String,
+}
+
+pub struct GeneratePaymentLinkExecutor;
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<GeneratePaymentLinkArgs> for GeneratePaymentLinkExecutor {
+    async fn execute_typed(&self, args: GeneratePaymentLinkArgs) -> Result<String, ToolError> {
+        info!("Generating payment link for invoice: {}", args.invoice_id);
+        Ok(json!({
+            "status": "success",
+            "payment_link": format!("https://pay.stripe.com/test_{}", args.invoice_id),
+            "message": format!("Generated payment link for invoice {}", args.invoice_id)
+        }).to_string())
+    }
+}
+
+pub fn generate_payment_link_tool() -> Tool {
+    Tool {
+        name: "generate_payment_link".to_string(),
+        description: "Generates a payment link for a drafted invoice.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "invoice_id": {"type": "string", "description": "The ID of the invoice."}
+            },
+            "required": ["invoice_id"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(GeneratePaymentLinkExecutor)),
+    }
+}
+
 // Pydantic-first tool schema validation: FinanceArgs
 #[derive(Deserialize)]
 struct FinanceArgs {
