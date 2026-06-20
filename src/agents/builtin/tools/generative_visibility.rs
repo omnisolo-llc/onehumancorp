@@ -1,18 +1,27 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
+
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
+
+/// SOTA Harness Pattern: Pydantic-first tool schema validation.
+#[derive(Deserialize)]
+pub struct GenerativeVisibilityArgs {
+    pub content: Option<String>,
+    pub url: Option<String>,
+}
 
 pub struct GenerativeVisibilityExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for GenerativeVisibilityExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GenerativeVisibilityArgs> for GenerativeVisibilityExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GenerativeVisibilityArgs,
     ) -> Result<String, ToolError> {
-        let content = args["content"].as_str().unwrap_or("");
-        let url = args["url"].as_str().unwrap_or("");
+        let content = args.content.as_deref().unwrap_or("");
+        let url = args.url.as_deref().unwrap_or("");
 
         if content.is_empty() && url.is_empty() {
             return Err(ToolError::LlmRecoverable(
@@ -88,7 +97,7 @@ pub fn generative_visibility_tool() -> Tool {
                 }
             }
         }),
-        execute: Arc::new(GenerativeVisibilityExecutor),
+        execute: Arc::new(PydanticAdapter::new(GenerativeVisibilityExecutor)),
     }
 }
 
@@ -99,19 +108,20 @@ mod tests {
     #[tokio::test]
     async fn test_generative_visibility_missing_args() {
         let executor = GenerativeVisibilityExecutor;
-        let args = json!({});
-        let result = executor.execute(args).await;
+        let args = GenerativeVisibilityArgs { content: None, url: None };
+        let result = executor.execute_typed(args).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_generative_visibility_with_content() {
         let executor = GenerativeVisibilityExecutor;
-        let args = json!({
-            "content": "We are the best bakery in Austin. We have json-ld schema.org data. ".repeat(10)
-        });
-        let result = executor.execute(args).await.unwrap();
-        let parsed: Value = serde_json::from_str(&result).unwrap();
+        let args = GenerativeVisibilityArgs {
+            content: Some("We are the best bakery in Austin. We have json-ld schema.org data. ".repeat(10)),
+            url: None,
+        };
+        let result = executor.execute_typed(args).await.unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
 
         assert_eq!(parsed["status"], "success");
         assert_eq!(parsed["generative_score"], 100);
@@ -122,11 +132,12 @@ mod tests {
     #[tokio::test]
     async fn test_generative_visibility_poor_content() {
         let executor = GenerativeVisibilityExecutor;
-        let args = json!({
-            "content": "Bakery store."
-        });
-        let result = executor.execute(args).await.unwrap();
-        let parsed: Value = serde_json::from_str(&result).unwrap();
+        let args = GenerativeVisibilityArgs {
+            content: Some("Bakery store.".to_string()),
+            url: None,
+        };
+        let result = executor.execute_typed(args).await.unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
 
         assert_eq!(parsed["status"], "success");
         assert_eq!(parsed["generative_score"], 50);
