@@ -287,7 +287,8 @@ export default function BuilderPage() {
           <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
             {wizardStep === 1 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
+                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
+                <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Let's build your store</h2>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Start with the basics. What's your business called, and what do you do?
                 </p>

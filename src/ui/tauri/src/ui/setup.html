@@ -305,6 +305,15 @@
         padding: 10px;
         margin-bottom: 20px;
       }
+      .image-url-input {
+        margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;
+      }
+      .chat-url-input {
+        margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;
+      }
+      .chat-message-input {
+        margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;
+      }
 
       .step-indicator.active {
         background: #0066FF;
@@ -968,7 +977,7 @@
         <p>Our AI will handle the rest in 30 seconds.</p>
 
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
-        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
+        <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism image-url-input" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
 
@@ -1012,9 +1021,9 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism chat-url-input" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next">
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." enterkeyhint="send" style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism chat-message-input" placeholder="Type a message..." enterkeyhint="send">
                 <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
             </div>
         </div>
@@ -1062,25 +1071,25 @@
 
         <div class="work-context-cards" id="context-group">
           <label class="context-card" data-testid="context-local">
-            <input type="radio" name="work_context" value="Local Service" />
+            <input type="radio" name="work_context" class="glassmorphism" value="Local Service" />
             <div class="context-icon">🔧</div>
             <div class="context-title">Local Service</div>
             <div class="context-desc">Field work, repairs, home services</div>
           </label>
           <label class="context-card" data-testid="context-storefront">
-            <input type="radio" name="work_context" value="Storefront" />
+            <input type="radio" name="work_context" class="glassmorphism" value="Storefront" />
             <div class="context-icon">🏪</div>
             <div class="context-title">Storefront or Cafe</div>
             <div class="context-desc">Physical location with walk-ins</div>
           </label>
           <label class="context-card" data-testid="context-creator">
-            <input type="radio" name="work_context" value="Online Creator" />
+            <input type="radio" name="work_context" class="glassmorphism" value="Online Creator" />
             <div class="context-icon">💻</div>
             <div class="context-title">Online Creator / Tutor</div>
             <div class="context-desc">Digital goods, lessons, coaching</div>
           </label>
           <label class="context-card" data-testid="context-agency">
-            <input type="radio" name="work_context" value="Agency" />
+            <input type="radio" name="work_context" class="glassmorphism" value="Agency" />
             <div class="context-icon">🏢</div>
             <div class="context-title">Agency or Studio</div>
             <div class="context-desc">Client projects, contractors</div>
