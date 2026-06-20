@@ -69,6 +69,15 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await toggleButton.click();
     await expect(page.locator('#queue-dashboard')).toBeVisible();
 
+    // Simulate conflict API response handling
+    await page.route('/api/pos/inventory', async (route) => {
+       await route.fulfill({
+           status: 409,
+           contentType: 'application/json',
+           body: JSON.stringify({ message: "Conflict detected", current_state: { is_sold_out: false }})
+       });
+    });
+
     // Set network to online
     await context.setOffline(false);
 
@@ -82,9 +91,18 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
         window.dispatchEvent(new Event('online'));
     });
 
-    // Wait for the sync to complete and the queue to hide.
-    // This assertion requires the backend to be running to successfully process the offline mutations.
-    await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 15000 });
+    // Wait for the sync to complete, due to conflict it will show conflict resolution UI
+    await expect(page.getByText('This item was updated elsewhere.')).toBeVisible({ timeout: 15000 });
+
+    // Click Keep Mine to resolve conflict and re-queue
+    await page.route('/api/pos/inventory', async (route) => {
+       await route.fulfill({ status: 200, contentType: 'application/json', body: "{}" });
+    });
+
+    await page.getByTestId(/btn-conflict-keep-mine-/).first().click();
+
+    // UI should disappear
+    await expect(page.getByText('This item was updated elsewhere.')).not.toBeVisible({ timeout: 15000 });
 
   });
 

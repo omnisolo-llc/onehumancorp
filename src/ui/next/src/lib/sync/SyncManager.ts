@@ -1,4 +1,5 @@
 import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+import { storeConflict } from '../../lib/sync/db';
 
 export class SyncManager {
   private static instance: SyncManager;
@@ -167,8 +168,24 @@ export class SyncManager {
           body: JSON.stringify({ deltas: crdtDeltas })
         });
         if (!resCrdt.ok) {
-          allOk = false;
-          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
+          if (resCrdt.status === 409) {
+             const errorData = await resCrdt.json().catch(() => ({}));
+             // Isolate conflict
+             for (const m of queue.filter(m => m.type === 'CRDT_MUTATION')) {
+                await storeConflict({
+                   id: m.id,
+                   type: m.type,
+                   payload: m.payload,
+                   timestamp: m.timestamp?.toString() || new Date().toISOString(),
+                   errorMsg: 'Conflict Detected',
+                   serverState: errorData
+                });
+                await removeAction(m.id);
+             }
+          } else {
+             allOk = false;
+             throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
+          }
         }
       }
 
@@ -323,8 +340,23 @@ export class SyncManager {
           body: JSON.stringify(orderEvents)
         });
         if (!resOrder.ok) {
-          allOk = false;
-          throw new Error(`Order Sync failed with status ${resOrder.status}`);
+          if (resOrder.status === 409) {
+             const errorData = await resOrder.json().catch(() => ({}));
+             for (const m of queue.filter(m => m.type === 'UPDATE_ORDER_STATUS')) {
+                await storeConflict({
+                   id: m.id,
+                   type: m.type,
+                   payload: m.payload,
+                   timestamp: m.timestamp?.toString() || new Date().toISOString(),
+                   errorMsg: 'Conflict Detected in Order Sync',
+                   serverState: errorData
+                });
+                await removeAction(m.id);
+             }
+          } else {
+             allOk = false;
+             throw new Error(`Order Sync failed with status ${resOrder.status}`);
+          }
         }
       }
 
@@ -336,15 +368,34 @@ export class SyncManager {
           body: JSON.stringify(inventoryEvents)
         });
         if (!resInv.ok) {
-          allOk = false;
-          throw new Error(`Inventory Sync failed with status ${resInv.status}`);
+          if (resInv.status === 409) {
+             const errorData = await resInv.json().catch(() => ({}));
+             for (const m of queue.filter(m => m.type === 'TOGGLE_SOLD_OUT')) {
+                await storeConflict({
+                   id: m.id,
+                   type: m.type,
+                   payload: m.payload,
+                   timestamp: m.timestamp?.toString() || new Date().toISOString(),
+                   errorMsg: 'Conflict Detected in Inventory Sync',
+                   serverState: errorData
+                });
+                await removeAction(m.id);
+             }
+          } else {
+             allOk = false;
+             throw new Error(`Inventory Sync failed with status ${resInv.status}`);
+          }
         }
       }
 
       if (allOk) {
-        // Clear all successfully synced items
+        // Clear all successfully synced items that were not moved to conflicts
+        const updatedQueue = await getActions();
         for (const item of queue) {
-           await removeAction(item.id);
+           // only remove if it's still in the queue (not already removed by conflict handler)
+           if (updatedQueue.find(q => q.id === item.id)) {
+              await removeAction(item.id);
+           }
         }
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success

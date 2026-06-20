@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { ConflictResolutionCard } from '../../../components/ConflictResolutionCard';
 
 export default function KDSPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -28,10 +29,23 @@ export default function KDSPage() {
     }
   }, []);
 
-  // Initial Data Load
-  useEffect(() => {
+  const loadData = () => {
     fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
     fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
+  };
+
+  // Initial Data Load
+  useEffect(() => {
+    loadData();
+
+    const handleResolvedLatest = () => {
+       loadData(); // reload when choosing 'Use Latest' to grab the cloud state
+    };
+
+    if (typeof window !== 'undefined') {
+       window.addEventListener('ohc_sync_resolved_latest', handleResolvedLatest);
+       return () => window.removeEventListener('ohc_sync_resolved_latest', handleResolvedLatest);
+    }
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
@@ -191,6 +205,9 @@ export default function KDSPage() {
           </div>
 
         </div>
+
+        {/* Conflict Resolution */}
+        <ConflictResolutionCard />
 
         {/* Sync Indicator */}
         {syncing && (
