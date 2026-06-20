@@ -8,14 +8,32 @@ export function AIUsageLimitWidget() {
   const [referralLink, setReferralLink] = useState("");
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [actionsUsed, setActionsUsed] = useState(85);
-  const totalActions = 100;
+  const [actionsUsed, setActionsUsed] = useState(0);
+  const [totalActions, setTotalActions] = useState(100);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
       const finalTenant = storedTenant || "default-team";
       setTenantId(finalTenant);
+
+      fetch(`/api/v1/billing/department-tier-usage?tenant_id=${encodeURIComponent(finalTenant)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && Array.isArray(data.departments)) {
+            let used = 0;
+            let limit = 0;
+            for (const d of data.departments) {
+              used += d.actions_used || 0;
+              limit += d.action_limit || 0;
+            }
+            setActionsUsed(used);
+            if (limit > 0) {
+              setTotalActions(limit);
+            }
+          }
+        })
+        .catch(err => console.error("Failed to fetch usage", err));
     }
   }, []);
 
