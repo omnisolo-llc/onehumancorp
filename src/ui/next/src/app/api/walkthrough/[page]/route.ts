@@ -2,10 +2,10 @@ import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { page: string } }
+  context: { params: Promise<{ page: string }> }
 ) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const page = params.page;
+  const page = (await context.params).page;
 
   try {
     const res = await fetch(`${backendUrl}/api/walkthrough/${page}`);

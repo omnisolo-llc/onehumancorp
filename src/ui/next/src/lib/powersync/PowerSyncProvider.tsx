@@ -30,7 +30,7 @@ function browserSupportsPowerSync() {
   return isPowerSyncSupportedForLocation(window.isSecureContext, window.location.hostname);
 }
 
-import { getPowerSyncInstance } from './db';
+import { getPowerSyncDB } from './db';
 
 export const PowerSyncProvider = ({
   children,
@@ -50,7 +50,7 @@ export const PowerSyncProvider = ({
     if (!supported) return;
     let _powerSync: PowerSyncDatabase;
     const init = async () => {
-      _powerSync = getPowerSyncInstance();
+      _powerSync = await getPowerSyncDB();
 
       await _powerSync.init();
 
