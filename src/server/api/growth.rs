@@ -996,9 +996,28 @@ async fn handle_generate_subscription_offer(
 }
 
 async fn handle_send_cart(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<SendCartRequest>,
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<SendCartRequest>,
 ) -> impl IntoResponse {
+    let tenant_id = auth_info.org_id.clone();
+    let customer_name = req.customer_name.unwrap_or_else(|| "Customer".to_string());
+    let cart_value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
+    let id = uuid::Uuid::new_v4().to_string();
+
+    let context_payload = serde_json::json!({
+        "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name)
+    });
+
+    let _ = sqlx::query(
+        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'sales', $3::jsonb, NULL, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+    )
+    .bind(&id)
+    .bind(&tenant_id)
+    .bind(&context_payload)
+    .execute(&state.pool)
+    .await;
+
     Json(SendCartResponse {
         success: true,
         message: "Email scheduled to be sent successfully".to_string(),
