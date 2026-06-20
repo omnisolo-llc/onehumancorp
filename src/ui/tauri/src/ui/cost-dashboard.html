@@ -352,12 +352,11 @@
     </div>
 
     <script>
-      function formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      function formatStorage(bytes) {
+        const mb = bytes / (1024 * 1024);
+        if (mb < 1) return "< 1 MB";
+        if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+        return parseFloat(mb.toFixed(1)) + " MB";
       }
 
       function formatCents(cents) {
@@ -402,7 +401,7 @@
                 }
 
                 // Storage
-                const storageText = planData.storage_limit_bytes ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
+                const storageText = planData.storage_limit_bytes ? `${formatStorage(planData.storage_used_bytes)} / ${formatStorage(planData.storage_limit_bytes)}` : `${formatStorage(planData.storage_used_bytes)} / Unlimited`;
                 document.getElementById('storage-text').innerText = storageText;
                 if (planData.storage_limit_bytes) {
                     const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);
