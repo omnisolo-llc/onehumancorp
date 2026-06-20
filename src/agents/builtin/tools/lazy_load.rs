@@ -122,7 +122,7 @@ mod tests {
         assert!(res.is_err());
 
         if let Err(ToolError::LlmRecoverable(err_msg)) = res {
-            assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(err_msg.contains("not available in the global registry"));
         } else {
             panic!("Expected LlmRecoverable error");
         }

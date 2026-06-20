@@ -215,6 +215,31 @@ Final Result: {}", res).as_bytes()).await;
             });
 
             Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
+        } else if mode == "worktree" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let worktree_dir = format!(".agent-worktrees/subagent-{}", task_id);
+
+            let runner_clone = self.runner.clone();
+            let mut envs = vec![];
+            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
+                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            }
+
+            let worktree_add = runner_clone.run("git", &["worktree", "add", "-b", &format!("agent-task-{}", task_id), &worktree_dir], None, vec![]).await;
+            if let Err(e) = worktree_add {
+                return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", e)));
+            }
+
+            let output = runner_clone.run("ohc_builtin_agent", &["--task", &task, "--worktree", &worktree_dir], None, envs).await;
+
+            match output {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                    let summary = self.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, stdout));
+                    Ok(format!("[Subagent (Worktree) in {}] Completed task: {}. Summary: {}", worktree_dir, task, summary))
+                }
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Runner failed: {}", e))),
+            }
         } else {
             return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }

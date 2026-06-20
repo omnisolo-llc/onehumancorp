@@ -1293,8 +1293,10 @@ mod tests {
 
         let agent = Arc::new(Agent::new(Arc::new(DummyLlmClient), vec![]));
 
-        let mut config = AgentRunConfig::default();
-        config.guardrails = Some(registry);
+        let config = AgentRunConfig {
+            guardrails: Some(registry),
+            ..Default::default()
+        };
 
         let core = Arc::new(CodexCore::new(agent, config));
         let runner = Runner::new_with_core(core);
