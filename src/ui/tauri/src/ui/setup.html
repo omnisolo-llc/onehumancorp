@@ -1882,10 +1882,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               generateStorefrontBtn.disabled = true;
           }
           instantBioInputEl.addEventListener('input', () => {
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantBioInputEl.style.borderColor = '';
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
-                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+                  instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
               }
               if (generateStorefrontBtn) {
                   generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
@@ -2089,14 +2091,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.classList.add('animate-shake');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   return;
               }
 
               instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
+              instantBioInputEl.style.borderColor = '';
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
@@ -2215,8 +2221,9 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   const errorMsg = err.message || "Network Error: Failed to fetch";
                   instantErrorEl.innerText = errorMsg;
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   generateStorefrontBtn.disabled = false;
                   generateStorefrontBtn.innerText = "Next";
               }
