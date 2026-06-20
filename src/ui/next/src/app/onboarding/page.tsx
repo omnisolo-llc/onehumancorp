@@ -891,9 +891,9 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-
                         autoCapitalize="words"
                         autoComplete="organization"
+
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -909,9 +909,6 @@ export default function OnboardingWizard() {
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className={`w-full p-3 sm:p-4 border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
-                        inputMode="text"
-                        autoComplete="organization"
-                        autoCapitalize="words"
                         enterKeyHint="next"
                       />
                     </div>
@@ -1357,7 +1354,6 @@ export default function OnboardingWizard() {
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                         inputMode="text"
-                        autoComplete="off"
                         enterKeyHint="next"
                       />
                       {validationErrors.adminName && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminName}</p>}
