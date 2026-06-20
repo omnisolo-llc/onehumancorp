@@ -34,7 +34,7 @@ test.describe('Dashboard', () => {
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1.app-title', { hasText: 'Agents' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should display business setup', async ({ page }) => {
