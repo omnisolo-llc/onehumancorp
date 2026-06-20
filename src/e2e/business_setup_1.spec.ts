@@ -7,7 +7,7 @@ test.describe('Business Setup Wizard', () => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
-      localStorage.removeItem('onboarding-storage-v3');
+      localStorage.removeItem('onboardingState');
     }, id);
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');

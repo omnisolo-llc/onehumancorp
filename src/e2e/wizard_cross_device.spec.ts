@@ -6,7 +6,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('onboarding-storage-v3');
+      localStorage.removeItem('onboardingState');
     }, 'storefront');
     await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
@@ -24,11 +24,11 @@ test.describe('Wizard Cross Device E2E', () => {
 
     // Wait until local storage is updated with the business name
     await expect.poll(async () => {
-      const stateStr = await page.evaluate(() => localStorage.getItem('onboarding-storage-v3'));
+      const stateStr = await page.evaluate(() => localStorage.getItem('onboardingState'));
       if (!stateStr) return '';
       try {
         const state = JSON.parse(stateStr);
-        return state.state.businessName;
+        return state.businessName;
       } catch (e) {
         return '';
       }
@@ -49,11 +49,11 @@ test.describe('Wizard Cross Device E2E', () => {
     // Inject the exact same local storage state to the new context to test restoration
     // We navigate to dashboard first to have the right origin
     await newPage.goto('/dashboard');
-    const wizardState = await page.evaluate(() => localStorage.getItem('onboarding-storage-v3'));
+    const wizardState = await page.evaluate(() => localStorage.getItem('onboardingState'));
 
     await newPage.evaluate((state) => {
         if(state) {
-            localStorage.setItem('onboarding-storage-v3', state);
+            localStorage.setItem('onboardingState', state);
         }
         localStorage.setItem('tenant_id', 'storefront');
         localStorage.setItem('user_id', 'storefront');
