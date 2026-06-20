@@ -49,9 +49,9 @@ export default function SmartPricingPage() {
   }, [enabled, discountPerishables, surgePricing, maxAdjustment]);
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Smart Pricing</h1>
+    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
+      <header className="px-6 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1]">
+        <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-[-0.02em]">Smart Pricing</h1>
         <div className="flex items-center min-h-[44px]">
           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[16px] text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
@@ -61,12 +61,12 @@ export default function SmartPricingPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-3xl mx-auto w-full flex flex-col gap-6">
         <div className="text-center mb-4">
-          <p className="text-lg" style={{ color: '#86868B' }}>Let AI automatically adjust your prices to maximize revenue and clear inventory, while staying within your safe limits.</p>
+          <p className="text-lg text-[#86868B]">Let AI automatically adjust your prices to maximize revenue and clear inventory, while staying within your safe limits.</p>
         </div>
 
-        <div className="p-6 shadow-sm rounded-[16px] flex items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+        <div className="p-6 shadow-sm rounded-[16px] flex items-center justify-between bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:border-white/10">
           <div>
-            <h3 className="text-lg font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Enable Smart Pricing</h3>
+            <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F]">Enable Smart Pricing</h3>
             <p className="text-sm text-gray-500 mt-1">Turn on autonomous hyper-local dynamic pricing.</p>
           </div>
           <div className="flex items-center min-h-[44px]">
@@ -83,12 +83,12 @@ export default function SmartPricingPage() {
         </div>
 
         {enabled && (
-          <div className="p-6 shadow-sm rounded-[16px] flex flex-col gap-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-            <h3 className="text-lg font-semibold font-outfit border-b pb-2" style={{ color: '#1D1D1F', borderColor: 'rgba(0,0,0,0.1)' }}>Configuration</h3>
+          <div className="p-6 shadow-sm rounded-[16px] flex flex-col gap-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:border-white/10">
+            <h3 className="text-lg font-semibold font-outfit border-b pb-2 text-[#1D1D1F] border-black/10">Configuration</h3>
 
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <p className="font-medium" style={{ color: '#1D1D1F' }}>Auto-discount perishables 2 hours before closing</p>
+                <p className="font-medium text-[#1D1D1F]">Auto-discount perishables 2 hours before closing</p>
                 <p className="text-xs text-gray-500 mt-1">Clear out remaining inventory today.</p>
               </div>
               <div className="flex items-center min-h-[44px]">
@@ -106,7 +106,7 @@ export default function SmartPricingPage() {
 
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <p className="font-medium" style={{ color: '#1D1D1F' }}>Surge pricing during high demand</p>
+                <p className="font-medium text-[#1D1D1F]">Surge pricing during high demand</p>
                 <p className="text-xs text-gray-500 mt-1">Charge a premium during peak rush hours.</p>
               </div>
               <div className="flex items-center min-h-[44px]">
@@ -124,7 +124,7 @@ export default function SmartPricingPage() {
 
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <label className="font-medium" style={{ color: '#1D1D1F' }}>Maximum price adjustment bounds (+/-)</label>
+                <label className="font-medium text-[#1D1D1F]">Maximum price adjustment bounds (+/-)</label>
                 <span className="font-bold text-blue-600">{maxAdjustment}%</span>
               </div>
               <div className="flex items-center min-h-[44px]">
