@@ -37,6 +37,9 @@ impl BudgetManager {
 
         let mut current_bits = self.current.load(Ordering::Relaxed);
         let final_current;
+        if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
+            tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid);
+        }
         loop {
             let current = f64::from_bits(current_bits);
             let next = current + amount;
@@ -152,6 +155,9 @@ mod tests {
         let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
 
         let manager = BudgetManager::new(50.0).with_telemetry("tenant-123".to_string(), store);
+        assert!(manager.telemetry_store.is_some());
+        // Spend money to hit telemetry path without panic
+        manager.record_spend_cents(1000).unwrap();
 
         // Ensure struct states updated correctly
         assert_eq!(manager.tenant_id, Some("tenant-123".to_string()));
@@ -159,7 +165,7 @@ mod tests {
 
         // Spend money to hit telemetry path without panic
         assert!(manager.record_spend(10.0).unwrap());
-        assert_eq!(manager.get_remaining(), 40.0);
+        assert_eq!(manager.get_remaining(), 30.0);
     }
 
     #[test]
