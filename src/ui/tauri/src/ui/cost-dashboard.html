@@ -263,6 +263,7 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+            <button id="manage-billing-btn" class="btn-outline" style="margin-top: 12px;">Manage Billing</button>
             <button id="view-detailed-costs" class="btn-outline" style="margin-top: 12px;">View Detailed Costs</button>
             <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
             <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
@@ -435,6 +436,24 @@
                     planMessageDiv.innerText = 'Invoice download is ready for your current billing period.';
                     planMessageDiv.style.color = '#34C759';
                     planMessageDiv.style.display = 'block';
+                }
+            });
+
+            document.getElementById('manage-billing-btn').addEventListener('click', async () => {
+                try {
+                    const res = await fetch('/api/billing/create-billing-portal-session', { method: 'POST', headers });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.url) {
+                            window.location.href = data.url;
+                        } else {
+                            planMessageDiv.innerText = 'Failed to open billing portal.';
+                            planMessageDiv.style.color = '#FF3B30';
+                            planMessageDiv.style.display = 'block';
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to create billing portal session', e);
                 }
             });
 
