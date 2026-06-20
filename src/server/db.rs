@@ -12,6 +12,7 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
@@ -629,7 +630,7 @@ impl DB {
         E: std::fmt::Debug + std::fmt::Display + From<String>,
     {
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = MAX_DB_RETRY_ATTEMPTS;
         #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
         #[cfg(test)]
