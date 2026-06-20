@@ -179,3 +179,113 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
   });
 
 });
+
+  test('POS terminal syncs offline queue and shows sync conflict resolution modal if item was sold out', async ({ page, memberPage, request, context }) => {
+    // Navigate to local API directly to set up origin to allow localstorage modification
+    await memberPage.goto('/api/staff');
+    await memberPage.evaluate(() => {
+      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        id: 'staff_1',
+        name: 'Priya',
+        role: 'Manager',
+        pin_hash: '1234'
+      }]));
+    });
+
+    // 1. Log in to get token
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    const response = await request.post('/api/v1/auth/login', {
+        data: {
+            email: 'admin@ohc.local',
+            password: 'admin'
+        }
+    });
+    expect(response.ok()).toBeTruthy();
+    const { token } = await response.json();
+
+    // 2. Create the "Blue Dress" product
+    const createProductRes = await request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            title: 'Blue Dress',
+            inventory_count: 1,
+            price_cents: 5000
+        }
+    });
+    expect(createProductRes.ok()).toBeTruthy();
+    const product = await createProductRes.json();
+    const productId = product.id || product.product_id;
+
+    // 3. Go to POS page and log in
+    await memberPage.goto('/pos.html');
+    await memberPage.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
+
+    await memberPage.getByRole('button', { name: '1' }).click();
+    await memberPage.getByRole('button', { name: '2' }).click();
+    await memberPage.getByRole('button', { name: '3' }).click();
+    await memberPage.getByRole('button', { name: '4' }).click();
+
+    await memberPage.waitForTimeout(500);
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await memberPage.waitForTimeout(500);
+
+    // Wait for product catalog to load
+    await memberPage.waitForSelector('text=Product Catalog', { timeout: 10000 });
+
+    // Ensure the product exists
+    const blueDressBtn = memberPage.locator('button').filter({ hasText: 'Blue Dress' }).first();
+    await expect(blueDressBtn).toBeVisible();
+
+    // 4. Set network offline
+    await context.setOffline(true);
+    await memberPage.evaluate(() => { window.dispatchEvent(new Event('offline')); });
+
+    // 5. Add "Blue Dress" to cart and pay
+    await blueDressBtn.click();
+    await expect(memberPage.locator('text=Tap to Pay via Terminal')).toBeVisible();
+
+    // Mock terminal connect
+    const discoverBtn = memberPage.locator('button', { hasText: 'Discover Readers' });
+    if (await discoverBtn.isVisible()) {
+        await discoverBtn.click();
+        await memberPage.locator('button', { hasText: 'Connect' }).first().click();
+    }
+    const collectBtn = memberPage.locator('button', { hasText: /Collect Payment/i });
+    await expect(collectBtn).toBeVisible();
+    await collectBtn.click();
+
+    // Mock successful tap for E2E
+    await memberPage.locator('button:has-text("Simulate Customer Tap")').click();
+    await expect(memberPage.getByText('Offline Quick Charge Saved.')).toBeVisible({ timeout: 10000 });
+
+    // 6. Simulate online purchase by depleting inventory
+    const depleteRes = await request.post('/api/v1/payments/terminal/commit', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            product_id: productId,
+            quantity: 1,
+            amount_cents: 5000
+        }
+    });
+    expect(depleteRes.ok()).toBeTruthy();
+
+    // 7. Set network online to trigger sync
+    await context.setOffline(false);
+    await memberPage.evaluate(() => { window.dispatchEvent(new Event('online')); });
+
+    // 8. Wait for the Inventory Conflict Detected modal
+    await expect(memberPage.locator('text=Inventory Conflict Detected')).toBeVisible({ timeout: 15000 });
+
+    // 9. Verify buttons
+    await expect(memberPage.locator('button', { hasText: 'Option A: Refund in-store customer' })).toBeVisible();
+    await expect(memberPage.locator('button', { hasText: 'Option B: Cancel & refund online order' })).toBeVisible();
+
+    // 10. Click Decide Later
+    await memberPage.locator('button', { hasText: 'Decide Later' }).click();
+    await expect(memberPage.locator('text=Inventory Conflict Detected')).not.toBeVisible();
+  });
