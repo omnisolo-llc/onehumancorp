@@ -77,9 +77,13 @@ impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
         match self.llm.chat(req).await {
             Ok(resp) => {
                 let text = resp.message.content;
+                tracing::info!("Domain expert {} completed successfully", self.role);
                 Ok(text)
             }
-            Err(e) => Err(format!("LLM Error: {}", e)),
+            Err(e) => {
+                tracing::error!("Domain expert {} LLM Error: {}", self.role, e);
+                Err(format!("LLM Error: {}", e))
+            }
         }
     }
 }
@@ -104,14 +108,18 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
         trace: &mut SkillTrace,
         lead_llm: std::sync::Arc<dyn ExpertTeamLlmClient>,
     ) -> Result<String, String> {
+        tracing::info!("Starting full expert workflow for task: {}", task);
         // 1. Pre-flight Gate
         QualityGates::pre_flight(self, task)?;
+        tracing::info!("Pre-flight gate passed");
 
         // 2. Parallel Execution
         let summaries = self.execute_parallel_tasks(task, trace).await?;
+        tracing::info!("Parallel tasks completed with {} summaries", summaries.len());
 
         // 3. Pre-merge Gate
         QualityGates::pre_merge(&summaries)?;
+        tracing::info!("Pre-merge gate passed");
 
         // 4. Synthesis by Lead LLM
         let combined = summaries.join("\n");
@@ -139,6 +147,7 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
         // 5. Pre-deliver Gate
         let expected_roles: Vec<String> = self.domain_experts.iter().map(|e| e.role.clone()).collect();
         QualityGates::pre_deliver(&final_output, trace, &expected_roles)?;
+        tracing::info!("Pre-deliver gate passed. Workflow complete.");
 
         Ok(final_output)
     }
