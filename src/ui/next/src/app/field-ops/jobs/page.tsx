@@ -59,7 +59,7 @@ export default function FieldOpsJobsPage() {
     };
   }, []);
 
-  const handleStatusChange = (jobId: string, newStatus: string) => {
+  const handleStatusChange = async (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
     setJobs((currentJobs) =>
       currentJobs.map((j) => {
@@ -73,13 +73,33 @@ export default function FieldOpsJobsPage() {
       }),
     );
 
+    const jobToUpdate = jobs.find(j => j.id === jobId);
+    if (!jobToUpdate) return;
+
+    const updatedJob = { ...jobToUpdate, status: newStatus };
+    if (newStatus === "In-Progress") updatedJob.actual_start_time = now;
+    if (newStatus === "Completed") updatedJob.actual_end_time = now;
+
+    if (isOffline) {
+      await SyncManager.getInstance().enqueue({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        type: 'field_ops_status',
+        payload: {
+          id: updatedJob.id,
+          status: updatedJob.status,
+          notes: updatedJob.notes,
+          scheduled_start_time: updatedJob.scheduled_start_time,
+          scheduled_end_time: updatedJob.scheduled_end_time,
+        },
+        timestamp: Date.now()
+      });
+      return;
+    }
+
     // Call optimize route endpoint after state change to simulate Operations Agent logic
     const updatedJobs = jobs.map((j) => {
       if (j.id === jobId) {
-        const updated = { ...j, status: newStatus };
-        if (newStatus === "In-Progress") updated.actual_start_time = now;
-        if (newStatus === "Completed") updated.actual_end_time = now;
-        return updated;
+        return updatedJob;
       }
       return j;
     });
@@ -173,7 +193,7 @@ export default function FieldOpsJobsPage() {
 
     handleStatusChange(jobId, "Completed");
 
-    if (job.notes && !isOffline) {
+    if (job.notes) {
       SyncManager.getInstance().enqueue({
         id: `mutation-${Date.now()}`,
         type: "draft_quote",
