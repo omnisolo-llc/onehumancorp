@@ -13,19 +13,19 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await page.click('button:has-text("Unlock")');
       await page.waitForTimeout(1000);
     } catch (e) {
-      console.log('No PIN screen, proceeding directly.');
+      // No PIN screen, proceeding directly.
     }
 
     const isCatalogVisible = await page.locator('h3:has-text("Product Catalog")').isVisible();
     if (!isCatalogVisible) {
-       console.log("Not clocked in or catalog not visible. Ending test early.");
+       // Not clocked in or catalog not visible. Ending test early.
        return;
     }
 
     const productButton = page.locator('.grid.grid-cols-1.gap-3.mb-8 button').first();
     const count = await productButton.count();
     if (count === 0) {
-      console.log('No products found, skipping interaction test.');
+      // No products found, skipping interaction test.
       return;
     }
 

@@ -241,6 +241,9 @@ importers:
 
   src/ui/next:
     dependencies:
+      '@bazel/bazelisk':
+        specifier: ^1.28.1
+        version: 1.28.1
       '@journeyapps/wa-sqlite':
         specifier: ^1.7.0
         version: 1.7.0

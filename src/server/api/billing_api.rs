@@ -634,7 +634,7 @@ fn current_usage_period() -> String {
     chrono::Utc::now().format("%Y-%m").to_string()
 }
 
-fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
+pub fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
     DepartmentTierUsageResponse {
         current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(),
         period: current_usage_period(),

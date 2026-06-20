@@ -152,7 +152,7 @@ function CheckoutContent() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F8F9FA] text-gray-900 overflow-x-hidden">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 app-panel-header shadow-sm">
         <WithTooltip
           id="checkout-title-tooltip"
           defaultText="Review your order or plan details before securely completing your purchase."
@@ -185,9 +185,6 @@ function CheckoutContent() {
             </div>
 
             <PostPurchaseShareWidget tenantId={tenant || "default-store"} orderId={searchParams.get("orderId") || "success"} />
-            <div className="flex justify-center">
-              <PoweredByOHC tenantId={tenant} />
-            </div>
           </div>
         ) : tier ? (
             <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px]">
@@ -220,7 +217,6 @@ function CheckoutContent() {
                   Cancel
                 </button>
               </WithTooltip>
-              <PoweredByOHC tenantId={tenant} />
             </div>
         ) : (
           <>
@@ -388,10 +384,14 @@ function CheckoutContent() {
               Cancel
             </button>
           </WithTooltip>
-          <PoweredByOHC tenantId={tenant} />
         </div>
         </>
         )}
+
+        {/* Powered By OHC Footer */}
+        <div className="flex justify-center mt-6 w-full relative z-[9999] pb-8">
+          <PoweredByOHC tenantId={tenant} />
+        </div>
       </main>
 
       {/* Post-Purchase Referral Modal */}

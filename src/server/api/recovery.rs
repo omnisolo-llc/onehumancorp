@@ -17,7 +17,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/campaigns", get(list_campaigns))
         .route("/attempts", get(list_attempts))
-        .route("/attempts/:id/approve", post(approve_attempt))
+        .route("/attempts/{id}/approve", post(approve_attempt))
 }
 
 async fn list_campaigns(

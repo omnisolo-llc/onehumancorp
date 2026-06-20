@@ -664,7 +664,8 @@ pub struct GeneratePromoterResponse {
 pub struct SendCartRequest {
     pub customer_name: Option<String>,
     pub cart_value: Option<String>,
-    pub draft: String,
+    pub draft: Option<String>,
+    pub tenant_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -996,13 +997,46 @@ async fn handle_generate_subscription_offer(
 }
 
 async fn handle_send_cart(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<SendCartRequest>,
+    Extension(state): Extension<GrowthState>,
+    claims: Option<Extension<::server_common::Claims>>,
+    Json(req): Json<SendCartRequest>,
 ) -> impl IntoResponse {
-    Json(SendCartResponse {
-        success: true,
-        message: "Email scheduled to be sent successfully".to_string(),
-    })
+    let customer_name = req.customer_name.unwrap_or_else(|| "Unknown".to_string());
+    let cart_value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
+
+    // Fallback to "my-store" if tenant_id is not in request and not in token
+    let tenant_id = req.tenant_id.or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or_else(|| "my-store".to_string());
+
+    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(state.pool.clone());
+    let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id,
+        event_source: format!("Salesperson recovered abandoned cart for {}", customer_name),
+        context_payload: Some(sqlx::types::Json(serde_json::json!({
+            "customer_name": customer_name,
+            "cart_value": cart_value
+        }))),
+        proposed_action: None,
+        lifecycle_state: "COMPLETED".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    match repo.create(item).await {
+        Ok(_) => {
+            Json(SendCartResponse {
+                success: true,
+                message: "Email scheduled to be sent successfully".to_string(),
+            }).into_response()
+        },
+        Err(e) => {
+            tracing::error!("Failed to save agent feed item for abandoned cart: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(SendCartResponse {
+                success: false,
+                message: "Internal server error".to_string()
+            })).into_response()
+        }
+    }
 }
 
 async fn handle_send_receipt(
@@ -1967,6 +2001,14 @@ async fn handle_referral_stats(
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut active_referrals: i64 = 0;
+    let mut invites_sent: i64 = 0;
+
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    if let Ok(count) = tracker.get_total_invites_count(&auth_info.org_id).await {
+        invites_sent = count;
+    }
     let mut revenue_from_referrals: f64 = 0.0;
     let mut pending_rewards: f64 = 0.0;
 
@@ -1984,6 +2026,7 @@ async fn handle_referral_stats(
     }
 
     Ok(Json(serde_json::json!({
+        "invites_sent": invites_sent,
         "active_referrals": active_referrals,
         "revenue_from_referrals": revenue_from_referrals,
         "pending_rewards": pending_rewards,

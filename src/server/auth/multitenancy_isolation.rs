@@ -2,7 +2,7 @@ use super::postgres_store::UserRepository;
 use super::postgres_store::PgUserRepository;
 use super::User;
 use std::time::Duration;
-use sqlx::postgres::PgPoolOptions;
+
 use std::sync::Mutex;
 
 static ENV_MUTEX: Mutex<()> = Mutex::new(());

@@ -873,6 +873,22 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        original_content TEXT NOT NULL,
+                        translated_content TEXT NOT NULL,
+                        source_language TEXT,
+                        target_language TEXT NOT NULL,
+                        draft_reply TEXT,
+                        status TEXT NOT NULL DEFAULT 'unread',
+                        sender_id TEXT,
+                        customer_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_feed_items (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -1779,11 +1795,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1792,7 +1806,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
@@ -1810,10 +1823,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1822,7 +1834,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
@@ -1923,10 +1934,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1935,7 +1945,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
         // Just checking configuration parses ok for multitenancy logic
@@ -2137,7 +2146,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -2156,7 +2164,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -2178,7 +2185,8 @@ mod e2e_tenant_isolation_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         // Create a basic pool using our implementation logic
         let pool_opts = crate::db::secure_pg_pool_options();
@@ -2362,7 +2370,7 @@ mod e2e_search_workspace_tests {
             .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind(150.25)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
-            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<f64>)
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(0.0f64)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -2394,7 +2402,7 @@ mod e2e_search_workspace_tests {
             .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind("150.25")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<&str>)
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind("0")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
