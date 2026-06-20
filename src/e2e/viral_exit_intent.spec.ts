@@ -24,9 +24,15 @@ test.describe('Viral Exit-Intent Loop', () => {
     await expect(page.locator('.preview-popup').filter({ hasText: 'Special Limited Time Offer!' })).toBeVisible();
     await expect(page.locator('.preview-popup').filter({ hasText: 'Get 10% off your first order when you sign up for our newsletter.' })).toBeVisible();
 
-    // 5. Test Copy Embed Code logic
-    await page.getByRole('button', { name: 'Copy to Clipboard' }).click();
+    // 5. Test Copy Embed Code logic and Viral Referral Link
+    const copyButton = page.getByRole('button', { name: 'Copy to Clipboard' });
+    await copyButton.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+
+    // Check the embed code text area content directly since we don't have a reliable way to check clipboard in all CI environments
+    const embedCode = await page.locator('#code-output').textContent();
+    expect(embedCode).toContain('/api/v1/growth/referrals/click?target=/setup.html&ref=');
+    expect(embedCode).toContain('⚡ Powered by OHC');
 
     // 6. Test Paywall logic
     const brandingToggle = page.locator('#branding-toggle');

@@ -379,6 +379,7 @@
     }
 
     function updateCode() {
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       const code = `
 <!-- OHC Exit-Intent Pop-up -->
 <script>
@@ -395,7 +396,7 @@
               <h2 style="margin-top: 0; color: #1d1d1f;">${inputHeadline.value}</h2>
               <p style="color: #4b5563; margin-bottom: 1.5rem;">${inputDesc.value}</p>
               <button style="background: ${inputColor.value}; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">${inputButton.value}</button>
-              ${!brandingToggle.checked ? `<div style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;"><a href="https://onehumancorp.com" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a></div>` : ''}
+              ${!brandingToggle.checked ? `<div style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a></div>` : ''}
             </div>
           </div>
         \`;
