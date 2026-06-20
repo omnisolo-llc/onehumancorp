@@ -10,10 +10,12 @@ export default function GiftCardsPage() {
   const [shareLink, setShareLink] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
+  const [tenantId, setTenantId] = useState('my-store');
 
   // Try to load tenant info on mount
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+    setTenantId(tenant);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
     setShareLink(`${origin}/gift-card?amount=${value}&ref=${tenant}`);
   }, [value]);
@@ -114,9 +116,9 @@ export default function GiftCardsPage() {
                {/* Viral Loop Footer */}
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
-                     <span className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-md">
+                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-md text-white hover:text-white" style={{ textDecoration: "none" }}>
                          ⚡ Powered by OHC
-                     </span>
+                     </a>
                   </div>
                )}
            </div>
