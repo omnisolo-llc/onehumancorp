@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Documentation UI Components', () => {
 
     test('Voice Assistant tooltip renders on hover', async ({ page }) => {
-        await page.goto('/dashboard');
+        await page.goto('/api/ui/dashboard.html');
 
         // Ensure Voice Assistant button exists
         const voiceButton = page.locator('button[aria-label="Voice Assistant"]');

@@ -660,6 +660,15 @@
         <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
       </div>
 
+      <div style="position: fixed; bottom: 24px; right: 24px; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <button id="voice-assistant-btn" aria-label="Voice Assistant" title="Hold to speak to your assistant" class="glassmorphism" style="width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid rgba(79, 70, 229, 0.5); background: rgba(79, 70, 229, 0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 24px; color: white; transition: all 0.2s;" onmouseover="showTooltip(this, 'voice-assistant-tooltip')" onmouseout="hideTooltip()">
+          🎤
+        </button>
+        <button id="rate-limit-close-btn" aria-label="Close warning" title="Dismiss this warning." class="glassmorphism" style="display:none;" onmouseover="showTooltip(this, 'rate-limit-close-tooltip')" onmouseout="hideTooltip()">
+          X
+        </button>
+      </div>
+
       <div class="ohc-growth-card app-card" id="ai-savings-widget">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
