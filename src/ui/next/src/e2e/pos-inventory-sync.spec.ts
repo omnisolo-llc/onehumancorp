@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('POS Inventory Sync - E2E Race Condition', () => {
+test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
     const tenantId = 'e2e-tenant-pos';
     const productId = 'e2e-product-cake-pos';
@@ -97,7 +97,7 @@ test.describe.skip('POS Inventory Sync - E2E Race Condition', () => {
     await page.getByRole('button', { name: 'Pay' }).click();
 
     // 4. Verify the "Item just sold out" message appears
-    await expect(page.getByText('Item just sold out.')).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Oops! Item just sold out.' })).toBeVisible();
 
     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
