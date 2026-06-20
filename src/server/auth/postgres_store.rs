@@ -423,18 +423,12 @@ impl UserRepository for PgUserRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        // GC expired entries
-        let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1"
-        } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
-        };
 
         let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -468,6 +462,7 @@ mod security_tests {
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;
+
 
 
     #[tokio::test]
