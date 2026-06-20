@@ -13,6 +13,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const upgradeButton = page.locator('button', { hasText: 'Upgrade' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
+    await page.waitForURL('**/pricing');
     await expect(page.url()).toContain('/pricing');
   });
 
@@ -23,6 +24,7 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const detailedCostsButton = page.locator('button', { hasText: 'View Detailed Costs' });
     await expect(detailedCostsButton).toBeVisible();
     await detailedCostsButton.click();
+    await page.waitForURL('**/cost-dashboard');
     await expect(page.url()).toContain('/cost-dashboard');
   });
 
@@ -31,11 +33,11 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     await page.goto('/cost-dashboard');
 
     // Check core metric elements visibility
-    await expect(page.locator('h1', { hasText: 'Cost Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Verify elements by id or text mapped to their metrics
     await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
     await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-projected-cost')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-projected')).toBeVisible();
   });
 });
