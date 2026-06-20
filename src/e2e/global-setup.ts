@@ -2,6 +2,7 @@ import { chromium, type FullConfig } from '@playwright/test';
 
 
 export default async function globalSetup(config: FullConfig) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc?sslmode=disable';
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
   if (!baseURL) {
     throw new Error('Playwright baseURL is required for e2e global setup.');
