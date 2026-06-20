@@ -9,6 +9,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@bazel/bazelisk": "^1.28.1",
     "@journeyapps/wa-sqlite": "^1.7.0",
     "@powersync/react": "^1.10.0",
     "@powersync/web": "^1.38.3",

@@ -920,7 +920,7 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
@@ -1753,7 +1753,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      window.goToStep = function goToStep(stepId) {
+      function goToStep(stepId) {
+
           if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
               document.getElementById('instant-bio').value = '';
               const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
@@ -1780,6 +1781,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           });
       });
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
 
       // Enter key support for select inputs
       document.querySelectorAll('select').forEach(input => {
@@ -2846,7 +2853,7 @@ function initWalkthrough() {
         }
 
         renderStep();
-
+    };
 }
 initWalkthrough();
 </script>
