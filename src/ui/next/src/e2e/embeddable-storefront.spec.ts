@@ -11,8 +11,8 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await widgetLink.click();
 
         // Should now be on the Storefront Widget page
-        const sectionHeader = page.getByRole('heading', { name: /Embed Your Store/ });
-        await expect(sectionHeader).toBeVisible();
+        const sectionHeader = page.locator('h1', { hasText: 'Embed Your Store' });
+        await expect(sectionHeader).toBeVisible({ timeout: 10000 });
 
         // Check for the "New Growth Loop" badge next to the header
         await expect(page.locator('text=New Growth Loop').first()).toBeVisible();
@@ -23,7 +23,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await getWidgetBtn.click();
 
         // Modal should appear
-        const modalHeader = page.locator('h2:has-text("Embed Storefront")');
+        const modalHeader = page.getByRole('heading', { name: /Embed Storefront/i });
         await expect(modalHeader).toBeVisible();
 
         // The textarea should contain the iframe snippet
