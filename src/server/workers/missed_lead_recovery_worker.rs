@@ -122,7 +122,7 @@ impl MissedLeadRecoveryWorker {
                 customer_name
             );
 
-            let max_retries = 2;
+            let max_retries = 3;
             let mut retry_count = 0;
 
             while retry_count < max_retries {
