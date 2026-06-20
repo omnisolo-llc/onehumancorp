@@ -1018,7 +1018,7 @@ mod tests {
 
         // Test lightweight index
         store.update_index("Sample index content").await.unwrap();
-        let index = store.get_lightweight_index().await.unwrap();
+        let _index = store.get_lightweight_index().await.unwrap();
         // assert_eq!(index, "Sample index content");
 
         // Test topic retrieve
@@ -1046,7 +1046,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = store
+        let _res = store
             .search_transcripts("3-tier is better", 10)
             .await
             .unwrap();
@@ -2480,7 +2480,7 @@ mod anthropic_memory_tests {
         let store = Anthropic3TierMemoryStore::new(temp_dir.path()).unwrap();
 
         // Initially index is empty
-        let index = store.get_lightweight_index().await.unwrap();
+        let _index = store.get_lightweight_index().await.unwrap();
         // assert_eq!(index, "");
 
         // Test storing multiple items
@@ -2514,17 +2514,17 @@ mod anthropic_memory_tests {
             .await
             .unwrap();
 
-        let results = store.retrieve("postgresql", 5).await.unwrap();
+        let _results = store.retrieve("postgresql", 5).await.unwrap();
         // Fallback or explicit implementation returning empty vectors means retrieve might be empty
         // assert_eq!(results.len(), 1);
         // assert!(results[0].to_lowercase().contains("postgresql"));
 
-        let results2 = store.retrieve("glassmorphism", 5).await.unwrap();
+        let _results2 = store.retrieve("glassmorphism", 5).await.unwrap();
         // Fallback or explicit implementation returning empty vectors means retrieve might be empty
         // assert_eq!(results2.len(), 1);
         // assert!(results2[0].to_lowercase().contains("flutter"));
 
-        let results3 = store.retrieve("nonexistent", 5).await.unwrap();
+        let _results3 = store.retrieve("nonexistent", 5).await.unwrap();
         // assert_eq!(results3.len(), 0);
     }
 
@@ -2817,7 +2817,7 @@ mod anthropic_memory_tests {
             .unwrap();
 
         // Agent searches transcripts
-        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let _results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "order a cake",
             5,
@@ -2828,7 +2828,7 @@ mod anthropic_memory_tests {
         // assert_eq!(results.len(), 1);
         // assert!(results[0].contains("user: I would like to order a cake."));
 
-        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let _results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "Chocolate",
             5,
@@ -2844,7 +2844,7 @@ mod anthropic_memory_tests {
             .store_session_message("session_2", "user", "Chocolate is good.")
             .await
             .unwrap();
-        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let _results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "Chocolate",
             1,
