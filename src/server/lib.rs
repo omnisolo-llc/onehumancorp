@@ -1386,7 +1386,19 @@ impl HubService for MyHubService {
             crate::pricing::cost_aggregator::aggregate_daily_costs(&db_pool, &t_id).await
         });
 
-        let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+        let t_id_2 = tenant_id.clone();
+        let db_pool_2 = self.hub.pool.clone();
+        let agent_costs_future = tokio::task::spawn(async move {
+            crate::pricing::cost_aggregator::aggregate_agent_costs(&db_pool_2, &t_id_2).await
+        });
+
+        let hub_clone_for_dept = hub_clone.clone();
+        let t_id_3 = tenant_id.clone();
+        let department_future = tokio::task::spawn(async move {
+            crate::api::billing_api::department_tier_usage_for_tenant(&hub_clone_for_dept, &t_id_3).await
+        });
+
+        let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
         let trend = trend_res.unwrap_or_else(|_| vec![]);
@@ -1468,6 +1480,19 @@ impl HubService for MyHubService {
             email_cost: email_cost_cents,
             api_cost: api_cost_cents,
             budget_health_alert,
+            trend: if trend.is_empty() { "stable".to_string() } else { "up".to_string() },
+            agent_costs: agent_costs_res.unwrap_or_else(|_| vec![]).into_iter().map(|r| ::server_ohc::orchestration::AgentCostProto {
+                agent_name: format!("Agent {}", r.agent_id), // Default formatting
+                agent_id: r.agent_id,
+                cost: r.cost_cents,
+            }).collect(),
+            department_tier_usage: Some(::server_ohc::orchestration::DepartmentTierUsageResponseProto {
+                departments: department_res.unwrap_or_else(|_| crate::api::billing_api::empty_department_tier_usage_response()).departments.into_iter().map(|d| ::server_ohc::orchestration::DepartmentUsageProto {
+                    department_id: d.id,
+                    department_name: d.department_type,
+                    cost: (d.actions_used as i64) * 10, // approximate cost mapping
+                }).collect()
+            }),
         };
 
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
