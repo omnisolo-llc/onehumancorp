@@ -19,17 +19,26 @@ describe('AIUsageLimitWidget', () => {
       },
       writable: true
     });
+
+    // Mock fetch for the API call
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ departments: [{ actions_used: 85, action_limit: 100 }] }),
+      })
+    ) as any;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('renders correctly', () => {
+  it('renders correctly', async () => {
     render(<AIUsageLimitWidget />);
 
     expect(screen.getByText(/Approaching Free Tier Limit/i)).toBeDefined();
-    expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    });
     expect(screen.getByText(/\/ 100/)).toBeDefined();
     expect(screen.getByText(/Upgrade to Pro \(Unlimited\)/)).toBeDefined();
     expect(screen.getByText(/Share on X to get \+50 Actions/)).toBeDefined();
@@ -37,6 +46,10 @@ describe('AIUsageLimitWidget', () => {
 
   it('generates link and copies it', async () => {
     render(<AIUsageLimitWidget />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    });
 
     const generateBtn = screen.getByText(/Share on X to get \+50 Actions/);
     fireEvent.click(generateBtn);
@@ -69,6 +82,10 @@ describe('AIUsageLimitWidget', () => {
   it('opens X share intent and updates usage', async () => {
     render(<AIUsageLimitWidget />);
 
+    await waitFor(() => {
+      expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    });
+
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     const generateBtn = screen.getByText(/Share on X to get \+50 Actions/);
@@ -92,5 +109,21 @@ describe('AIUsageLimitWidget', () => {
     await waitFor(() => {
         expect(screen.getAllByText(/35/).length).toBeGreaterThan(0);
     }, { timeout: 2000 });
+  });
+
+  it('handles fetch failure gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    global.fetch = vi.fn(() => Promise.reject(new Error("API Down"))) as any;
+
+    render(<AIUsageLimitWidget />);
+
+    // Should default to 0 used and 100 limit, and log an error
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch usage", expect.any(Error));
+    });
+
+    expect(screen.getByText(/Approaching Free Tier Limit/i)).toBeDefined();
+    expect(screen.getAllByText(/0/).length).toBeGreaterThan(0);
   });
 });
