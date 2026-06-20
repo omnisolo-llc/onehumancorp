@@ -57,7 +57,7 @@ impl PromptCache {
         tracing::info!("💰 Miser telemetry: Prompt cache lookup");
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
-            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
+            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count); // pii-safe
 
             if let Some(store) = &self.telemetry_store {
                 store.llm_cost_counter.add(0, &[

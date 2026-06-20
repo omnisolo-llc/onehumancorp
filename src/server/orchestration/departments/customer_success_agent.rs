@@ -100,7 +100,7 @@ impl Department for CustomerSuccessAgent {
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
+                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e); // pii-safe
                         }
                     }
                 }
