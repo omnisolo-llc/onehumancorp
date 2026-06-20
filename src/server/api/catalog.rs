@@ -220,6 +220,9 @@ async fn handle_create_product(
     let event_payload = serde_json::json!({
         "product_id": product_id,
         "name": payload.name,
+        "description": payload.description,
+        "item_type": payload.item_type,
+        "price": payload.price.parse::<f64>().unwrap_or(0.0),
         "organization_id": tenant_id,
     });
 
