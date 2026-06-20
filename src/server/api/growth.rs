@@ -1970,6 +1970,14 @@ async fn handle_referral_stats(
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut active_referrals: i64 = 0;
+    let mut invites_sent: i64 = 0;
+
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    if let Ok(count) = tracker.get_total_invites_count(&auth_info.org_id).await {
+        invites_sent = count;
+    }
     let mut revenue_from_referrals: f64 = 0.0;
     let mut pending_rewards: f64 = 0.0;
 
@@ -1987,6 +1995,7 @@ async fn handle_referral_stats(
     }
 
     Ok(Json(serde_json::json!({
+        "invites_sent": invites_sent,
         "active_referrals": active_referrals,
         "revenue_from_referrals": revenue_from_referrals,
         "pending_rewards": pending_rewards,
