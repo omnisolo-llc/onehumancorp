@@ -2210,10 +2210,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
               } catch (err) {
                   console.error(err);
-                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  const errorMsg = typeof err === 'string' ? err : (err.message || "Network Error: Failed to fetch");
                   instantErrorEl.innerText = errorMsg;
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
                   instantBioInputEl.classList.add('border-[#FF3B30]');
                   generateStorefrontBtn.disabled = false;
                   generateStorefrontBtn.innerText = "Next";
