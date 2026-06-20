@@ -89,7 +89,7 @@ export default function MyPlanPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm w-full">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header shadow-sm w-full">
         <div className="flex items-center gap-3">
           <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
             Back
@@ -103,7 +103,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-card ohc-growth-card shadow-lg hover:shadow-2xl transition-all duration-300 p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -137,7 +137,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card glassmorphism ohc-growth-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 dark:bg-gray-900/70 dark:border-white/10">
+        <section className="app-card ohc-growth-card shadow-lg hover:shadow-2xl transition-all duration-300 mt-4">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>

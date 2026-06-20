@@ -60,4 +60,59 @@ test.describe('Glassmorphism UI Audit', () => {
     });
     expect(borderRadius).toBe('16px');
   });
+
+  test('Verify cost-dashboard panels use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/cost-dashboard');
+    const panel = page.locator('.app-panel').first();
+    await expect(panel).toBeVisible({ timeout: 10000 });
+    const borderRadius = await panel.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify plan cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/plan');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify pricing cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/pricing');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify affiliate-badge-builder cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/affiliate-badge-builder');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify work-intake-widget cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/work-intake-widget');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
 });

@@ -87,7 +87,7 @@ export default function WorkIntakeWidgetPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Editor Sidebar */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[16px] glass-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 shadow-lg">
+            <div className="p-6 app-card shadow-lg">
                 <h2 className="text-lg font-semibold font-outfit mb-4">Widget Settings</h2>
 
                 <div className="mb-6">
@@ -153,7 +153,7 @@ export default function WorkIntakeWidgetPage() {
                 </div>
             </div>
 
-            <div className="p-6 rounded-[16px] glass-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 shadow-lg flex flex-col justify-center gap-4">
+            <div className="p-6 app-card shadow-lg flex flex-col justify-center gap-4">
                <h3 className="font-semibold text-gray-900">Embed on Your Website</h3>
                <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
                <button
@@ -170,7 +170,7 @@ export default function WorkIntakeWidgetPage() {
              <h2 className="text-xl font-semibold font-outfit self-start" style={{ color: '#1D1D1F' }}>Live Preview</h2>
 
              {/* Realistic environment wrapper */}
-             <div className="w-full max-w-2xl glass-card bg-white/70 backdrop-blur-xl saturate-200 rounded-[16px] min-h-[44px] min-w-[44px] overflow-hidden border border-white/40 shadow-2xl relative mt-4">
+             <div className="w-full max-w-2xl app-card min-h-[44px] min-w-[44px] overflow-hidden shadow-2xl relative mt-4">
                  <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center gap-2">
                      <div className="flex gap-1.5">
                          <div className="w-3 h-3 rounded-full bg-red-400"></div>

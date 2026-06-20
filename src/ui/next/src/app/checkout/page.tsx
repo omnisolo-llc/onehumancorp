@@ -152,7 +152,7 @@ function CheckoutContent() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F8F9FA] text-gray-900 overflow-x-hidden">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 app-panel-header shadow-sm">
         <WithTooltip
           id="checkout-title-tooltip"
           defaultText="Review your order or plan details before securely completing your purchase."
