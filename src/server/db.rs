@@ -646,9 +646,15 @@ impl DB {
             if start_time.elapsed() > timeout_duration {
                 return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
             }
-            match f().await {
-                Ok(val) => return Ok(val),
-                Err(err) => {
+            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+            let timeout_res = tokio::time::timeout(remaining_time, f()).await;
+
+            match timeout_res {
+                Err(_) => {
+                    return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+                }
+                Ok(Ok(val)) => return Ok(val),
+                Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
                     let is_sqlite_lock = self.is_sqlite()
                         && (err_str.contains("database is locked")

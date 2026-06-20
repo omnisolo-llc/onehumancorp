@@ -765,7 +765,7 @@ mod parity_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_execute_with_retry_sync_lag() {
         let sqlite_db = setup_sqlite_db().await;
 
