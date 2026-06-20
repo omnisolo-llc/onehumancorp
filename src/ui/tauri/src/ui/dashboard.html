@@ -2016,7 +2016,7 @@
           let bodyPayload;
 
           if (isAgentFeed) {
-             url = `/api/v1/feed/${encodeURIComponent(id)}/state`;
+             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
