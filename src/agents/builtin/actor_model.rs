@@ -84,7 +84,11 @@ impl ActorSystem {
         mb.remove(name);
     }
 
-    pub async fn ask(&self, mut msg: ActorMessage, timeout: std::time::Duration) -> Result<ActorMessage, String> {
+    pub async fn ask(
+        &self,
+        mut msg: ActorMessage,
+        timeout: std::time::Duration,
+    ) -> Result<ActorMessage, String> {
         let reply_to = format!("ask-{}", uuid::Uuid::new_v4());
         let (tx, mut rx) = mpsc::channel(1);
 
@@ -147,7 +151,8 @@ impl Actor for ToolActor {
 
         tokio::spawn(async move {
             info!("Actor {} started", name);
-            let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            let mut error_counts: std::collections::HashMap<String, u64> =
+                std::collections::HashMap::new();
             while let Some(msg) = receiver.recv().await {
                 debug!(
                     "Actor {} received message from {}: executing tools",

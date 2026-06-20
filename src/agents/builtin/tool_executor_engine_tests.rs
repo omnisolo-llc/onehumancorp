@@ -67,10 +67,10 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("Expected string in test");
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("Expected string in test"), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 
@@ -97,7 +97,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("Expected string in test"), "success");
         // The loop returns immediately, so no backoff occurs and count is exactly 1
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
@@ -128,10 +128,10 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(30000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("Expected string in test");
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("Expected string in test"), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
@@ -161,10 +161,10 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(30000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("Expected string in test");
 
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
             _ => panic!("Expected Unexpected error"),
         }
@@ -212,7 +212,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
                 assert!(msg.contains("missing field `required_int`"));
@@ -242,8 +242,8 @@ mod tests {
         // We simulate the pydantic loop which returns the recoverable error directly
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
         assert!(res.is_err());
-        assert!(res.as_ref().unwrap_err().to_string().contains("Validation Error (Pydantic-first tool schema)"));
-        match res.unwrap_err() {
+        assert!(res.as_ref().expect_err("Expected error in test").to_string().contains("Validation Error (Pydantic-first tool schema)"));
+        match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
             _ => panic!("Expected LlmRecoverable error"),
         }
@@ -272,7 +272,7 @@ mod tests {
 
         // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             },
@@ -300,7 +300,7 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
             _ => panic!("Expected LlmRecoverable error"),
         }
@@ -326,7 +326,7 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
             _ => panic!("Expected UserFixable error bubbled up"),
         }
@@ -352,7 +352,7 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
             _ => panic!("Expected Fatal error"),
         }
@@ -378,7 +378,7 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
             _ => panic!("Expected Unexpected error"),
         }
@@ -404,7 +404,7 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),
             _ => panic!("Expected HandoffRequested error"),
         }
@@ -437,10 +437,10 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(30000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("Expected string in test");
 
         assert!(res.is_err());
-        match res.unwrap_err() {
+        match res.expect_err("Expected error in test") {
             ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
             _ => panic!("Expected Unexpected error"),
         }
@@ -501,10 +501,10 @@ mod additional_transient_tests {
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("Expected string in test");
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("Expected string in test"), "success");
         // Loop should run twice: first is error, second is success.
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }

@@ -318,7 +318,7 @@ mod tests {
 
         // It should recover on the second try
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "recovered");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
 
         // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
         // Let's modify the test to just check if it fails with the right message when max_retries = 0
@@ -428,7 +428,7 @@ mod tests {
         let result: TestOutput =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
                 .await
-                .unwrap();
+                .expect("Expected TestOutput in test");
         assert_eq!(result.result, "success_markdown");
     }
 
@@ -448,7 +448,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "success after retry");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success after retry");
     }
 
     #[tokio::test]
@@ -484,7 +484,7 @@ mod tests {
         let result: TestOutput =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
                 .await
-                .unwrap();
+                .expect("Expected TestOutput in test");
         assert_eq!(result.result, "success_tool_call");
     }
 
@@ -507,7 +507,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "success_tool_call_retry");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success_tool_call_retry");
     }
 
     #[tokio::test]
@@ -557,7 +557,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "recovered");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
     }
 
     #[tokio::test]
@@ -582,7 +582,7 @@ mod tests {
 
         // Because of the strict native tool_calls enforcement, it must retry and succeed on the second attempt
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "success_plain_recovered");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain_recovered");
     }
 
     #[tokio::test]
@@ -604,7 +604,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "corrected_schema");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "corrected_schema");
     }
 
     #[tokio::test]
@@ -646,7 +646,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "recovered_eof");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered_eof");
     }
 }
 
@@ -762,7 +762,7 @@ mod retry_tests {
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 3).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "success");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success");
     }
 
     #[tokio::test]
@@ -903,7 +903,7 @@ mod tests_clamped {
 
         tokio::time::advance(std::time::Duration::from_millis(30000)).await;
 
-        let result = handle.await.unwrap();
+        let result = handle.await.expect("Expected TestOutput in test");
 
         assert!(result.is_err());
         match result {
