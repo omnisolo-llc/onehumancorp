@@ -174,7 +174,7 @@ impl TaskDecompositionService {
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = crate::db::MAX_DB_RETRY_ATTEMPTS;
         let timeout = task_claim_timeout();
 
         let start_time = std::time::Instant::now();

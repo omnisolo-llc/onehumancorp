@@ -11,13 +11,16 @@ mod parity_tests {
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let sqlite_pool = SqlitePoolOptions::new()
             .max_connections(2)
+            // Fix connection pooling timeout on sqlite
+            .acquire_timeout(std::time::Duration::from_secs(5))
             .connect(&uri)
             .await
             .unwrap();
 
         // Run migrations/schema setup for SQLite
         let db = DB {
-            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            // Fix connection pooling timeout on mocked pg pool
+            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(5)).connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();
@@ -812,7 +815,7 @@ mod parity_tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Database retry exhausted"));
         // execute_with_retry makes 1 initial attempt + 2 retries (max_attempts = 3)
-        assert_eq!(*attempts.lock().unwrap(), 3);
+        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -830,7 +833,7 @@ mod parity_tests {
 
             assert!(res.is_err());
             assert!(res.unwrap_err().contains("Database retry exhausted"));
-            assert_eq!(*attempts.lock().unwrap(), 3);
+            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS);
         }
     }
 
@@ -898,7 +901,7 @@ mod parity_tests {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
-        assert_eq!(*attempts.lock().unwrap(), 3);
+        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -920,7 +923,7 @@ mod parity_tests {
 
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), "success");
-            assert_eq!(*attempts.lock().unwrap(), 3);
+            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS);
         }
     }
 }
