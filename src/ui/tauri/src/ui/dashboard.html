@@ -857,16 +857,21 @@
         </a>
       </div>
 
-      <div class="ohc-growth-card app-card" id="cloud-bridge-section" style="margin-top: 20px;">
-        <h2>Cloud Bridge Invite</h2>
-        <p>Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
+      <div class="ohc-growth-card app-card" id="cloud-bridge-section" style="border: 2px solid #0066FF; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -10px; right: -10px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 0 0 0 16px; font-size: 12px; font-weight: 700; color: #0066FF; border-left: 1px solid rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.4);">
+          🛡️ Zero Data Leakage
+        </div>
+        <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px; margin-top: 8px;">Invite to Cloud Workspace</h2>
+        <p style="color: #555; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
+          Share your agentic output securely. Provision a cloud-native workspace for your team while maintaining ultimate local sovereignty over your source data.
+        </p>
         <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(0,0,0,0.2); color: white; min-width: 200px;" />
-            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.1s;">
-              Generate Cloud Invite
+            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255,255,255,0.8); color: #1D1D1F; min-width: 200px; font-family: Outfit, sans-serif;" />
+            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0,102,255,0.3);">
+              Unlock Cloud Collaboration
             </button>
         </div>
-        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; word-break: break-all;"></div>
+        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; word-break: break-all; transition: all 0.3s ease;"></div>
       </div>
 
       <div class="ohc-growth-card app-card">
