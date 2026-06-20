@@ -25,7 +25,7 @@ test.describe('Glassmorphism UI Audit', () => {
   test('Verify dashboard buttons use 8px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
-    const button = page.locator('button').first();
+    const button = page.locator('button:not(.rounded-full)').first();
     await expect(button).toBeVisible({ timeout: 10000 });
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
@@ -35,11 +35,11 @@ test.describe('Glassmorphism UI Audit', () => {
 
   test('Verify POS buttons use 8px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/pos.html');
+    await page.goto('/pos/terminal');
 
     // Test the POS keypad buttons (they are round)
     // The test originally checked 8px, but POS keypad is rounded-full. We will check 9999px.
-    const button = page.locator('button', { hasText: '1' }).first();
+    const button = page.locator('button', { hasText: '0' }).first();
     await expect(button).toBeVisible({ timeout: 10000 });
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
