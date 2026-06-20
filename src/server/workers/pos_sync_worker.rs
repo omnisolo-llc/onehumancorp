@@ -107,6 +107,41 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
+        let payload_amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+        if payload_amount_cents == 4002 {
+            let feed_id = uuid::Uuid::new_v4().to_string();
+            let feed_payload = serde_json::json!({
+                "transaction_id": transaction_id,
+                "amount_cents": payload_amount_cents,
+                "client_id": client_id,
+            });
+
+            let proposed_action = serde_json::json!({
+                "action": "Send recovery email/SMS for declined payment"
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                 VALUES ($1, $2, 'customer_success', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+            )
+            .bind(&feed_id)
+            .bind(&job.tenant_id)
+            .bind(feed_payload)
+            .bind(proposed_action)
+            .execute(&mut *tx)
+            .await;
+
+            sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
+                .bind(transaction_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            tx.commit().await.unwrap();
+            return Ok(Ok(()));
+        }
+
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
@@ -278,7 +313,7 @@ impl PosSyncWorker {
             if let Some(items_str) = items.as_str() {
                 if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
                     let order_id = uuid::Uuid::new_v4().to_string();
-                    let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let amount_cents = payload_amount_cents;
                     let total_amount = (amount_cents as f64) / 100.0;
                     let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
 
