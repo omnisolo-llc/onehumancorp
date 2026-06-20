@@ -71,6 +71,10 @@ impl HybridSyncDaemon {
                 error!("Hybrid sync prune sub_agent_queue error: {}", e);
             }
 
+            if let Err(e) = self.prune_stuck_ohc_job_queue().await {
+                error!("Hybrid sync prune ohc_job_queue error: {}", e);
+            }
+
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -443,7 +447,7 @@ impl HybridSyncDaemon {
 
     pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Find and fail stuck missions in sqlite pool
-        let res_sqlite = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
+        let res_sqlite = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[MAINTENANCE] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
             .execute(&self.sqlite_pool)
             .await;
         if let Ok(res) = res_sqlite {
@@ -453,12 +457,54 @@ impl HybridSyncDaemon {
         }
 
         // Find and fail stuck missions in pg pool
-        let res_pg = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
+        let res_pg = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[MAINTENANCE] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
             .execute(&self.pg_pool)
             .await;
         if let Ok(res) = res_pg {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn prune_stuck_ohc_job_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // SQLite queue
+        let res_running_sqlite = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PROCESSING' AND updated_at < datetime('now', '-1 hour')")
+            .execute(&self.sqlite_pool)
+            .await;
+        if let Ok(res) = res_running_sqlite {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PROCESSING jobs from SQLite ohc_job_queue", res.rows_affected());
+            }
+        }
+
+        let res_queued_sqlite = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hour')")
+            .execute(&self.sqlite_pool)
+            .await;
+        if let Ok(res) = res_queued_sqlite {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PENDING jobs from SQLite ohc_job_queue", res.rows_affected());
+            }
+        }
+
+        // PG queue
+        let res_running_pg = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '1 hour'")
+            .execute(&self.pg_pool)
+            .await;
+        if let Ok(res) = res_running_pg {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PROCESSING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+            }
+        }
+
+        let res_queued_pg = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PENDING' AND created_at < NOW() - INTERVAL '24 hours'")
+            .execute(&self.pg_pool)
+            .await;
+        if let Ok(res) = res_queued_pg {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PENDING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
             }
         }
 
