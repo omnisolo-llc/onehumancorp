@@ -7,7 +7,7 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
     const tenantId = 'e2e-tenant-1';
 
     // Simulate action
-    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}&mobile_optimized=true`);
     expect(response.ok()).toBeTruthy();
 
     await page.goto(`/dashboard?tenant_id=${tenantId}`);
@@ -30,7 +30,7 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
   test('Scenario 2: Simulates an inbound action and then dismisses the action directly', async ({ page, request }) => {
     const tenantId = 'e2e-tenant-2';
 
-    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}&mobile_optimized=true`);
     expect(response.ok()).toBeTruthy();
 
     await page.goto(`/dashboard?tenant_id=${tenantId}`);
@@ -49,7 +49,7 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
   test('Scenario 3: Simulates an inbound action, goes into the edit workflow, and cancels editing', async ({ page, request }) => {
     const tenantId = 'e2e-tenant-3';
 
-    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}&mobile_optimized=true`);
     expect(response.ok()).toBeTruthy();
 
     await page.goto(`/dashboard?tenant_id=${tenantId}`);
@@ -73,7 +73,7 @@ test.describe('Unified Agent Feed (Mobile MVP) - Real E2E Flow', () => {
   test('Scenario 4: Simulates an inbound action, edits the payload content, and saves/approves it', async ({ page, request }) => {
     const tenantId = 'e2e-tenant-4';
 
-    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}&mobile_optimized=true`);
     expect(response.ok()).toBeTruthy();
 
     await page.goto(`/dashboard?tenant_id=${tenantId}`);
