@@ -17,6 +17,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
+import { AIUsageLimitWidget } from "./AIUsageLimitWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -363,6 +364,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <AIUsageLimitWidget />
       <DashboardViralInviteWidget />
 
       <AiTimeSavingsWidget />
