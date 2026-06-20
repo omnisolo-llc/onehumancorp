@@ -424,3 +424,27 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProjectLead {
+    pub id: String,
+    pub tenant_id: String,
+    pub client_name: String,
+    pub client_email: String,
+    pub project_details: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProposalDraft {
+    pub id: String,
+    pub tenant_id: String,
+    pub lead_id: String,
+    pub content: String,
+    pub estimated_price_cents: i64,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

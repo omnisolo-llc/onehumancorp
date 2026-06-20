@@ -28,6 +28,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/milestone-loop.spec.ts",
     "//src/ui/next:src/e2e/milestones.spec.ts",
     "//src/ui/next:src/e2e/onboarding.spec.ts",
+    "//src/e2e:tests/client_intake.spec.ts",
     "//src/ui/next:src/e2e/review-campaign.spec.ts",
     "//src/ui/next:src/e2e/staff-mesh.spec.ts",
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
@@ -71,7 +72,8 @@ _ROOT_E2E_SPECS = [
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
     name = "run_playwright_e2e",
-    srcs = ["//bazel/rules/playwright:run_playwright.sh"],
+    srcs = [
+        "//bazel/rules/playwright:run_playwright.sh"],
     data = [
         "//deploy:docker-compose.e2e.yml",
         "//scripts:run-playwright.mjs",
@@ -106,7 +108,8 @@ define_playwright_tests(
 
 sh_test(
     name = "verify_artifacts_test",
-    srcs = ["verify_artifacts.sh"],
+    srcs = [
+        "verify_artifacts.sh"],
     data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )

@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
+import { ProposalDraftCard } from './ProposalDraftCard';
+
 
 interface FeedItem {
   id: string;
@@ -105,7 +107,6 @@ export default function FeedPage() {
     if (!item) return;
 
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-
     const updatedProposed = {
         ...item.proposed_action,
         description: isAmbassador ? item.proposed_action?.description : editValue,
@@ -227,7 +228,22 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
-            const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+
+          const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+          const isProposal = item.proposed_action?.feature_type === 'proposal_draft' || item.context_payload?.feature_type === 'proposal_draft';
+
+          if (isProposal) {
+             return (
+                 <ProposalDraftCard
+                    key={item.id}
+                    item={item}
+                    onApprove={handleApprove}
+                    onDismiss={handleDismiss}
+                    isProcessing={processingId === item.id}
+                 />
+             );
+          }
+
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
 
             return (
