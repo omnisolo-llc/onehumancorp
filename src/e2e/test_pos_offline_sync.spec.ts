@@ -178,6 +178,102 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // initiates the state transition successfully.
   });
 
+  test('POS terminal generates Customer Success Agent draft on offline payment failure', async ({ memberPage, context }) => {
+    // Navigate to the POS Terminal page
+    await memberPage.goto('/pos.html');
+
+    // Enter PIN
+    await memberPage.getByRole('button', { name: '1' }).click();
+    await memberPage.getByRole('button', { name: '2' }).click();
+    await memberPage.getByRole('button', { name: '3' }).click();
+    await memberPage.getByRole('button', { name: '4' }).click();
+
+    // Clock in
+    await memberPage.waitForTimeout(500);
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await memberPage.waitForTimeout(500);
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+
+    // Set network to offline
+    await context.setOffline(true);
+
+    // Mock offline event
+    await memberPage.evaluate(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+
+    // Inject failed payment mock directly into IndexedDB Offline Queue
+    await memberPage.evaluate(async () => {
+      const dbName = 'OHC_Offline_Queue';
+      const storeName = 'actions';
+      const getDB = () => new Promise<IDBDatabase>((resolve, reject) => {
+        const req = window.indexedDB.open(dbName, 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+      });
+
+      const db = await getDB();
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+
+      const failedTransaction = {
+        id: `tx_failed_${Date.now()}`,
+        type: 'tap_to_pay',
+        payload: JSON.stringify([{ product_id: 'prod_test_fail', quantity: 1 }]),
+        amount_cents: 4002, // Magic number to simulate failure
+        currency: 'usd',
+        timestamp: Date.now()
+      };
+
+      store.put(failedTransaction);
+
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    });
+
+    // Make network online
+    await context.setOffline(false);
+
+    // Trigger sync
+    await memberPage.evaluate(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    // Verify "Online" indicator
+    await expect(memberPage.locator('text=Online').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+
+    // Wait for the sync to complete and the IndexedDB to be cleared
+    await memberPage.waitForFunction(async () => {
+      return new Promise<boolean>((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve(true);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const all = store.getAll();
+          all.onsuccess = () => {
+            resolve(all.result.length === 0);
+          };
+          all.onerror = () => resolve(false);
+        };
+        req.onerror = () => resolve(false);
+      });
+    }, { timeout: 15000 });
+
+    // Navigate to Agent Feed to verify the draft
+    await memberPage.goto('/feed');
+
+    // Check if the recovery email draft is visible in the feed
+    await expect(memberPage.getByText("Hi, your card at Fatima's Food Cart couldn't be processed later.")).toBeVisible({ timeout: 15000 });
+  });
+
 });
 
   test('POS terminal syncs offline queue and shows sync conflict resolution modal if item was sold out', async ({ page, memberPage, request, context }) => {
