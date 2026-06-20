@@ -901,7 +901,7 @@ mod tests_clamped {
             retry_parser.parse_with_prompt(req, 10).await
         });
 
-        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
 
         let result = handle.await.unwrap();
 
