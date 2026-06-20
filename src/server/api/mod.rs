@@ -48,3 +48,4 @@ pub mod assistant;
 
 pub mod field_ops;
 pub mod storefront_delivery;
+pub mod unified_inbox;

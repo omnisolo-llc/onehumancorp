@@ -21,6 +21,7 @@ exports_files(
         "mesh_handler.rs",
         "meta_webhook.rs",
         "twilio_webhook.rs",
+        "unified_inbox.rs",
         "twilio_voice.rs",
         "docs.rs",
     "field_ops.rs",
@@ -58,6 +59,7 @@ rust_library(
         "bazel_lib.rs",
         "autodream.rs",
         "twilio_webhook.rs",
+        "unified_inbox.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
@@ -225,3 +227,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files([
+    "unified_inbox.rs",
+])

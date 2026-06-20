@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::db::DB;
-use crate::common::auth::{ui_tenant_id, UiTenantQuery};
+use crate::{ui_tenant_id, UiTenantQuery};
 use axum::extract::Query;
 
 #[derive(Clone)]
