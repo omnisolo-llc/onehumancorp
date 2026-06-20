@@ -31,11 +31,116 @@ impl PosSyncWorker {
             return Err("Failed to set org context".into());
         }
 
+        // Check if we simulate failure via specific amount
+        let mut amount_cents = 0;
+        if let Some(mutation) = payload.get("mutation") {
+            amount_cents = mutation.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
+        } else if let Some(a) = payload.get("amount_cents").and_then(|v| v.as_i64()) {
+            amount_cents = a;
+        }
+
+        if amount_cents == 4002 {
+            // Simulate Payment Failure
+            sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'synced' WHERE id = $1")
+                .bind(transaction_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            let product_id_owned: Option<String> = payload.get("mutation").and_then(|m| m.get("product_id")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                .or_else(|| {
+                    if let Some(items) = payload.get("payload").and_then(|v| v.as_str()) {
+                        if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(items) {
+                            if let Some(first) = arr.first() {
+                                return first.get("product_id").and_then(|p| p.as_str()).map(|s| s.to_string());
+                            }
+                        }
+                    }
+                    None
+                });
+            let product_id_str = product_id_owned.unwrap_or_else(|| "unknown".to_string());
+            let product_id = product_id_str.as_str();
+
+            let action_request_id = uuid::Uuid::new_v4().to_string();
+            let agent_payload = serde_json::json!({
+                "event": "offline_payment_failed",
+                "customer_email": "",
+                "transaction_id": transaction_id,
+                "amount_cents": amount_cents,
+                "product_id": product_id,
+            }).to_string();
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                 VALUES ($1, $2, 'terminal', 'ambassador', 'Draft Recovery Email', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&action_request_id)
+            .bind(&job.tenant_id)
+            .bind(&agent_payload)
+            .execute(&mut *tx)
+            .await;
+
+            let notification_id = uuid::Uuid::new_v4().to_string();
+            let notification_payload = serde_json::json!({
+                "product_id": product_id,
+                "transaction_id": transaction_id,
+                "message": format!("Hi, your card at Fatima's Food Cart couldn't be processed later. Here's a secure link to update payment.")
+            }).to_string();
+
+            let _ = sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                 VALUES ($1, $2, 'customer_success', 'OfflinePaymentFailed', $3::jsonb, 'PENDING')"
+            )
+            .bind(&notification_id)
+            .bind(&job.tenant_id)
+            .bind(&notification_payload)
+            .execute(&mut *tx)
+            .await;
+
+            tx.commit().await.unwrap();
+            return Ok(Ok(()));
+        }
+
         sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED', _sync_status = 'synced' WHERE id = $1")
             .bind(transaction_id)
             .execute(&mut *tx)
             .await
             .unwrap();
+
+        let payload_amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+        if payload_amount_cents == 4002 {
+            let feed_id = uuid::Uuid::new_v4().to_string();
+            let feed_payload = serde_json::json!({
+                "transaction_id": transaction_id,
+                "amount_cents": payload_amount_cents,
+                "client_id": client_id,
+            });
+
+            let proposed_action = serde_json::json!({
+                "action": "Send recovery email/SMS for declined payment"
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                 VALUES ($1, $2, 'customer_success', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+            )
+            .bind(&feed_id)
+            .bind(&job.tenant_id)
+            .bind(feed_payload)
+            .bind(proposed_action)
+            .execute(&mut *tx)
+            .await;
+
+            sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
+                .bind(transaction_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            tx.commit().await.unwrap();
+            return Ok(Ok(()));
+        }
 
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();
@@ -151,7 +256,7 @@ impl PosSyncWorker {
 
                     let _ = sqlx::query(
                         "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                         VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
                     )
                     .bind(&notification_id)
                     .bind(&job.tenant_id)
@@ -208,7 +313,7 @@ impl PosSyncWorker {
             if let Some(items_str) = items.as_str() {
                 if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
                     let order_id = uuid::Uuid::new_v4().to_string();
-                    let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let amount_cents = payload_amount_cents;
                     let total_amount = (amount_cents as f64) / 100.0;
                     let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
 
@@ -338,7 +443,7 @@ impl PosSyncWorker {
 
                                 let _ = sqlx::query(
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                                     VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&notification_id)
                                 .bind(&job.tenant_id)

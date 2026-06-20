@@ -8,7 +8,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
-    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('h3', { hasText: 'Department Usage' }).first()).toBeVisible();
 
     // Check if the plan navigation link is present
-    await expect(page.getByRole('link', { name: 'Back to My Plan' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
   });
 
   test('should display my plan limits and route to pricing', async ({ page, adminUser, loginAs }) => {
@@ -63,7 +63,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
         starterButton.click(),
       ]);
     } catch(e) {
-      console.log('Skipping strict URL validation due to likely environment checkout API timeout');
+      // Skipping strict URL validation due to likely environment checkout API timeout
     }
 
     // The redirect logic changes the URL, so we can verify the checkout or error loads
@@ -75,7 +75,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     } catch (e) {
       // In local isolated test environments the Stripe checkout session endpoint might fail or error,
       // which is acceptable for UI-focused tests if the API call was at least dispatched.
-      console.log('Skipping strict URL validation due to likely environment checkout API timeout');
+      // Skipping strict URL validation due to likely environment checkout API timeout
     }
   });
 });

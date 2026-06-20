@@ -34,17 +34,19 @@ pub struct WalkthroughStep {
 pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
     let steps = match page.as_str() {
         "store-setup" => vec![
-            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() }
+            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() },
+            WalkthroughStep { selector: "#bio-input-tooltip".to_string(), title: "Describe your business".to_string(), text: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
+            WalkthroughStep { selector: "#generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), text: "Click here and watch our AI build your store from scratch.".to_string() },
         ],
         "dashboard" => vec![
             WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
             WalkthroughStep { selector: "#wrapped-summary".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
         ],
         "pos" => vec![
-            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
+            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge your first customer. It's that easy!".to_string() }
         ],
         "assistant" => vec![
-            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent.".to_string() }
+            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent. They can handle support tickets while you sleep.".to_string() }
         ],
         _ => vec![],
     };
