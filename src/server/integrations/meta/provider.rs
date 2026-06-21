@@ -22,6 +22,20 @@ impl MetaProvider {
         }
     }
 
+        pub fn with_phone_number_id(access_token: String, phone_number_id: String) -> Self {
+        let client = RealMetaClient::with_phone_number_id(access_token, phone_number_id);
+
+        Self {
+            client: Arc::new(client),
+            metadata: ProviderMetadata {
+                id: "meta".to_string(),
+                name: "Meta Graph API (Facebook, Instagram, WhatsApp)".to_string(),
+                category: "social".to_string(),
+                base_url: "https://graph.facebook.com/v19.0".to_string(),
+            },
+        }
+    }
+
     pub fn with_client(client: Arc<dyn MetaClientWrapper>) -> Self {
         Self {
             client,
