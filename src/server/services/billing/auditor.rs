@@ -48,6 +48,8 @@ pub struct CostAuditor {
     storage_savings_counter: Counter<u64>,
     bandwidth_savings_counter: Counter<u64>,
     compute_cost_counter: Counter<u64>,
+    api_call_counter: Counter<u64>,
+    email_send_counter: Counter<u64>,
 }
 
 impl CostAuditor {
@@ -57,6 +59,8 @@ impl CostAuditor {
         let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
         let bandwidth_savings_counter = meter.u64_counter("ohc_bandwidth_savings_total_cents").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
+        let api_call_counter = meter.u64_counter("ohc_api_calls_total").build();
+        let email_send_counter = meter.u64_counter("ohc_emails_sent_total").build();
 
         CostAuditor {
             config,
@@ -84,6 +88,8 @@ impl CostAuditor {
             storage_savings_counter,
             bandwidth_savings_counter,
             compute_cost_counter,
+            api_call_counter,
+            email_send_counter,
         }
     }
 
@@ -225,6 +231,19 @@ impl CostAuditor {
         let savings_cents = (savings * 100.0).round() as u64;
         self.bandwidth_savings_counter.add(savings_cents, &[KeyValue::new("tenant_id", tenant_id.to_string())]);
         savings
+    }
+
+    pub fn record_api_call(&self, tenant_id: &str, endpoint: &str) {
+        self.api_call_counter.add(1, &[
+            KeyValue::new("tenant_id", tenant_id.to_string()),
+            KeyValue::new("endpoint", endpoint.to_string()),
+        ]);
+    }
+
+    pub fn record_email_send(&self, tenant_id: &str) {
+        self.email_send_counter.add(1, &[
+            KeyValue::new("tenant_id", tenant_id.to_string()),
+        ]);
     }
 
     pub fn get_total_cost(&self) -> f64 {
