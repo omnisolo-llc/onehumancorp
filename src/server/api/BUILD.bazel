@@ -1,5 +1,5 @@
 
-exports_files(["chaos.rs", "sync_gateway.rs"])
+exports_files(["chaos.rs", "sync_gateway.rs", "triage.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 
@@ -47,7 +47,7 @@ exports_files(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
-    ],
+            ],
     visibility = ["//visibility:public"],
 )
 
@@ -112,6 +112,7 @@ rust_library(
         "//src/server/api/onboarding:mod.rs",
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
+                    "triage.rs",
     ],
     compile_data = [
         "//:CHANGELOG.md",

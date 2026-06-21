@@ -13,3 +13,5 @@ pub mod pricing_analysis_worker;
 pub mod deposit_follow_up_worker;
 pub mod missed_lead_recovery_worker;
 pub mod lifecycle_engagement_worker;
+
+pub mod triage_ingestion_worker;

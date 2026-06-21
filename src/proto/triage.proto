@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package onehumancorp.triage;
+
+// Normalized representation of an incoming message from any channel.
+message NormalizedMessage {
+    string id = 1;
+    string tenant_id = 2;
+    string source_channel = 3; // e.g., "instagram", "whatsapp", "sms"
+    string sender_id = 4;
+    string text_content = 5;
+    string created_at = 6;
+}
+
+// Intent extracted by the LLM
+message TriageIntent {
+    enum IntentType {
+        UNKNOWN = 0;
+        LEAD = 1;
+        SUPPORT = 2;
+        SPAM = 3;
+        BOOKING_REQUEST = 4;
+        CUSTOM_QUOTE = 5;
+    }
+    IntentType intent_type = 1;
+    float confidence_score = 2;
+    // JSON-encoded extracted entities (e.g. {"Date": "Oct 10", "Vegan": true})
+    string extracted_entities_json = 3;
+}

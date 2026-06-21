@@ -2569,6 +2569,31 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
 
+    let triage_llm = {
+        let key = std::env::var("OHC_LLM_API_KEY")
+            .or_else(|_| std::env::var("OPENAI_API_KEY"))
+            .unwrap_or_default();
+        if key.is_empty() {
+            None
+        } else {
+            let endpoint = std::env::var("OPENAI_BASE_URL")
+                .or_else(|_| std::env::var("OHC_OPENAI_BASE_URL"))
+                .or_else(|_| std::env::var("OHC_LLM_BASE_URL"))
+                .or_else(|_| std::env::var("OHC_LLM_ENDPOINT"))
+                .ok();
+            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+            let mut config = if let Some(endpoint) = endpoint {
+                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
+            } else {
+                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
+            };
+            config.default_model = Some(model);
+            Some(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)) as std::sync::Arc<dyn ohc_builtin_agent::llm::LlmClient>)
+        }
+    };
+    let triage_ingestion_worker = Arc::new(crate::workers::triage_ingestion_worker::TriageIngestionWorker::new(db.clone(), triage_llm));
+    triage_ingestion_worker.start();
+
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();

@@ -2,10 +2,14 @@ CREATE TABLE IF NOT EXISTS triage_items (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     customer_id TEXT,
+    source_id TEXT,
+    source_type TEXT,
     source TEXT,
+    content TEXT,
+    intent TEXT,
     priority TEXT,
     context TEXT,
-    status TEXT DEFAULT 'pending',
+    status TEXT DEFAULT 'PENDING',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
