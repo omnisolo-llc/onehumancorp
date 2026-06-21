@@ -208,7 +208,7 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let cancel = match transport.subscribe(&channel, handler).await {
         Ok(c) => c,
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to subscribe to mesh transport");
+            ::server_telemetry::record_error_signal("[bug] Failed to subscribe to mesh transport");
             tracing::error!("Failed to subscribe to mesh transport: {}", e);
             return;
         }
@@ -223,7 +223,7 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
                     break;
                 }
             } else {
-                ::server_telemetry::record_error_signal("Failed to encode mesh message to protobuf");
+                ::server_telemetry::record_error_signal("[bug] Failed to encode mesh message to protobuf");
                 tracing::error!("Failed to encode mesh message to protobuf");
             }
         }

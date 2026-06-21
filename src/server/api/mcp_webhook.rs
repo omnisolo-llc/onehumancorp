@@ -367,7 +367,7 @@ pub async fn handle_mcp_webhook(
             .execute(&hub.pool)
             .await
             {
-                ::server_telemetry::record_error_signal("Failed to update MCP task ");
+                ::server_telemetry::record_error_signal("[bug] Failed to update MCP task ");
                 tracing::error!("Failed to update MCP task {}: {}", t_id, e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -407,7 +407,7 @@ pub async fn handle_mcp_webhook(
             )
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Database error fetching MCP task ");
+            ::server_telemetry::record_error_signal("[bug] Database error fetching MCP task ");
             tracing::error!("Database error fetching MCP task {}: {}", t_id, e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -133,7 +133,7 @@ impl OHCJobQueue {
         // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
         sqlx::query(
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, 'Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )

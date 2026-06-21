@@ -183,7 +183,7 @@ pub fn spawn_lead_recovery_background_workers(pool: Arc<PgPool>) {
                     }
                 }
                 Err(err) => {
-                    ::server_telemetry::record_error_signal("Lead recovery scan failed");
+                    ::server_telemetry::record_error_signal("[bug] Lead recovery scan failed");
                     tracing::warn!("Lead recovery scan failed: {}", err);
                 }
             }

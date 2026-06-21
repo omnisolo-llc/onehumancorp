@@ -542,7 +542,7 @@ Your response:",
                 .execute(&pool)
                 .await
             {
-                ::server_telemetry::record_error_signal("Failed to schedule weekly health report");
+                ::server_telemetry::record_error_signal("[bug] Failed to schedule weekly health report");
                 tracing::error!("Failed to schedule weekly health report: {}", e);
             }
 

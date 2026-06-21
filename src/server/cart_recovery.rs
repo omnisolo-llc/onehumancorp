@@ -850,7 +850,7 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
                     }
                 }
                 Err(err) => {
-                    ::server_telemetry::record_error_signal("Cart recovery scan failed");
+                    ::server_telemetry::record_error_signal("[bug] Cart recovery scan failed");
                     tracing::warn!("Cart recovery scan failed: {}", err);
                 }
             }
@@ -873,7 +873,7 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
                     tracing::warn!("Cart recovery dispatch failed closed: {}", err);
                 }
                 Err(err) => {
-                    ::server_telemetry::record_error_signal("Cart recovery dispatch failed");
+                    ::server_telemetry::record_error_signal("[bug] Cart recovery dispatch failed");
                     tracing::warn!("Cart recovery dispatch failed: {}", err);
                 }
             }

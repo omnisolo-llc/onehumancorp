@@ -321,7 +321,7 @@ pub async fn offline_sync_handler(
                     Err("Product not found or unauthorized".to_string())
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
+                    ::server_telemetry::record_error_signal("[bug] Failed to deduct inventory for product ");
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
                     Err("Database error".to_string())
                 }
