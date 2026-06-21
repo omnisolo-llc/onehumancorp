@@ -1,11 +1,11 @@
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use sqlx::PgPool;
-use uuid::Uuid;
+
 use chrono::Utc;
 use serde_json::Value;
 
 pub struct AgentFeedService {
-    pool: PgPool,
+    _pool: PgPool,
     repo: AgentFeedRepository,
 }
 
