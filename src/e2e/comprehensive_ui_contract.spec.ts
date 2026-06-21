@@ -120,9 +120,9 @@ function externalHostAllowed(hostname: string) {
 function isFakeOHCUrl(href: string) {
   try {
     const url = new URL(href, 'http://localhost:3000');
-    return url.protocol === 'ohc:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store');
+    return url.protocol === 'ohc:' || url.hostname === 'ohc.app' || url.hostname.endsWith('.ohc.app');
   } catch {
-    return href.startsWith('ohc://') || href.includes('ohc.store');
+    return href.startsWith('ohc://') || href.includes('ohc.app');
   }
 }
 

@@ -178,7 +178,7 @@ async fn handle_waitlist(
     Ok(Json(WaitlistResponse {
         success: true,
         position: 42,
-        referral_link: format!("https://ohc.app/waitlist?ref={}", req.tenant_id),
+        referral_link: format!("https://ohc.store/waitlist?ref={}", req.tenant_id),
     }))
 }
 
@@ -262,7 +262,7 @@ pub async fn handle_conversational_chat(
             description: "Share your latest business milestone with your followers.".to_string(),
             action_type: "generate_social_post".to_string(),
             payload: serde_json::json!({
-                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://ohc.app/onboarding?ref=social-share \n\n⚡ Powered by OHC"
+                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://ohc.store/onboarding?ref=social-share \n\n⚡ Powered by OHC"
             }),
         });
     }
@@ -1313,7 +1313,7 @@ async fn handle_customer_referral_embed(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.store/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
     };
 
     let html = format!(
@@ -1380,7 +1380,7 @@ async fn handle_customer_referral_embed(
         <div class="icon">🎁</div>
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
-        <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        <button class="button" onclick="window.open('https://ohc.store/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
         {branding}
     </div>
 </body>
@@ -1990,9 +1990,9 @@ async fn handle_referral_click_get(
 
     // Redirect user to the intended target (or dashboard if not specified)
     let redirect_url = if target_url.starts_with('/') {
-        format!("https://ohc.app{}", target_url)
+        format!("https://ohc.store{}", target_url)
     } else {
-        "https://ohc.app/dashboard".to_string()
+        "https://ohc.store/dashboard".to_string()
     };
 
     Ok(axum::response::Redirect::to(&redirect_url).into_response())
@@ -2081,7 +2081,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://ohc.app/ref/{}", ref_code),
+                referral_link: format!("https://ohc.store/ref/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -2147,7 +2147,7 @@ async fn handle_create_team_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
-            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            let invite_link = format!("https://ohc.store/invite/{}", invite.id);
             Ok(Json(CreateTeamInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -2224,7 +2224,7 @@ mod tests {
         let res = handle_create_team_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
         let create_res_json = res.unwrap().0;
-        assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
+        assert!(create_res_json.invite_link.starts_with("https://ohc.store/invite/inv-"));
 
         // Call get handler directly
         let query = GetTeamInvitesQuery {
@@ -2448,7 +2448,7 @@ mod tests {
         let json = res.unwrap().0;
         assert_eq!(json.success, true);
         assert_eq!(json.position, 42);
-        assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
+        assert_eq!(json.referral_link, "https://ohc.store/waitlist?ref=test-tenant");
     }
 
     #[tokio::test]
@@ -2471,7 +2471,7 @@ mod tests {
 
         let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+        assert!(ref_link.starts_with("https://ohc.store/ref/"));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
@@ -2779,7 +2779,7 @@ async fn handle_cloud_bridge_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
-            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            let invite_link = format!("https://ohc.store/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -2844,7 +2844,7 @@ mod cloud_bridge_tests {
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
-        assert!(res_json.invite_link.starts_with("https://ohc.app/invite/"));
+        assert!(res_json.invite_link.starts_with("https://ohc.store/invite/"));
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
@@ -2978,7 +2978,7 @@ pub async fn handle_embed_widget(
   <button id="start-btn" data-type="{}">Start {}</button>
 
   <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    <a href="https://ohc.store/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
   </div>
 
   <script>
@@ -3304,7 +3304,7 @@ pub async fn handle_discount_code_embed(
         "".to_string()
     } else {
         format!(
-            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OHC</a></div>",
+            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://ohc.store/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OHC</a></div>",
             tenant
         )
     };

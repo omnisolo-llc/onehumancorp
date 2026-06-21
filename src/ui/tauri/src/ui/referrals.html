@@ -322,7 +322,7 @@
         } else {
           // Fallback
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-          link = `https://ohc.app/setup.html?ref=${tenantId}`;
+          link = `https://ohc.store/setup.html?ref=${tenantId}`;
         }
 
         document.getElementById('referral-link').value = link;
@@ -332,7 +332,7 @@
       } catch (e) {
         console.error("Failed to generate referral link", e);
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-        document.getElementById('referral-link').value = `https://ohc.app/setup.html?ref=${tenantId}`;
+        document.getElementById('referral-link').value = `https://ohc.store/setup.html?ref=${tenantId}`;
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('link-state').style.display = 'block';
       }

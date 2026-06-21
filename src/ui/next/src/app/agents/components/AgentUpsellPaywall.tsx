@@ -17,7 +17,7 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
     if (typeof localStorage !== "undefined") {
       tenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
     }
-    return `https://ohc.app/join?ref=${encodeURIComponent(tenant)}&source=agent_paywall`;
+    return `https://ohc.store/join?ref=${encodeURIComponent(tenant)}&source=agent_paywall`;
   };
 
   const handleGenerateLink = async () => {

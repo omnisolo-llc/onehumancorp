@@ -21,7 +21,7 @@ export default function ReferralsPage() {
     };
 
     const normalizeReferralLink = (rawLink: string) => {
-      if (!rawLink || rawLink.includes('ohc.store') || rawLink.startsWith('ohc://')) return fallbackReferralLink();
+      if (!rawLink || rawLink.includes('ohc.app') || rawLink.startsWith('ohc://')) return fallbackReferralLink();
       return rawLink;
     };
 
