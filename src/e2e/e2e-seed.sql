@@ -561,3 +561,60 @@ VALUES
 INSERT INTO business_milestones (id, tenant_id, milestone_type, title, description, reached, reached_at) VALUES
 ('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', '💰 Four-Figure Club', 'Your business has surpassed $1,000 in total revenue!', true, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
+INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
+VALUES
+  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false),
+  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false)
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    industry = EXCLUDED.industry,
+    plan_tier = EXCLUDED.plan_tier,
+    has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
+    updated_at = CURRENT_TIMESTAMP;
+
+UPDATE users SET tenant_id = 'e2e-tenant-free' WHERE id = 'e2e-admin-user';
+
+INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+VALUES
+  (
+    'e2e-starter-user',
+    'starter@example.com',
+    'starter@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-business-user',
+    'business@example.com',
+    'business@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant-business',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-pro-user',
+    'pro@example.com',
+    'pro@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant-unlimited',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO UPDATE
+SET username = EXCLUDED.username,
+    email = EXCLUDED.email,
+    password_hash = EXCLUDED.password_hash,
+    roles = EXCLUDED.roles,
+    active = EXCLUDED.active,
+    tenant_id = EXCLUDED.tenant_id,
+    updated_at = EXCLUDED.updated_at;
