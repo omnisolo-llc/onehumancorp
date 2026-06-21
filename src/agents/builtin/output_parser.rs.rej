@@ -1,0 +1,11 @@
+--- output_parser.rs
++++ output_parser.rs
+@@ -232,7 +232,7 @@
+                                     let tool_err = match self.registry.execute_tool(&tc.name, parsed_args).await {
+                                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                             let self_correct_msg =
+-                                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg);
++                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg).error;
+                                             Some(format!("Tool '{}' returned recoverable error: {}", tc.name, self_correct_msg))
+                                         }
+                                         Err(e) => Some(format!("Tool '{}' execution failed: {}", tc.name, e)),
