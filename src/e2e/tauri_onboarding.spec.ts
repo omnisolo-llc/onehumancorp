@@ -184,7 +184,10 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
 
-    // Step 7: Template
+    // Step 7: Domain
+    await expect(page.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
+    await page.fill('#domain-name', 'my-domain');
+    await page.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
@@ -274,7 +277,10 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
 
-    // Step 7: Template
+    // Step 7: Domain
+    await expect(newPage.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
+    await newPage.fill('#domain-name', 'my-domain');
+    await newPage.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
     await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
 
