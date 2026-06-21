@@ -12,6 +12,7 @@ pub struct MyPosService {}
 
 impl MyPosService {
     pub fn new(_db: Arc<crate::db::DB>) -> Self {
+        tracing::debug!("Initializing PosService for POS distributed terminal.");
         Self { }
     }
 
