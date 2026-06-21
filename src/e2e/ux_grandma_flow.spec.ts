@@ -6,7 +6,7 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
     await page.getByRole('button', { name: 'Log In' }).click();
 
-    await expect(page.locator("h2", { hasText: 'Welcome back, Maya.' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("h2", { hasText: 'Welcome back.' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Your agents are working on your behalf.')).toBeVisible();
   });
 

@@ -55,6 +55,23 @@ function CheckoutContent() {
   const [availablePoints, setAvailablePoints] = useState(0);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState<number | null>(null);
   const [isLoyaltyReady, setIsLoyaltyReady] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
+
+  useEffect(() => {
+    if (productId && tenant && !tier) {
+      fetch(`/api/v1/pos/inventory?tenant_id=${tenant}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.inventory) {
+            const product = data.inventory.find((p: any) => p.id === productId);
+            if (product) {
+              setProductData(product);
+            }
+          }
+        })
+        .catch(console.error);
+    }
+  }, [productId, tenant, tier]);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -362,31 +379,34 @@ function CheckoutContent() {
                 )}
               </div>
 
-              <div className="flex items-center mb-4">
-                <label
-                  htmlFor="subscribe"
-                  className="flex items-center cursor-pointer group"
-                >
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      id="subscribe"
-                      className="sr-only"
-                      checked={isSubscription}
-                      onChange={(e) => setIsSubscription(e.target.checked)}
-                    />
-                    <div
-                      className={`block w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${isSubscription ? "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : "bg-gray-300"}`}
-                    ></div>
-                    <div
-                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? "transform translate-x-4" : ""}`}
-                    ></div>
-                  </div>
-                  <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-                    Subscribe & Save 10%
-                  </div>
-                </label>
-              </div>
+              {!tier && productData && productData.is_subscribable && (
+                <div className="flex items-center mb-4">
+                  <label
+                    htmlFor="subscribe"
+                    className="flex items-center cursor-pointer group"
+                  >
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        id="subscribe"
+                        className="sr-only"
+                        checked={isSubscription}
+                        onChange={(e) => setIsSubscription(e.target.checked)}
+                      />
+                      <div
+                        className={`block w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${isSubscription ? "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : "bg-gray-300"}`}
+                      ></div>
+                      <div
+                        className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? "transform translate-x-4" : ""}`}
+                      ></div>
+                    </div>
+                    <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                      Subscribe & Save{" "}
+                      {productData.subscription_discount_percent || 10}%
+                    </div>
+                  </label>
+                </div>
+              )}
 
               <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
                 <div className="flex justify-between items-center">

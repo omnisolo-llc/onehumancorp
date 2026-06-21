@@ -3,7 +3,12 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const backendUrl = process.env.OHC_BACKEND_URL || 'http://127.0.0.1:18789';
-    const body = await request.json();
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      // allow empty body
+    }
 
     const headers = new Headers({
       'Content-Type': 'application/json',

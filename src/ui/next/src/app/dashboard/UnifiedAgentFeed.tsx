@@ -153,7 +153,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       setTriageError("");
       try {
         const tenant = tenantId();
-        const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenant)}`);
+        const res = await fetch(`/api/triage/pending?tenant_id=${encodeURIComponent(tenant)}`);
         if (!res.ok) throw new Error("Failed to load triage items from the database");
         const data = await res.json();
         const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
@@ -416,7 +416,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   const handleTriageDecision = async (id: string, approved: boolean) => {
     try {
-      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+      const res = await fetch(`/api/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ triage_item_id: id, approved })

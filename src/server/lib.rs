@@ -4952,16 +4952,15 @@ async fn ui_dashboard_unified_feed_handler(
     let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    let cache_future = cache.get_with_swr(&cache_key);
-    let supply_future = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized);
-    let (cache_res, supply_res) = tokio::join!(cache_future, supply_future);
-    let supply_val = supply_res.unwrap_or_else(|_| serde_json::json!({}));
+    let supply_future = tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } });
+    let cache_res = cache.get_with_swr(&cache_key).await;
 
     // Check cache
     if let Some((cached, is_stale)) = cache_res {
         if !is_stale {
             // Supply should not be cached because it changes continuously (inventory counts),
             // so we fetch supply and merge it on cache hit.
+            let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
             let mut final_cached = cached.clone();
             if let Some(obj) = final_cached.as_object_mut() {
                 obj.insert("supply".to_string(), supply_val.clone());
@@ -5013,6 +5012,7 @@ async fn ui_dashboard_unified_feed_handler(
 
         // Supply should not be cached because it changes continuously (inventory counts),
         // so we fetch supply and merge it on cache hit.
+        let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
         if let Some(obj) = final_cached.as_object_mut() {
             obj.insert("supply".to_string(), supply_val.clone());
@@ -5028,14 +5028,15 @@ async fn ui_dashboard_unified_feed_handler(
     let db7 = db.clone(); let t7 = tenant_id.clone();
     let db8 = db.clone(); let t8 = tenant_id.clone();
 
-    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res, supply_res) = tokio::join!(
         tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_triage_from_db(&db5, &t5, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_approvals_from_db(&db6, &t6, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_feed_from_db(&db7, &t7, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await })
+        tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await }),
+        supply_future
     );
 
     let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -5044,6 +5045,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
 
 
     let cacheable_result = serde_json::json!({
@@ -6081,8 +6083,11 @@ async fn create_ui_bom_item_handler(
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+        .route("/api/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+        .route("/api/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
@@ -6496,6 +6501,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
+        }))
+        .route("/onboarding", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/setup.html"))
         }))
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
