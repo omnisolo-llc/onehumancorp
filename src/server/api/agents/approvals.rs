@@ -52,6 +52,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-promoter-draft", post(simulate_promoter_draft))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/stream", get(stream_agent_feed))
@@ -280,6 +281,38 @@ async fn simulate_ambassador_draft(
     }
 }
 
+
+
+async fn simulate_promoter_draft(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "social_post",
+        "product_name": "Summer Collection Floral Dress",
+        "image_url": "https://images.unsplash.com/photo-1515347619152-32a76201a084?auto=format&fit=crop&q=80&w=800",
+        "draft_copy": "Get ready for summer with our new Floral Dress! 🌸✨ Perfect for those warm sunny days. Shop the link in bio! #SummerFashion #FloralDress #NewArrival"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Marketing,
+        "Draft Instagram post for Summer Collection Floral Dress".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate promoter draft: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
 
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,

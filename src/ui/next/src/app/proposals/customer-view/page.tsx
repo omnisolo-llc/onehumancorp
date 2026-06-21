@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function CustomerProposalView() {
+function CustomerProposalViewContent() {
     const searchParams = useSearchParams();
     const proposalId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState(false);
@@ -57,5 +58,13 @@ export default function CustomerProposalView() {
                 {isLoading ? 'Processing...' : 'Pay Deposit'}
             </button>
         </div>
+    );
+}
+
+export default function CustomerProposalView() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <CustomerProposalViewContent />
+        </Suspense>
     );
 }

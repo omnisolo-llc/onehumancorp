@@ -97,7 +97,8 @@ export default function FeedPage() {
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-    const textToEdit = isAmbassador ?
+    const isPromoter = item.proposed_action?.feature_type === 'social_post' || item.context_payload?.feature_type === 'social_post';
+    const textToEdit = isPromoter ? (item.proposed_action || item.context_payload)?.draft_copy : isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
         (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
     setEditValue(textToEdit || "");
@@ -108,16 +109,19 @@ export default function FeedPage() {
     if (!item) return;
 
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+    const isPromoter = item.proposed_action?.feature_type === 'social_post' || item.context_payload?.feature_type === 'social_post';
 
     const updatedProposed = {
         ...item.proposed_action,
-        description: isAmbassador ? item.proposed_action?.description : editValue,
+        description: (isAmbassador || isPromoter) ? item.proposed_action?.description : editValue,
         generated_response: isAmbassador ? editValue : item.proposed_action?.generated_response,
+        draft_copy: isPromoter ? editValue : item.proposed_action?.draft_copy,
     };
 
     const updatedContext = {
         ...item.context_payload,
-        summary: isAmbassador ? item.context_payload?.summary : editValue,
+        summary: (isAmbassador || isPromoter) ? item.context_payload?.summary : editValue,
+        draft_copy: isPromoter ? editValue : item.context_payload?.draft_copy,
         generated_response: isAmbassador ? editValue : item.context_payload?.generated_response,
     };
 
@@ -197,6 +201,22 @@ export default function FeedPage() {
     }
   };
 
+
+  const simulatePromoterDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-promoter-draft', { method: 'POST' });
+      // The websocket should pick it up, but we can also refetch
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateAmbassadorDraft = async () => {
     try {
       setLoading(true);
@@ -215,7 +235,7 @@ export default function FeedPage() {
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
-        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal")} />}
+        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard />}
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
@@ -250,6 +270,8 @@ export default function FeedPage() {
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
             const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
+            const isPromoter = item.proposed_action?.feature_type === 'social_post' || item.context_payload?.feature_type === 'social_post';
+            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -260,7 +282,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
                     <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isPromoter ? 'SOCIAL POST' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -270,6 +292,8 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isPromoter
+                    ? `Social Post Draft for ${promoterPayload?.product_name || 'Product'}`
                     : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Quote'
@@ -303,7 +327,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
-                        {isAmbassador ? 'Save & Send' : 'Save'}
+                        {isPromoter ? 'Save & Schedule' : isAmbassador ? 'Save & Send' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
@@ -347,7 +371,53 @@ export default function FeedPage() {
                           </div>
                         </div>
                       </div>
-                    ) : isAmbassador ? (
+                    ) : isPromoter ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 flex items-center gap-3">
+                           {promoterPayload?.image_url && <img src={promoterPayload.image_url} alt="Product" className="w-16 h-16 object-cover rounded-md border border-gray-200 dark:border-gray-600" />}
+                           <div>
+                              <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 mb-1">{promoterPayload?.product_name || "New Product"}</p>
+                              <p className="text-[12px] text-gray-500 dark:text-gray-400">Ready to promote on social channels.</p>
+                           </div>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
+                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap">
+                            {promoterPayload?.draft_copy}
+                          </p>
+                        </div>
+                      </div>
+                    ) : isPromoter ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#E81CFF] text-white font-medium hover:bg-[#C010D6] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule Post"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Schedule'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : isAmbassador ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                           <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
@@ -473,6 +543,13 @@ export default function FeedPage() {
 
         {/* Hidden test button to trigger simulation easily during development/testing */}
         <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center gap-2">
+                    <button
+             onClick={simulatePromoterDraft}
+             data-testid="simulate-promoter-btn"
+             className="text-xs bg-pink-100 text-pink-600 border border-pink-200 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Promoter Draft
+          </button>
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
