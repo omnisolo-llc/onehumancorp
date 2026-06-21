@@ -829,8 +829,9 @@
           }
         } catch (error) {
           console.error("Error fetching time savings data:", error);
-          aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "Failed to load time savings data.";
+          // Gracefully degrade the UI by hiding the widget if data fails to load
+          const aiSavingsCard = document.getElementById('ai-savings-widget')?.closest('.ohc-growth-card');
+          if (aiSavingsCard) aiSavingsCard.style.display = 'none';
         }
 
         if (shareSavingsBtn) {
