@@ -116,18 +116,18 @@ mod tests {
     fn test_compress_decompress_lossless() {
         let original_data = "This is a prompt that needs to be compressed to save space and tokens in our database.";
 
-        let compressed = compress_lossless(original_data).unwrap();
+        let compressed = compress_lossless(original_data).expect("failed to unwrap");
         assert!(compressed.starts_with(COMPRESSION_PREFIX));
         assert_ne!(compressed, original_data);
 
-        let decompressed = decompress_lossless(&compressed).unwrap();
+        let decompressed = decompress_lossless(&compressed).expect("failed to unwrap");
         assert_eq!(decompressed, original_data);
     }
 
     #[test]
     fn test_decompress_uncompressed() {
         let original_data = "Plain text data";
-        let decompressed = decompress_lossless(original_data).unwrap();
+        let decompressed = decompress_lossless(original_data).expect("failed to unwrap");
         assert_eq!(decompressed, original_data);
     }
 
@@ -159,8 +159,8 @@ mod tests {
 
         let minified = minify_json_prompt(input_json);
         // Field order might vary depending on serde implementation. Parse it back.
-        let parsed_min: serde_json::Value = serde_json::from_str(&minified).unwrap();
-        let parsed_orig: serde_json::Value = serde_json::from_str(input_json).unwrap();
+        let parsed_min: serde_json::Value = serde_json::from_str(&minified).expect("failed to unwrap");
+        let parsed_orig: serde_json::Value = serde_json::from_str(input_json).expect("failed to unwrap");
         assert_eq!(parsed_min, parsed_orig);
 
         // Ensure no whitespace outside strings
@@ -194,14 +194,14 @@ mod tests {
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(10, 10);
         let mut png_data = Vec::new();
         let mut cursor = Cursor::new(&mut png_data);
-        img.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
+        img.write_to(&mut cursor, image::ImageFormat::Png).expect("failed to unwrap");
 
-        let (optimized, mime) = optimize_image(&png_data, 5).unwrap();
+        let (optimized, mime) = optimize_image(&png_data, 5).expect("failed to unwrap");
         assert_eq!(mime, "image/webp");
         assert!(!optimized.is_empty());
 
         // Verify it's actually WebP and resized
-        let opt_img = image::load_from_memory(&optimized).unwrap();
+        let opt_img = image::load_from_memory(&optimized).expect("failed to unwrap");
         let (w, h) = image::GenericImageView::dimensions(&opt_img);
         assert!(w <= 5);
         assert!(h <= 5);
