@@ -455,8 +455,8 @@ pub mod services {
     pub mod inventory_sync;
     pub mod cache_invalidator;
     pub mod inventory;
+    pub mod loyalty;
 }
-
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
@@ -5811,6 +5811,7 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
+
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone()))
@@ -6450,6 +6451,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
+        .nest("/api/v1/loyalty", api::loyalty::routes(api::loyalty::LoyaltyApiState { loyalty_service: std::sync::Arc::new(crate::services::loyalty::LoyaltyService::new(db.pool.clone())) }))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))

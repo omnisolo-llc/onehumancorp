@@ -1,5 +1,6 @@
 pub mod dashboard;
 pub mod wizard;
+pub mod loyalty;
 pub mod billing;
 pub mod growth;
 pub mod onboarding;
