@@ -549,7 +549,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               onDecision={handleTriageDecision}
             />
 
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
@@ -561,7 +561,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             </div>
 
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
@@ -596,7 +596,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             )}
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
+              <div className="glassmorphism w-full flex flex-col items-center gap-6 p-6 rounded-[16px] shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
@@ -610,7 +610,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
+                className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
