@@ -19,7 +19,6 @@ use redis::AsyncCommands;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MobileAgentFeedItem {
     pub id: String,
-    pub tenant_id: String,
     pub event_source: String,
     pub lifecycle_state: String,
     pub created_at: Option<DateTime<Utc>>,
@@ -206,7 +205,6 @@ async fn list_feed_items(
                 let any_response = if mobile_optimized {
                     let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                         id: item.id,
-                        tenant_id: item.tenant_id,
                         event_source: item.event_source,
                         lifecycle_state: item.lifecycle_state,
                         created_at: item.created_at,
@@ -231,7 +229,6 @@ async fn list_feed_items(
             let any_response = if mobile_optimized {
                 let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                     id: item.id,
-                    tenant_id: item.tenant_id,
                     event_source: item.event_source,
                     lifecycle_state: item.lifecycle_state,
                     created_at: item.created_at,
