@@ -82,3 +82,64 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     await expect(page.locator('text=Invoice download is ready for your current billing period.')).toBeVisible({ timeout: 5000 });
   });
 });
+
+test.describe('Cost Features Next', () => {
+  test('Pricing page renders Manage Plan for active paid tier', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
+    // Intercept my-plan response to return Starter to verify UI logic
+    await page.route('**/api/billing/my-plan', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          current_plan: 'Starter',
+          ai_actions_used: 10,
+          ai_actions_limit: 1000,
+          storage_used_bytes: 0,
+          storage_limit_bytes: 5000000000,
+          next_bill_estimated: 2900
+        })
+      });
+    });
+
+    await page.goto('/pricing');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for the specific usage component to render
+    const managePlanButton = page.locator('button', { hasText: 'Manage Plan' });
+    await expect(managePlanButton.first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Cost Dashboard hides billing buttons for Free tier', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
+    await page.route('**/api/billing/my-plan', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          current_plan: 'Free',
+          ai_actions_used: 10,
+          ai_actions_limit: 100,
+          storage_used_bytes: 0,
+          storage_limit_bytes: 500000000,
+          next_bill_estimated: 0
+        })
+      });
+    });
+
+    await page.goto('/cost-dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Make sure we loaded
+    await expect(page.locator('text=Cost Transparency Dashboard').or(page.locator('#cost-dashboard-total-costs'))).toBeVisible({ timeout: 15000 });
+
+    // Ensure manage billing is hidden
+    const manageBillingBtn = page.locator('#manage-billing-btn');
+    if (await manageBillingBtn.count() > 0) {
+      await expect(manageBillingBtn).toBeHidden();
+    }
+  });
+
+});
