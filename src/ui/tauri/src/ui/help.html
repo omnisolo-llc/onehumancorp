@@ -599,18 +599,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      function renderContent(query) {
+      async function renderContent(query) {
         const lowerQuery = query.toLowerCase().trim();
 
         let filteredArticles = allArticles;
         let filteredVideos = allVideos;
 
         if (lowerQuery) {
-            filteredArticles = allArticles.filter(a =>
-                a.title.toLowerCase().includes(lowerQuery) ||
-                (a.desc && a.desc.toLowerCase().includes(lowerQuery)) ||
-                (a.category && a.category.toLowerCase().includes(lowerQuery))
-            );
+            try {
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    filteredArticles = allArticles.filter(a =>
+                        a.title.toLowerCase().includes(lowerQuery) ||
+                        (a.desc && a.desc.toLowerCase().includes(lowerQuery)) ||
+                        (a.category && a.category.toLowerCase().includes(lowerQuery))
+                    );
+                } else {
+                    const searchRes = await fetch('/api/help/search?q=' + encodeURIComponent(lowerQuery));
+                    if (searchRes.ok) {
+                        filteredArticles = await searchRes.json();
+                    } else {
+                         filteredArticles = allArticles.filter(a =>
+                            a.title.toLowerCase().includes(lowerQuery) ||
+                            (a.desc && a.desc.toLowerCase().includes(lowerQuery)) ||
+                            (a.category && a.category.toLowerCase().includes(lowerQuery))
+                        );
+                    }
+                }
+            } catch (e) {
+                 filteredArticles = allArticles.filter(a =>
+                    a.title.toLowerCase().includes(lowerQuery) ||
+                    (a.desc && a.desc.toLowerCase().includes(lowerQuery)) ||
+                    (a.category && a.category.toLowerCase().includes(lowerQuery))
+                );
+            }
+
             filteredVideos = allVideos.filter(v =>
                 v.title.toLowerCase().includes(lowerQuery)
             );
