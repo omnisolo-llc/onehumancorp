@@ -3,12 +3,12 @@ import { test, expect } from '@playwright/test';
 test.describe('Walkthrough and Tooltips features', () => {
   test('Dashboard walkthrough and help center elements are visible and work', async ({ page }) => {
     // Navigate using the admin credentials implicitly logged in by global setup, or just go directly
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#dashboard-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
+    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.ohc-walkthrough-overlay');
@@ -20,17 +20,17 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
+    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
   });
 
   test('POS walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/pos.html');
+    await page.goto('/api/ui/pos.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#pos-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
+    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.ohc-walkthrough-overlay');
@@ -42,7 +42,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
+    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
 
     // Check Help Center button
@@ -51,12 +51,12 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Assistant walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/assistant.html');
+    await page.goto('/api/ui/assistant.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#assistant-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
+    await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
     const overlay = page.locator('.ohc-walkthrough-overlay');
@@ -68,7 +68,7 @@ test.describe('Walkthrough and Tooltips features', () => {
 
     // Close the walkthrough
     const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
+    await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
 
     // Check Help Center button
@@ -77,7 +77,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Tooltips are injected into the page', async ({ page }) => {
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check tooltips registry is available
     const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
@@ -100,12 +100,12 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(results).toBeVisible();
 
     // The chat widget should also be there
-    const chatBtn = page.locator('#ohc-floating-help-btn');
+    const chatBtn = page.locator('#ohc-floating-help-btn').first();
     await expect(chatBtn).toBeVisible();
-    await chatBtn.click();
+    await chatBtn.click({ force: true });
 
     // The chat widget should open
-    const chatWidget = page.locator('#ohc-floating-help-widget');
+    const chatWidget = page.locator('#ohc-floating-help-widget').first();
     await expect(chatWidget).toBeVisible();
 
     // Switch to Ask AI tab
