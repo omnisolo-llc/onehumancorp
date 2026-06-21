@@ -1,10 +1,15 @@
 import { POST } from "./route";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("POST /api/billing/create-checkout-session", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should proxy the request to the backend and return the response", async () => {

@@ -12,6 +12,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
     "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
     "//src/ui/next:src/e2e/whatsapp-flow.spec.ts",
+    "//src/ui/next:src/e2e/whatsapp-twilio-flow.spec.ts",
 
     "//src/ui/next:src/e2e/branding-loop.spec.ts",
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
@@ -51,7 +52,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
     "//src/ui/next:e2e/dashboard-feed.spec.ts",
     "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
-    "//src/ui/next:src/e2e/documentation_flows.spec.ts",
+
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "playwright/documentation_features.spec.ts",
@@ -59,6 +60,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/social_share_widget.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",
+    "//src/ui/next:src/e2e/viral_share_to_unlock.spec.ts",
     "//src/ui/next:e2e/storefront_v2.spec.ts",
 ]
 

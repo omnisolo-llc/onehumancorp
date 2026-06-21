@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use std::time::{Instant, Duration};
 use dashmap::DashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Debug)]
 pub struct CachedResponse {
@@ -31,7 +31,10 @@ impl PromptCache {
         }
     }
 
-    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(
+        mut self,
+        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
+    ) -> Self {
         self.telemetry_store = Some(store);
         self
     }
@@ -48,7 +51,8 @@ impl PromptCache {
             }
             drop(entry_ref);
             // Remove expired entry atomically
-            self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > v.ttl);
+            self.cache
+                .remove_if(prompt, |_, v| v.created_at.elapsed() > v.ttl);
         }
         None
     }
@@ -61,13 +65,19 @@ impl PromptCache {
         }
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
-            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count); // pii-safe
+            tracing::info!(
+                "💰 Miser cost optimization: Prompt cache hit saved {} tokens",
+                r.token_count
+            ); // pii-safe
 
             if let Some(store) = &self.telemetry_store {
-                store.llm_cost_counter.add(0, &[
-                    opentelemetry::KeyValue::new("cache_hit", "true"),
-                    opentelemetry::KeyValue::new("model", model.to_string()),
-                ]);
+                store.llm_cost_counter.add(
+                    0,
+                    &[
+                        opentelemetry::KeyValue::new("cache_hit", "true"),
+                        opentelemetry::KeyValue::new("model", model.to_string()),
+                    ],
+                );
             }
 
             let pricing = super::calculator::get_pricing(model);
@@ -87,12 +97,15 @@ impl PromptCache {
         if self.cache.len() >= self.max_capacity {
             self.evict_oldest();
         }
-        self.cache.insert(prompt.to_string(), CachedResponse {
-            text: response.to_string(),
-            created_at: Instant::now(),
-            token_count,
-            ttl,
-        });
+        self.cache.insert(
+            prompt.to_string(),
+            CachedResponse {
+                text: response.to_string(),
+                created_at: Instant::now(),
+                token_count,
+                ttl,
+            },
+        );
     }
 
     fn evict_oldest(&self) {
@@ -114,13 +127,16 @@ impl PromptCache {
 
         // Sort by created_at to remove the oldest items.
         // DashMap iter() locks the shards, so we collect keys first to minimize lock time.
-        let mut entries: Vec<(String, Instant)> = self.cache.iter()
+        let mut entries: Vec<(String, Instant)> = self
+            .cache
+            .iter()
             .map(|kv| (kv.key().clone(), kv.value().created_at))
             .collect();
 
         // Use select_nth_unstable_by_key for O(N) performance instead of O(N log N) sorting
         if entries.len() > to_remove {
-            let (to_remove_slice, _, _) = entries.select_nth_unstable_by_key(to_remove, |(_, time)| *time);
+            let (to_remove_slice, _, _) =
+                entries.select_nth_unstable_by_key(to_remove, |(_, time)| *time);
             for (key, _) in to_remove_slice.iter() {
                 self.cache.remove(key);
             }
@@ -133,7 +149,8 @@ impl PromptCache {
 
     pub fn clear_expired(&self) {
         let now = Instant::now();
-        self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= entry.ttl);
+        self.cache
+            .retain(|_, entry| now.duration_since(entry.created_at) <= entry.ttl);
     }
 
     /// Intelligently truncates a context string to fit within a given token limit.
@@ -148,12 +165,21 @@ impl PromptCache {
         let mut char_count = 0;
         let mut byte_index = context.len();
 
-        for (i, _) in context.char_indices() {
-            if char_count == max_chars {
-                byte_index = i;
-                break;
+        // Fast path for ASCII strings where bytes == chars
+        if context.is_ascii() {
+            if context.len() <= max_chars {
+                return context.to_string();
             }
-            char_count += 1;
+            byte_index = max_chars;
+            char_count = max_chars;
+        } else {
+            for (i, _) in context.char_indices() {
+                if char_count == max_chars {
+                    byte_index = i;
+                    break;
+                }
+                char_count += 1;
+            }
         }
 
         if char_count < max_chars && byte_index == context.len() {
@@ -173,7 +199,9 @@ impl PromptCache {
         }
 
         // Clean up trailing whitespace and punctuation before appending ellipsis
-        while truncated.ends_with(char::is_whitespace) || truncated.ends_with(|c: char| c.is_ascii_punctuation()) {
+        while truncated.ends_with(char::is_whitespace)
+            || truncated.ends_with(|c: char| c.is_ascii_punctuation())
+        {
             truncated.pop();
         }
 
@@ -194,7 +222,7 @@ mod tests {
 
         let response = cache.get("What is the capital of France?");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
     }
 
     #[test]
@@ -236,7 +264,8 @@ mod tests {
         let cache = PromptCache::new(Duration::from_secs(10)).with_telemetry(store.clone());
 
         cache.set("What is the capital of France?", "Paris", 100);
-        let (response, _cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        let (response, _cost) =
+            cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
 
         assert!(response.is_some());
         // Since telemetry doesn't have an easily readable getter in this mock test without accessing the internal structure,
@@ -245,13 +274,16 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
-        unsafe { std::env::set_var("OHC_LLM_MODEL", "gpt-4o"); } // 5.00 per 1M tokens
+        unsafe {
+            std::env::set_var("OHC_LLM_MODEL", "gpt-4o");
+        } // 5.00 per 1M tokens
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 1_000_000);
 
-        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        let (response, cost) =
+            cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
         // 1,000,000 tokens * 2.50 / 1M = 2.5 dollars = 250 cents
         assert_eq!(cost, 250);
     }
@@ -261,7 +293,8 @@ mod tests {
         let cache = PromptCache::new(Duration::from_secs(10));
         let response = cache.get("What is the capital of France?");
         assert!(response.is_none());
-        let (response_with_cost, cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        let (response_with_cost, cost) =
+            cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
         assert!(response_with_cost.is_none());
         assert_eq!(cost, 0);
     }
@@ -295,11 +328,16 @@ mod tests {
     #[test]
     fn test_prompt_cache_set_with_ttl() {
         let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set_with_ttl("What is the capital of France?", "Paris", 1, Duration::from_millis(10));
+        cache.set_with_ttl(
+            "What is the capital of France?",
+            "Paris",
+            1,
+            Duration::from_millis(10),
+        );
 
         let response = cache.get("What is the capital of France?");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
 
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
@@ -307,7 +345,8 @@ mod tests {
 
     #[test]
     fn test_truncate_context() {
-        let text = "This is a very long string that we need to truncate to save some tokens and money.";
+        let text =
+            "This is a very long string that we need to truncate to save some tokens and money.";
 
         // No truncation needed
         let res = PromptCache::truncate_context(text, 100);

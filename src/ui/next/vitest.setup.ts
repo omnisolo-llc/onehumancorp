@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
 
 // Mock next/navigation
@@ -185,3 +185,15 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
+
+// Silence React act() warnings
+const originalError = console.error;
+console.error = (...args: any[]) => {
+  if (typeof args[0] === 'string' && args[0].includes('Warning: The current testing environment is not configured to support act')) {
+    return;
+  }
+  originalError(...args);
+};
+
+// Set IS_REACT_ACT_ENVIRONMENT
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
