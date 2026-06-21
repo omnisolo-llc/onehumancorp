@@ -8,7 +8,7 @@ test.describe('Help Center & Documentation Features', () => {
     await page.goto('/api/ui/help.html');
 
     // 2. Help Center Page is loaded
-    await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
+    await expect(page.locator('h1:has-text("In-App Help Center")')).toBeVisible();
 
     // 3. Search for a specific topic
     const searchInput = page.locator('input[placeholder="Search for help articles and videos..."]');
