@@ -115,4 +115,101 @@ test.describe('Glassmorphism UI Audit', () => {
     });
     expect(borderRadius).toBe('16px');
   });
+
+  test('setup container has proper dark mode glassmorphism styling', async ({ page }) => {
+    await page.goto('/setup.html');
+    const container = page.locator('#form-container');
+    await expect(container).toBeVisible();
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(100);
+
+    const containerBgColor = await container.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(containerBgColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+,\s*0\.[0-9]+\)/);
+  });
+
+  test('text inputs have proper dark mode glassmorphism styling and minimum height', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Evaluate to click because visibility logic is tricky here
+    await page.locator('button:has-text("Start My Business")').click();
+    await page.waitForTimeout(500);
+
+    const input = page.locator('#business-name');
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(100);
+
+    const minHeight = await input.evaluate((el) => {
+      return window.getComputedStyle(el).minHeight;
+    });
+    expect(minHeight).toBe('44px');
+
+    const inputBgColor = await input.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(inputBgColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+,\s*0\.[0-9]+\)/);
+  });
+
+  test('textareas have proper dark mode glassmorphism styling and minimum height', async ({ page }) => {
+    await page.goto('/setup.html');
+    await page.locator('button:has-text("Conversational Setup")').click();
+    await page.waitForTimeout(500);
+
+    const textarea = page.locator('#chat-input');
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(100);
+
+    const minHeight = await textarea.evaluate((el) => {
+      return window.getComputedStyle(el).minHeight;
+    });
+    expect(minHeight).toBe('44px');
+
+    const bgColor = await textarea.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(bgColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+,\s*0\.[0-9]+\)/);
+  });
+
+  test('select dropdowns have proper dark mode glassmorphism styling and minimum height', async ({ page }) => {
+    await page.goto('/setup.html');
+    await page.locator('button:has-text("Start My Business")').click();
+    await page.waitForTimeout(500);
+
+    const select = page.locator('#business-categories');
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(100);
+
+    const minHeight = await select.evaluate((el) => {
+      return window.getComputedStyle(el).minHeight;
+    });
+    expect(minHeight).toBe('44px');
+
+    const bgColor = await select.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(bgColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+,\s*0\.[0-9]+\)/);
+  });
+
+  test('mobile layout maintains touch target sizes of at least 44x44px for action buttons', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/setup.html');
+
+    const button = page.locator('button:has-text("Instant Build")');
+    await expect(button).toBeVisible();
+
+    const minHeight = await button.evaluate((el) => {
+      return window.getComputedStyle(el).minHeight;
+    });
+    const minWidth = await button.evaluate((el) => {
+      return window.getComputedStyle(el).minWidth;
+    });
+    expect(minHeight).toBe('44px');
+    expect(minWidth).toBe('44px');
+  });
+
 });
