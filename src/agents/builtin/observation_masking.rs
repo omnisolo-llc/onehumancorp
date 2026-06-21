@@ -153,7 +153,9 @@ impl JetBrainsObservationMasker {
                     for tr in &mut messages[i].tool_results {
                         if tr.error.is_empty()
                             && (!tr.content.starts_with("{\"_masked_observation\"")
-                                && !tr.content.starts_with("{\"error\": \"[Observation Masked"))
+                                && !tr
+                                    .content
+                                    .starts_with("{\"_masked_observation\": \"[Observation Masked"))
                         {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
@@ -182,7 +184,8 @@ impl JetBrainsObservationMasker {
                                             bytes, tr.tool_call_id
                                         );
                                         tr.content =
-                                            serde_json::json!({ "error": raw_msg }).to_string();
+                                            serde_json::json!({ "_masked_observation": raw_msg })
+                                                .to_string();
                                     }
                                     continue; // Treated as JSON, don't fall back to raw string masking
                                 }
@@ -205,9 +208,11 @@ impl JetBrainsObservationMasker {
                                     );
                                     let content_trimmed = tr.content.trim();
                                     if content_trimmed.starts_with('{') {
-                                        serde_json::json!({ "error": raw_msg }).to_string()
+                                        serde_json::json!({ "_masked_observation": raw_msg })
+                                            .to_string()
                                     } else if content_trimmed.starts_with('[') {
-                                        serde_json::json!([{ "error": raw_msg }]).to_string()
+                                        serde_json::json!([{ "_masked_observation": raw_msg }])
+                                            .to_string()
                                     } else {
                                         raw_msg
                                     }
@@ -218,9 +223,11 @@ impl JetBrainsObservationMasker {
                                     );
                                     let content_trimmed = tr.content.trim();
                                     if content_trimmed.starts_with('{') {
-                                        serde_json::json!({ "error": raw_msg }).to_string()
+                                        serde_json::json!({ "_masked_observation": raw_msg })
+                                            .to_string()
                                     } else if content_trimmed.starts_with('[') {
-                                        serde_json::json!([{ "error": raw_msg }]).to_string()
+                                        serde_json::json!([{ "_masked_observation": raw_msg }])
+                                            .to_string()
                                     } else {
                                         raw_msg
                                     }
@@ -359,9 +366,9 @@ mod tests {
 
         if let Ok(parsed) = serde_json::from_str::<Value>(masked_content) {
             if let Some(obj) = parsed.as_object() {
-                if obj.contains_key("error") {
+                if obj.contains_key("_masked_observation") {
                     // It fell back to complete masking. Let's make sure it contains Observation Masked.
-                    let err_str = obj.get("error").unwrap().as_str().unwrap();
+                    let err_str = obj.get("_masked_observation").unwrap().as_str().unwrap();
                     assert!(err_str.contains("[Observation Masked"));
                 } else {
                     assert_eq!(obj.get("small").unwrap().as_str().unwrap(), "abc");
@@ -439,8 +446,15 @@ mod additional_tests {
             assert!(last_element.contains("[Masked array:"));
             assert!(last_element.contains("elements truncated]"));
         } else if let Some(s) = parsed
+            .as_array()
+            .and_then(|a| a[0].as_object())
+            .and_then(|o| o.get("_masked_observation"))
+            .and_then(|v| v.as_str())
+        {
+            assert!(s.contains("[Observation Masked"));
+        } else if let Some(s) = parsed
             .as_object()
-            .and_then(|o| o.get("error"))
+            .and_then(|o| o.get("_masked_observation"))
             .and_then(|v| v.as_str())
         {
             assert!(s.contains("[Observation Masked"));
@@ -490,8 +504,8 @@ mod additional_tests {
         let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
 
         if let Some(obj) = parsed.as_object() {
-            if obj.contains_key("error") {
-                let s = obj.get("error").unwrap().as_str().unwrap();
+            if obj.contains_key("_masked_observation") {
+                let s = obj.get("_masked_observation").unwrap().as_str().unwrap();
                 assert!(s.contains("[Observation Masked"));
             } else {
                 assert_eq!(obj.len(), 21); // 20 original keys + 1 masked keys summary
