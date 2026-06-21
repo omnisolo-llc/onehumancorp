@@ -112,6 +112,10 @@ async fn execute_publish_site_job(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+    // Explicitly Pre-render SEO metadata to static HTML cache for edge network
+    let prerender_cache_key = format!("storefront:product:{}:{}", tenant_id, site_id);
+    let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, prerender_cache_key.clone(), cache.clone()).await;
+
     let cache_key = format!("edge_site_{}_{}", tenant_id, site_id); // Keeping old var for notify to not break it
     sqlx::query("NOTIFY edge_cache_invalidation, $1")
         .bind(&cache_key)

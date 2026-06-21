@@ -42,6 +42,22 @@ impl Department for OperationsAgent {
             cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
             if !product_id.is_empty() {
                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
+                // Additional precision edge cache invalidation by exact key mapping
+                let edge_key = format!("storefront:product:{}:{}", event.tenant_id, product_id);
+                cache.invalidate_by_key(&edge_key).await;
+
+                // Cloudflare Edge Cache Purge
+                if let Ok(cf_token) = std::env::var("CLOUDFLARE_API_TOKEN") {
+                    if let Ok(cf_zone) = std::env::var("CLOUDFLARE_ZONE_ID") {
+                        let _ = reqwest::Client::new()
+                            .post(&format!("https://api.cloudflare.com/client/v4/zones/{}/purge_cache", cf_zone))
+                            .bearer_auth(cf_token)
+                            .json(&serde_json::json!({ "tags": [edge_key] }))
+                            .send()
+                            .await;
+                    }
+                }
             }
         }
 

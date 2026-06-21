@@ -287,6 +287,10 @@ where
         }
     }
 
+    pub async fn invalidate_by_key(&self, key: &str) {
+        self.invalidate(key).await;
+    }
+
     pub async fn invalidate_by_tag(&self, tag: &str) {
         let mut keys_to_delete = Vec::new();
         let tags_map = self.get_local_tags();
