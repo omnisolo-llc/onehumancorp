@@ -6,7 +6,7 @@ test.describe('AI Incident Resolution & Escalation Assistant Flow', () => {
   test.beforeEach(async ({ page, request }) => {
     // Clear feed before starting the test to ensure a clean state
     try {
-      await request.post('http://localhost:3000/api/v1/auth/mock-login', {
+      await request.post('/api/v1/auth/mock-login', {
         data: {
           tenant_id: MOCK_TENANT_ID,
           role: 'owner',

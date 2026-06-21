@@ -9,28 +9,28 @@ export const test = base.extend({
 
 test.describe('Actionable Inbox', () => {
   test('Inbox loads and displays messages', async ({ page }) => {
-    await page.goto('http://localhost:3000/inbox');
+    await page.goto('/inbox');
     await expect(page.locator('.app-title')).toHaveText('Unified Inbox');
     await expect(page.locator('#messages-list')).toBeVisible();
   });
 
   test('Inbox displays original content and draft reply', async ({ page }) => {
-    await page.goto('http://localhost:3000/inbox');
+    await page.goto('/inbox');
     await expect(page.locator('.app-title')).toHaveText('Unified Inbox');
   });
 
   test('Inbox can approve and send draft', async ({ page }) => {
-    await page.goto('http://localhost:3000/inbox');
+    await page.goto('/inbox');
     await expect(page.locator('.app-title')).toHaveText('Unified Inbox');
   });
 
   test('Inbox properly flags messages with warn tone', async ({ page }) => {
-    await page.goto('http://localhost:3000/inbox');
+    await page.goto('/inbox');
     await expect(page.locator('.app-title')).toHaveText('Unified Inbox');
   });
 
   test('Inbox shows empty state correctly', async ({ page }) => {
-    await page.goto('http://localhost:3000/inbox');
+    await page.goto('/inbox');
     await expect(page.locator('.app-title')).toHaveText('Unified Inbox');
   });
 });
