@@ -5,23 +5,6 @@ pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
 
-#[derive(serde::Deserialize)]
-pub struct UiTenantQuery {
-    pub tenant_id: Option<String>,
-    pub tenant: Option<String>,
-    pub mobile_optimized: Option<bool>,
-}
-
-pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
-    query
-        .tenant_id
-        .as_deref()
-        .or(query.tenant.as_deref())
-        .map(str::trim)
-        .unwrap_or("")
-        .to_string()
-}
-
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -3000,6 +2983,23 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     }
 }
 
+#[derive(serde::Deserialize)]
+struct UiTenantQuery {
+    tenant_id: Option<String>,
+    tenant: Option<String>,
+    mobile_optimized: Option<bool>,
+}
+
+pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
+    query
+        .tenant_id
+        .as_deref()
+        .or(query.tenant.as_deref())
+        .map(str::trim)
+        .filter(|tenant| !tenant.is_empty())
+        .unwrap_or("default")
+        .to_string()
+}
 
 #[derive(serde::Deserialize)]
 pub struct TriageActionPayload {
@@ -5954,10 +5954,6 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
-        .nest(
-            "/api/unified-inbox",
-            crate::api::unified_inbox::router(crate::api::unified_inbox::UnifiedInboxState { db: db.clone() }),
-        )
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
