@@ -808,6 +808,11 @@ pub async fn bench_ui_supply_latency() {
     }
 }
 
+#[tokio::test]
+async fn test_bench_crm_opportunities_latency() {
+    bench_crm_opportunities_latency().await;
+}
+
 pub async fn bench_crm_opportunities_latency() {
     println!("Benchmarking list_opportunities_handler (Parallel Execution Optimization)...");
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
