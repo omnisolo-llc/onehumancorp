@@ -549,46 +549,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               onDecision={handleTriageDecision}
             />
 
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-sans">Just now</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
-                </h3>
-              </div>
-            </div>
-
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-sans">5 min ago</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
-                </h3>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-[#00C24B] hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
-                  Approve
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
-                  Edit
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] min-w-[44px] rounded-[8px] font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
-                  Deny
-                </button>
-              </div>
-            </div>
 
             {(loading || triageLoading) && (
               <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
