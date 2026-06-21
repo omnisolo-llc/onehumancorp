@@ -46,6 +46,7 @@ pub async fn get_appointments(
 ) -> Result<Json<GetAppointmentsResponse>, (axum::http::StatusCode, String)> {
 
 
+
     let query_str = if query.mobile_optimized.unwrap_or(false) {
         r#"
         SELECT
@@ -86,38 +87,17 @@ pub async fn get_appointments(
 "#
     };
 
-    let pool1 = state.pool.clone();
-    let pool2 = state.pool.clone();
-    let tenant_id_1 = query.tenant_id.clone();
-    let tenant_id_2 = query.tenant_id.clone();
+    let rows = sqlx::query(query_str)
+        .bind(&query.tenant_id)
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|e| {
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                e.to_string(),
+            )
+        })?;
 
-    // Create a dummy metadata query to show parallel execution
-    let (rows_res, _meta_res) = tokio::join!(
-        tokio::spawn(async move {
-            sqlx::query(query_str)
-                .bind(&tenant_id_1)
-                .fetch_all(&pool1)
-                .await
-        }),
-        tokio::spawn(async move {
-            sqlx::query("SELECT count(*) FROM appointments WHERE tenant_id = $1")
-                .bind(&tenant_id_2)
-                .fetch_one(&pool2)
-                .await
-        })
-    );
-
-    let rows = rows_res.map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?.map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?;
 
 
     let mut appointments = Vec::new();
