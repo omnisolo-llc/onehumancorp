@@ -10,8 +10,6 @@ function CustomerProposalViewContent() {
 
     const handlePayDeposit = async () => {
         setIsLoading(true);
-        // Normally this would call an API route to generate a Stripe Checkout URL
-        // and then redirect the user.
         setTimeout(() => {
             alert('Redirecting to Stripe for deposit payment...');
             setIsLoading(false);
@@ -28,12 +26,12 @@ function CustomerProposalViewContent() {
                     <span>Custom Service</span>
                     <span>$150.00</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px' }}>
                     <span>Total</span>
                     <span>$150.00</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0066cc', fontWeight: 'bold', marginTop: '10px' }}>
-                    <span>Deposit Due</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '10px', color: '#0066FF' }}>
+                    <span>Required Deposit</span>
                     <span>$50.00</span>
                 </div>
             </div>
@@ -43,18 +41,17 @@ function CustomerProposalViewContent() {
                 disabled={isLoading}
                 style={{
                     width: '100%',
+                    backgroundColor: '#0066FF',
+                    color: 'white',
                     padding: '15px',
-                    backgroundColor: '#000',
-                    color: '#fff',
-                    border: 'none',
                     borderRadius: '8px',
-                    marginTop: '30px',
-                    fontSize: '16px',
+                    border: 'none',
                     fontWeight: 'bold',
-                    cursor: 'pointer'
+                    marginTop: '30px',
+                    opacity: isLoading ? 0.7 : 1
                 }}
             >
-                {isLoading ? 'Processing...' : 'Pay Deposit'}
+                {isLoading ? 'Processing...' : 'Pay $50 Deposit'}
             </button>
         </div>
     );
