@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::{State, Json, Query},
     response::IntoResponse,
     http::StatusCode,
     routing::{get, post},
@@ -125,9 +125,22 @@ async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
     (StatusCode::OK, Json((*hub.get_agents().await).clone())).into_response()
 }
 
-pub async fn list_marketplace_agents() -> impl IntoResponse {
+#[derive(Deserialize, Debug)]
+pub struct MarketplaceQuery {
+    pub q: Option<String>,
+}
+
+pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> impl IntoResponse {
     let marketplace = Marketplace::new();
-    let agents = marketplace.list_agents();
+    let mut agents = marketplace.list_agents();
+
+    if let Some(q) = query.q {
+        if !q.is_empty() {
+            let lower_q = q.to_lowercase();
+            agents.retain(|a| a.name.to_lowercase().contains(&lower_q));
+        }
+    }
+
 
     // Transform into a JSON format expected by the frontend
     let json_agents = serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
