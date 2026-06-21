@@ -43,10 +43,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
     // Offer step
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
-    // Domain step
-    await page.getByTestId('domain-name').fill('my-bakery-shop');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
     // Template step
     await page.getByTestId('template-selection').selectOption('Modern');
     // Make sure finish btn is visible before interacting
@@ -155,7 +152,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
         localStorage.setItem('onboardingState', JSON.stringify({
-            step: 8, // step-template
+            step: 7, // step-template
             businessName: 'Error Bakery',
             categories: 'Bakery',
             templateSelection: 'Modern'
