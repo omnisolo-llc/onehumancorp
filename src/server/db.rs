@@ -465,7 +465,7 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) ORDER BY id ASC LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -488,7 +488,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ? OR CAST(total_cost AS TEXT) LIKE ?) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (LOWER(id) LIKE LOWER(?) OR LOWER(status) LIKE LOWER(?) OR LOWER(CAST(total_cost AS TEXT)) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -513,7 +513,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (original_content LIKE ? OR source LIKE ?) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -2418,8 +2418,8 @@ mod e2e_search_workspace_tests {
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Query both and compare
-        let sqlite_results = sqlite_db.search_workspace(&unique_tenant, "john").await.expect("SQLite query failed");
-        let pg_results = pg_db.search_workspace(&unique_tenant, "john").await.expect("Postgres query failed");
+        let sqlite_results = sqlite_db.search_workspace(&unique_tenant, "JoHn").await.expect("SQLite query failed");
+        let pg_results = pg_db.search_workspace(&unique_tenant, "JoHn").await.expect("Postgres query failed");
 
         assert_eq!(sqlite_results.len(), pg_results.len(), "Number of search results should match");
 
