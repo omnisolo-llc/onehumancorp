@@ -1432,7 +1432,7 @@ impl HubService for MyHubService {
         let period_start = start_of_month.format("%Y-%m-%d").to_string();
         let period_end = now.format("%Y-%m-%d").to_string();
 
-        let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
+        let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")  {
             7
         } else {
             now.day()
@@ -1459,7 +1459,7 @@ impl HubService for MyHubService {
 
         let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
         let _ = budget_manager.record_spend_cents(projected_cents);
-        let budget_health_alert = budget_manager.check_alert_threshold() || tenant_id == "default";
+        let budget_health_alert = budget_manager.check_alert_threshold();
 
         let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,

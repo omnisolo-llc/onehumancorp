@@ -433,7 +433,7 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
 
-    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
+    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")  {
         7
     } else {
         now.day()
@@ -465,7 +465,7 @@ pub async fn cost_dashboard_handler(
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
     budget_manager.record_spend_cents(projected_cents).unwrap_or(false);
-    let budget_health_alert = budget_manager.check_alert_threshold() || tenant_id == "default";
+    let budget_health_alert = budget_manager.check_alert_threshold();
 
 
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
