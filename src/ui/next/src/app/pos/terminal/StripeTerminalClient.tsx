@@ -230,7 +230,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       const res = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, currency: 'usd' })
+        body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
       });
       const data = await res.json();
 
