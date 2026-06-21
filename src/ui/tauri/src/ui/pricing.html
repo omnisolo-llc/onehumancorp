@@ -306,17 +306,45 @@
                 const btn = document.getElementById(btnId);
                 if (btn) {
                     btn.className = 'btn-secondary';
-                    btn.disabled = true;
-                    btn.innerText = 'Current Plan';
+                    if (currentPlan === "Free") { btn.disabled = true; } else { btn.onclick = managePlan; }
+                    if (currentPlan === 'Free') { btn.innerText = 'Current Plan'; } else { btn.innerText = 'Manage Plan'; }
                     btn.style.backgroundColor = '';
                     btn.style.boxShadow = '';
-                    btn.onclick = null;
+                    if (currentPlan === "Free") { btn.onclick = null; }
                 }
             }
         } catch (e) {
             console.error('Failed to fetch current plan', e);
         }
       });
+
+
+      async function managePlan() {
+        const errorMsg = document.getElementById('error-message');
+        errorMsg.innerText = '';
+        try {
+          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const headers = { 'Content-Type': 'application/json' };
+          if (tenant) { headers['x-ohc-tenant-id'] = tenant; }
+          const response = await fetch('/api/billing/create-billing-portal-session', {
+            method: 'POST',
+            headers: headers
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.url) {
+              window.location.href = data.url;
+            } else {
+              errorMsg.innerText = 'Failed to open billing portal.';
+            }
+          } else {
+            errorMsg.innerText = 'Failed to open billing portal.';
+          }
+        } catch (error) {
+          console.error('Error creating billing portal session:', error);
+          errorMsg.innerText = 'Failed to open billing portal.';
+        }
+      }
 
       async function upgradePlan(tier) {
         const btnId = `btn-${tier}`;

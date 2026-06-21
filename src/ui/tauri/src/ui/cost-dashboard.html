@@ -381,6 +381,14 @@
                 const planData = await planRes.json();
                 document.getElementById('my-plan-name').innerText = planData.current_plan;
 
+                if (planData.current_plan === 'Free') {
+                    const manageBillingBtn = document.getElementById('manage-billing-btn');
+                    if (manageBillingBtn) manageBillingBtn.style.display = 'none';
+
+                    const cancelSubscriptionBtn = document.getElementById('cancel-subscription-btn');
+                    if (cancelSubscriptionBtn) cancelSubscriptionBtn.style.display = 'none';
+                }
+
                 let warningMessage = "";
 
                 // AI Actions
