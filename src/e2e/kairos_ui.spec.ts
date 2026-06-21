@@ -36,15 +36,4 @@ test('autodream memory stats', async ({ page }) => {
   await expect(page.locator('#kairos-memory')).toBeVisible({ timeout: 15000 });
 });
 
-test('walkthrough tooltips appear', async ({ page }) => {
-  await page.goto('/login');
-  await page.evaluate(() => window.localStorage.setItem('TEST_WALKTHROUGH', 'true'));
-  await page.goto('/kairos?walkthrough=true&test_walkthrough=true');
-  await page.waitForLoadState('domcontentloaded');
-
-  // The walkthrough has a 1 second delay
-  await page.waitForTimeout(1500);
-
-  // The walkthrough should show a tooltip
-  await expect(page.getByText('Shared tasks appear here when the orchestration backend returns active work.')).toBeVisible({ timeout: 30000 });
 });

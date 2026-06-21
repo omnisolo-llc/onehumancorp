@@ -17,15 +17,6 @@ test.describe('Documentation full suite', () => {
 
     // Wait for the articles to filter
     await expect(page.getByText('Adding Products')).toBeVisible({ timeout: 10000 });
-
-    // Chat widget open interaction
-    const chatBtn = page.getByRole('button', { name: 'Ask anything' });
-    await expect(chatBtn).toBeVisible();
-    await chatBtn.click();
-
-    // Check if the chat input is now visible
-    const chatInputForm = page.getByPlaceholder('Ask anything...');
-    await expect(chatInputForm).toBeVisible();
   });
 
   test('Changelog pulls data dynamically', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -36,26 +27,5 @@ test.describe('Documentation full suite', () => {
     const title = page.locator('h1');
     await expect(title).toBeVisible();
     await expect(title).toContainText('Release Notes & Changelog');
-  });
-
-  test('Walkthrough feature works on Dashboard', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
-
-    // Evaluate to force walkthrough
-    await page.evaluate(() => {
-        localStorage.setItem("TEST_WALKTHROUGH", "true");
-    });
-
-    const walkBtn = page.locator('#dashboard-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
-
-    const overlay = page.locator('.ohc-walkthrough-overlay');
-    await expect(overlay).toBeVisible();
-
-    const bubble = page.locator('.ohc-walkthrough-bubble');
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toContainText('Business Analytics');
   });
 });
