@@ -497,7 +497,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
+      <div className="w-full mb-6 p-4 rounded-[16px] glassmorphism border-[#FF3B30] text-[#FF3B30] text-center">
         {error}
       </div>
     );
@@ -549,7 +549,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               onDecision={handleTriageDecision}
             />
 
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
@@ -561,7 +561,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             </div>
 
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
@@ -591,12 +591,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             </div>
 
             {(loading || triageLoading) && (
-              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Agent Proposals...
               </div>
             )}
             {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center" data-testid="triage-feed-empty">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
@@ -610,7 +610,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
+                className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -649,7 +649,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && <InstagramDMCard approval={approval} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && <AmbassadorReplyCard approval={approval} />}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-[16px] glassmorphism flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -659,7 +659,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
-                          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px] relative mt-2">
+                          <div className="glassmorphism p-3 rounded-[8px] relative mt-2">
                             <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
@@ -1350,12 +1350,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center">
+              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -1365,7 +1365,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">

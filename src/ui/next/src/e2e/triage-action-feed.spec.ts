@@ -80,9 +80,7 @@ test.describe('Triage Action Feed UI', () => {
     }
 
     const triageFeedEmpty = page.getByTestId('triage-feed-empty');
-    if (await triageFeedEmpty.isVisible()) {
-       await page.waitForTimeout(3000);
-       await expect(triageFeedEmpty).toContainText(/caught up/i, { timeout: 15000 });
-    }
+    await expect(triageFeedEmpty).toBeVisible({ timeout: 15000 });
+    await expect(triageFeedEmpty).toContainText(/caught up/i);
   });
 });

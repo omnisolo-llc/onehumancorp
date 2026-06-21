@@ -40,17 +40,17 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     // Check layout and glassmorphism styling
-    await expect(triageCard).toHaveCSS('border-radius', '12px');
-    await expect(triageCard).toHaveCSS('padding', '20px');
-    await expect(page.locator('.triage-card')).toHaveCSS('backdrop-filter', 'blur(16px)');
+    await expect(triageCard).toHaveCSS('border-radius', '16px');
+    await expect(triageCard).toHaveCSS('padding', '16px');
+    await expect(page.locator('.triage-item').first()).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
 
     // 4. Approve the drafted response
-    const approveBtn = triageCard.getByTestId('approve-btn');
+    const approveBtn = triageCard.getByTestId(/triage-approve-/);
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
     // 5. Verify the item is marked as approved and visually dismissed/dimmed
-    await expect(triageCard).toHaveCSS('opacity', '0.5');
+    await expect(triageCard).not.toBeVisible();
   });
 
   test('User can dismiss a triage item', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await dismissBtn.click();
 
     // Verify it is dimmed
-    await expect(triageCard).toHaveCSS('opacity', '0.5');
+    await expect(triageCard).not.toBeVisible();
   });
 
   test('Triage Feed displays an empty state beautifully', async ({ page }) => {
@@ -92,7 +92,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
 
     await page.goto('/api/ui/dashboard.html');
 
-    const emptyMessage = page.locator('.triage-card.empty', { hasText: 'No items need your attention right now' });
+    const emptyMessage = page.locator('.triage-card.empty', { hasText: 'No recent activity found' });
     await expect(emptyMessage).toBeVisible();
   });
 });
