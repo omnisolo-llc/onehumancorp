@@ -82,6 +82,7 @@ impl LoyaltyService for LoyaltyServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut update_query = "UPDATE loyalty_programs SET updated_at = CURRENT_TIMESTAMP".to_string();
+        #[allow(unused_assignments)]
         let mut bind_index = 3;
 
         if req.name.is_some() {
