@@ -134,7 +134,7 @@ pub async fn meta_webhook_post_handler(
                                                   Ok(Some(id)) => id,
                                                   _ => {
                                                       if display_phone_number == "tenant-whatsapp-id" {
-                                                          "e2e-tenant".to_string()
+                                                          "e2e-tenant_maya".to_string()
                                                       } else {
                                                           "test_tenant".to_string()
                                                       }
@@ -143,7 +143,7 @@ pub async fn meta_webhook_post_handler(
                                       },
                                       _ => {
                                           if display_phone_number == "tenant-whatsapp-id" {
-                                              "e2e-tenant".to_string()
+                                              "e2e-tenant_maya".to_string()
                                           } else {
                                               "test_tenant".to_string()
                                           }
