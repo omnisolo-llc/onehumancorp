@@ -9,7 +9,7 @@ use loyalty_proto::ohc::loyalty::{
     CreateLoyaltyProgramRequest, CreateLoyaltyProgramResponse,
     CustomerLoyaltyAccount, EarnPointsRequest, EarnPointsResponse,
     GetCustomerLoyaltyStatusRequest, GetCustomerLoyaltyStatusResponse, LoyaltyProgram,
-    LoyaltyTransaction, RedeemRewardRequest, RedeemRewardResponse, Reward,
+    LoyaltyTransaction, RedeemRewardRequest, RedeemRewardResponse,
     UpdateLoyaltyProgramRequest, UpdateLoyaltyProgramResponse,
 };
 

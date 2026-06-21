@@ -1,4 +1,3 @@
-
 -- Drop tables if they exist to handle dirty test environments or partial migration failures
 DROP TABLE IF EXISTS rewards CASCADE;
 DROP TABLE IF EXISTS loyalty_transactions CASCADE;
@@ -9,7 +8,7 @@ CREATE TABLE loyalty_programs (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    program_type TEXT NOT NULL,
+    program_type TEXT NOT NULL, -- 'points', 'punch_card', 'tiers'
     config JSONB DEFAULT '{}',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -39,7 +38,7 @@ CREATE TABLE loyalty_transactions (
     tenant_id TEXT NOT NULL,
     customer_id TEXT NOT NULL,
     program_id TEXT NOT NULL,
-    transaction_type TEXT NOT NULL,
+    transaction_type TEXT NOT NULL, -- 'earn', 'redeem', 'adjust'
     points INTEGER DEFAULT 0,
     punches INTEGER DEFAULT 0,
     description TEXT,
@@ -57,7 +56,7 @@ CREATE TABLE rewards (
     description TEXT,
     points_cost INTEGER DEFAULT 0,
     punches_cost INTEGER DEFAULT 0,
-    reward_type TEXT NOT NULL,
+    reward_type TEXT NOT NULL, -- 'discount', 'free_item', 'custom'
     reward_value JSONB DEFAULT '{}',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

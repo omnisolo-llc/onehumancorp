@@ -1420,11 +1420,6 @@ impl DB {
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
 
-                    DROP TABLE IF EXISTS rewards;
-                    DROP TABLE IF EXISTS loyalty_transactions;
-                    DROP TABLE IF EXISTS customer_loyalty_accounts;
-                    DROP TABLE IF EXISTS loyalty_programs;
-
                     CREATE TABLE IF NOT EXISTS loyalty_programs (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
