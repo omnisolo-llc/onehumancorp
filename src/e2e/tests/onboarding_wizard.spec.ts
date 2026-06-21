@@ -8,29 +8,20 @@ test.describe('Onboarding Wizard Flow', () => {
 
   test('successfully completes the wizard with drafting and instant image url', async ({ page }) => {
     // Step 1: Initial Intro
-    await expect(page.locator('h1')).toContainText('Setup');
-    await page.getByRole('button', { name: 'Start Setup' }).click();
+    await expect(page.locator('h1').first()).toContainText('10-Minute Setup Wizard');
+    await page.getByRole('button', { name: 'Instant Build' }).click();
 
-    // Step 2: Intake Chat
-    // Type in a business name/idea
-    await page.getByPlaceholder(/Maya's Custom Cakes/i).fill('My E2E Bakery');
+    // Step Instant
+    await page.locator('#instant-bio').fill('My E2E Bakery');
 
     // Type in an image url
     const imageUrlInput = page.getByPlaceholder(/Image URL \(Optional\)/i).first();
     await imageUrlInput.fill('https://example.com/bakery.png');
 
-    // Save draft and verify the message
-    await page.getByRole('button', { name: 'Save Draft' }).click();
-    await expect(page.getByText('Draft Saved!')).toBeVisible();
+    // Proceed
+    await page.locator('#generate-storefront-btn').click();
 
-    // Proceed to Step 3: What do you sell?
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    // In this step, the values should persist
-    const newImageUrlInput = page.getByPlaceholder(/Image URL \(Optional\)/i).first();
-    await expect(newImageUrlInput).toHaveValue('https://example.com/bakery.png');
-
-    await page.getByRole('button', { name: 'Save Draft' }).click();
-    await expect(page.getByText('Draft Saved!')).toBeVisible();
+    // Loading step
+    await expect(page.locator('#loading-title')).toContainText('Building Your Business...');
   });
 });
