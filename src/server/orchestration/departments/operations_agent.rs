@@ -278,7 +278,7 @@ mod tests {
             .unwrap();
         sqlx::query(
             "CREATE TABLE tenants (
-                tenant_id TEXT PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 business_name TEXT,
                 tier TEXT
             )",
@@ -314,7 +314,7 @@ mod tests {
         .execute(&sqlite_pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('tenant-ops', 'Ops Test', 'starter')")
+        sqlx::query("INSERT INTO tenants (id, business_name, tier) VALUES ('tenant-ops', 'Ops Test', 'starter')")
             .execute(&sqlite_pool)
             .await
             .unwrap();
