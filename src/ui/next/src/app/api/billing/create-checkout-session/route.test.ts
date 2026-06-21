@@ -7,7 +7,7 @@ describe("POST /api/billing/create-checkout-session", () => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
 
     // Silence console error for this specific test
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -42,6 +42,7 @@ describe("POST /api/billing/create-checkout-session", () => {
   });
 
   it("should handle backend errors by returning a mock URL for E2E", async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     (global.fetch as any).mockRejectedValue(new Error("Network Error"));
 
     const req = new Request("http://localhost/api/billing/create-checkout-session", {
