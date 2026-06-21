@@ -54,7 +54,7 @@ impl AgentMemoryPipeline {
                     let embedding = match self.embedding_api.generate_embedding(&context_data).await {
                         Ok(emb) => emb,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
                             tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
                             vec![0.0; 1536]
                         }
@@ -98,7 +98,7 @@ impl AgentMemoryPipeline {
                     let embedding = match self.embedding_api.generate_embedding(&context_data).await {
                         Ok(emb) => emb,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
                             tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
                             vec![0.0; 1536]
                         }
@@ -181,7 +181,7 @@ impl AgentMemoryPipeline {
                         let _ = tokio::fs::remove_file(&file_path).await;
                     }
                     Err(e) => {
-                        ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding for fs memory");
+                        ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding for fs memory");
                         tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory: {}", e);
                     }
                 }

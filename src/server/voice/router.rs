@@ -69,7 +69,7 @@ impl VoiceContextRouter {
         let plan = match self.planner.plan_turn(session_id, user_text).await {
             Ok(plan) => plan,
             Err(err) => {
-                ::server_telemetry::record_error_signal("VoiceContextRouter LLM planning failed");
+                ::server_telemetry::record_error_signal("[bug] VoiceContextRouter LLM planning failed");
                 tracing::error!("VoiceContextRouter LLM planning failed: {}", err);
                 VoiceTurnPlan {
                     intent_type: None,
@@ -94,7 +94,7 @@ impl VoiceContextRouter {
             if let Some(call) = calls.iter().find(|c| c.session_id == session_id) {
                 let caller_phone = call.caller_phone.clone();
                 if let Err(err) = self.twilio.send_sms(&caller_phone, merchant_phone, sms_body).await {
-                    ::server_telemetry::record_error_signal("VoiceContextRouter SMS dispatch failed");
+                    ::server_telemetry::record_error_signal("[bug] VoiceContextRouter SMS dispatch failed");
                     tracing::error!("VoiceContextRouter SMS dispatch failed: {}", err);
                 }
             }
