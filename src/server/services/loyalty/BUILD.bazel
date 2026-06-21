@@ -1,0 +1,33 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "loyalty",
+    srcs = [
+        "lib.rs",
+        "service.rs",
+        "service_test.rs",
+    ],
+    visibility = ["//visibility:public"],
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        "//src/proto:loyalty_prost",
+        "//src/server:server_lib",
+
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "loyalty_test",
+    crate = ":loyalty",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        "@crates//:tokio",
+    ],
+)

@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package ohc.loyalty;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/loyalty;loyaltypb";
+
+message LoyaltyProgram {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string program_type = 4;
+  string config = 5;
+  bool is_active = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message CustomerLoyaltyAccount {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string program_id = 4;
+  int32 points_balance = 5;
+  string tier = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message LoyaltyTransaction {
+  string id = 1;
+  string tenant_id = 2;
+  string account_id = 3;
+  string transaction_type = 4;
+  int32 points = 5;
+  string description = 6;
+  string order_id = 7;
+  int64 created_at = 8;
+}
+
+message Reward {
+  string id = 1;
+  string tenant_id = 2;
+  string program_id = 3;
+  string name = 4;
+  string description = 5;
+  int32 points_cost = 6;
+  string reward_type = 7;
+  string config = 8;
+  bool is_active = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+}
+
+// Requests and Responses
+
+message CreateProgramRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string program_type = 3;
+  string config = 4;
+}
+
+message CreateProgramResponse {
+  LoyaltyProgram program = 1;
+}
+
+message UpdateProgramRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string program_type = 4;
+  string config = 5;
+  bool is_active = 6;
+}
+
+message UpdateProgramResponse {
+  LoyaltyProgram program = 1;
+}
+
+message GetProgramRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetProgramResponse {
+  LoyaltyProgram program = 1;
+}
+
+message EarnPointsRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string program_id = 3;
+  int32 points = 4;
+  string description = 5;
+  string order_id = 6;
+}
+
+message EarnPointsResponse {
+  CustomerLoyaltyAccount account = 1;
+  LoyaltyTransaction transaction = 2;
+}
+
+message RedeemRewardRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string program_id = 3;
+  string reward_id = 4;
+}
+
+message RedeemRewardResponse {
+  CustomerLoyaltyAccount account = 1;
+  LoyaltyTransaction transaction = 2;
+}
+
+message GetCustomerStatusRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string program_id = 3;
+}
+
+message GetCustomerStatusResponse {
+  CustomerLoyaltyAccount account = 1;
+}
+
+service LoyaltyService {
+  rpc CreateProgram(CreateProgramRequest) returns (CreateProgramResponse);
+  rpc UpdateProgram(UpdateProgramRequest) returns (UpdateProgramResponse);
+  rpc GetProgram(GetProgramRequest) returns (GetProgramResponse);
+
+  rpc EarnPoints(EarnPointsRequest) returns (EarnPointsResponse);
+  rpc RedeemReward(RedeemRewardRequest) returns (RedeemRewardResponse);
+
+  rpc GetCustomerStatus(GetCustomerStatusRequest) returns (GetCustomerStatusResponse);
+}
