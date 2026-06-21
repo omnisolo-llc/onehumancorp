@@ -9,10 +9,10 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main headings
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).or(page.locator('h2', { hasText: 'Cost Transparency Dashboard' })).first()).toBeVisible({ timeout: 15000 });
 
     // Verify Cost Transparency Dashboard section
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' })).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
     await expect(page.locator('text=Total Costs')).toBeVisible();
