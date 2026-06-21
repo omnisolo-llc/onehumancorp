@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-export function ProposalDraftCard() {
+export function ProposalDraftCard({ item }: { item: any }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isApproved, setIsApproved] = useState(false);
 

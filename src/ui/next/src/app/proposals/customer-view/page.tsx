@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function CustomerProposalView() {
+function CustomerProposalView() {
     const searchParams = useSearchParams();
     const proposalId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState(false);
+
 
     const handlePayDeposit = async () => {
         setIsLoading(true);
@@ -59,3 +60,4 @@ export default function CustomerProposalView() {
         </div>
     );
 }
+export default function CustomerProposalViewPage() { return <React.Suspense><CustomerProposalView /></React.Suspense>; }
