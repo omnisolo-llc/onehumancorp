@@ -144,6 +144,84 @@ mod tests {
         assert!(results.is_empty(), "Record should have been pruned");
     }
 
+    #[test]
+    fn test_determine_conflict_winner_all_branches() {
+        use chrono::{Utc, TimeZone};
+        let ts_early = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+        let ts_late = Utc.with_ymd_and_hms(2025, 2, 1, 0, 0, 0).unwrap();
+
+        let base_record = EmbeddingRecord {
+            id: "1".to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "c".to_string(),
+            embedding: vec![0.0],
+            source_type: "s".to_string(),
+            created_at: ts_early,
+            last_referenced_at: ts_early,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Branch 1: Owner override wins
+        let mut rec_a = base_record.clone();
+        rec_a.id = "A".to_string();
+        rec_a.owner_override = true;
+
+        let mut rec_b = base_record.clone();
+        rec_b.id = "B".to_string();
+        rec_b.owner_override = false;
+        rec_b.reliability_score = 100; // Even with higher score, override wins
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "A");
+        assert_eq!(loser.id, "B");
+
+        // Swap order
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "A");
+        assert_eq!(loser.id, "B");
+
+        // Branch 2: Reliability score wins (no overrides)
+        let mut rec_a2 = base_record.clone();
+        rec_a2.id = "A2".to_string();
+        rec_a2.reliability_score = 60;
+
+        let mut rec_b2 = base_record.clone();
+        rec_b2.id = "B2".to_string();
+        rec_b2.reliability_score = 90;
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a2, &rec_b2);
+        assert_eq!(winner.id, "B2");
+        assert_eq!(loser.id, "A2");
+
+        // Branch 3: Recency wins (no overrides, tied score)
+        let mut rec_a3 = base_record.clone();
+        rec_a3.id = "A3".to_string();
+        rec_a3.created_at = ts_late; // newer
+
+        let mut rec_b3 = base_record.clone();
+        rec_b3.id = "B3".to_string();
+        rec_b3.created_at = ts_early; // older
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a3, &rec_b3);
+        assert_eq!(winner.id, "A3");
+        assert_eq!(loser.id, "B3");
+
+        // Branch 4: ID tiebreaker (no overrides, tied score, tied time)
+        let mut rec_a4 = base_record.clone();
+        rec_a4.id = "Z".to_string();
+
+        let mut rec_b4 = base_record.clone();
+        rec_b4.id = "A".to_string();
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a4, &rec_b4);
+        assert_eq!(winner.id, "A");
+        assert_eq!(loser.id, "Z");
+    }
+
     #[tokio::test]
     async fn test_consolidation_worker_spawn() {
         let repo = setup_sqlite_repo().await;

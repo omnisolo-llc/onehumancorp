@@ -797,14 +797,7 @@ impl VectorRepository {
                     }
                 } else {
                     // Fallback for tests environments without sqlite-vec loaded:
-                    // Optimize by fetching only id, tenant_id, and embedding to minimize memory usage
-                    #[allow(dead_code)]
-                    struct MinimalRecord {
-                        id: String,
-                        tenant_id: String,
-                        embedding: Vec<f32>,
-                    }
-
+                    // Optimize by normalizing embeddings on load and computing dot product.
                     let _batch_size = 1000;
                     let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
                     let mut match_count = 0;
@@ -823,14 +816,14 @@ impl VectorRepository {
 
                     'outer: for current_tenant_id in tenant_ids {
                         // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
-                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
+                        let query = "SELECT id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
                         let rows = sqlx::query(query)
                             .bind(&current_tenant_id)
                             .fetch_all(pool)
                             .await
                             .map_err(|e| e.to_string())?;
 
-                        let mut records_in_tenant: Vec<MinimalRecord> = Vec::new();
+                        let mut normalized_records: Vec<(String, Vec<f32>)> = Vec::with_capacity(rows.len());
                         for row in rows {
                             let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
                                 String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
@@ -839,51 +832,32 @@ impl VectorRepository {
                             let embedding: Vec<f32> =
                                 serde_json::from_str(&emb_str).unwrap_or_default();
 
-                            let record = MinimalRecord {
-                                id: row.get("id"),
-                                tenant_id: row.get("tenant_id"),
-                                embedding,
-                            };
-                            records_in_tenant.push(record);
+                            let mag: f32 = embedding.iter().map(|&val| val * val).sum::<f32>().sqrt();
+                            if mag > 0.0 {
+                                let norm: Vec<f32> = embedding.into_iter().map(|v| v / mag).collect();
+                                normalized_records.push((row.get("id"), norm));
+                            }
                         }
 
-                        let records = records_in_tenant;
-                        let magnitudes: Vec<f32> = records
-                            .iter()
-                            .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())
-                            .collect();
+                        for i in 0..normalized_records.len() {
+                            let (id_a, emb_a) = &normalized_records[i];
+                            for j in (i + 1)..normalized_records.len() {
+                                let (id_b, emb_b) = &normalized_records[j];
 
-                        for i in 0..records.len() {
-                            let mag_a = magnitudes[i];
-                            if mag_a == 0.0 {
-                                continue;
-                            }
-
-                            for j in (i + 1)..records.len() {
-                                let mag_b = magnitudes[j];
-                                if mag_b == 0.0 {
-                                    continue;
-                                }
-
-                                let a = &records[i];
-                                let b = &records[j];
-
-                                let dot_product: f32 = a
-                                    .embedding
+                                let similarity: f32 = emb_a
                                     .iter()
-                                    .zip(b.embedding.iter())
+                                    .zip(emb_b.iter())
                                     .map(|(x, y)| x * y)
                                     .sum();
-                                let similarity = dot_product / (mag_a * mag_b);
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
-                                    let (id_a, id_b) = if a.id < b.id {
-                                        (a.id.clone(), b.id.clone())
+                                    let (a, b) = if id_a < id_b {
+                                        (id_a.clone(), id_b.clone())
                                     } else {
-                                        (b.id.clone(), a.id.clone())
+                                        (id_b.clone(), id_a.clone())
                                     };
-                                    conflicting_pairs_ids.push((id_a, id_b));
+                                    conflicting_pairs_ids.push((a, b));
                                     match_count += 1;
                                     if match_count >= 10 {
                                         break 'outer;
