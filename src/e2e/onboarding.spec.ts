@@ -341,21 +341,24 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(containerBox?.width).toBeLessThanOrEqual(375);
 
     // Click step-by-step
-    const stepByStepButton = page.locator('button', { hasText: 'Step-by-step' }).first();
-    await stepByStepButton.click();
+    // Click Start My Business
+    const startMyBusinessButton = page.locator("button", { hasText: "Start My Business" }).first();
+    await startMyBusinessButton.click();
 
-    // Check .radio-option
-    const radioOption = page.locator('.radio-option').first();
-    const radioBox = await radioOption.boundingBox();
-    expect(Math.round(radioBox?.height || 0)).toBeGreaterThanOrEqual(44);
+    // Check .context-card
+    const contextCard = page.locator(".context-card").first();
+    const cardBox = await contextCard.boundingBox();
+    expect(Math.round(cardBox?.height || 0)).toBeGreaterThanOrEqual(44);
 
     // Next step
-    await page.locator('#btn-next-type').click();
+    await contextCard.click();
+    const nextButton = page.locator("button[data-next=\"step-categories\"]").first();
+    await nextButton.click();
+    await expect(page.locator("#step-categories")).toBeVisible();
 
-    // Check .persona-chip
-    const personaChip = page.locator('.persona-chip').first();
-    const chipBox = await personaChip.boundingBox();
-    expect(Math.round(chipBox?.height || 0)).toBeGreaterThanOrEqual(44);
+    const selectBox = page.locator("#business-categories");
+    await expect(selectBox).toBeVisible();
+
   });
 
   // Test 5: Mobile responsiveness of the Instant Build component
