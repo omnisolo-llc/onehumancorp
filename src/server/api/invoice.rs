@@ -35,7 +35,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let total_amount: f64 = req.line_items.iter().map(|item| item.amount).sum();
         let status = "draft".to_string();
 
-        let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+        let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}?client_reference_id={}", uuid::Uuid::new_v4().to_string().replace("-", ""), invoice_id);
 
         sqlx::query(
             "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link)

@@ -478,6 +478,66 @@ pub async fn stripe_webhook_handler(
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
+                // Auto-reconcile invoice payment if invoice_id is present
+
+                if let Some(invoice_id) = obj.get("client_reference_id").and_then(|id| id.as_str()) {
+
+                    let tenant_id = obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str()).unwrap_or("default");
+
+                    let pool = webhook_state.db.pool.clone();
+
+                    let inv_id = invoice_id.to_string();
+
+                    let t_id = tenant_id.to_string();
+
+                    let orch = webhook_state.orchestrator.clone();
+
+                    let payload_val = obj.clone();
+
+                    tokio::spawn(async move {
+
+                        match sqlx::query("UPDATE invoices SET status = $1, payment_status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5")
+
+                            .bind("paid")
+
+                            .bind("paid")
+
+                            .bind(chrono::Utc::now().timestamp())
+
+                            .bind(&inv_id)
+
+                            .bind(&t_id)
+
+                            .execute(&pool)
+
+                            .await {
+
+                            Ok(_) => {
+
+                                let evt = crate::orchestration::departments::types::DepartmentEvent {
+
+                                    id: uuid::Uuid::new_v4().to_string(),
+
+                                    tenant_id: t_id,
+
+                                    event_type: "invoice.paid".to_string(),
+
+                                    payload: payload_val,
+
+                                };
+
+                                let _ = orch.dispatch_event(evt).await;
+
+                            },
+
+                            Err(e) => tracing::error!("Failed to auto-reconcile invoice {}: {:?}", inv_id, e),
+
+                        }
+
+                    });
+
+                }
+
                 release_inventory_locks_for_payment(&webhook_state, obj).await;
 
                 // Dispatch payment.captured event to Finance agent
