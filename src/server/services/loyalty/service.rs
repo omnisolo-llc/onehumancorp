@@ -249,7 +249,7 @@ impl LoyaltyService for LoyaltyServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut account_row = match account_row {
+        let account_row = match account_row {
             Some(row) => row,
             None => return Err(Status::not_found("Customer account not found")),
         };
