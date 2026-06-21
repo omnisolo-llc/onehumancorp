@@ -3430,6 +3430,115 @@ pub struct MockOmniInboxPayload {
     pub message: String,
 }
 
+pub async fn simulate_ui_triage_item_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let item_id = format!("triage-{}", uuid::Uuid::new_v4());
+    let action_id = format!("act-{}", uuid::Uuid::new_v4());
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("12345")
+            .bind("Instagram DM")
+            .bind("High")
+            .bind("Do you have vegan chocolate cake available this weekend?")
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert triage_items: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
+            )
+            .bind(&action_id)
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Draft Reply")
+            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = tx.commit().await {
+                 tracing::error!("Failed to commit transaction: {:?}", e);
+                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("12345")
+            .bind("Instagram DM")
+            .bind("High")
+            .bind("Do you have vegan chocolate cake available this weekend?")
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert triage_items: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+            )
+            .bind(&action_id)
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("Draft Reply")
+            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = tx.commit().await {
+                 tracing::error!("Failed to commit transaction: {:?}", e);
+                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+        }
+    }
+
+    // Invalidating cache
+    let cache_key = format!("ui_triage:{}:mobile:false", tenant_id);
+    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let _ = cache.invalidate(&cache_key).await;
+
+    let cache_key_mobile = format!("ui_triage:{}:mobile:true", tenant_id);
+    let _ = cache.invalidate(&cache_key_mobile).await;
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": item_id}))).into_response()
+}
+
 pub async fn simulate_agent_feed_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -6082,6 +6191,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
