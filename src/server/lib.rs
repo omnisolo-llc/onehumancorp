@@ -3379,12 +3379,47 @@ pub async fn update_ui_omni_inbox_action_handler(
             if payload.approved {
                 if let Some(reply) = &payload.edited_reply {
                     let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+
+                    let mut target_source = "Omni Inbox Action".to_string();
+                    let mut target_sender = "".to_string();
+                    if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2")
+                        .bind(&payload.message_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                    {
+                        if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                        if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                    }
+
+                    if target_source == "whatsapp" && !target_sender.is_empty() {
+                        if let Ok(Some(config_row)) = sqlx::query("SELECT integration_code FROM tool_integrations WHERE name = 'WhatsApp Cloud API' AND tenant_id = $1 LIMIT 1")
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            if let Ok(code) = sqlx::Row::try_get::<String, usize>(&config_row, 0) {
+                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&code) {
+                                    if let Some(token) = json.get("access_token").and_then(|v| v.as_str()) {
+                                        use crate::integrations::meta::client::MetaClientWrapper;
+                                        let client = crate::integrations::meta::client::RealMetaClient::new(token.to_string());
+                                        if let Err(e) = client.send_message("whatsapp", &target_sender, reply).await {
+                                            tracing::error!("Failed to send WhatsApp message: {}", e);
+                                        } else {
+                                            tracing::info!("Successfully sent WhatsApp message to {}", target_sender);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     let _ = sqlx::query(
                         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'sent')"
                     )
                     .bind(&new_msg_id)
                     .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
+                    .bind(&target_source)
                     .bind(reply)
                     .execute(&mut *tx)
                     .await;
@@ -3406,12 +3441,47 @@ pub async fn update_ui_omni_inbox_action_handler(
             if payload.approved {
                 if let Some(reply) = &payload.edited_reply {
                     let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+
+                    let mut target_source = "Omni Inbox Action".to_string();
+                    let mut target_sender = "".to_string();
+                    if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?")
+                        .bind(&payload.message_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                    {
+                        if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                        if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                    }
+
+                    if target_source == "whatsapp" && !target_sender.is_empty() {
+                        if let Ok(Some(config_row)) = sqlx::query("SELECT integration_code FROM tool_integrations WHERE name = 'WhatsApp Cloud API' AND tenant_id = ? LIMIT 1")
+                            .bind(&tenant_id)
+                            .fetch_optional(pool)
+                            .await
+                        {
+                            if let Ok(code) = sqlx::Row::try_get::<String, usize>(&config_row, 0) {
+                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&code) {
+                                    if let Some(token) = json.get("access_token").and_then(|v| v.as_str()) {
+                                        use crate::integrations::meta::client::MetaClientWrapper;
+                                        let client = crate::integrations::meta::client::RealMetaClient::new(token.to_string());
+                                        if let Err(e) = client.send_message("whatsapp", &target_sender, reply).await {
+                                            tracing::error!("Failed to send WhatsApp message: {}", e);
+                                        } else {
+                                            tracing::info!("Successfully sent WhatsApp message to {}", target_sender);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     let _ = sqlx::query(
                         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'sent')"
                     )
                     .bind(&new_msg_id)
                     .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
+                    .bind(&target_source)
                     .bind(reply)
                     .execute(pool)
                     .await;
@@ -3674,12 +3744,56 @@ pub async fn update_ui_triage_action_handler(
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+
+                        let mut target_source = "Triage Action".to_string();
+                        let mut target_sender = "".to_string();
+
+                        if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM inbox_messages WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                        } else if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                        }
+
+                        if target_source == "whatsapp" && !target_sender.is_empty() {
+                            if let Ok(Some(config_row)) = sqlx::query("SELECT integration_code FROM tool_integrations WHERE name = 'WhatsApp Cloud API' AND tenant_id = $1 LIMIT 1")
+                                .bind(&tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                            {
+                                if let Ok(code) = sqlx::Row::try_get::<String, usize>(&config_row, 0) {
+                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&code) {
+                                        if let Some(token) = json.get("access_token").and_then(|v| v.as_str()) {
+                                            use crate::integrations::meta::client::MetaClientWrapper;
+                                            let client = crate::integrations::meta::client::RealMetaClient::new(token.to_string());
+                                            if let Err(e) = client.send_message("whatsapp", &target_sender, &action_payload).await {
+                                                tracing::error!("Failed to send WhatsApp message: {}", e);
+                                            } else {
+                                                tracing::info!("Successfully sent WhatsApp message to {}", target_sender);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
-                        .bind("Triage Action")
+                        .bind(&target_source)
                         .bind(&action_payload)
                         .bind("")
                         .bind("sent")
@@ -3896,12 +4010,56 @@ pub async fn update_ui_triage_action_handler(
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+
+                        let mut target_source = "Triage Action".to_string();
+                        let mut target_sender = "".to_string();
+
+                        if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM inbox_messages WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                        } else if let Ok(Some(row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 0) { target_source = s; }
+                            if let Ok(s) = sqlx::Row::try_get::<String, usize>(&row, 1) { target_sender = s; }
+                        }
+
+                        if target_source == "whatsapp" && !target_sender.is_empty() {
+                            if let Ok(Some(config_row)) = sqlx::query("SELECT integration_code FROM tool_integrations WHERE name = 'WhatsApp Cloud API' AND tenant_id = ? LIMIT 1")
+                                .bind(&tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                            {
+                                if let Ok(code) = sqlx::Row::try_get::<String, usize>(&config_row, 0) {
+                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&code) {
+                                        if let Some(token) = json.get("access_token").and_then(|v| v.as_str()) {
+                                            use crate::integrations::meta::client::MetaClientWrapper;
+                                            let client = crate::integrations::meta::client::RealMetaClient::new(token.to_string());
+                                            if let Err(e) = client.send_message("whatsapp", &target_sender, &action_payload).await {
+                                                tracing::error!("Failed to send WhatsApp message: {}", e);
+                                            } else {
+                                                tracing::info!("Successfully sent WhatsApp message to {}", target_sender);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
-                        .bind("Triage Action")
+                        .bind(&target_source)
                         .bind(&action_payload)
                         .bind("")
                         .bind("sent")
@@ -6070,6 +6228,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::setup::save_whatsapp_cloud_api_integration_handler).with_state(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))

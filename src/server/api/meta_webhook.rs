@@ -133,11 +133,19 @@ pub async fn meta_webhook_post_handler(
                                               .await {
                                                   Ok(Some(id)) => id,
                                                   _ => {
-                                                      if display_phone_number == "tenant-whatsapp-id" {
-                                                          "e2e-tenant".to_string()
-                                                      } else {
-                                                          "test_tenant".to_string()
-                                                      }
+                                                      match sqlx::query_scalar::<_, String>("SELECT tenant_id FROM tool_integrations WHERE name = 'WhatsApp Cloud API' AND integration_code LIKE '%' || $1 || '%' LIMIT 1")
+                                                          .bind(display_phone_number)
+                                                          .fetch_optional(pool)
+                                                          .await {
+                                                              Ok(Some(tid)) => tid,
+                                                              _ => {
+                                                                  if display_phone_number == "tenant-whatsapp-id" {
+                                                                      "e2e-tenant".to_string()
+                                                                  } else {
+                                                                      "test_tenant".to_string()
+                                                                  }
+                                                              }
+                                                          }
                                                   }
                                               }
                                       },

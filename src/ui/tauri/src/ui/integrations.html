@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Integrations - OHC</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --card-border: rgba(255, 255, 255, 0.4);
+      --text-main: #1D1D1F;
+      --text-muted: #86868B;
+      --accent-blue: #0066FF;
+      --accent-green: #34C759;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000000;
+        --card-bg: rgba(22, 22, 26, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #F5F5F7;
+        --text-muted: #A1A1A6;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      background: var(--bg-color);
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content {
+      padding: 0 20px 20px;
+      flex: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .integration-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      border: 1px solid var(--card-border);
+    }
+
+    .integration-details {
+      flex: 1;
+    }
+
+    .integration-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 0 0 4px 0;
+    }
+
+    .integration-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .btn-connect {
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: transform 0.1s;
+    }
+
+    .btn-connect:active {
+      transform: scale(0.96);
+    }
+
+    .btn-connected {
+      background: rgba(52, 199, 89, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(52, 199, 89, 0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: default;
+      min-height: 44px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-meta {
+      background: #1877F2;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 16px;
+      min-height: 48px;
+    }
+
+    .loader {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #status-msg {
+      margin-top: 12px;
+      font-size: 13px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <button class="back-btn" onclick="window.history.back()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <h1>Integrations</h1>
+  </div>
+
+  <div class="content">
+
+    <div class="glass-card">
+      <div class="integration-icon">💬</div>
+      <div class="integration-details">
+        <h2 class="integration-title">WhatsApp Cloud API</h2>
+        <p class="integration-desc">Connect directly with Meta to let your AI assistant handle customer messages seamlessly.</p>
+      </div>
+      <button class="btn-connect" id="wa-connect-btn" onclick="openWaModal()">Connect</button>
+    </div>
+
+  </div>
+
+  <!-- Meta Auth Modal -->
+  <div class="modal-overlay" id="wa-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="integration-icon" style="width:40px; height:40px; font-size:20px;">💬</div>
+          <h2 class="modal-title">Connect WhatsApp</h2>
+        </div>
+        <button class="modal-close" onclick="closeWaModal()">&times;</button>
+      </div>
+
+      <p style="color: var(--text-muted); font-size: 14px; line-height: 1.5; margin-bottom: 20px;">
+        Link your WhatsApp Business account via Meta. Once connected, your AI Assistant will be able to read and draft replies to customer inquiries instantly.
+      </p>
+
+      <button class="btn-meta" id="btn-meta-auth" onclick="startMetaAuth()">
+        <span id="btn-meta-text">Continue with Meta</span>
+        <div class="loader" id="btn-meta-loader"></div>
+      </button>
+
+      <div id="status-msg"></div>
+    </div>
+  </div>
+
+  <script>
+    function openWaModal() {
+      document.getElementById('wa-modal').style.display = 'flex';
+    }
+
+    function closeWaModal() {
+      document.getElementById('wa-modal').style.display = 'none';
+      document.getElementById('status-msg').innerText = '';
+    }
+
+    async function startMetaAuth() {
+      const btnText = document.getElementById('btn-meta-text');
+      const loader = document.getElementById('btn-meta-loader');
+      const statusMsg = document.getElementById('status-msg');
+      const connectBtn = document.getElementById('wa-connect-btn');
+
+      btnText.style.display = 'none';
+      loader.style.display = 'block';
+      statusMsg.innerText = 'Connecting to Meta...';
+
+      try {
+        const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+        const res = await fetch(`${backendUrl}/api/v1/settings/integrations/whatsapp_cloud_api`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ integration_id: 'whatsapp_cloud_api' })
+        });
+
+        if (res.ok) {
+          statusMsg.style.color = 'var(--accent-green)';
+          statusMsg.innerText = 'Successfully connected WhatsApp Cloud API!';
+
+          connectBtn.innerText = 'Connected';
+          connectBtn.className = 'btn-connected';
+          connectBtn.onclick = null;
+
+          setTimeout(() => {
+            closeWaModal();
+          }, 1500);
+        } else {
+          throw new Error('Server returned an error');
+        }
+      } catch (err) {
+        statusMsg.style.color = '#FF3B30';
+        statusMsg.innerText = 'Connection failed. Please try again.';
+      } finally {
+        btnText.style.display = 'block';
+        loader.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
