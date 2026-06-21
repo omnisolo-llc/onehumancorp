@@ -14,7 +14,7 @@ test.describe('Triage Action Feed UI', () => {
     };
 
     // Attempt to seed data
-    const res = await page.request.post(`/api/triage/create?tenant_id=${tenantId}`, {
+    const res = await page.request.post(`/api/ui/triage/create?tenant_id=${tenantId}`, {
         data: {
           customer_id: 'cust_test',
           ...seedData
