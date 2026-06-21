@@ -289,7 +289,7 @@ impl Department for SalesAgent {
             {
                 Ok(intent) => intent,
                 Err(err) => {
-                    ::server_telemetry::record_error_signal("SalesAgent LLM planning failed");
+                    ::server_telemetry::record_error_signal("[bug] SalesAgent LLM planning failed");
                     tracing::error!("SalesAgent LLM planning failed: {}", err);
                     None
                 }
