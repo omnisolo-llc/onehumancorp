@@ -18,6 +18,9 @@ exports_files(
 rust_library(
     name = "server_services",
     srcs = [
+        "loyalty/mod.rs",
+        "loyalty/service.rs",
+        "loyalty/service_test.rs",
         "bazel_lib.rs",
         "booking.rs",
         "mod.rs",
