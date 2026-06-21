@@ -614,7 +614,11 @@ mod tests {
     #[tokio::test]
     async fn test_bench_time_savings_latency() {
         bench_time_savings_latency().await;
-    bench_ui_omni_inbox_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_omni_inbox_latency() {
+        bench_ui_omni_inbox_latency().await;
     }
 
     #[tokio::test]
@@ -1063,8 +1067,11 @@ pub async fn bench_ui_omni_inbox_latency() {
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
 
+        let pool2 = pg_pool.clone();
+
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1)
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 

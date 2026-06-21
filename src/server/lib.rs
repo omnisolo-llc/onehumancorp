@@ -4980,15 +4980,17 @@ async fn ui_dashboard_unified_feed_handler(
             let db5 = db_bg.clone(); let t5 = t_bg.clone();
             let db6 = db_bg.clone(); let t6 = t_bg.clone();
             let db7 = db_bg.clone(); let t7 = t_bg.clone();
+            let db8 = db_bg.clone(); let t8 = t_bg.clone();
 
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res, omni_inbox_res) = tokio::join!(
                 tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_triage_from_db(&db4, &t4, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_approvals_from_db(&db5, &t5, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_feed_from_db(&db6, &t6, mobile_optimized).await }),
-                tokio::spawn(async move { load_ui_priority_tasks_from_db(&db7, &t7, mobile_optimized).await })
+                tokio::spawn(async move { load_ui_priority_tasks_from_db(&db7, &t7, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_omni_inbox_from_db(&db8, &t8, mobile_optimized).await })
             );
 
             let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -4997,6 +4999,7 @@ async fn ui_dashboard_unified_feed_handler(
             let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let omni_inbox = omni_inbox_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
@@ -5005,6 +5008,7 @@ async fn ui_dashboard_unified_feed_handler(
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
                 "priority_tasks": priority_tasks,
+                "omni_inbox": omni_inbox,
             });
             if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
@@ -5027,15 +5031,17 @@ async fn ui_dashboard_unified_feed_handler(
     let db6 = db.clone(); let t6 = tenant_id.clone();
     let db7 = db.clone(); let t7 = tenant_id.clone();
     let db8 = db.clone(); let t8 = tenant_id.clone();
+    let db9 = db.clone(); let t9 = tenant_id.clone();
 
-    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+    let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res, omni_inbox_res) = tokio::join!(
         tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_triage_from_db(&db5, &t5, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_approvals_from_db(&db6, &t6, mobile_optimized).await }),
         tokio::spawn(async move { load_ui_agent_feed_from_db(&db7, &t7, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await })
+        tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await }),
+        tokio::spawn(async move { load_ui_omni_inbox_from_db(&db9, &t9, mobile_optimized).await })
     );
 
     let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -5044,6 +5050,7 @@ async fn ui_dashboard_unified_feed_handler(
     let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let omni_inbox = omni_inbox_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
 
     let cacheable_result = serde_json::json!({
@@ -5054,6 +5061,7 @@ async fn ui_dashboard_unified_feed_handler(
         "pending_approvals": approvals,
         "agent_feed": agent_feed,
         "priority_tasks": priority_tasks,
+        "omni_inbox": omni_inbox,
     });
 
     let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
