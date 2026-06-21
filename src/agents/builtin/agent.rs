@@ -1486,6 +1486,18 @@ impl Agent {
         active_cfg_cloned.apply_anthropic_gating();
         let cfg = &active_cfg_cloned;
 
+        // Guardrails & Safety: OpenAI 3 distinct hooks (1. Input Validator)
+        // input guardrails (first agent) linked to a "tripwire" that halts the loop.
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::other(format!(
+                    "Termination: Input Guardrail tripwire fires: {}",
+                    e
+                ))));
+            }
+        }
+
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
@@ -1576,6 +1588,16 @@ impl Agent {
                             vec![]
                         };
 
+                        // Guardrails & Safety: OpenAI 3 distinct hooks (2. Output Auditor)
+                        // output guardrails (final output) linked to a "tripwire" that halts the loop.
+                        if final_tool_calls.is_empty() {
+                            if let Some(guardrails) = &llm_cfg_c.guardrails {
+                                if let Err(e) = guardrails.check_output(&final_content) {
+                                    return Err(format!("Output Guardrail tripwire fires: {}", e));
+                                }
+                            }
+                        }
+
                         let new_message = crate::types::Message {
                             role: crate::types::Role::Assistant,
                             content: final_content,
@@ -1640,6 +1662,9 @@ impl Agent {
                     let tc_clone = tc.clone();
 
                     read_only_futures.push(async move {
+                        // Guardrails & Safety: OpenAI 3 distinct hooks (3. Tool Policy Enforcer)
+                        // tool guardrails (run on every tool invocation) linked to a "tripwire" that halts the loop.
+                        // (Handled implicitly via ToolGater::check_gating which checks `cfg.guardrails.check_tool`)
                         let gating_err = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_arc_clone);
                         if let Err(e) = gating_err {
                             return (id, Err(e));
@@ -1718,6 +1743,9 @@ impl Agent {
                     let id = tc.id.clone();
                     let idx = tool_calls.iter().position(|t| t.id == id).expect("Tool call not found in tool_calls array");
 
+                    // Guardrails & Safety: OpenAI 3 distinct hooks (3. Tool Policy Enforcer)
+                    // tool guardrails (run on every tool invocation) linked to a "tripwire" that halts the loop.
+                    // (Handled implicitly via ToolGater::check_gating which checks `cfg.guardrails.check_tool`)
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
                         match e {
