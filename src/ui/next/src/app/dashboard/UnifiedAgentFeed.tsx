@@ -190,7 +190,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
           unifiedData = await unifiedRes.json();
         } else {
-          fetchTriage();
+          if (!unifiedData?.triage || unifiedData.triage.length === 0) fetchTriage(); else setTriageItems(unifiedData.triage);
         }
 
         if (mounted) {
