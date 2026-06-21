@@ -58,6 +58,8 @@ pub struct Edge {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
+#[derive(Default)]
 pub struct WorkflowGraph {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,

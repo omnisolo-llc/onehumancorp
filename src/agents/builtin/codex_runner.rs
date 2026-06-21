@@ -3,6 +3,8 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::visual_workflow::{WorkflowExecutor, WorkflowGraph};
 use std::collections::HashMap;
+use crate::visual_workflow::{WorkflowExecutor, WorkflowGraph};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -492,7 +494,7 @@ impl AppServer {
                     }),
                     meta: None,
                 };
-                return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                return return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());;
             }
 
             let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
@@ -515,7 +517,7 @@ impl AppServer {
                             }),
                             meta: None,
                         };
-                        return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                        return return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());;
                     }
 
                     let final_output = format!(
@@ -547,7 +549,7 @@ impl AppServer {
                             }),
                             meta: None,
                         };
-                        return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                        return return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());;
                     }
 
                     let resp = JsonRpcResponse {
@@ -557,7 +559,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -570,7 +572,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
             }
         } else if req.method == "run_agent" {
@@ -616,7 +618,7 @@ impl AppServer {
                     }),
                     meta: None,
                 };
-                return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                return return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());;
             }
 
             match self
@@ -638,7 +640,7 @@ impl AppServer {
                         error: None,
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -651,7 +653,7 @@ impl AppServer {
                         }),
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
             }
         } else if req.method == "get_sona_patterns" {
@@ -669,7 +671,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
         } else if req.method == "record_sona_pattern" {
             let pattern: crate::sona_patterns::TrajectoryPattern = match serde_json::from_value(
                 req.params.clone(),
@@ -686,7 +688,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                    return return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());;
                 }
             };
             if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
@@ -699,7 +701,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
         } else if req.method == "run_actor_model" {
             let initial_message = req
                 .params
@@ -777,7 +779,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -790,7 +792,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
             }
         } else if req.method == "get_task" {
@@ -827,8 +829,48 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
         } else if req.method == "run_scalable_agents" {
+        } else if req.method == "vw_run_workflow" {
+            let graph_val = req.params.get("graph").cloned().unwrap_or_default();
+            let inputs_val = req.params.get("inputs").cloned().unwrap_or_default();
+
+            let graph: WorkflowGraph = serde_json::from_value(graph_val).unwrap_or_default();
+            let inputs: HashMap<String, String> = serde_json::from_value(inputs_val).unwrap_or_default();
+
+            let executor = WorkflowExecutor::new(
+                graph,
+                self.runner.core.agent.clone(),
+                self.runner.core.agent.tools.clone(),
+                HashMap::new(),
+                self.runner.core.runtime_config.clone(),
+            );
+
+            match executor.execute(inputs).await {
+                Ok(result) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: Some(serde_json::json!({ "output": result })),
+                        error: None,
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32603,
+                            message: format!("Workflow execution failed: {}", e),
+                        }),
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                }
+            }
         } else if req.method == "vw_run_workflow" {
             let graph_val = req.params.get("graph").cloned().unwrap_or_default();
             let inputs_val = req.params.get("inputs").cloned().unwrap_or_default();
@@ -937,7 +979,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -950,7 +992,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
                 }
             }
         } else {
@@ -964,7 +1006,7 @@ impl AppServer {
                 }),
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
         }
     }
 }
@@ -1247,6 +1289,36 @@ mod tests {
             agent_fetch_result.get("name").unwrap().as_str().unwrap(),
             "Senior Rust Developer"
         );
+
+        // Test Visual Workflow ap_execute_step equivalent
+        let graph = crate::visual_workflow::WorkflowGraph {
+            nodes: vec![
+                crate::visual_workflow::Node {
+                    id: "in".to_string(),
+                    node_type: crate::visual_workflow::NodeType::Input { name: "input_var".to_string() },
+                },
+                crate::visual_workflow::Node {
+                    id: "out".to_string(),
+                    node_type: crate::visual_workflow::NodeType::Output,
+                }
+            ],
+            edges: vec![
+                crate::visual_workflow::Edge { source: "in".to_string(), target: "out".to_string() }
+            ]
+        };
+        let req_json_vw = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": "13",
+            "method": "vw_run_workflow",
+            "params": {
+                "graph": graph,
+                "inputs": { "in": "hello workflow" }
+            }
+        });
+        let resp_json_vw = app_server.handle_request(&req_json_vw.to_string()).await;
+        let resp_vw: JsonRpcResponse = serde_json::from_str(&resp_json_vw).unwrap();
+        assert!(resp_vw.error.is_none());
+        assert_eq!(resp_vw.result.unwrap().get("output").unwrap().as_str().unwrap(), "hello workflow");
 
         // Test Visual Workflow ap_execute_step equivalent
         let graph = crate::visual_workflow::WorkflowGraph {
