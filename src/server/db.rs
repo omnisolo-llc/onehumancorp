@@ -637,10 +637,7 @@ impl DB {
 
         // Enforce the 60-second ML-Resilience rule for database operations
         let start_time = std::time::Instant::now();
-        #[cfg(not(test))]
         let timeout_duration = std::time::Duration::from_secs(60);
-        #[cfg(test)]
-        let timeout_duration = std::time::Duration::from_millis(2000);
 
         loop {
             if start_time.elapsed() > timeout_duration {
