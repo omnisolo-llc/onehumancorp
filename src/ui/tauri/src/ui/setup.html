@@ -1306,9 +1306,12 @@
       <div class="step" id="step-domain">
         <h1>Where will your business live?</h1>
         <p>Choose your workspace domain</p>
-        <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="e.g. my-business" inputmode="text" autocomplete="off" enterkeyhint="next" />
-        <div id="domain-error" class="error-msg" aria-live="polite">Please enter a valid domain.</div>
-        <div class="btn-group">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="e.g. my-business" inputmode="text" autocomplete="off" enterkeyhint="next" style="margin-bottom: 0; text-align: right; padding-right: 4px;" />
+          <span style="font-size: 18px; font-weight: 500; color: #1D1D1F; opacity: 0.8;">.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 10px;">Please enter a valid domain.</div>
+        <div class="btn-group" style="margin-top: 20px;">
           <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
@@ -1380,6 +1383,15 @@
           const originalText = chip.innerText;
           chip.innerText = "Applied!";
           setTimeout(() => { chip.innerText = originalText; }, 1000);
+      }
+
+      function generateSubdomain(name) {
+          if (!name || name.trim() === '') return 'my-business';
+          const cleanName = name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+          return cleanName ? cleanName : 'my-business';
       }
 
       const finishBtn = document.getElementById('finish-btn');
@@ -1512,6 +1524,14 @@
           if (inputs.name.value.trim().length >= 3) {
               errors.name.style.display = 'none';
               inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+          if (inputs.domainName) {
+              const suggested = generateSubdomain(inputs.name.value);
+              inputs.domainName.placeholder = `e.g. ${suggested}`;
+              // Only auto-fill if the user hasn't typed anything in the domain field yet
+              if (!state.domain || state.domain === '') {
+                  inputs.domainName.value = suggested;
+              }
           }
       });
 
@@ -1995,7 +2015,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                       website_template: "auto",
                       first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
                       first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
-                      domain_choice: state.domain || "subdomain",
+                      domain_choice: state.domain || generateSubdomain(state.businessName),
                       price_type: "fixed",
                       location: intakeData.location || "Local",
                       target_audience: intakeData.target_audience || "General",
@@ -2187,7 +2207,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                       websiteTemplate: "auto",
                       firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
                       firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
+                      domainChoice: state.domain || generateSubdomain(state.businessName),
                       priceType: "fixed",
                       location: intakeData.location || "Local",
                       targetAudience: intakeData.target_audience || "General",
@@ -2357,7 +2377,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
-                   domain_choice: state.domain || "subdomain",
+                   domain_choice: state.domain || generateSubdomain(state.businessName),
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General",
