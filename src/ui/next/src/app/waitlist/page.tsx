@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function WaitlistPage() {
   const router = useRouter();
@@ -134,10 +135,8 @@ export default function WaitlistPage() {
             >
               Sign up another email
             </button>
-            <div className="mt-8 pt-6 border-t border-gray-200/60 w-full text-center">
-              <span className="text-xs font-semibold text-gray-400 flex items-center justify-center gap-1">
-                ⚡ Powered by OHC
-              </span>
+            <div className="mt-8 pt-6 border-t border-gray-200/60 w-full flex justify-center">
+              <PoweredByOHC tenantId="waitlist" />
             </div>
           </div>
         ) : (
