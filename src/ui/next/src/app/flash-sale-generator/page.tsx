@@ -55,7 +55,7 @@ export default function FlashSaleGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-red-50 via-orange-50 to-amber-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism border-b shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Flash Sale Generator ⚡</h1>
         <button
           onClick={() => router.push('/dashboard')}

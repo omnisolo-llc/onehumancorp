@@ -290,7 +290,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   return (
-    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden glassmorphism">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-md text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 

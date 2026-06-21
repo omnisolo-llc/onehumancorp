@@ -46,7 +46,7 @@ export default function TipJarWidgetGenerator() {
         <title>Tip Jar Widget Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism border-b shadow-sm">
          <div className="flex items-center gap-3">
              <span className="text-2xl font-bold text-indigo-600">⚡</span>
              <h1 className="text-xl font-bold font-outfit text-gray-900">Tip Jar Builder</h1>

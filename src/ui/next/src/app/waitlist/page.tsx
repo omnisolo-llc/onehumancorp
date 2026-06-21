@@ -55,7 +55,7 @@ export default function WaitlistPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism border-b">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] tracking-tight">
           OneHumanCorp
         </h1>

@@ -56,7 +56,7 @@ export default function AgentMarketplacePage() {
  placeholder="Search for agents..."
  value={query}
  onChange={(e) => setQuery(e.target.value)}
- className="w-full p-4 pl-12 text-lg rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="w-full p-4 pl-12 text-lg rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all glassmorphism"
  />
  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
  🔍
@@ -78,7 +78,7 @@ export default function AgentMarketplacePage() {
  {agents.map((agent) => (
  <div
  key={agent.id}
- className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col glassmorphism"
 >
  <div className="mb-4 flex-grow">
  <h3 className="text-2xl font-bold text-gray-900 mb-2">{agent.name}</h3>

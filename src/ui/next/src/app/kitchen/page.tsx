@@ -97,7 +97,7 @@ export default function KitchenView() {
             <h2 className="text-lg font-bold font-outfit mb-4">Active Orders</h2>
             <div className="space-y-4">
               {orders.filter(o => o.status !== "ready" && o.status !== "completed").map(order => (
-                <div key={order.id} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-[16px] p-4 shadow-sm">
+                <div key={order.id} className="glassmorphism rounded-[16px] p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-lg">Order #{order.id} - {order.customer_name || 'Guest'}</h3>
                     <span className="bg-[#0071E3]/10 text-[#0071E3] text-xs font-bold px-2 py-1 rounded">NEW</span>
@@ -139,7 +139,7 @@ export default function KitchenView() {
               {menu.map(item => {
                 const soldOut = item.is_sold_out || item.available_quantity === 0;
                 return (
-                <div key={item.id} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-[16px] p-4 shadow-sm flex items-center justify-between">
+                <div key={item.id} className="glassmorphism rounded-[16px] p-4 shadow-sm flex items-center justify-between">
                   <h3 className={`font-bold font-outfit text-lg ${soldOut ? "text-gray-400 line-through" : "text-[#1D1D1F]"}`}>
                     {item.name || item.title}
                   </h3>

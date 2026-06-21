@@ -38,7 +38,7 @@ export default function InteractiveQuoteGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism border-b shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-700">
             ← Back

@@ -169,7 +169,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 </button>
             </div>
 
-            <div className="p-6 rounded-[16px] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm">
+            <div className="p-6 rounded-[16px] glassmorphism shadow-sm">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Instant Chat
                 </h3>

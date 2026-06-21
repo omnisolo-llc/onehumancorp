@@ -224,7 +224,7 @@ export function HelpChat() {
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
                       ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      : "glassmorphism text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -242,7 +242,7 @@ export function HelpChat() {
             ))}
             {isLoading && (
               <div className="flex flex-col items-start animate-pulse">
-                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
+                <div className="px-4 py-3 rounded-2xl max-w-[85%] glassmorphism text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0ms" }}

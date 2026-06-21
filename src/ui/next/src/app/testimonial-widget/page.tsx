@@ -41,7 +41,7 @@ export default function TestimonialWidgetGenerator() {
         <title>Testimonial Widget Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism border-b shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Testimonial Widget 🌟</h1>
         <button className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard

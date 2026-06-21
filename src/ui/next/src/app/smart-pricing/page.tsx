@@ -64,7 +64,7 @@ export default function SmartPricingPage() {
           <p className="text-lg text-[#86868B]">Let AI automatically adjust your prices to maximize revenue and clear inventory, while staying within your safe limits.</p>
         </div>
 
-        <div className="p-6 shadow-sm rounded-[16px] flex items-center justify-between bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:border-white/10">
+        <div className="p-6 shadow-sm rounded-[16px] flex items-center justify-between glassmorphism">
           <div>
             <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F]">Enable Smart Pricing</h3>
             <p className="text-sm text-gray-500 mt-1">Turn on autonomous hyper-local dynamic pricing.</p>
@@ -83,7 +83,7 @@ export default function SmartPricingPage() {
         </div>
 
         {enabled && (
-          <div className="p-6 shadow-sm rounded-[16px] flex flex-col gap-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:border-white/10">
+          <div className="p-6 shadow-sm rounded-[16px] flex flex-col gap-6 glassmorphism">
             <h3 className="text-lg font-semibold font-outfit border-b pb-2 text-[#1D1D1F] border-black/10">Configuration</h3>
 
             <div className="flex items-center justify-between gap-4">

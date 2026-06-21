@@ -62,7 +62,7 @@ export default function MenuGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F5F7] dark:bg-[#000000] font-inter">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-md border-white/40 dark:border-white/10">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism">
         <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">Viral AI Menu Generator 🪄</h1>
         <button
           onClick={() => router.push('/dashboard')}
