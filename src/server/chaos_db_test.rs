@@ -70,8 +70,7 @@ mod chaos_db_tests {
 
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1)
-            .connect(&uri)
-            .await
+            .connect_lazy(&uri)
             .unwrap();
 
         let db = Arc::new(DB {
