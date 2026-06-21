@@ -1,22 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Interactive Walkthroughs', () => {
-
-  test.beforeEach(async ({ page }) => {
-    await page.route('**/api/walkthrough/store-setup', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { targetId: "bio-input-tooltip", title: "Business Description", text: "Enter your business description." },
-          { targetId: "generate-btn-tooltip", title: "Generate", text: "Click to generate!" }
-        ])
-      });
-    });
-  });
-
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
-    await page.goto('/builder');
+    // Navigate to a page with the walkthrough target and the help widget
+    await page.goto('/dashboard'); // or /storefront-builder which has bio-input
 
     // Open the help widget
     const helpButton = page.locator('#help-widget-container button').first();
@@ -27,6 +14,22 @@ test.describe('Interactive Walkthroughs', () => {
     const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(tourButton).toBeVisible();
     await tourButton.click();
+
+    // In a real flow, you might be redirected or the elements are present.
+    // Since /dashboard does not have bio-input, let's navigate directly to storefront builder if it redirects,
+    // or just mock the route if possible. We will assume the Tour redirects or we just navigate to where bio-input is.
+
+    // Instead of dashboard, let's go straight to builder since that's where the target elements are:
+    await page.goto('/builder');
+
+    // Re-open help widget on the right page
+    const builderHelpButton = page.locator('#help-widget-container button').first();
+    await expect(builderHelpButton).toBeVisible();
+    await builderHelpButton.click();
+
+    const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    await expect(builderTourButton).toBeVisible();
+    await builderTourButton.click();
 
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');
@@ -49,14 +52,14 @@ test.describe('Interactive Walkthroughs', () => {
   test('user can exit the walkthrough early by clicking the skip/close button', async ({ page }) => {
     await page.goto('/builder');
 
-    // Open help widget
-    const helpButton = page.locator('#help-widget-container button').first();
-    await expect(helpButton).toBeVisible();
-    await helpButton.click();
+    // Re-open help widget
+    const builderHelpButton = page.locator('#help-widget-container button').first();
+    await expect(builderHelpButton).toBeVisible();
+    await builderHelpButton.click();
 
-    const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
-    await expect(tourButton).toBeVisible();
-    await tourButton.click();
+    const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    await expect(builderTourButton).toBeVisible();
+    await builderTourButton.click();
 
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');

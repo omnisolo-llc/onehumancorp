@@ -58,10 +58,11 @@ export async function GET(request: Request) {
         const cookie = request.headers.get('cookie');
         if (cookie) headers.set('cookie', cookie);
 
-        // Best effort async fetch via GET proxy
-        fetch(`${backendUrl}/api/v1/growth/referrals/click?target=${encodeURIComponent(target)}&ref=${encodeURIComponent(ref)}`, {
-          method: 'GET',
-          headers
+        // Best effort async fetch
+        fetch(`${backendUrl}/api/v1/growth/referrals/click`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ id: ref })
         }).catch(err => console.error("Error recording referral click on GET:", err));
     }
 

@@ -12,7 +12,7 @@ test.describe('In-App Help & Documentation Features', () => {
 
     // Search functionality
     const searchInput = page.getByPlaceholder('Search for help articles and videos...');
-    await searchInput.fill('Payments', { force: true });
+    await searchInput.fill('Payments');
 
     // Should show payments-related article
     await expect(page.getByText('Getting Paid').first()).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('In-App Help & Documentation Features', () => {
     await page.goto('/help_article.html?id=getting-started-1');
 
     await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible();
-    await expect(page.getByText(/Tell us about your business/)).toBeVisible();
+    await expect(page.getByText('Tell us about your business')).toBeVisible();
   });
 
   test('contextual tooltips and floating help widget', async ({ page }) => {

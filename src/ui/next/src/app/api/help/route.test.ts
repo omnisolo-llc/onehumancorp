@@ -1,58 +1,48 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
+import { fallbackArticles } from './fallback';
 import { NextRequest } from 'next/server';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockFetch = vi.fn();
-
-describe('Help API Route', () => {
+describe('/api/help GET', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch);
-    process.env.BACKEND_URL = 'http://test-backend';
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it('fetches help articles from backend successfully', async () => {
-    const mockData = [{ id: '1', title: 'Test Article' }];
-    mockFetch.mockResolvedValueOnce({
+  it('fetches help from the backend and returns them', async () => {
+    const mockArticles = [
+      { category: 'Getting Started', title: 'Getting Started', desc: 'Learn', link: '/help/getting-started-1' }
+    ];
+
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockData
+      json: () => Promise.resolve(mockArticles),
     });
 
-    const request = new NextRequest('http://localhost/api/help');
+    const request = new NextRequest('http://localhost:3000/api/help');
     const response = await GET(request);
-    const data = await response.json();
-
-    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/help');
     expect(response.status).toBe(200);
-    expect(data).toEqual(mockData);
+    const data = await response.json();
+    expect(data).toEqual(mockArticles);
   });
 
-  it('returns empty array on backend error', async () => {
-    mockFetch.mockResolvedValueOnce({
+  it('returns fallback articles on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      status: 500
+      status: 404,
     });
-
-    const request = new NextRequest('http://localhost/api/help');
+    const request = new NextRequest('http://localhost:3000/api/help');
     const response = await GET(request);
-    const data = await response.json();
-
     expect(response.status).toBe(200);
-    expect(data).toEqual([]);
+    const data = await response.json();
+    expect(data).toEqual(fallbackArticles);
   });
 
-  it('handles fetch exceptions gracefully with empty array', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    const request = new NextRequest('http://localhost/api/help');
+  it('handles fetch exceptions gracefully with fallback articles', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const request = new NextRequest('http://localhost:3000/api/help');
     const response = await GET(request);
-    const data = await response.json();
-
     expect(response.status).toBe(200);
-    expect(data).toEqual([]);
+    const data = await response.json();
+    expect(data).toEqual(fallbackArticles);
   });
 });

@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { fallbackArticles } from '../fallback';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -16,9 +17,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json([], { status: 200 });
+    // Fallback logic
+    const results = fallbackArticles.filter(a =>
+      a.title.toLowerCase().includes(q) ||
+      a.desc.toLowerCase().includes(q) ||
+      (a.category && a.category.toLowerCase().includes(q))
+    );
+    return NextResponse.json(results, { status: 200 });
+
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch help search from backend:", e);
-    return NextResponse.json([], { status: 200 });
+    const results = fallbackArticles.filter(a =>
+      a.title.toLowerCase().includes(q) ||
+      a.desc.toLowerCase().includes(q) ||
+      (a.category && a.category.toLowerCase().includes(q))
+    );
+    return NextResponse.json(results, { status: 200 });
   }
 }

@@ -844,9 +844,6 @@ export default function WebsiteBuilderPage() {
           ))}
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
-          <div className="text-center mt-4 mb-8">
-            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
-          </div>
         </div>
 
         <div className="absolute bottom-0 w-full p-4 glassmorphism z-50 rounded-b-[16px]">

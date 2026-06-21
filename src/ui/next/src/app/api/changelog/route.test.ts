@@ -1,58 +1,51 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
 import { NextRequest } from 'next/server';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockFetch = vi.fn();
-
-describe('Changelog API Route', () => {
+describe('/api/changelog GET', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch);
-    process.env.BACKEND_URL = 'http://test-backend';
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it('fetches changelog from backend successfully', async () => {
-    const mockData = [{ version: "v1.0.0", contentLines: ["### Initial Release"] }];
-    mockFetch.mockResolvedValueOnce({
+  it('fetches changelog from backend', async () => {
+    const mockResults = [
+      { version: '1.0', contentLines: ['Feature'] }
+    ];
+
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockData
+      json: () => Promise.resolve(mockResults),
     });
 
-    const request = new NextRequest('http://localhost/api/changelog');
+    const request = new NextRequest('http://localhost:3000/api/changelog');
     const response = await GET(request);
+
+    expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/changelog');
-    expect(response.status).toBe(200);
-    expect(data).toEqual(mockData);
+    expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:18789/api/changelog');
+    expect(data).toEqual(mockResults);
   });
 
-  it('returns empty array on backend failure', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500
-    });
+  it('returns fallback changelog on backend failure', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network Error'));
 
-    const request = new NextRequest('http://localhost/api/changelog');
+    const request = new NextRequest('http://localhost:3000/api/changelog');
     const response = await GET(request);
-    const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data).toEqual([]);
-  });
-
-  it('handles fetch exceptions gracefully with empty array', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    const request = new NextRequest('http://localhost/api/changelog');
-    const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toEqual([]);
+    expect(data).toEqual([
+      {
+        version: "v1.0.0",
+        contentLines: [
+          "### Initial Release",
+          "- Welcome to OneHumanCorp!",
+          "- Added AI Support Agent to help manage your business.",
+          "- Included Storefront Builder for quick setup.",
+        ]
+      }
+    ]);
   });
 });

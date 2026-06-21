@@ -5,13 +5,6 @@ describe("POST /api/billing/create-checkout-session", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
-
-    // Silence console error for this specific test
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   it("should proxy the request to the backend and return the response", async () => {

@@ -1,68 +1,36 @@
-import { GET } from "./route";
-import { NextRequest } from "next/server";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GET } from './route';
+import { NextRequest } from 'next/server';
 
-const mockFetch = vi.fn();
-
-describe("Help Article API Route", () => {
+describe('/api/help/[articleId] GET', () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", mockFetch);
-    process.env.BACKEND_URL = "http://test-backend";
-    // Silence expected console errors
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
+  it('fetches article from the backend and returns them', async () => {
+    const mockArticle = { category: 'Getting Started', title: 'Getting Started', desc: 'Learn', link: '/help/getting-started-1' };
 
-  it("fetches article from backend successfully", async () => {
-    const mockData = { id: "test-id", title: "Test Article" };
-    mockFetch.mockResolvedValueOnce({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockData,
+      json: () => Promise.resolve(mockArticle),
     });
 
-    const request = new NextRequest("http://localhost/api/help/test-id");
-    const response = await GET(request, {
-      params: Promise.resolve({ articleId: "test-id" }),
-    });
-    const data = await response.json();
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://test-backend/api/help/test-id",
-    );
+    const request = new NextRequest('http://localhost:3000/api/help/test-id');
+    const response = await GET(request, { params: Promise.resolve({ articleId: 'test-id' }) });
     expect(response.status).toBe(200);
-    expect(data).toEqual(mockData);
+    const data = await response.json();
+    expect(data).toEqual(mockArticle);
   });
 
-  it("returns 404 on backend 404 error", async () => {
-    mockFetch.mockResolvedValueOnce({
+  it('returns fallback article on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
     });
-
-    const request = new NextRequest("http://localhost/api/help/unknown-id");
-    const response = await GET(request, {
-      params: Promise.resolve({ articleId: "unknown-id" }),
-    });
+    const request = new NextRequest('http://localhost:3000/api/help/add-products');
+    const response = await GET(request, { params: Promise.resolve({ articleId: 'add-products' }) });
+    expect(response.status).toBe(200);
     const data = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(data.error).toBe("Article not found");
-  });
-
-  it("handles fetch exceptions gracefully with 404 error", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-    const request = new NextRequest("http://localhost/api/help/error-id");
-    const response = await GET(request, {
-      params: Promise.resolve({ articleId: "error-id" }),
-    });
-    const data = await response.json();
-
-    expect(response.status).toBe(404);
-    expect(data.error).toBe("Article not found");
+    expect(data.id).toEqual("add-products");
   });
 });

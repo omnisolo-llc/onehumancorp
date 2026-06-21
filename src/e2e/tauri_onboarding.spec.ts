@@ -83,7 +83,6 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // We mocked start btn but it relies on index.html script redirect, which might be intercepted or missing full context in playwright mock scheme.
     // Just explicitly go there since the button just does a simple location.href.
     await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Conversational Setup' }).click();
 
 
     // Initial Setup Step: Conversational Setup
@@ -184,7 +183,12 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
 
-    // Step 7: Template
+    // Step 7: Domain
+    await expect(page.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
+    await page.getByPlaceholder("my-business").fill("test-business");
+    await page.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
+
+    // Step 8: Template
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
@@ -274,7 +278,13 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
 
-    // Step 7: Template
+    // Step 7: Domain
+    await expect(newPage.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
+    await newPage.getByPlaceholder("my-business").fill("test-business");
+    await expect(newPage.getByPlaceholder("my-business")).toHaveValue("test-business");
+    await newPage.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
+
+    // Step 8: Template
     await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
 

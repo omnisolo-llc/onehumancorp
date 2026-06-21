@@ -217,7 +217,6 @@ describe('WebsiteBuilderPage', () => {
       // 3 + 1 PoweredBy (the powered by component isn't wrapped in draggable-block anymore based on actual implementation)
       // Wait for it to not be empty
       expect(screen.getAllByTestId('draggable-block').length).toBe(3);
-      expect(screen.getByText('⚡ Powered by OHC')).toBeInTheDocument();
     });
 
     const blocks = screen.getAllByTestId('draggable-block');

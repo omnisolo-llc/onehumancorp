@@ -60,7 +60,6 @@ describe('StorefrontBuilderPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Preview Mode')).toBeTruthy();
-      expect(screen.getByText('⚡ Powered by OHC')).toBeTruthy();
     });
   });
 

@@ -34,9 +34,6 @@ impl BudgetManager {
         if amount < 0.0 {
             return Err("spend amount cannot be negative".to_string());
         }
-        if amount == 0.0 {
-            return Ok(self.get_remaining() >= 0.0);
-        }
 
         let mut current_bits = self.current.load(Ordering::Relaxed);
         let final_current;
@@ -88,9 +85,6 @@ impl BudgetManager {
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        if amount_cents == 0 {
-            return Ok(self.get_remaining() >= 0.0);
-        }
         self.record_spend((amount_cents as f64) / 100.0)
     }
 

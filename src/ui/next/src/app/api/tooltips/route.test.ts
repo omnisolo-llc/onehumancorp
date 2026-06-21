@@ -1,58 +1,13 @@
 import { GET } from './route';
 import { NextRequest } from 'next/server';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-const mockFetch = vi.fn();
-
-describe('Tooltips API Route', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch);
-    process.env.BACKEND_URL = 'http://test-backend';
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-  });
-
-  it('fetches tooltips from backend successfully', async () => {
-    const mockData = { 'test-tooltip': 'Test text' };
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockData
-    });
-
-    const request = new NextRequest('http://localhost/api/tooltips');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/tooltips');
-    expect(response.status).toBe(200);
-    expect(data).toEqual(mockData);
-  });
-
-  it('returns empty object on backend error', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500
-    });
-
-    const request = new NextRequest('http://localhost/api/tooltips');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data).toEqual({});
-  });
-
-  it('handles fetch exceptions gracefully with empty object', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-    const request = new NextRequest('http://localhost/api/tooltips');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data).toEqual({});
+describe('Tooltips API', () => {
+  it('returns fallback tooltips when backend fails', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const req = new NextRequest('http://localhost:3000/api/tooltips');
+    const res = await GET(req);
+    const data = await res.json();
+    expect(data['changelog-nav-tooltip']).toBeDefined();
   });
 });

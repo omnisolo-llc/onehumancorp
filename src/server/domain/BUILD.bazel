@@ -18,7 +18,6 @@ exports_files(
         "subscription.rs",
         "unified_tenant_test.rs",
         "booking.rs",
-        "estimator.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -43,7 +42,6 @@ rust_library(
         "subscription.rs",
         "unified_tenant_test.rs",
         "booking.rs",
-        "estimator.rs",
         "//src/server/domain/repository:campaign_repo.rs",
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",
