@@ -294,6 +294,9 @@ export default function Dashboard() {
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
         setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        if (unifiedData.triage) {
+          setInitialTriage(unifiedData.triage);
+        }
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {

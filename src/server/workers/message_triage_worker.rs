@@ -111,7 +111,7 @@ impl MessageTriageWorker {
 
             // Extract intent & context using LLM
             let prompt = format!(
-                "You are an AI order and task triage assistant for a business.
+                "You are the WorkTriageAgent, an AI order and task triage assistant for a business.\n\nYou have access to the following tools:\n1. `search_customers`: Search existing customers by name or phone.\n2. `check_availability`: Check calendar and inventory availability.\n3. `draft_reply`: Draft a response to the customer.\n4. `create_draft_invoice`: Create a drafted quote or invoice for the customer.\n
 Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
