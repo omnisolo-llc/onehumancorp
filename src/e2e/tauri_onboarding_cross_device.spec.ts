@@ -198,12 +198,12 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         body: JSON.stringify({ organization_id: 'test-org-123' })
       });
     });
-    await page.route('**/success.html', async route => {
+    await page.route('**/dashboard.html', async route => {
       await route.fulfill({ status: 200, body: 'Success' });
     });
     await page.getByTestId('finish-btn').click();
     // Finish setup redirects to success
-    await expect(page).toHaveURL(/.*success.html/);
+    await expect(page).toHaveURL(/.*dashboard.html/);
   });
 
   test('Setup UI Persona chips auto-fill the form correctly', async ({ page }) => {
