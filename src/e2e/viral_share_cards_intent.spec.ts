@@ -39,5 +39,12 @@ test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
         const waHref = await whatsappShare.getAttribute('href');
         expect(waHref).toContain('wa.me/?text=');
         expect(waHref).toContain(encodeURIComponent('Powered by OHC'));
+
+        // Validate LinkedIn Share Link
+        const linkedinShare = page.locator('a', { hasText: 'Share on LinkedIn' });
+        await expect(linkedinShare).toBeVisible();
+        const liHref = await linkedinShare.getAttribute('href');
+        expect(liHref).toContain('linkedin.com/sharing/share-offsite');
+        expect(liHref).toContain('url=');
     });
 });
