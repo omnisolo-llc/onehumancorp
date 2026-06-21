@@ -54,6 +54,23 @@ test.describe('Interactive Quote Widget Growth Loop', () => {
         const publicFooterLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
         await expect(publicFooterLink).toBeVisible();
         await expect(publicFooterLink).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=e2e-service/);
+
+        // 8. Go back to generator page and verify the embed code contains the viral link
+        // We wait for the generator page to be ready and local storage tenant to be loaded
+        await page.goto('/interactive-quote-generator');
+        // Give time for useEffect to pick up localStorage and update state to e2e-service
+        await page.waitForFunction(() => {
+            const el = document.querySelector('textarea[readonly]');
+            return el && (el as HTMLTextAreaElement).value.includes('ref=e2e-service');
+        });
+
+        const embedCodeTextarea = page.locator('textarea[readonly]');
+        await expect(embedCodeTextarea).toBeVisible();
+
+        // Use regex for checking text since spaces/newlines might differ, ensuring the core viral link structure is there
+        const embedCodeValue = await embedCodeTextarea.inputValue();
+        expect(embedCodeValue).toContain('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=e2e-service');
+        expect(embedCodeValue).toContain('⚡ Powered by OHC');
     });
 
     test('Dashboard contains link to Interactive Quote Generator', async ({ page }) => {
