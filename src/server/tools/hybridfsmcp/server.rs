@@ -118,8 +118,8 @@ impl HybridFSMcpServer {
                 let pool = pool.ok_or_else(|| tonic::Status::internal("database pool required for sync operations"))?;
                 async {
                     let id = uuid::Uuid::new_v4().to_string();
-                    let spiffe_id_str = &req.spiffe_id;
-                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
+                    let spiffe_id_str = req.spiffe_id.clone();
+                    let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
                     let tenant_id = parsed.0;
                     if tenant_id.is_empty() {
                         return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
