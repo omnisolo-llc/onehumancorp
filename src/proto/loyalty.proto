@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package ohc.loyalty;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/loyalty;loyaltypb";
+
+message LoyaltyProgram {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string program_type = 4; // 'points', 'punch_card', 'tiers'
+    string config_json = 5;
+    bool is_active = 6;
+    int64 created_at_unix = 7;
+    int64 updated_at_unix = 8;
+}
+
+message CustomerLoyaltyAccount {
+    string id = 1;
+    string tenant_id = 2;
+    string customer_id = 3;
+    string program_id = 4;
+    int32 points_balance = 5;
+    int32 punches_count = 6;
+    string tier_name = 7;
+    int64 created_at_unix = 8;
+    int64 updated_at_unix = 9;
+}
+
+message LoyaltyTransaction {
+    string id = 1;
+    string tenant_id = 2;
+    string account_id = 3;
+    string transaction_type = 4; // 'EARN', 'REDEEM', 'ADJUST'
+    int32 points = 5;
+    string reason = 6;
+    string order_id = 7;
+    int64 created_at_unix = 8;
+}
+
+message Reward {
+    string id = 1;
+    string tenant_id = 2;
+    string program_id = 3;
+    string name = 4;
+    string description = 5;
+    int32 cost_in_points = 6;
+    string reward_type = 7; // 'discount', 'free_item'
+    string reward_value_json = 8;
+    bool is_active = 9;
+    int64 created_at_unix = 10;
+    int64 updated_at_unix = 11;
+}
+
+message CreateLoyaltyProgramRequest {
+    string tenant_id = 1;
+    string name = 2;
+    string program_type = 3;
+    string config_json = 4;
+}
+
+message UpdateLoyaltyProgramRequest {
+    string tenant_id = 1;
+    string id = 2;
+    string name = 3;
+    string program_type = 4;
+    string config_json = 5;
+    bool is_active = 6;
+}
+
+message GetLoyaltyProgramRequest {
+    string tenant_id = 1;
+    string id = 2;
+}
+
+message ListLoyaltyProgramsRequest {
+    string tenant_id = 1;
+}
+
+message ListLoyaltyProgramsResponse {
+    repeated LoyaltyProgram programs = 1;
+}
+
+message GetLoyaltyStatusRequest {
+    string tenant_id = 1;
+    string customer_id = 2;
+    string program_id = 3;
+}
+
+message EarnPointsRequest {
+    string tenant_id = 1;
+    string customer_id = 2;
+    string program_id = 3;
+    int32 points = 4;
+    string reason = 5;
+    string order_id = 6;
+}
+
+message EarnPointsResponse {
+    CustomerLoyaltyAccount account = 1;
+    LoyaltyTransaction transaction = 2;
+}
+
+message CreateRewardRequest {
+    string tenant_id = 1;
+    string program_id = 2;
+    string name = 3;
+    string description = 4;
+    int32 cost_in_points = 5;
+    string reward_type = 6;
+    string reward_value_json = 7;
+}
+
+message UpdateRewardRequest {
+    string tenant_id = 1;
+    string id = 2;
+    string name = 3;
+    string description = 4;
+    int32 cost_in_points = 5;
+    string reward_type = 6;
+    string reward_value_json = 7;
+    bool is_active = 8;
+}
+
+message GetRewardsRequest {
+    string tenant_id = 1;
+    string program_id = 2;
+}
+
+message GetRewardsResponse {
+    repeated Reward rewards = 1;
+}
+
+message RedeemRewardRequest {
+    string tenant_id = 1;
+    string customer_id = 2;
+    string program_id = 3;
+    string reward_id = 4;
+}
+
+message RedeemRewardResponse {
+    CustomerLoyaltyAccount account = 1;
+    LoyaltyTransaction transaction = 2;
+}
+
+service LoyaltyService {
+    rpc CreateLoyaltyProgram(CreateLoyaltyProgramRequest) returns (LoyaltyProgram);
+    rpc UpdateLoyaltyProgram(UpdateLoyaltyProgramRequest) returns (LoyaltyProgram);
+    rpc GetLoyaltyProgram(GetLoyaltyProgramRequest) returns (LoyaltyProgram);
+    rpc ListLoyaltyPrograms(ListLoyaltyProgramsRequest) returns (ListLoyaltyProgramsResponse);
+
+    rpc GetLoyaltyStatus(GetLoyaltyStatusRequest) returns (CustomerLoyaltyAccount);
+    rpc EarnPoints(EarnPointsRequest) returns (EarnPointsResponse);
+
+    rpc CreateReward(CreateRewardRequest) returns (Reward);
+    rpc UpdateReward(UpdateRewardRequest) returns (Reward);
+    rpc GetRewards(GetRewardsRequest) returns (GetRewardsResponse);
+    rpc RedeemReward(RedeemRewardRequest) returns (RedeemRewardResponse);
+}
