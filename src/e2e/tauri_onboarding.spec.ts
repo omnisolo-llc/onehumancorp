@@ -86,6 +86,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Initial Setup Step: Conversational Setup
+    await page.getByRole('button', { name: "Conversational Setup" }).click();
     await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
 
     // Type into chat
