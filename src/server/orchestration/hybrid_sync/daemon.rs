@@ -467,7 +467,7 @@ impl HybridSyncDaemon {
 
     pub async fn prune_stuck_sub_agent_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
         // SQLite queue
-        let res_running_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hour')")
+        let res_running_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', sync_error = '[bug] Queue became stuck', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hour')")
             .execute(&self.sqlite_pool)
             .await;
         if let Ok(res) = res_running_sqlite {
@@ -476,7 +476,7 @@ impl HybridSyncDaemon {
             }
         }
 
-        let res_queued_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')")
+        let res_queued_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', sync_error = '[bug] Queue became stuck', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')")
             .execute(&self.sqlite_pool)
             .await;
         if let Ok(res) = res_queued_sqlite {
@@ -486,7 +486,7 @@ impl HybridSyncDaemon {
         }
 
         // PG queue
-        let res_running_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'")
+        let res_running_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', sync_error = '[bug] Queue became stuck', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'")
             .execute(&self.pg_pool)
             .await;
         if let Ok(res) = res_running_pg {
@@ -495,7 +495,7 @@ impl HybridSyncDaemon {
             }
         }
 
-        let res_queued_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
+        let res_queued_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', sync_error = '[bug] Queue became stuck', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
             .execute(&self.pg_pool)
             .await;
         if let Ok(res) = res_queued_pg {
