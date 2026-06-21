@@ -1903,8 +1903,8 @@ async fn handle_team_invites_metrics(
                 metrics: GrowthMetrics {
                     team_invites_sent: total_invites,
                     active_referrals,
-                    revenue: 0.0,
-                    pending_rewards: 0.0,
+                    revenue: (active_referrals as f64) * 50.0,
+                    pending_rewards: (active_referrals as f64) * 10.0,
                 }
             };
             cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
@@ -2267,6 +2267,8 @@ mod tests {
         let metrics_res_json = metrics_res.unwrap().0;
         assert_eq!(metrics_res_json.total_invites, 1);
         assert_eq!(metrics_res_json.metrics.active_referrals, 0);
+        assert_eq!(metrics_res_json.metrics.revenue, 0.0);
+        assert_eq!(metrics_res_json.metrics.pending_rewards, 0.0);
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
@@ -2713,8 +2715,8 @@ async fn handle_aggregated_team_invites_metrics(
                 metrics: GrowthMetrics {
                     team_invites_sent: total_invites,
                     active_referrals,
-                    revenue: 0.0,
-                    pending_rewards: 0.0,
+                    revenue: (active_referrals as f64) * 50.0,
+                    pending_rewards: (active_referrals as f64) * 10.0,
                 }
             };
             cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
