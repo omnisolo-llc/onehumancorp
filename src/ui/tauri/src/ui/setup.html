@@ -2097,6 +2097,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               instantBioInputEl.style.borderColor = '';
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
+              goToStep('step-loading');
 
               try {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
@@ -2210,6 +2211,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
               } catch (err) {
                   console.error(err);
+                  goToStep('step-instant');
                   const errorMsg = err.message || "Network Error: Failed to fetch";
                   instantErrorEl.innerText = errorMsg;
                   instantErrorEl.style.display = 'block';
