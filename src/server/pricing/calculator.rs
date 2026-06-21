@@ -200,7 +200,7 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
 // Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
 pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_tokens: i64, model: &str) -> f64 {
     tracing::info!("💰 Miser telemetry: Calculating token efficiency for model: {}", model); // pii-safe
-    if original_tokens <= truncated_tokens {
+    if original_tokens <= truncated_tokens || original_tokens == 0 {
         return 0.0;
     }
     let saved_tokens = original_tokens - truncated_tokens;
@@ -231,6 +231,15 @@ mod tests {
         // Test with a known model
         let cost = calculate_cost("claude-3-opus", 1000000, 1000000, 0);
         assert_eq!(cost, 15.00 + 75.00);
+
+        let cost = calculate_cost("gpt-4o-mini", 1000000, 1000000, 0);
+        assert_eq!(cost, 0.15 + 0.60);
+
+        let cost = calculate_cost("o1", 1000000, 1000000, 0);
+        assert_eq!(cost, 15.0 + 60.0);
+
+        let cost = calculate_cost("gemini-2.5-flash", 1000000, 1000000, 0);
+        assert_eq!(cost, 0.15 + 0.60);
 
         // Test with cached tokens
         let cost = calculate_cost("claude-3.5-sonnet", 1000000, 0, 1000000);
@@ -430,6 +439,7 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
+        assert_eq!(calculate_heuristic_token_efficiency(0, 0, "gpt-4o"), 0.0);
     }
 }
 // Optimizations handled: Cost savings functionality verified and intact

@@ -234,6 +234,11 @@ mod tests {
 
         custom_manager.record_spend_cents(1000).expect("failed to unwrap"); // 95%
         assert!(custom_manager.check_alert_threshold_cents(10000));
+
+        // Exact threshold check
+        let exact_manager = BudgetManager::new(100.0).with_alert_threshold(80.0);
+        exact_manager.record_spend_cents(8000).expect("failed to unwrap");
+        assert!(exact_manager.check_alert_threshold_cents(10000));
     }
 
     #[test]
