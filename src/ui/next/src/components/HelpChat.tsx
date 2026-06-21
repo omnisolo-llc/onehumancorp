@@ -141,6 +141,16 @@ export function HelpChat() {
     }
   }, [inputValue, isLoading]);
 
+  const clearChat = () => {
+    setMessages([
+      {
+        id: "1",
+        sender: "agent",
+        text: "Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?",
+      },
+    ]);
+  };
+
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const forceChat =
     typeof window !== "undefined" &&
@@ -189,7 +199,17 @@ export function HelpChat() {
                 </p>
               </div>
             </div>
-            <button
+            <div className="flex gap-2">
+              {messages.length > 1 && (
+                <button
+                  onClick={clearChat}
+                  className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px] px-3 flex items-center text-xs font-bold font-inter"
+                  aria-label="Clear chat"
+                >
+                  Clear
+                </button>
+              )}
+              <button
               onClick={() => setIsOpen(false)}
               className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
               aria-label="Close help chat"
@@ -211,6 +231,7 @@ export function HelpChat() {
                 />
               </svg>
             </button>
+            </div>
           </div>
 
           {/* Messages */}

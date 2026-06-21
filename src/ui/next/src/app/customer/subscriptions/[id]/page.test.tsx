@@ -39,7 +39,7 @@ describe('CustomerSubscriptionPortal', () => {
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
+    if (vi.isFakeTimers && vi.isFakeTimers()) { vi.runOnlyPendingTimers(); }
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
