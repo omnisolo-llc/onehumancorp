@@ -72,7 +72,7 @@ impl RequestDeduplicator {
         };
 
         if is_leader {
-            let tx = tx.unwrap();
+            let tx = tx.expect("failed to unwrap");
             let result = fetcher().await;
 
             let _ = tx.send(DeduplicationState::Completed(result.clone()));
@@ -154,9 +154,9 @@ mod tests {
 
         let (res1, res2, res3) = tokio::join!(req1, req2, req3);
 
-        assert_eq!(res1.unwrap().unwrap().response, "success");
-        assert_eq!(res2.unwrap().unwrap().response, "success");
-        assert_eq!(res3.unwrap().unwrap().response, "success 3"); // Executed again because it was removed!
+        assert_eq!(res1.expect("failed to unwrap").expect("failed to unwrap").response, "success");
+        assert_eq!(res2.expect("failed to unwrap").expect("failed to unwrap").response, "success");
+        assert_eq!(res3.expect("failed to unwrap").expect("failed to unwrap").response, "success 3"); // Executed again because it was removed!
         assert_eq!(call_count.load(Ordering::SeqCst), 2); // Executed twice!
     }
 
@@ -191,8 +191,8 @@ mod tests {
 
         let (res1, res2) = tokio::join!(req1, req2);
 
-        assert_eq!(res1.unwrap().unwrap().response, "success 1");
-        assert_eq!(res2.unwrap().unwrap().response, "success 2");
+        assert_eq!(res1.expect("failed to unwrap").expect("failed to unwrap").response, "success 1");
+        assert_eq!(res2.expect("failed to unwrap").expect("failed to unwrap").response, "success 2");
         assert_eq!(call_count.load(Ordering::SeqCst), 2); // Executed twice!
     }
 
@@ -228,8 +228,8 @@ mod tests {
 
         let (res1, res2) = tokio::join!(req1, req2);
 
-        assert_eq!(res1.unwrap(), Err("failed".to_string()));
-        assert_eq!(res2.unwrap(), Err("failed".to_string()));
+        assert_eq!(res1.expect("failed to unwrap"), Err("failed".to_string()));
+        assert_eq!(res2.expect("failed to unwrap"), Err("failed".to_string()));
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 }
