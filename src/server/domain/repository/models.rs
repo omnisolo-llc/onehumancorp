@@ -106,6 +106,8 @@ pub struct Product {
     pub seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub low_stock_threshold: Option<i32>,
+    pub supplier_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -421,6 +423,17 @@ pub struct DepositRequirement {
     pub percentage: Option<f64>,
     pub status: String,
     pub payment_intent_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Supplier {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub email: Option<String>,
+    pub phone: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

@@ -170,6 +170,8 @@ mod tests {
             seo_schema_json: None,
             created_at: None,
             updated_at: None,
+            low_stock_threshold: None,
+            supplier_id: None,
         };
         assert_eq!(p.id, "p1");
 
