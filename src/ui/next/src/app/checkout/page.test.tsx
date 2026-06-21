@@ -86,6 +86,12 @@ beforeEach(() => {
       value: { assign },
     });
     global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/v1/pos/inventory')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
+        });
+      }
       if (url === '/api/billing/create-checkout-session') {
         return Promise.resolve({
           ok: true,
@@ -120,6 +126,12 @@ beforeEach(() => {
       value: { assign },
     });
     global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/v1/pos/inventory')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
+        });
+      }
       if (url === '/api/billing/create-checkout-session') {
         return Promise.resolve({
           ok: true,
