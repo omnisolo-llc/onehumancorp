@@ -74,7 +74,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
-        border-radius: 8px;
+        border-radius: 16px;
         min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -100,10 +100,11 @@
       }
             button, input, select, textarea, .glassmorphism {
         min-height: 44px;
+        min-width: 44px;
         box-sizing: border-box;
       }
       button, input, select, textarea {
-        border-radius: 8px !important;
+        border-radius: 16px !important;
       }
       button { min-width: 44px;
         background-color: #0066FF;
@@ -111,7 +112,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px !important;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
