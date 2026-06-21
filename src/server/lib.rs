@@ -5168,7 +5168,11 @@ async fn ui_dashboard_unified_feed_handler(
         "priority_tasks": priority_tasks,
     });
 
-    let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
+    if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
+        let cache_key_set = cache_key.clone();
+        let cacheable_result_set = cacheable_result.clone();
+        let _ = tokio::spawn(async move { c.set(&cache_key_set, cacheable_result_set, std::time::Duration::from_secs(10)).await; });
+    }
 
     // Add supply to the final result
     let mut final_result = cacheable_result;
