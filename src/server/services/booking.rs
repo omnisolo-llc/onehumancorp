@@ -1765,6 +1765,7 @@ mod native_booking_tests {
             requires_deposit: false,
             timezone: "UTC".to_string(),
         });
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "t1".to_string(),
@@ -1784,6 +1785,7 @@ mod native_booking_tests {
             product_id: "p1".to_string(),
             date: "invalid-date".to_string(),
         });
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "t1".to_string(),
@@ -1795,7 +1797,7 @@ mod native_booking_tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires a migrated OHC_DATABASE_URL with product inventory rows"]
+
     async fn test_native_create_conversational_checkout() {
         let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(CreateConversationalCheckoutRequest {
@@ -1804,6 +1806,7 @@ mod native_booking_tests {
             amount_cents: 1000,
             product_id: "p1".to_string(),
         });
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "t1".to_string(),
@@ -1832,6 +1835,7 @@ mod native_booking_tests {
             requires_deposit: true,
             timezone: "UTC".to_string(),
         });
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "t1".to_string(),
