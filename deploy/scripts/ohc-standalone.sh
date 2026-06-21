@@ -85,7 +85,13 @@ echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 
 # Launch the UI Desktop wrapper
 echo -e "${DIM}  Waiting for backend to be ready...${RESET}"
-until curl -s http://localhost:8080/readyz > /dev/null 2>&1; do
+retry_count=0
+until curl -s http://localhost:8080/readyz > /dev/null 2>&1 || curl -s http://localhost:18789/readyz > /dev/null 2>&1; do
+  ((retry_count++))
+  if [ $retry_count -gt 60 ]; then
+    echo "Timeout waiting for server"
+    exit 1
+  fi
   sleep 1
 done
 

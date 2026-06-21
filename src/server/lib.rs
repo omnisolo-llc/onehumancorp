@@ -3608,7 +3608,22 @@ pub async fn update_ui_triage_action_handler(
     let tenant_id = ui_tenant_id(&query);
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
+            update_ui_triage_action_pg(&db, &tenant_id, &payload).await
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            update_ui_triage_action_sqlite(sqlite_pool, &tenant_id, &payload).await
+        }
+    }
+}
+
+async fn update_ui_triage_action_pg(
+    db: &std::sync::Arc<crate::db::DB>,
+    tenant_id: &str,
+    payload: &TriageActionPayload,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
                 Err(e) => {
                     tracing::error!("Failed to begin transaction: {:?}", e);
@@ -3827,16 +3842,23 @@ pub async fn update_ui_triage_action_handler(
                     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
                     cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
                     cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                    return (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response();
                 },
                 Err(e) => {
                     tracing::error!("Failed to update triage item: {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
                 }
             }
-        }
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let mut tx = match sqlite_pool.begin().await {
+}
+
+async fn update_ui_triage_action_sqlite(
+    sqlite_pool: &sqlx::SqlitePool,
+    tenant_id: &str,
+    payload: &TriageActionPayload,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+let mut tx = match sqlite_pool.begin().await {
                 Ok(tx) => tx,
                 Err(e) => {
                     tracing::error!("Failed to begin sqlite transaction: {:?}", e);
@@ -3932,16 +3954,15 @@ pub async fn update_ui_triage_action_handler(
                     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
                     cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
                     cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                    return (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response();
                 },
                 Err(e) => {
                     tracing::error!("Failed to update triage item (sqlite): {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
                 }
             }
         }
-    }
-}
+
 
 
 #[derive(Debug, Clone, serde::Serialize)]
