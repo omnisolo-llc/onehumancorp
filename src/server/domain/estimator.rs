@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use serde_json::{Value, json};
+use serde_json::Value;
 use uuid::Uuid;
 
 pub async fn handle_proposal_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
