@@ -81,7 +81,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     });
 
     // Login via UI
-    await page.goto('http://127.0.0.1:3000/login'); // Next.js login routes back to Tauri dashboard
+    await page.goto('http://localhost:18789/login'); // Next.js login routes back to Tauri dashboard
     await page.fill('input[type="email"]', `${tenantId}@example.com`);
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');

@@ -47,7 +47,7 @@ test.describe('Smart Pricing autonomous workflow', () => {
     });
 
     // Login via UI
-    await page.goto('http://127.0.0.1:3000/login');
+    await page.goto('http://localhost:18789/login');
     await page.fill('input[type="email"]', `${tenantId}@example.com`);
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');

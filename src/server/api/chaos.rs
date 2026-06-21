@@ -29,7 +29,7 @@ pub async fn get_chaos_report_handler(
     {
         for row in rows {
             let val: f64 = row.try_get("value").unwrap_or(0.0);
-            histograms.push(val as i32);
+            histograms.push(val as i32); // Convert to i32 for histograms
         }
     }
 
@@ -38,7 +38,7 @@ pub async fn get_chaos_report_handler(
     {
         for row in rows {
             let val: f64 = row.try_get("value").unwrap_or(0.0);
-            errors.push(val as f32);
+            errors.push(val as f32); // React UI expects float array
         }
     }
 

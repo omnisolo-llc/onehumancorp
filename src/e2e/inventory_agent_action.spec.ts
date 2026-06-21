@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
   test('Priya views and approves a stockout reorder and price action', async ({ page, request }) => {
     // 1. Log in via magic test route
-    await page.goto('http://127.0.0.1:3000/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
+    await page.goto('http://localhost:18789/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
     // 2. Clear existing approvals
     await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
@@ -17,7 +17,7 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
     });
 
     // 4. Navigate to dashboard feed
-    await page.goto('http://127.0.0.1:3000/dashboard');
+    await page.goto('http://localhost:18789/dashboard');
     await page.waitForLoadState('networkidle');
 
     // 5. Verify the card appears
@@ -45,7 +45,7 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
   });
 
   test('Priya views and approves an inventory reconciliation action', async ({ page, request }) => {
-    await page.goto('http://127.0.0.1:3000/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
+    await page.goto('http://localhost:18789/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
     await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
 
@@ -56,7 +56,7 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
       }
     });
 
-    await page.goto('http://127.0.0.1:3000/dashboard');
+    await page.goto('http://localhost:18789/dashboard');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('Inventory Reconciliation: Shopify Sync Issue')).toBeVisible({ timeout: 10000 });

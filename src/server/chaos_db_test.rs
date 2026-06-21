@@ -59,7 +59,7 @@ mod chaos_db_tests {
         assert_eq!(count, 50);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_sql_sync_lag() {
         // We simulate a long-running sync (lag) that times out.
         // We enforce the 60-second ML-Resilience rule here by simulating
@@ -73,6 +73,9 @@ mod chaos_db_tests {
             .connect(&uri)
             .await
             .unwrap();
+
+        // Pause time AFTER pool creation so sqlx connect doesn't timeout
+        tokio::time::pause();
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),

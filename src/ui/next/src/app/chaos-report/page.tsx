@@ -54,15 +54,15 @@ export default function ChaosReportPage() {
             <div className="space-y-3 font-mono text-sm opacity-90">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <span>API Latency (P99) under 100 Cloud Users: <span className="font-bold">{data?.latencyP99Cloud || 'Loading...'}</span></span>
+                    <span>API Latency (P99) under 100 Cloud Users: <span className="font-bold">{data ? (data.latencyP99Cloud) : 'Loading...'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    <span>API Latency (P99) under 10 Standalone Users: <span className="font-bold">{data?.latencyP99Standalone || 'Loading...'}</span></span>
+                    <span>API Latency (P99) under 10 Standalone Users: <span className="font-bold">{data ? (data.latencyP99Standalone) : 'Loading...'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    <span>Error Rate during LLM Outage: <span className="font-bold">{data?.errorRateLlmOutage || 'Loading...'}</span></span>
+                    <span>Error Rate during LLM Outage: <span className="font-bold">{data ? (data.errorRateLlmOutage) : 'Loading...'}</span></span>
                 </div>
             </div>
         </section>
