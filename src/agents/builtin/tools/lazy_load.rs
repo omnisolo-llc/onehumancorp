@@ -29,7 +29,7 @@ impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
 
         if !invalid_tools.is_empty() {
             return Err(ToolError::LlmRecoverable(format!(
-                "The following tools are not available in the global registry: {}. Please check your tool name spelling or use ToolSearch to find the correct tool name.",
+                "Validation Error (Pydantic-first tool schema): The following tools are not available in the global registry: {}. Please check your tool name spelling or use ToolSearch to find the correct tool name.",
                 invalid_tools.join(", ")
             )));
         }

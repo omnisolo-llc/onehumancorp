@@ -215,6 +215,77 @@ Final Result: {}", res).as_bytes()).await;
             });
 
             Ok(format!("Teammate subagent spawned. Communicate via {} and {}", inbox_path, outbox_path))
+        } else if mode == "worktree" {
+            let branch_name = format!("subagent-{}", uuid::Uuid::new_v4());
+            let worktree_dir = format!(".agent-worktrees/{}", branch_name);
+
+            // Check if there are any uncommitted changes, as creating a worktree might require a clean working directory in some cases
+            // but `git worktree add` mostly just needs a new branch name.
+            let git_status = self.runner.run("git", &["status", "--porcelain"], None, vec![]).await;
+            if let Ok(out) = git_status {
+                if !out.stdout.is_empty() {
+                    // It's not strictly required to be clean, but Claude Code style worktree isolation often prefers branching off cleanly.
+                    // We'll proceed but log it.
+                    tracing::warn!("Spawning worktree with dirty parent git status.");
+                }
+            }
+
+            // Create the git worktree
+            let add_worktree = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
+
+            match add_worktree {
+                Ok(out) => {
+                    if !out.status.success() {
+                        return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", String::from_utf8_lossy(&out.stderr))));
+                    }
+                },
+                Err(e) => return Err(ToolError::LlmRecoverable(format!("Command runner failed on git worktree: {}", e))),
+            }
+
+            // Spawn the subagent in the new worktree directory
+            let mut envs = vec![];
+            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
+                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            }
+
+            let output = self.runner.run("ohc_builtin_agent", &["--task", &task], Some(std::path::Path::new(&worktree_dir)), envs).await;
+
+            let res = match output {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                    if out.status.success() {
+                        Ok(SubAgentResponse {
+                            result: stdout,
+                            error: String::new(),
+                        })
+                    } else {
+                        Err(format!("Process failed: {}", stderr))
+                    }
+                }
+                Err(e) => Err(format!("Runner failed: {}", e)),
+            };
+
+            // Clean up the worktree
+            let cleanup = self.runner.run("git", &["worktree", "remove", "--force", &worktree_dir], None, vec![]).await;
+            if let Err(e) = cleanup {
+                tracing::warn!("Failed to clean up git worktree {}: {}", worktree_dir, e);
+            }
+
+            // Optionally we might want to run `git branch -D` if the worktree failed and we want to discard it,
+            // but usually the caller will inspect the branch.
+
+            match res {
+                Ok(inner) => {
+                    if !inner.error.is_empty() {
+                        Err(ToolError::LlmRecoverable(inner.error))
+                    } else {
+                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, inner.result));
+                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}\nBranch: {}", task, summary, branch_name))
+                    }
+                }
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed in worktree: {}", e))),
+            }
         } else {
             return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
@@ -346,10 +417,14 @@ mod tests {
     #[tokio::test]
     async fn test_subagent_worktree_mode() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Mock successful git status/add check
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "M some_file", "")));
         // Mock successful git worktree add
         runner.push_response(Ok(crate::runner::mock::mock_output(0, "Preparing worktree", "")));
         // Mock successful ohc_builtin_agent run
         runner.push_response(Ok(crate::runner::mock::mock_output(0, "I completed the worktree task", "")));
+        // Mock successful git cleanup
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Removed worktree", "")));
 
         let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
