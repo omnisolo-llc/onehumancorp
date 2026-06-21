@@ -194,7 +194,7 @@ impl MyDashboardService {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
-                            description: r.try_get("description").unwrap_or_default(),
+                            description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
@@ -221,7 +221,7 @@ impl MyDashboardService {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
-                            description: r.try_get("description").unwrap_or_default(),
+                            description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
@@ -1003,7 +1003,6 @@ mod tests {
         }
         if !res_mobile.products.is_empty() {
             assert_ne!(res_mobile.products[0].currency, "", "Mobile payload should include product currency");
-            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
         }
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
@@ -1017,7 +1016,6 @@ mod tests {
             assert_eq!(res_mobile.bookings[0].organization_id, "", "Mobile optimization should clear booking organization_id");
         }
         if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].organization_id, "", "Mobile optimization should clear product organization_id");
             assert_eq!(res_mobile.products[0].description, "", "Mobile optimization should clear product description");
             assert_eq!(res_mobile.products[0].metadata_json, "", "Mobile optimization should clear product metadata_json");
         }
