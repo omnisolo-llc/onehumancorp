@@ -26,7 +26,7 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
 
     // Go to /help
     await page.goto('/api/ui/help.html');
-    await expect(page.locator('text=Help Center').first()).toBeVisible();
+    await expect(page.locator('text=In-App Help Center').first()).toBeVisible();
     await expect(page.locator('text=Getting Started').first()).toBeVisible();
 
     await page.fill('input[placeholder="Search for help articles and videos..."]', 'paid');
