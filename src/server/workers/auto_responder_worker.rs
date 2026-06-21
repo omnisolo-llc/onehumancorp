@@ -29,7 +29,7 @@ impl AutoResponderWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("AutoResponderWorker error");
+                            ::server_telemetry::record_error_signal("[bug] AutoResponderWorker error");
                             tracing::error!("AutoResponderWorker error: {}", e);
                             break;
                         }

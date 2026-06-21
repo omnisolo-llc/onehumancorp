@@ -24,11 +24,11 @@ impl PowerSyncOrchestrator {
             loop {
                 interval.tick().await;
                 if let Err(e) = self.push_sync().await {
-                    ::server_telemetry::record_error_signal("PowerSync push failed");
+                    ::server_telemetry::record_error_signal("[bug] PowerSync push failed");
                     tracing::error!("PowerSync push failed: {}", e);
                 }
                 if let Err(e) = self.pull_sync().await {
-                    ::server_telemetry::record_error_signal("PowerSync pull failed");
+                    ::server_telemetry::record_error_signal("[bug] PowerSync pull failed");
                     tracing::error!("PowerSync pull failed: {}", e);
                 }
             }
@@ -191,7 +191,7 @@ impl PowerSyncOrchestrator {
                     .execute(sqlite_pool)
                     .await
                 {
-                    ::server_telemetry::record_error_signal("PowerSync pull failed to save to database: error=");
+                    ::server_telemetry::record_error_signal("[bug] PowerSync pull failed to save to database: error=");
                     tracing::error!("PowerSync pull failed to save to database: error={}", e);
                 }
             }
