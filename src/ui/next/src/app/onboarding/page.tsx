@@ -742,7 +742,7 @@ export default function OnboardingWizard() {
 
           {step === -2 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Setup Assistant</h2>
@@ -815,7 +815,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
@@ -885,7 +885,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -944,7 +944,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -954,7 +954,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1009,7 +1009,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -1019,7 +1019,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1076,7 +1076,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 4 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
@@ -1086,7 +1086,7 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1153,7 +1153,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); setChatStep(4); syncStateToBackend({ step: 1, chatStep: 4 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(1); setChatStep(4); syncStateToBackend({ step: 1, chatStep: 4 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -1163,7 +1163,7 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1285,7 +1285,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
@@ -1295,7 +1295,7 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
