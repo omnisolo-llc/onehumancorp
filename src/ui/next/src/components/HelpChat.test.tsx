@@ -124,6 +124,41 @@ describe('HelpChat Component', () => {
       expect(screen.getByText("Sorry, the connection timed out. Please try again later or check your network connection.")).toBeInTheDocument();
     });
   });
+
+  it('clears the chat when the clear button is clicked', async () => {
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+
+    // Open chat
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    // Send a message
+    const input = screen.getByPlaceholderText('Ask anything...');
+    const submitBtn = screen.getByRole('button', { name: 'Send message' });
+    await user.type(input, 'Test message');
+    act(() => {
+      fireEvent.click(submitBtn);
+    });
+
+    // Check message is displayed
+    expect(screen.getByText('Test message')).toBeInTheDocument();
+
+    // Check clear button appears and click it
+    const clearBtn = screen.getByRole('button', { name: 'Clear chat' });
+    expect(clearBtn).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(clearBtn);
+    });
+
+    // Verify messages are cleared (back to initial)
+    expect(screen.queryByText('Test message')).not.toBeInTheDocument();
+    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
+
+    // Clear button should disappear
+    expect(screen.queryByRole('button', { name: 'Clear chat' })).not.toBeInTheDocument();
+  });
+
 });
 
 describe('HelpChat accessibility', () => {

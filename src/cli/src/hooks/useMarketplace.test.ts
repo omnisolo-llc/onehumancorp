@@ -43,7 +43,59 @@ describe('useMarketplace', () => {
     expect(result.current.error).toContain('HTTP error');
     expect(result.current.agents).toHaveLength(0);
   });
-});
+
+  test('handles JSON-RPC error with message', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        error: { message: 'Custom RPC Error' }
+      })
+    });
+
+    const { result } = renderHook(() => useMarketplace());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe('Custom RPC Error');
+  });
+
+  test('handles JSON-RPC error without message', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        error: {}
+      })
+    });
+
+    const { result } = renderHook(() => useMarketplace());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe('JSON-RPC Error');
+  });
+
+  test('handles fetch missing result property', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        jsonrpc: '2.0',
+        id: 'test'
+      })
+    });
+
+    const { result } = renderHook(() => useMarketplace());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.agents).toHaveLength(0);
+    expect(result.current.error).toBeNull();
+  });
 
   test('handles unknown error format', async () => {
     (global.fetch as any).mockRejectedValueOnce('Network disconnected');
@@ -56,3 +108,4 @@ describe('useMarketplace', () => {
 
     expect(result.current.error).toContain('Failed to fetch marketplace agents.');
   });
+});

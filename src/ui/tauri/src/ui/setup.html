@@ -241,7 +241,11 @@
         transform: translateX(20px);
       }
       @media (prefers-color-scheme: dark) {
-
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
@@ -411,7 +415,11 @@
         transform: translateX(20px);
       }
       @media (prefers-color-scheme: dark) {
-
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
@@ -705,7 +713,11 @@
         transform: translateX(20px);
       }
       @media (prefers-color-scheme: dark) {
-
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
@@ -770,8 +782,10 @@
         input, select, textarea, button, .radio-option, .persona-chip {
         min-height: 44px;
         min-width: 44px;
-        box-sizing: border-box; min-height: 44px;
-          min-height: 44px !important;
+        box-sizing: border-box;
+        min-height: 44px;
+        border-radius: 8px;
+        min-height: 44px !important;
         }
       }
 
@@ -942,7 +956,11 @@
         transform: translateX(20px);
       }
       @media (prefers-color-scheme: dark) {
-
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
@@ -1397,7 +1415,7 @@
 
 
       // Auto save draft logic
-      let autoSaveTimer = null;
+      var autoSaveTimer = null;
       function debouncedAutoSave() {
           clearTimeout(autoSaveTimer);
           autoSaveTimer = setTimeout(() => {
@@ -1553,7 +1571,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
       }
 
-      let saveStateTimer = null;
+      var saveStateTimer = null;
       function saveCurrentState() {
           state.categories = inputs.categories.value;
           state.businessName = inputs.name.value;
@@ -1782,6 +1800,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
       }
 
       function goToStep(stepId) {
+          saveCurrentState();
+          localStorage.setItem('onboardingState', JSON.stringify(state));
 
           if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
               document.getElementById('instant-bio').value = '';
@@ -2383,8 +2403,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
         });
       }
 
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
+      // Enter key support for text, email, and password inputs
+      document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]').forEach(input => {
           input.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
                   e.preventDefault();
@@ -2535,7 +2555,11 @@ document.addEventListener('DOMContentLoaded', () => {
         transform: translateX(20px);
       }
       @media (prefers-color-scheme: dark) {
-
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);

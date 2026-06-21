@@ -12,6 +12,23 @@ test.describe('Extended Documentation & Help Features', () => {
     await expect(page.getByText('No results found matching "XYZNonExistent123"')).toBeVisible({ timeout: 10000 });
   });
 
+  test('should launch interactive walkthrough from Help widget', async ({ page }) => {
+    await page.goto('/');
+
+    // Open help widget
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
+    await expect(helpBtn).toBeVisible();
+    await helpBtn.click();
+
+    // Click the walkthrough button
+    const walkthroughBtn = page.getByRole('button', { name: 'Tour: Activate your AI Support Agent' });
+    await expect(walkthroughBtn).toBeVisible();
+    await walkthroughBtn.click();
+
+    // Verify walkthrough bubble appears
+    await expect(page.getByRole('dialog', { name: 'Activate your AI Support Agent walkthrough step' })).toBeVisible({ timeout: 10000 });
+  });
+
   test('should display duration badges on video tutorials', async ({ page }) => {
     await page.goto('/api/ui/help.html');
 

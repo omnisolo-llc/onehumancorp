@@ -20,6 +20,14 @@ test.describe('Documentation Features CUJ', () => {
     await expect(page).toHaveURL(/.*\/changelog/);
     await expect(page.locator('h1')).toHaveText('Release Notes & Changelog');
 
+    // 4. Trigger Walkthrough (Dashboard has a walkthrough button)
+    await page.goto('/dashboard');
+    const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');
+    await expect(walkthroughBtn).toBeVisible();
+    await walkthroughBtn.click();
+    await expect(page.locator('.ohc-walkthrough-bubble')).toBeVisible();
+    await page.locator('.ohc-walkthrough-close').click();
+    await expect(page.locator('.ohc-walkthrough-bubble')).not.toBeVisible();
 
     // 5. View API Docs
     await page.goto('/api-docs');

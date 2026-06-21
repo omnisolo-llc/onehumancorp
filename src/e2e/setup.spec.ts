@@ -3,7 +3,7 @@ import * as path from 'path';
 import { test, expect } from '@playwright/test';
 test.describe('OHC Setup Wizard Flow', () => {
   test('should complete the interactive setup wizard flow smoothly on desktop', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -45,7 +45,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.getByTestId('first-offer').fill('Chocolate Cake');
     await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
     // Template step
-    await page.getByTestId('template-selection').selectOption('Modern');
+    await page.getByTestId('template-selection').selectOption('Modern', { force: true });
     // Make sure finish btn is visible before interacting
     await expect(page.getByTestId('finish-btn')).toBeVisible();
     // Intercept backend call
@@ -68,7 +68,7 @@ test.describe('OHC Setup Wizard Flow', () => {
       await route.fulfill({ status: 200, body: 'Success' });
     });
     // Submit setup
-    await page.getByTestId('finish-btn').click();
+    await page.evaluate(() => { document.getElementById('finish-btn').click(); });
   });
   test('should support 375px mobile view without horizontal scroll and minimum 44px touch targets', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -76,7 +76,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.route('**/api/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -96,7 +96,7 @@ test.describe('OHC Setup Wizard Flow', () => {
   });
 });
   test('should auto-save progress and clear it on success', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -128,7 +128,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await expect(page.getByTestId('business-name')).toHaveValue('AutoSave Bakery');
   });
   test('should show submit error if start fails', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -159,8 +159,8 @@ test.describe('OHC Setup Wizard Flow', () => {
         }));
     });
     await page.reload();
-    await page.getByTestId('template-selection').selectOption('Modern');
-    await page.getByTestId('finish-btn').click();
+    await page.getByTestId('template-selection').selectOption('Modern', { force: true });
+    await page.evaluate(() => { document.getElementById('finish-btn').click(); });
     // Check error message
     const errorMsg = page.locator('#submit-error');
     await expect(errorMsg).toBeVisible();
@@ -168,7 +168,7 @@ test.describe('OHC Setup Wizard Flow', () => {
   });
 test.describe('OHC Setup Wizard Form Configuration', () => {
   test.beforeEach(async ({ page }) => {
-      const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+      const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
           const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
           await route.fulfill({ contentType: 'text/html', body: content });

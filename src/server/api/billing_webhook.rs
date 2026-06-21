@@ -128,7 +128,7 @@ async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, objec
             }
         }
         Err(err) => {
-            ::server_telemetry::record_error_signal("Failed to get redis connection for payment inventory lock release");
+            ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for payment inventory lock release");
             tracing::warn!("Failed to release payment inventory locks: {}", err);
         }
     }
@@ -335,7 +335,7 @@ pub async fn webhook_security_middleware(
                 return Ok(StatusCode::OK.into_response());
             }
         } else {
-            ::server_telemetry::record_error_signal("Failed to get redis connection for webhook idempotency check");
+            ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for webhook idempotency check");
             tracing::error!("Failed to get redis connection for webhook idempotency check");
         }
     }
@@ -427,7 +427,7 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(e) = res {
-                    ::server_telemetry::record_error_signal("Failed to update order status for order : {:?}");
+                    ::server_telemetry::record_error_signal("[bug] Failed to update order status for order : {:?}");
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
                 }
             }
@@ -627,7 +627,7 @@ pub async fn stripe_webhook_handler(
                     tracing::warn!("Stripe invoice.payment_failed did not match an OHC subscriber");
                 }
                 Err(err) => {
-                    ::server_telemetry::record_error_signal("Failed to process Stripe failed-payment dunning");
+                    ::server_telemetry::record_error_signal("[bug] Failed to process Stripe failed-payment dunning");
                     tracing::error!("Failed to process Stripe failed-payment dunning: {}", err);
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
@@ -747,7 +747,7 @@ pub async fn razorpay_webhook_handler(
             };
 
             if let Err(e) = res {
-                ::server_telemetry::record_error_signal("Failed to update order status: {:?}");
+                ::server_telemetry::record_error_signal("[bug] Failed to update order status: {:?}");
                 tracing::error!("Failed to update order status: {:?}", e);
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }

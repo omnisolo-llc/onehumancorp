@@ -10,6 +10,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use crate::services::agent_feed::service::AgentFeedService;
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
@@ -266,21 +267,16 @@ async fn create_feed_item(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool);
+    let service = AgentFeedService::new(pool);
 
-    let item = AgentFeedItem {
-        id: Uuid::new_v4().to_string(),
-        tenant_id: tenant_id.clone(),
-        event_source: payload.event_source,
-        context_payload: payload.context_payload.map(sqlx::types::Json),
-        proposed_action: payload.proposed_action.map(sqlx::types::Json),
-        lifecycle_state: "PENDING_APPROVAL".to_string(),
-        created_at: Some(Utc::now()),
-        updated_at: Some(Utc::now()),
-    };
+    // Pass the payload as a JSON value
+    let mut value_payload = serde_json::json!({});
+    if let Some(cp) = &payload.context_payload {
+        value_payload = cp.clone();
+    }
 
-    match repo.create(item.clone()).await {
-        Ok(_) => {
+    match service.process_event(&tenant_id, &payload.event_source, &value_payload).await {
+        Ok(item) => {
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;

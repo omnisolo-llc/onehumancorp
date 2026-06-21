@@ -12,6 +12,9 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
 
   test('quick actions expose guidance and custom software', async ({ page }) => {
     await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Start Tour' }).click();
+    await page.waitForTimeout(500);
+    await expect(page.locator('#walkthrough-bubble').locator('text=Business Analytics')).toBeAttached({ timeout: 10000 });
     await page.getByRole('link', { name: 'Integrations' }).click();
     await expect(page.locator('.app-title', { hasText: 'Tool Integrations' })).toBeVisible();
   });

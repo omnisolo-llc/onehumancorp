@@ -76,11 +76,11 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
                     sync_successful = true;
                 }
                 Ok(resp) => {
-                    ::server_telemetry::record_error_signal("Cloud sync failed with status");
+                    ::server_telemetry::record_error_signal("[bug] Cloud sync failed with status");
                     tracing::error!("Cloud sync failed with status: {}", resp.status());
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("Cloud sync request failed");
+                    ::server_telemetry::record_error_signal("[bug] Cloud sync request failed");
                     tracing::error!("Cloud sync request failed: {}", e);
                 }
             }
@@ -176,7 +176,7 @@ pub fn start_autodream_sync_engine(db: Arc<DB>) {
         loop {
             interval.tick().await;
             if let Err(e) = process_forecast_tick(db.clone()).await {
-                ::server_telemetry::record_error_signal("AutoDream Sync Engine error");
+                ::server_telemetry::record_error_signal("[bug] AutoDream Sync Engine error");
                 tracing::error!("AutoDream Sync Engine error: {}", e);
             }
         }

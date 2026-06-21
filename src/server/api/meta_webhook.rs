@@ -34,7 +34,7 @@ pub async fn meta_webhook_get_handler(
     let verify_token = match std::env::var("META_VERIFY_TOKEN") {
         Ok(t) if !t.is_empty() => t,
         _ => {
-            ::server_telemetry::record_error_signal("META_VERIFY_TOKEN not configured");
+            ::server_telemetry::record_error_signal("[bug] META_VERIFY_TOKEN not configured");
             tracing::warn!("META_VERIFY_TOKEN not configured");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
@@ -92,7 +92,7 @@ pub async fn meta_webhook_post_handler(
     let payload: Value = match serde_json::from_slice(&body_bytes) {
         Ok(p) => p,
         Err(_) => {
-            ::server_telemetry::record_error_signal("Failed to parse Meta webhook payload");
+            ::server_telemetry::record_error_signal("[bug] Failed to parse Meta webhook payload");
             tracing::error!("Failed to parse Meta webhook payload");
             return StatusCode::BAD_REQUEST.into_response();
         }
