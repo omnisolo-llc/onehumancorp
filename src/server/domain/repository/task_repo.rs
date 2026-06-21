@@ -156,13 +156,14 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES ($1, $2)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, organization_id)
+                    VALUES ($1, $2, $3)
                     ON CONFLICT DO NOTHING
                     "#
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
+                .bind(&dependency.organization_id)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -170,13 +171,14 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES (?, ?)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, organization_id)
+                    VALUES (?, ?, ?)
                     ON CONFLICT DO NOTHING
                     "#
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
+                .bind(&dependency.organization_id)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -185,17 +187,18 @@ impl TaskRepository {
         Ok(())
     }
 
-    pub async fn get_task_dependencies(&self, task_id: &str) -> Result<Vec<TaskDependency>, String> {
+    pub async fn get_task_dependencies(&self, organization_id: &str, task_id: &str) -> Result<Vec<TaskDependency>, String> {
         let deps = match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query_as::<_, TaskDependency>(
                     r#"
-                    SELECT task_id, depends_on_task_id
+                    SELECT task_id, depends_on_task_id, organization_id
                     FROM task_dependencies
-                    WHERE task_id = $1
+                    WHERE task_id = $1 AND organization_id = $2
                     "#
                 )
                 .bind(task_id)
+                .bind(organization_id)
                 .fetch_all(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -203,12 +206,13 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, TaskDependency>(
                     r#"
-                    SELECT task_id, depends_on_task_id
+                    SELECT task_id, depends_on_task_id, organization_id
                     FROM task_dependencies
-                    WHERE task_id = ?
+                    WHERE task_id = ? AND organization_id = ?
                     "#
                 )
                 .bind(task_id)
+                .bind(organization_id)
                 .fetch_all(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -404,6 +408,7 @@ mod tests {
             CREATE TABLE IF NOT EXISTS task_dependencies (
                 task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                organization_id TEXT NOT NULL,
                 PRIMARY KEY (task_id, depends_on_task_id)
             );
             "#
@@ -516,9 +521,10 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
+            organization_id: "tenant1".to_string(),
         }).await.unwrap();
 
-        let deps = repo.get_task_dependencies("task_2").await.unwrap();
+        let deps = repo.get_task_dependencies("tenant1", "task_2").await.unwrap();
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0].depends_on_task_id, "task_1");
     }
@@ -559,6 +565,7 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
+            organization_id: "tenant1".to_string(),
         }).await.unwrap();
 
         // task_2 cannot be claimed because task_1 is not DONE

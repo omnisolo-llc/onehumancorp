@@ -722,6 +722,7 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS task_dependencies (
                 task_id TEXT NOT NULL,
                 depends_on_task_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 PRIMARY KEY (task_id, depends_on_task_id)
             )"
         )
@@ -872,6 +873,7 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS shared_task_dependencies (
                 task_id TEXT NOT NULL,
                 depends_on_task_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 PRIMARY KEY (task_id, depends_on_task_id)
             )"
         )
@@ -905,7 +907,7 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('2', 'tenant1', 'Task 2', 'PENDING', '[]')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES ('2', '1')")
+        sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id, organization_id) VALUES ('2', '1', 'tenant1')")
             .execute(&pool).await.unwrap();
 
         // Try to claim, should get Task 1
@@ -988,6 +990,7 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS task_dependencies (
                 task_id TEXT NOT NULL,
                 depends_on_task_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
                 PRIMARY KEY (task_id, depends_on_task_id)
             )"
         )
@@ -1020,7 +1023,7 @@ mod tests {
         sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('100', 'test-tenant', 'm100', 'Task A', 'PENDING', '[]')")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('200', 'test-tenant', 'm100', 'Task B', 'PENDING', '[]')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('200', '100')")
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id, organization_id) VALUES ('200', '100', 'test-tenant')")
             .execute(&pool).await.unwrap();
 
         // Task A is claimed

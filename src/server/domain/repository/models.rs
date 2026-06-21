@@ -33,6 +33,7 @@ pub struct ConversationalCheckoutSession {
 pub struct TaskDependency {
     pub task_id: String,
     pub depends_on_task_id: String,
+    pub organization_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

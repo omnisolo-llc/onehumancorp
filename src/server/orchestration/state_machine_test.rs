@@ -30,6 +30,7 @@ async fn test_state_machine_lifecycle_sqlite() {
         CREATE TABLE shared_task_dependencies (
             task_id TEXT NOT NULL,
             depends_on_task_id TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
             PRIMARY KEY (task_id, depends_on_task_id)
         );
         "#
@@ -90,6 +91,7 @@ async fn test_state_machine_invalid_transitions_sqlite() {
         CREATE TABLE shared_task_dependencies (
             task_id TEXT NOT NULL,
             depends_on_task_id TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
             PRIMARY KEY (task_id, depends_on_task_id)
         );
         "#
