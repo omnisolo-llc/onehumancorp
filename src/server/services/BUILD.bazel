@@ -11,6 +11,10 @@ exports_files(
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",
+        "referral/mod.rs",
+        "referral/engine.rs",
+        "loyalty/mod.rs",
+        "loyalty/engine.rs",
         ],
     visibility = ["//visibility:public"],
 )
@@ -27,6 +31,10 @@ rust_library(
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",
+        "referral/mod.rs",
+        "referral/engine.rs",
+        "loyalty/mod.rs",
+        "loyalty/engine.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
@@ -229,3 +237,4 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+# Added referral module

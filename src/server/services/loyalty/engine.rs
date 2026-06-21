@@ -13,17 +13,17 @@ pub async fn create_loyalty_program(
     config: JsonValue,
 ) -> Result<String, String> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO loyalty_programs (id, tenant_id, name, program_type, config)
         VALUES ($1, $2, $3, $4, $5)
-        "#,
-        id,
-        tenant_id,
-        name,
-        program_type,
-        config
+        "#
     )
+    .bind(id.clone())
+    .bind(tenant_id)
+    .bind(name)
+    .bind(program_type)
+    .bind(config)
     .execute(pool)
     .await
     .map_err(|e| format!("Failed to create loyalty program: {}", e))?;
@@ -32,26 +32,27 @@ pub async fn create_loyalty_program(
 }
 
 pub async fn get_loyalty_programs(pool: &PgPool, tenant_id: &str) -> Result<Vec<JsonValue>, String> {
-    let records = sqlx::query!(
+    let records = sqlx::query(
         r#"
         SELECT id, name, program_type, config, is_active
         FROM loyalty_programs
         WHERE tenant_id = $1
-        "#,
-        tenant_id
+        "#
     )
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to fetch programs: {}", e))?;
 
     let mut programs = Vec::new();
     for rec in records {
+        use sqlx::Row;
         programs.push(serde_json::json!({
-            "id": rec.id,
-            "name": rec.name,
-            "program_type": rec.program_type,
-            "config": rec.config,
-            "is_active": rec.is_active
+            "id": rec.try_get::<String, _>("id").unwrap_or_default(),
+            "name": rec.try_get::<String, _>("name").unwrap_or_default(),
+            "program_type": rec.try_get::<String, _>("program_type").unwrap_or_default(),
+            "config": rec.try_get::<JsonValue, _>("config").unwrap_or(serde_json::json!({})),
+            "is_active": rec.try_get::<bool, _>("is_active").unwrap_or(true)
         }));
     }
 
@@ -65,35 +66,36 @@ pub async fn enroll_customer(
     customer_id: &str,
 ) -> Result<String, String> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO customer_loyalty_accounts (id, tenant_id, program_id, customer_id)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (tenant_id, program_id, customer_id) DO NOTHING
-        "#,
-        id,
-        tenant_id,
-        program_id,
-        customer_id
+        "#
     )
+    .bind(&id)
+    .bind(tenant_id)
+    .bind(program_id)
+    .bind(customer_id)
     .execute(pool)
     .await
     .map_err(|e| format!("Failed to enroll customer: {}", e))?;
 
-    let record = sqlx::query!(
+    let record = sqlx::query(
         r#"
         SELECT id FROM customer_loyalty_accounts
         WHERE tenant_id = $1 AND program_id = $2 AND customer_id = $3
-        "#,
-        tenant_id,
-        program_id,
-        customer_id
+        "#
     )
+    .bind(tenant_id)
+    .bind(program_id)
+    .bind(customer_id)
     .fetch_one(pool)
     .await
     .map_err(|e| format!("Failed to fetch account ID: {}", e))?;
 
-    Ok(record.id)
+    use sqlx::Row;
+    Ok(record.get("id"))
 }
 
 pub async fn get_customer_account(
@@ -102,26 +104,27 @@ pub async fn get_customer_account(
     program_id: &str,
     customer_id: &str,
 ) -> Result<Option<JsonValue>, String> {
-    let record = sqlx::query!(
+    let record = sqlx::query(
         r#"
         SELECT id, points_balance, punches, tier_name
         FROM customer_loyalty_accounts
         WHERE tenant_id = $1 AND program_id = $2 AND customer_id = $3
-        "#,
-        tenant_id,
-        program_id,
-        customer_id
+        "#
     )
+    .bind(tenant_id)
+    .bind(program_id)
+    .bind(customer_id)
     .fetch_optional(pool)
     .await
     .map_err(|e| format!("Failed to fetch customer account: {}", e))?;
 
     if let Some(rec) = record {
+        use sqlx::Row;
         Ok(Some(serde_json::json!({
-            "id": rec.id,
-            "points_balance": rec.points_balance,
-            "punches": rec.punches,
-            "tier_name": rec.tier_name
+            "id": rec.try_get::<String, _>("id").unwrap_or_default(),
+            "points_balance": rec.try_get::<i32, _>("points_balance").unwrap_or(0),
+            "punches": rec.try_get::<i32, _>("punches").unwrap_or(0),
+            "tier_name": rec.try_get::<Option<String>, _>("tier_name").unwrap_or(None)
         })))
     } else {
         Ok(None)
@@ -139,20 +142,20 @@ pub async fn create_reward(
     reward_value: JsonValue,
 ) -> Result<String, String> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO loyalty_rewards (id, tenant_id, program_id, name, description, cost_in_points, reward_type, reward_value)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        "#,
-        id,
-        tenant_id,
-        program_id,
-        name,
-        description,
-        cost_in_points,
-        reward_type,
-        reward_value
+        "#
     )
+    .bind(&id)
+    .bind(tenant_id)
+    .bind(program_id)
+    .bind(name)
+    .bind(description)
+    .bind(cost_in_points)
+    .bind(reward_type)
+    .bind(reward_value)
     .execute(pool)
     .await
     .map_err(|e| format!("Failed to create reward: {}", e))?;
@@ -161,29 +164,30 @@ pub async fn create_reward(
 }
 
 pub async fn get_rewards(pool: &PgPool, tenant_id: &str, program_id: &str) -> Result<Vec<JsonValue>, String> {
-    let records = sqlx::query!(
+    let records = sqlx::query(
         r#"
         SELECT id, name, description, cost_in_points, reward_type, reward_value, is_active
         FROM loyalty_rewards
         WHERE tenant_id = $1 AND program_id = $2
-        "#,
-        tenant_id,
-        program_id
+        "#
     )
+    .bind(tenant_id)
+    .bind(program_id)
     .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to fetch rewards: {}", e))?;
 
     let mut rewards = Vec::new();
     for rec in records {
+        use sqlx::Row;
         rewards.push(serde_json::json!({
-            "id": rec.id,
-            "name": rec.name,
-            "description": rec.description,
-            "cost_in_points": rec.cost_in_points,
-            "reward_type": rec.reward_type,
-            "reward_value": rec.reward_value,
-            "is_active": rec.is_active
+            "id": rec.try_get::<String, _>("id").unwrap_or_default(),
+            "name": rec.try_get::<String, _>("name").unwrap_or_default(),
+            "description": rec.try_get::<Option<String>, _>("description").unwrap_or(None),
+            "cost_in_points": rec.try_get::<i32, _>("cost_in_points").unwrap_or(0),
+            "reward_type": rec.try_get::<String, _>("reward_type").unwrap_or_default(),
+            "reward_value": rec.try_get::<JsonValue, _>("reward_value").unwrap_or(serde_json::json!({})),
+            "is_active": rec.try_get::<bool, _>("is_active").unwrap_or(true)
         }));
     }
 
@@ -210,53 +214,55 @@ pub async fn record_transaction(
         _ => return Err("Invalid transaction_type".to_string()),
     };
 
-    let current = sqlx::query!(
+    let current = sqlx::query(
         r#"
         SELECT points_balance FROM customer_loyalty_accounts
         WHERE id = $1 AND tenant_id = $2
         FOR UPDATE
-        "#,
-        account_id,
-        tenant_id
+        "#
     )
+    .bind(account_id)
+    .bind(tenant_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| format!("Failed to lock account: {}", e))?;
 
     if let Some(record) = current {
-        if record.points_balance + delta < 0 {
+        use sqlx::Row;
+        let balance: i32 = record.try_get("points_balance").unwrap_or(0);
+        if balance + delta < 0 {
             return Err("Insufficient points balance for redemption".to_string());
         }
     } else {
         return Err("Account not found".to_string());
     }
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO loyalty_transactions (id, tenant_id, account_id, transaction_type, amount, reason)
         VALUES ($1, $2, $3, $4, $5, $6)
-        "#,
-        id,
-        tenant_id,
-        account_id,
-        tx_type,
-        delta,
-        reason
+        "#
     )
+    .bind(&id)
+    .bind(tenant_id)
+    .bind(account_id)
+    .bind(tx_type)
+    .bind(delta)
+    .bind(reason)
     .execute(&mut *tx)
     .await
     .map_err(|e| format!("Failed to insert transaction: {}", e))?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE customer_loyalty_accounts
         SET points_balance = points_balance + $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2 AND tenant_id = $3
-        "#,
-        delta,
-        account_id,
-        tenant_id
+        "#
     )
+    .bind(delta)
+    .bind(account_id)
+    .bind(tenant_id)
     .execute(&mut *tx)
     .await
     .map_err(|e| format!("Failed to update account balance: {}", e))?;
