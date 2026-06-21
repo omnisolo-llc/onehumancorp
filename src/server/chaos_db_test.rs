@@ -59,19 +59,34 @@ mod chaos_db_tests {
         assert_eq!(count, 50);
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_sql_sync_lag() {
         // We simulate a long-running sync (lag) that times out.
-        // We enforce the 60-second ML-Resilience rule here by using tokio::time::timeout
-        // and expecting an error.
-        let timeout_duration = std::time::Duration::from_secs(60);
-        let result = tokio::time::timeout(timeout_duration, async {
-            // Simulate a query that takes longer than the timeout due to sync lag
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
-            Ok::<(), String>(())
-        })
-        .await;
+        // We enforce the 60-second ML-Resilience rule here by simulating
+        // a database operation that hangs for 65 seconds using tokio's
+        // time pausing (so the test runs instantly).
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
 
-        assert!(result.is_err(), "Sync operation should time out to prevent cascading failures");
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&uri)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        // Test the actual execute_with_retry timeout logic
+        let res: Result<(), String> = db.execute_with_retry("slow_query", || async {
+            // Simulate a query that takes longer than the timeout
+            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            Ok(())
+        }).await;
+
+        assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
+        assert!(res.unwrap_err().contains("timed out after 60 seconds"), "Must be explicitly timed out by ML-Resilience rule");
     }
 }
