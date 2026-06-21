@@ -454,7 +454,8 @@ pub mod services {
     pub mod collective;
     pub mod inventory_sync;
     pub mod cache_invalidator;
-    pub mod inventory;
+        pub mod loyalty;
+pub mod inventory;
 }
 
 use tonic::{transport::Server, Request, Response, Status};

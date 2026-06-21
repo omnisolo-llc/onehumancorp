@@ -1,4 +1,9 @@
 pub mod sync;
+pub mod loyalty;
+
+#[cfg(test)]
+pub mod loyalty_test;
+
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;

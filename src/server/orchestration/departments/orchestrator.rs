@@ -1692,7 +1692,7 @@ impl DepartmentOrchestrator {
     pub async fn get_loyalty_ledger(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::LoyaltyLedger>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT * FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+                let row = sqlx::query("SELECT * FROM customer_loyalty_accounts WHERE tenant_id = $1 AND customer_id = $2")
                     .bind(tenant_id)
                     .bind(customer_id)
                     .fetch_optional(&self.db.pool)
@@ -1713,7 +1713,7 @@ impl DepartmentOrchestrator {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT * FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                let row = sqlx::query("SELECT * FROM customer_loyalty_accounts WHERE tenant_id = ? AND customer_id = ?")
                     .bind(tenant_id)
                     .bind(customer_id)
                     .fetch_optional(pool)
@@ -1742,7 +1742,7 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let id = uuid::Uuid::new_v4().to_string();
-                let row = sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated RETURNING points_balance")
+                let row = sqlx::query("INSERT INTO customer_loyalty_accounts (id, tenant_id, customer_id, program_id, points_balance, punch_count, last_updated) VALUES ($1, $2, $3, 'DEFAULT', $4, 0, $5) ON CONFLICT (tenant_id, customer_id, program_id) DO UPDATE SET points_balance = customer_loyalty_accounts.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated RETURNING points_balance")
                     .bind(&id)
                     .bind(tenant_id)
                     .bind(customer_id)
@@ -1755,7 +1755,7 @@ impl DepartmentOrchestrator {
                 total_points = row.get::<i32, _>("points_balance");
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let exists = sqlx::query("SELECT points_balance FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                let exists = sqlx::query("SELECT points_balance FROM customer_loyalty_accounts WHERE tenant_id = ? AND customer_id = ? AND program_id = 'DEFAULT'")
                     .bind(tenant_id)
                     .bind(customer_id)
                     .fetch_optional(pool)
@@ -1765,7 +1765,7 @@ impl DepartmentOrchestrator {
                     use sqlx::Row;
                     let curr_points = r.get::<i32, _>("points_balance");
                     total_points = curr_points + points;
-                    sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ?")
+                    sqlx::query("UPDATE customer_loyalty_accounts SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ? AND program_id = 'DEFAULT'")
                         .bind(points)
                         .bind(&now)
                         .bind(tenant_id)
@@ -1776,7 +1776,7 @@ impl DepartmentOrchestrator {
                 } else {
                     total_points = points;
                     let id = uuid::Uuid::new_v4().to_string();
-                    sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, ?)")
+                    sqlx::query("INSERT INTO customer_loyalty_accounts (id, tenant_id, customer_id, program_id, points_balance, punch_count, last_updated) VALUES (?, ?, ?, 'DEFAULT', ?, 0, ?)")
                         .bind(&id)
                         .bind(tenant_id)
                         .bind(customer_id)
