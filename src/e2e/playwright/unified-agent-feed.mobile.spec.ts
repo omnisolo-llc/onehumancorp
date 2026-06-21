@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({
-    viewport: { width: 375, height: 667 }, // iPhone SE resolution
+    viewport: { width: 375, height: 812 }, // iPhone SE resolution
   });
 
   test('should render agent feed without horizontal scrolling and test touch targets', async ({ page }) => {
