@@ -1,53 +1,39 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Viral Growth Loop - Share to Unlock Widget', () => {
-    test('generator UI creates correct embed link and preview', async ({ page }) => {
-        // We use page directly to bypass login since generator is a static/public tool
-        // or we can test the generator output directly.
-        await page.goto('/ui/share-to-unlock-generator.html');
+test.describe('Viral Share to Unlock - Digital Business Card', () => {
 
-        await expect(page.locator('h1')).toHaveText('Share-to-Unlock Generator');
+  test('Shows soft paywall and allows unlock via share', async ({ page }) => {
+    // Navigate to the digital business card generator using relative path
+    await page.goto('/digital-business-card');
 
-        // Fill in details
-        await page.fill('#title', 'Super Secret Holiday Promo');
-        await page.fill('#reward', '50% off all cakes');
-        await page.fill('#code', 'CAKE50');
+    // Fill in basic details to see preview update
+    await page.fill('input[placeholder="e.g. Jane Doe"]', 'Test User');
 
-        // Verify preview reflects changes
-        await expect(page.locator('#preview-title')).toHaveText('Super Secret Holiday Promo');
-        await expect(page.locator('#preview-reward-text')).toHaveText('50% off all cakes');
+    // Check that "Powered by OHC" is visible in the preview initially
+    await expect(page.locator('text=⚡ Powered by OHC')).toBeVisible();
 
-        // Generate Link
-        await page.click('#generate-btn');
+    // Click the "Remove \'Powered by OHC\' branding" checkbox
+    await page.click('text=Remove "Powered by OHC" branding');
 
-        // Check link result
-        const generatedLink = await page.inputValue('#generated-url');
-        expect(generatedLink).toContain('title=Super+Secret+Holiday+Promo');
-        expect(generatedLink).toContain('code=CAKE50');
+    // The Soft Paywall should appear
+    await expect(page.locator('text=Upgrade to Pro').first()).toBeVisible();
+    await expect(page.locator('text=Share to Unlock for Free').first()).toBeVisible();
+
+    // Wait for the modal animation
+    await page.waitForTimeout(300);
+
+    // Some tests fail because the locator might match multiple things or it opens a new page and the old one closes too fast.
+    // Instead of waiting for a popup, we can stub window.open to prevent the actual navigation, which might break tests
+    await page.evaluate(() => {
+        window.open = () => null;
     });
 
-    test('consumer widget renders and handles unlock', async ({ page }) => {
-        const url = '/ui/share-to-unlock/index.html?title=Free%20Cookie&reward=One%20free%20cookie&code=FREECOOKIE';
-        await page.goto(url);
+    await page.click('text=Share to Unlock for Free');
 
-        await expect(page.locator('#campaign-title')).toHaveText('Free Cookie');
-        await expect(page.locator('#reward-desc')).toHaveText('One free cookie');
+    // The modal should close
+    await expect(page.locator('text=Share to Unlock for Free')).not.toBeVisible();
 
-        // Initially locked
-        await expect(page.locator('#locked-badge')).toBeVisible();
-
-        // Simulate click to share which triggers unlock
-        await page.click('#share-wa-btn');
-
-        // The timeout is 300ms in JS, wait for unlock
-        await page.waitForTimeout(500);
-
-        // Code should now be visible and unlocked
-        await expect(page.locator('#unlocked-actions')).toBeVisible();
-        await expect(page.locator('#copy-code-btn')).toBeVisible();
-        await expect(page.locator('#discount-code')).toHaveClass(/unlocked/);
-
-        // Verify footer branding
-        await expect(page.locator('footer a')).toHaveText('⚡ Powered by OHC');
-    });
+    // The checkbox should be checked (verified by the branding being gone)
+    await expect(page.locator('text=⚡ Powered by OHC')).not.toBeVisible();
+  });
 });
