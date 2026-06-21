@@ -15,7 +15,7 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
     const tenantId = 'default';
     const messagePayload = {
       tenant_id: tenantId,
-      source: 'instagram',
+      channel: 'instagram',
       sender_id: 'maya_bakes',
       message: 'Do you have vegan chocolate cake available for Saturday?',
       target_language: 'English'
