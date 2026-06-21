@@ -135,4 +135,29 @@ test.describe('Miser Cost Features E2E', () => {
       // Skipping strict URL validation due to likely environment checkout API timeout
     }
   });
+
+  test('Pricing Page displays Manage Plan for active paid tier', async ({ page }) => {
+    // Intercept my-plan response to return Starter to verify UI logic
+    await page.route('**/api/billing/my-plan', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          current_plan: 'Starter',
+          ai_actions_used: 10,
+          ai_actions_limit: 1000,
+          storage_used_bytes: 0,
+          storage_limit_bytes: 5000000000,
+          next_bill_estimated: 2900
+        })
+      });
+    });
+
+    await page.goto('/pricing');
+
+    // Using a more resilient text check for Starter plan text on button
+    const starterCard = page.locator('.ohc-growth-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
+    const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' });
+    await expect(managePlanButton).toBeVisible({ timeout: 15000 });
+  });
 });
