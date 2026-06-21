@@ -13,7 +13,7 @@ test.describe('Check heights', () => {
     const feedContainer = page.locator('.glassmorphism').first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
-    const buttons = page.locator('div.glassmorphism button');
+    const buttons = page.locator('div[class*="bg-[rgba(255,255,255,0.65)]"] button');
     const buttonCount = await buttons.count();
     let failedButtons = [];
     for (let i = 0; i < buttonCount; i++) {

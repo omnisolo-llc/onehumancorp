@@ -11,7 +11,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Wait for the feed items to populate
-    const feedContainer = page.locator('div.glassmorphism', { hasText: 'Approval' }).first();
+    const feedContainer = page.locator('div[class*="bg-[rgba(255,255,255,0.65)]"]', { hasText: 'Approval' }).first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     // 1. Verify width constraint
@@ -115,7 +115,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Check if feed loads
-    const feedContainer = page.locator('div.glassmorphism', { hasText: 'Approval' }).first();
+    const feedContainer = page.locator('div[class*="bg-[rgba(255,255,255,0.65)]"]', { hasText: 'Approval' }).first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
   });
 

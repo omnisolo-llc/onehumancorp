@@ -84,7 +84,12 @@ export default function POSTerminal() {
       setPin(newPin);
       if (newPin.length === 4) {
         if (isOffline) {
-           const staff = { id: 'staff_1', name: 'Offline Manager', role: 'Manager' };
+           let staff = { id: 'staff_1', name: 'Offline Manager', role: 'Manager' };
+           try {
+             const offlineStaffs = JSON.parse(localStorage.getItem('ohc_offline_staff') || '[]');
+             const validOfflineStaff = offlineStaffs.find((s: any) => s.pin_hash === newPin);
+             if (validOfflineStaff) staff = validOfflineStaff;
+           } catch(e){}
            setActiveStaff(staff);
            setLocked(false);
            setPin('');
@@ -126,7 +131,12 @@ export default function POSTerminal() {
           }
         } catch (e) {
            console.error("Auth failed, falling back to offline", e);
-           const staff = { id: 'staff_1', name: 'Offline Manager (Fallback)', role: 'Manager' };
+           let staff = { id: 'staff_1', name: 'Offline Manager (Fallback)', role: 'Manager' };
+           try {
+             const offlineStaffs = JSON.parse(localStorage.getItem('ohc_offline_staff') || '[]');
+             const validOfflineStaff = offlineStaffs.find((s: any) => s.pin_hash === newPin);
+             if (validOfflineStaff) staff = validOfflineStaff;
+           } catch(e){}
            setActiveStaff(staff);
            setLocked(false);
            setPin('');
