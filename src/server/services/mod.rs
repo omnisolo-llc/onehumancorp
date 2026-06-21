@@ -22,6 +22,7 @@ pub mod pos;
 pub mod collective;
 pub mod campaign;
 pub mod ledger;
+pub mod loyalty;
 pub mod quoting;
 pub mod inventory_sync;
 pub mod inventory;

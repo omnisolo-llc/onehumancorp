@@ -6434,6 +6434,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
+        .nest("/api/v1/loyalty", api::loyalty::router().with_state(api::loyalty::AppState { db: db.clone() }))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))

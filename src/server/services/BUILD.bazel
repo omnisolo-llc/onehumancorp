@@ -103,6 +103,8 @@ rust_library(
             "//src/server/services/ledger:mod.rs",
         "//src/server/services/ledger:service.rs",
         "//src/server/services/ledger:service_test.rs",
+        "//src/server/services/loyalty:mod.rs",
+        "//src/server/services/loyalty:service.rs",
 ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -114,6 +116,8 @@ rust_library(
     deps = [
         "//src/proto:ledger_tonic",
         "//src/proto:ledger_prost",
+        "//src/proto:loyalty_prost",
+        "//src/proto:loyalty_tonic",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",

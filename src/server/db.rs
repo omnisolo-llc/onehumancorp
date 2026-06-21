@@ -1420,6 +1420,63 @@ impl DB {
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
 
+                    CREATE TABLE IF NOT EXISTS loyalty_programs (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        program_type TEXT NOT NULL,
+                        config TEXT DEFAULT '{}',
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_loyalty_programs_tenant ON loyalty_programs(tenant_id);
+
+                    CREATE TABLE IF NOT EXISTS customer_loyalty_accounts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        program_id TEXT NOT NULL,
+                        points_balance INTEGER DEFAULT 0,
+                        punches INTEGER DEFAULT 0,
+                        tier_name TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, customer_id, program_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_customer_loyalty_accounts_tenant_customer ON customer_loyalty_accounts(tenant_id, customer_id);
+                    CREATE INDEX IF NOT EXISTS idx_customer_loyalty_accounts_tenant_program ON customer_loyalty_accounts(tenant_id, program_id);
+
+                    CREATE TABLE IF NOT EXISTS loyalty_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        program_id TEXT NOT NULL,
+                        transaction_type TEXT NOT NULL,
+                        points INTEGER DEFAULT 0,
+                        punches INTEGER DEFAULT 0,
+                        description TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_tenant_customer ON loyalty_transactions(tenant_id, customer_id);
+                    CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_tenant_program ON loyalty_transactions(tenant_id, program_id);
+
+                    CREATE TABLE IF NOT EXISTS rewards (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        program_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        points_cost INTEGER DEFAULT 0,
+                        punches_cost INTEGER DEFAULT 0,
+                        reward_type TEXT NOT NULL,
+                        reward_value TEXT DEFAULT '{}',
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_rewards_tenant_program ON rewards(tenant_id, program_id);
+
                     CREATE TABLE IF NOT EXISTS ohc_job_queue (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
