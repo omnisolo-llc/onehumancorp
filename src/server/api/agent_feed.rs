@@ -6,7 +6,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
 use chrono::{DateTime, Utc};
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};

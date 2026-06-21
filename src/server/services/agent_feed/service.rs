@@ -5,6 +5,7 @@ use chrono::Utc;
 use serde_json::Value;
 
 pub struct AgentFeedService {
+    #[allow(dead_code)]
     pool: PgPool,
     repo: AgentFeedRepository,
 }
