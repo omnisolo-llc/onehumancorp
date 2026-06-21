@@ -30,7 +30,7 @@ test.describe('Closer Agent CUJ (Mocked)', () => {
       await route.fulfill({ json });
     });
 
-    await page.goto('http://localhost:3000/feed');
+    await page.goto('/feed');
     await expect(page.locator('text=Drafted Estimate for Carlos Handyman')).toBeVisible();
 
     // 2. Click Review Estimate and navigate to quote review screen
@@ -100,7 +100,7 @@ test.describe('Closer Agent CUJ (Mocked)', () => {
       await route.fulfill({ json });
     });
 
-    await page.goto('http://localhost:3000/feed');
+    await page.goto('/feed');
     await expect(page.locator('text=Unpaid Deposit: Carlos Handyman')).toBeVisible();
     await expect(page.locator('button', { hasText: 'Send Follow-up' })).toBeVisible();
   });

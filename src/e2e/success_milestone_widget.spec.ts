@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Success Milestone Widget', () => {
   test('displays milestone and handles share', async ({ page, loginAs, adminUser }) => {
     // Navigate to the Next.js dashboard
-    await page.goto('http://localhost:3000/dashboard');
+    await page.goto('/dashboard');
 
     // Wait for the Milestone component to appear
     const milestoneWidget = page.locator('text=100th Order Delivered!');
