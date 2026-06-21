@@ -47,6 +47,8 @@ exports_files(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
+        "cfo.rs",
+        "cfo_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -97,6 +99,8 @@ rust_library(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
+        "cfo.rs",
+        "cfo_test.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
         "//src/server/api/agents:approvals.rs",
