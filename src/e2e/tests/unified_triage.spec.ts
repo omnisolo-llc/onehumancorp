@@ -96,3 +96,57 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await expect(emptyMessage).toBeVisible();
   });
 });
+
+  test('Triage Feed properly links a customer context', async ({ page }) => {
+     const customTenant = 'e2e-triage-customer-tenant';
+     await page.addInitScript((t) => {
+      window.localStorage.setItem('tenant_id', t);
+    }, customTenant);
+
+    const res = await page.request.post('/api/v1/omnichannel/webhook', {
+        data: {
+            tenant_id: customTenant,
+            source: 'Email',
+            sender_id: 'maya@example.com',
+            message: 'I want to order a custom cake for my wedding',
+        }
+    });
+    expect(res.status()).toBe(200);
+
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    await page.goto('/api/ui/dashboard.html');
+
+    const triageCard = page.locator('.triage-item', { hasText: 'Email' }).first();
+    await expect(triageCard).toBeVisible({ timeout: 10000 });
+
+    const contextText = await triageCard.locator('.triage-context').textContent();
+    expect(contextText).toContain('inquiry'); // LLM might generate varying summaries, but it will have context.
+  });
+
+  test('Triage Feed proposes Draft Booking action correctly', async ({ page }) => {
+    const bookingTenant = 'e2e-triage-booking-tenant';
+    await page.addInitScript((t) => {
+     window.localStorage.setItem('tenant_id', t);
+   }, bookingTenant);
+
+   // The LLM mock will try to determine action type. We simulate a booking request.
+   const res = await page.request.post('/api/v1/omnichannel/webhook', {
+       data: {
+           tenant_id: bookingTenant,
+           source: 'WhatsApp',
+           sender_id: 'user_book_1',
+           message: 'I would like to schedule an appointment for next Monday at 10am',
+       }
+   });
+   expect(res.status()).toBe(200);
+
+   await new Promise(resolve => setTimeout(resolve, 5000));
+   await page.goto('/api/ui/dashboard.html');
+
+   const triageCard = page.locator('.triage-item', { hasText: 'WhatsApp' }).first();
+   await expect(triageCard).toBeVisible({ timeout: 10000 });
+
+   // Verify action button exists
+   const actionBtn = triageCard.getByRole('button', { name: /Approve|Send|Review/i });
+   await expect(actionBtn).toBeVisible();
+ });
