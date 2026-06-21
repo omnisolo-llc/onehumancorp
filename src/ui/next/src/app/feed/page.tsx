@@ -215,7 +215,7 @@ export default function FeedPage() {
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
-        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal")} />}
+        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal") as any} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
