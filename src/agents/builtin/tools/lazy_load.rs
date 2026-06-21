@@ -28,10 +28,13 @@ impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
         }
 
         if !invalid_tools.is_empty() {
-            return Err(ToolError::LlmRecoverable(format!(
+            let error_msg = format!(
                 "The following tools are not available in the global registry: {}. Please check your tool name spelling or use ToolSearch to find the correct tool name.",
                 invalid_tools.join(", ")
-            )));
+            );
+            return Err(ToolError::LlmRecoverable(
+                ohc_builtin_agent_core::types::format_pydantic_error_string(&error_msg, None, None)
+            ));
         }
 
         if args.tool_names.is_empty() {
