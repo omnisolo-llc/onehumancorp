@@ -24,6 +24,8 @@ impl AgentFeedRepository {
     }
 
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &item.tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
@@ -39,13 +41,17 @@ impl AgentFeedRepository {
         .bind(item.lifecycle_state)
         .bind(item.created_at)
         .bind(item.updated_at)
-        .fetch_one(&self.pool)
+                .fetch_one(&mut *tx)
         .await?;
+
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
 
         Ok(rec)
     }
 
     pub async fn get(&self, tenant_id: &str, id: &str) -> Result<Option<AgentFeedItem>, sqlx::Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             SELECT
@@ -81,13 +87,17 @@ impl AgentFeedRepository {
         )
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+                .fetch_optional(&mut *tx)
         .await?;
+
+        tx.rollback().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
 
         Ok(rec)
     }
 
     pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64, mobile_optimized: bool) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         let query = if mobile_optimized {
             r#"
             SELECT
@@ -164,8 +174,10 @@ impl AgentFeedRepository {
         .bind(tenant_id)
         .bind(limit)
         .bind(offset)
-        .fetch_all(&self.pool)
+                .fetch_all(&mut *tx)
         .await?;
+
+        tx.rollback().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
 
         Ok(items)
     }

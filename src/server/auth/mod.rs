@@ -170,6 +170,16 @@ impl Store {
 
                 let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
                 if secret_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                            let perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                            }
+                        }
+                    }
                     if let Ok(bytes) = std::fs::read(&secret_path) {
                         if bytes.len() >= 32 {
                             return bytes;
@@ -180,6 +190,16 @@ impl Store {
                 let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
                     let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                                let perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
+                                }
+                            }
+                        }
                         if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return Some(bytes.trim().to_string());

@@ -56,14 +56,19 @@ impl ToolRegistry for PgToolRegistry {
             RETURNING id, tenant_id, name, description, config, created_at
         ";
 
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         let row = sqlx::query(query)
             .bind(&id)
             .bind(tenant_id)
             .bind(name)
             .bind(description)
             .bind(config)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
+
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
 
         Ok(McpTool {
             id: row.get("id"),

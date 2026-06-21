@@ -12,6 +12,9 @@ impl CampaignRepository {
     }
 
     pub async fn create_campaign(&self, campaign: &Campaign) -> Result<(), Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &campaign.tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         sqlx::query(
             r#"
             INSERT INTO campaigns (id, tenant_id, goal, status, start_time, end_time, created_at, updated_at)
@@ -26,25 +29,35 @@ impl CampaignRepository {
         .bind(&campaign.end_time)
         .bind(&campaign.created_at)
         .bind(&campaign.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         Ok(())
     }
 
     pub async fn get_campaign(&self, tenant_id: &str, id: &str) -> Result<Campaign, Error> {
-        sqlx::query_as::<_, Campaign>(
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
+        let res = sqlx::query_as::<_, Campaign>(
             r#"
             SELECT * FROM campaigns WHERE tenant_id = $1 AND id = $2
             "#,
         )
         .bind(tenant_id)
         .bind(id)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await;
+
+        tx.rollback().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        res
     }
 
     pub async fn update_campaign_status(&self, tenant_id: &str, id: &str, status: &str) -> Result<(), Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         sqlx::query(
             r#"
             UPDATE campaigns SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3
@@ -53,13 +66,17 @@ impl CampaignRepository {
         .bind(status)
         .bind(tenant_id)
         .bind(id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         Ok(())
     }
 
     pub async fn add_asset(&self, asset: &CampaignAsset) -> Result<(), Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &asset.tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         sqlx::query(
             r#"
             INSERT INTO campaign_assets (id, tenant_id, campaign_id, type, content_url, created_at)
@@ -72,22 +89,29 @@ impl CampaignRepository {
         .bind(&asset.r#type)
         .bind(&asset.content_url)
         .bind(&asset.created_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         Ok(())
     }
 
     pub async fn get_assets(&self, tenant_id: &str, campaign_id: &str) -> Result<Vec<CampaignAsset>, Error> {
-        sqlx::query_as::<_, CampaignAsset>(
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
+        let res = sqlx::query_as::<_, CampaignAsset>(
             r#"
             SELECT * FROM campaign_assets WHERE tenant_id = $1 AND campaign_id = $2
             "#,
         )
         .bind(tenant_id)
         .bind(campaign_id)
-        .fetch_all(&self.pool)
-        .await
+        .fetch_all(&mut *tx)
+        .await;
+
+        tx.rollback().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        res
     }
 
     pub async fn record_channel_execution(
@@ -97,6 +121,9 @@ impl CampaignRepository {
         channel: &str,
         metrics_sent: i32,
     ) -> Result<(), Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         sqlx::query(
             r#"
             INSERT INTO channel_executions (id, tenant_id, campaign_id, channel, metrics_sent)
@@ -108,13 +135,17 @@ impl CampaignRepository {
         .bind(campaign_id)
         .bind(channel)
         .bind(metrics_sent)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         Ok(())
     }
 
     pub async fn create_lead_gen_campaign(&self, campaign: &LeadGenCampaign) -> Result<(), Error> {
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &campaign.tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
         sqlx::query(
             r#"
             INSERT INTO lead_gen_campaigns (id, tenant_id, budget, radius_miles, zip_code, status, created_at, updated_at)
@@ -129,21 +160,28 @@ impl CampaignRepository {
         .bind(&campaign.status)
         .bind(&campaign.created_at)
         .bind(&campaign.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
+        tx.commit().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
         Ok(())
     }
 
     pub async fn get_lead_gen_campaign(&self, tenant_id: &str, id: &str) -> Result<LeadGenCampaign, Error> {
-        sqlx::query_as::<_, LeadGenCampaign>(
+        let mut tx = self.pool.begin().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+
+        let res = sqlx::query_as::<_, LeadGenCampaign>(
             r#"
             SELECT * FROM lead_gen_campaigns WHERE tenant_id = $1::uuid AND id = $2::uuid
             "#,
         )
         .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_default())
         .bind(uuid::Uuid::parse_str(id).unwrap_or_default())
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await;
+
+        tx.rollback().await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+        res
     }
 }
