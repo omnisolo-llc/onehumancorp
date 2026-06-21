@@ -214,26 +214,26 @@ impl GatherActVerifyHarness {
                                 });
 
                                 let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
-                                let (tr, is_recoverable) = if let Some(tool) = tool_opt {
+                                let tr = if let Some(tool) = tool_opt {
                                     match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2).await {
-                                        Ok(res) => (ohc_builtin_agent_core::types::ToolResult {
+                                        Ok(res) => ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: res.clone(),
                                             error: String::new(),
-                                        }, false),
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => (ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg), true),
-                                        Err(e) => (ohc_builtin_agent_core::types::ToolResult {
+                                        },
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg),
+                                        Err(e) => ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: String::new(),
                                             error: e.to_string(),
-                                        }, false),
+                                        },
                                     }
                                 } else {
-                                    (ohc_builtin_agent_core::types::ToolResult {
+                                    ohc_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
                                         error: format!("Tool {} not found in this phase", tc.name),
-                                    }, false)
+                                    }
                                 };
 
                                 let _ = tx.send(AgentEvent::ToolCall {
@@ -294,30 +294,6 @@ impl GatherActVerifyHarness {
                             };
 
                             if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
-                                let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
-                                error_counts.insert(tc.name.clone(), count);
-                                if count > cfg_max_retries {
-                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, tr.error);
-                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
-                                    return;
-                                }
-                            } else if tr.error.is_empty() {
-                                error_counts.insert(tc.name.clone(), 0);
-                            }
-
-                            if is_recoverable {
-                                let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
-                                error_counts.insert(tc.name.clone(), count);
-                                if count > cfg_max_retries {
-                                    let msg = format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, tr.error);
-                                    let _ = tx.send(AgentEvent::TaskError { error: msg });
-                                    return;
-                                }
-                            } else if tr.error.is_empty() {
-                                error_counts.insert(tc.name.clone(), 0);
-                            }
-
-                            if is_recoverable {
                                 let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
                                 error_counts.insert(tc.name.clone(), count);
                                 if count > cfg_max_retries {
