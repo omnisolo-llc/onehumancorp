@@ -43,7 +43,11 @@ pub struct CostAuditor {
     tenant_tokens: Mutex<HashMap<String, i64>>,
     tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
+    pub tenant_api_calls: Mutex<HashMap<String, u64>>,
+    pub tenant_email_sends: Mutex<HashMap<String, u64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
+    api_calls_counter: opentelemetry::metrics::Counter<u64>,
+    email_sends_counter: opentelemetry::metrics::Counter<u64>,
     llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<u64>,
     bandwidth_savings_counter: Counter<u64>,
@@ -57,6 +61,8 @@ impl CostAuditor {
         let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
         let bandwidth_savings_counter = meter.u64_counter("ohc_bandwidth_savings_total_cents").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
+        let api_calls_counter = meter.u64_counter("ohc_api_calls_total").build();
+        let email_sends_counter = meter.u64_counter("ohc_email_sends_total").build();
 
         CostAuditor {
             config,
@@ -79,7 +85,11 @@ impl CostAuditor {
             tenant_tokens: Mutex::new(HashMap::new()),
             tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
+            tenant_api_calls: Mutex::new(HashMap::new()),
+            tenant_email_sends: Mutex::new(HashMap::new()),
             telemetry_tx: None,
+            api_calls_counter,
+            email_sends_counter,
             llm_cost_counter,
             storage_savings_counter,
             bandwidth_savings_counter,
@@ -269,6 +279,27 @@ impl CostAuditor {
     pub fn get_total_cached_tokens(&self) -> i64 {
         let tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
         tenant_cached_tokens.values().sum()
+    }
+
+    pub fn record_api_call(&self, tenant_id: &str, endpoint: &str) {
+        let mut calls = self.tenant_api_calls.lock().unwrap();
+        let counter = calls.entry(tenant_id.to_string()).or_insert(0);
+        *counter += 1;
+
+        self.api_calls_counter.add(1, &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            opentelemetry::KeyValue::new("endpoint", endpoint.to_string()),
+        ]);
+    }
+
+    pub fn record_email_send(&self, tenant_id: &str) {
+        let mut sends = self.tenant_email_sends.lock().unwrap();
+        let counter = sends.entry(tenant_id.to_string()).or_insert(0);
+        *counter += 1;
+
+        self.email_sends_counter.add(1, &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        ]);
     }
 
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
@@ -562,6 +593,32 @@ mod tests {
         };
         let savings = auditor.record_cache_hit(event);
         assert!(savings > 0.0);
+    }
+
+    #[test]
+    fn test_record_api_call_and_email_send() {
+        let config = CostConfig::default();
+        let auditor = CostAuditor::new(config);
+
+        auditor.record_api_call("tenant1", "/api/test");
+        auditor.record_api_call("tenant1", "/api/test");
+        auditor.record_api_call("tenant2", "/api/other");
+
+        {
+            let calls = auditor.tenant_api_calls.lock().unwrap();
+            assert_eq!(calls.get("tenant1"), Some(&2));
+            assert_eq!(calls.get("tenant2"), Some(&1));
+        }
+
+        auditor.record_email_send("tenant1");
+        auditor.record_email_send("tenant3");
+        auditor.record_email_send("tenant3");
+
+        {
+            let sends = auditor.tenant_email_sends.lock().unwrap();
+            assert_eq!(sends.get("tenant1"), Some(&1));
+            assert_eq!(sends.get("tenant3"), Some(&2));
+        }
     }
 
     #[test]
