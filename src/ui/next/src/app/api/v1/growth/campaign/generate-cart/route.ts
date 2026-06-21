@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { customer_name, cart_value, tenantId, storeName, discountOffer, isPro } = await request.json();
+    const body = await request.json();
+    const { customer_name, cart_value, tenantId, storeName, discountOffer, isPro } = body;
 
     // Use environment variable for backend URL, default to a sensible local value for testing
     const backendUrl = process.env.OHC_CORE_URL || 'http://localhost:8080';
@@ -42,12 +43,7 @@ export async function POST(request: Request) {
 
     if (!backendRes.ok) {
       if (process.env.NODE_ENV !== "test") console.warn(`Backend API warn: ${backendRes.status} ${backendRes.statusText}`);
-      // Fallback for demo purposes if backend is not available
-      const branding = isPro ? '' : '\n\n⚡ Powered by OHC';
-      return NextResponse.json({
-        message: `Subject: We saved your cart!\n\nHi ${safeCustomerName},\n\nWe noticed you left some great items in your cart${safeCartValue ? ` worth ${safeCartValue}` : ''} at ${safeStoreName}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK${safeDiscountOffer} for ${safeDiscountOffer}% off your entire order!\n\nBest,\nThe ${safeStoreName} Team${branding}`,
-        draft: `Subject: We saved your cart!\n\nHi ${safeCustomerName},\n\nWe noticed you left some great items in your cart${safeCartValue ? ` worth ${safeCartValue}` : ''} at ${safeStoreName}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK${safeDiscountOffer} for ${safeDiscountOffer}% off your entire order!\n\nBest,\nThe ${safeStoreName} Team${branding}`
-      });
+      throw new Error(`Backend failed with status ${backendRes.status}`);
     }
 
     const data = await backendRes.json();
@@ -55,13 +51,9 @@ export async function POST(request: Request) {
 
   } catch (error) {
     if (process.env.NODE_ENV !== "test") console.warn("Warn generating cart recovery draft:", error);
-    // Fallback for demo purposes if network error
-    return NextResponse.json(
-        {
-          message: `Subject: We saved your cart!\n\nHi there,\n\nWe noticed you left some great items in your cart. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK10 for 10% off your entire order!\n\nBest,\nThe Team\n\n⚡ Powered by OHC`,
-          draft: `Subject: We saved your cart!\n\nHi there,\n\nWe noticed you left some great items in your cart. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK10 for 10% off your entire order!\n\nBest,\nThe Team\n\n⚡ Powered by OHC`
-        },
-        { status: 200 } // Returning 200 with fallback so UI doesn't break during tests without backend
-    );
+    // Since we are not mocking the backend in E2E tests, the backend LLM gateway or rust service
+    // might occasionally fail or timeout. To ensure E2E UI paths don't totally crash,
+    // we provide a fallback message just for safety, but real tests verify network.
+    return NextResponse.json({ error: "Failed to generate campaign" }, { status: 500 });
   }
 }
