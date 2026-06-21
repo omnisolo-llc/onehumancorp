@@ -141,7 +141,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
 
     // Fallback tooltips matching frontend
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest updates.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Connect custom tools with your account. Only needed for advanced setups.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
     m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
     m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
     m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());

@@ -34,9 +34,13 @@ pub struct WalkthroughStep {
 pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
     let steps = match page.as_str() {
         "store-setup" => vec![
-            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() },
-            WalkthroughStep { selector: "#bio-input-tooltip".to_string(), title: "Describe your business".to_string(), text: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
-            WalkthroughStep { selector: "#generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), text: "Click here and watch our AI build your store from scratch.".to_string() },
+            WalkthroughStep { selector: "#nav-store".to_string(), title: "Set up your store".to_string(), text: "Click here to access your storefront and add your first products.".to_string() },
+        ],
+        "accept-payment" => vec![
+            WalkthroughStep { selector: "#nav-settings".to_string(), title: "Accept your first payment".to_string(), text: "Go to Settings > Payments to connect your bank account.".to_string() }
+        ],
+        "activate-agent" => vec![
+            WalkthroughStep { selector: "#nav-agents".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Visit the AI Agents tab to hire your first digital assistant.".to_string() }
         ],
         "dashboard" => vec![
             WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
