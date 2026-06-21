@@ -108,4 +108,35 @@ describe('App', () => {
      expect(output).toContain('another mock');
      expect(runAgentMock).toHaveBeenCalledTimes(2);
   });
+
+  it('handles selecting Browse Agent Marketplace', async () => {
+     const runAgentMock = vi.fn();
+     vi.spyOn(orchestrator, 'useOrchestrator').mockReturnValue({
+       status: 'ok',
+       tools: [],
+       error: null,
+       runAgent: runAgentMock,
+       output: null
+     });
+
+     const { lastFrame, stdin } = render(<App />);
+
+     // 10th item is Browse Agent Marketplace
+     for (let i = 0; i < 9; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+     }
+
+     stdin.write('\r');
+     await new Promise(r => setTimeout(r, 20));
+
+     const output = lastFrame();
+     expect(output).toContain('Agent Marketplace');
+
+     // Press q to exit marketplace
+     stdin.write('q');
+     await new Promise(r => setTimeout(r, 20));
+
+     expect(lastFrame()).toContain('Select an action');
+  });
 });
