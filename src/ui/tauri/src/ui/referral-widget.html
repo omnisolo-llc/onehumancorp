@@ -552,8 +552,12 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p class="modal-desc">Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
-      <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
+      <p class="modal-desc">Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+        <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
+      </div>
+      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
     </div>
   </div>
 
@@ -591,6 +595,8 @@
       const paywallModal = document.getElementById('paywall-modal');
       const closePaywallBtn = document.getElementById('close-paywall');
       const upgradeBtn = document.getElementById('upgrade-btn');
+      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+      const softPaywallStatus = document.getElementById('soft-paywall-status');
 
       // Initialize
       previewLink.value = `https://app.onehumancorp.com/setup.html?ref=${state.tenant}&promo=ref123`;
@@ -661,6 +667,64 @@
       upgradeBtn.addEventListener('click', () => {
         window.location.href = 'pricing.html';
       });
+
+      if (shareToUnlockBtn) {
+        shareToUnlockBtn.addEventListener('click', async () => {
+          const tenantId = state.tenant;
+          const message = `Check out my new Referral Program built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+          // Open share dialog
+          window.open(shareUrl, '_blank');
+
+          shareToUnlockBtn.style.display = 'none';
+          softPaywallStatus.style.display = 'block';
+          softPaywallStatus.innerText = 'Verifying Share...';
+
+          try {
+            let url = '/api/v1/growth/trial-extension/claim';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+            }
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+
+            if (response.ok) {
+              softPaywallStatus.innerText = 'Unlocked!';
+              state.hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
+              setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheckbox.checked = true;
+                state.removeBranding = true;
+                updatePreview();
+
+                // reset state for next time
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 1500);
+            } else {
+              softPaywallStatus.innerText = 'Failed to claim trial extension.';
+              setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+            }
+          } catch (e) {
+            console.error(e);
+            softPaywallStatus.innerText = 'Error claiming trial extension.';
+            setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        });
+      }
 
       // Functions
       function updatePreview() {

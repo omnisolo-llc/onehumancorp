@@ -19,16 +19,31 @@ test.describe('Referral Widget Growth Loop', () => {
 
         // Verify soft paywall pops up
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
-        await expect(page.getByText('Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeVisible();
+        await expect(page.getByText(/Make the Referral Widget 100% yours/)).toBeVisible();
 
-        // Click Upgrade to Pro
-        await page.evaluate(() => { const btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent === 'Upgrade to Pro'); if(btn) btn.click(); });
+        // Setup mocked window.open so the share button doesn't actually open a new tab and break tests
+        await page.evaluate(() => {
+            window.open = function() { return null; };
+        });
 
-        // Wait for navigation
-        await page.waitForURL('**/pricing*');
+        // Click Share to Unlock
+        const shareBtn = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
+        await expect(shareBtn).toBeVisible();
+        await shareBtn.click();
 
-        // Verify we are on pricing page
-        await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible();
+        // Verify loading state
+        await expect(page.getByText('Verifying Share...')).toBeVisible();
+
+        // Verify success state
+        await expect(page.getByText('Unlocked!')).toBeVisible({ timeout: 10000 });
+
+        // Verify modal closes and checkbox is now checked
+        await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden({ timeout: 5000 });
+        const checkbox = page.getByLabel(/Remove "Powered by OHC"/);
+        await expect(checkbox).toBeChecked();
+
+        // Verify branding is removed from preview
+        await expect(page.getByRole('link', { name: /Powered by OHC/i })).toBeHidden();
     });
 
     test('Smoke test: referral_widget', async ({ page, request }) => {
