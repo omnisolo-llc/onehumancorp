@@ -153,7 +153,9 @@ impl JetBrainsObservationMasker {
                     for tr in &mut messages[i].tool_results {
                         if tr.error.is_empty()
                             && (!tr.content.starts_with("{\"_masked_observation\"")
-                                && !tr.content.starts_with("{\"_masked_observation\": \"[Observation Masked"))
+                                && !tr
+                                    .content
+                                    .starts_with("{\"_masked_observation\": \"[Observation Masked"))
                         {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
@@ -182,7 +184,8 @@ impl JetBrainsObservationMasker {
                                             bytes, tr.tool_call_id
                                         );
                                         tr.content =
-                                            serde_json::json!({ "_masked_observation": raw_msg }).to_string();
+                                            serde_json::json!({ "_masked_observation": raw_msg })
+                                                .to_string();
                                     }
                                     continue; // Treated as JSON, don't fall back to raw string masking
                                 }
@@ -205,9 +208,11 @@ impl JetBrainsObservationMasker {
                                     );
                                     let content_trimmed = tr.content.trim();
                                     if content_trimmed.starts_with('{') {
-                                        serde_json::json!({ "_masked_observation": raw_msg }).to_string()
+                                        serde_json::json!({ "_masked_observation": raw_msg })
+                                            .to_string()
                                     } else if content_trimmed.starts_with('[') {
-                                        serde_json::json!([{ "_masked_observation": raw_msg }]).to_string()
+                                        serde_json::json!([{ "_masked_observation": raw_msg }])
+                                            .to_string()
                                     } else {
                                         raw_msg
                                     }
@@ -218,9 +223,11 @@ impl JetBrainsObservationMasker {
                                     );
                                     let content_trimmed = tr.content.trim();
                                     if content_trimmed.starts_with('{') {
-                                        serde_json::json!({ "_masked_observation": raw_msg }).to_string()
+                                        serde_json::json!({ "_masked_observation": raw_msg })
+                                            .to_string()
                                     } else if content_trimmed.starts_with('[') {
-                                        serde_json::json!([{ "_masked_observation": raw_msg }]).to_string()
+                                        serde_json::json!([{ "_masked_observation": raw_msg }])
+                                            .to_string()
                                     } else {
                                         raw_msg
                                     }
@@ -438,6 +445,13 @@ mod additional_tests {
             tracing::debug!("MASKED CONTENT: {}", masked_content);
             assert!(last_element.contains("[Masked array:"));
             assert!(last_element.contains("elements truncated]"));
+        } else if let Some(s) = parsed
+            .as_array()
+            .and_then(|a| a[0].as_object())
+            .and_then(|o| o.get("_masked_observation"))
+            .and_then(|v| v.as_str())
+        {
+            assert!(s.contains("[Observation Masked"));
         } else if let Some(s) = parsed
             .as_object()
             .and_then(|o| o.get("_masked_observation"))
