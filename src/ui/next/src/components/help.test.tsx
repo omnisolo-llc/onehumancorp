@@ -29,13 +29,7 @@ describe('HelpWidget', () => {
 
   it('renders the help widget', async () => {
     await act(async () => {
-      render(
-        <TooltipProvider>
-          <WalkthroughProvider>
-            <HelpWidget />
-          </WalkthroughProvider>
-        </TooltipProvider>
-      );
+      await act(async () => { render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>); });
     });
     expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
   });
@@ -43,16 +37,7 @@ describe('HelpWidget', () => {
   it('fetches dynamic walkthroughs when clicked', async () => {
     const user = userEvent.setup();
     await act(async () => {
-      render(
-        <div>
-          <div id="test-target">Mock Target</div>
-          <TooltipProvider>
-            <WalkthroughProvider>
-              <HelpWidget />
-            </WalkthroughProvider>
-          </TooltipProvider>
-        </div>
-      );
+      await act(async () => { render(<div><div id="test-target">Mock Target</div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>); });
     });
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });

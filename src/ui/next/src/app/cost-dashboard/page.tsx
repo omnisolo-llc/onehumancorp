@@ -229,19 +229,19 @@ export default function CostDashboardPage() {
 
             <div className="app-panel-body p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                         <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">{formatCurrency(data?.total_costs || 0)}</p>
                     </div>
-                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
                         <p id="cost-dashboard-projected" className="text-3xl font-bold font-outfit text-[#0f766e] dark:text-[#6ac5bd]">{formatCurrency(data?.projected_monthly_cost || 0)}</p>
                     </div>
-                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                         <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                     </div>
-                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+                    <div className="app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
                         <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
                         <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
@@ -270,7 +270,7 @@ export default function CostDashboardPage() {
             </div>
 
             <div className="app-panel-body p-6 space-y-4">
-                <div className="flex flex-col app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <h3 className="font-medium text-gray-950 dark:text-white mb-4">7-Day Trend</h3>
                     {data?.trend && data.trend.length > 0 ? (
                         <div className="flex items-end h-32 gap-2 mt-4" id="cost-dashboard-trend">
@@ -295,7 +295,7 @@ export default function CostDashboardPage() {
                     )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                             LLM Usage
@@ -317,7 +317,7 @@ export default function CostDashboardPage() {
                 </div>
 
                 {/* Per-Agent / Per-Feature Costs */}
-                <div className="flex flex-col app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <h3 className="font-medium text-gray-900 dark:text-white mb-2">Agent & Feature Costs</h3>
                     {data?.agent_costs && data.agent_costs.length > 0 ? (
                         <ul id="cost-dashboard-agent-costs" className="space-y-2">
@@ -333,7 +333,7 @@ export default function CostDashboardPage() {
                     )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
@@ -341,7 +341,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
@@ -349,7 +349,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Compute Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
@@ -357,7 +357,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.compute_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Network & Bandwidth</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
@@ -365,7 +365,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.network_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Email Sends</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of transactional and marketing email delivery.</p>
@@ -373,7 +373,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-email" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.email_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900 dark:text-white">Outbound API Calls</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of third-party integration usage.</p>
@@ -381,7 +381,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-api" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.api_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                     <div>
                         <span className="font-medium text-green-700">Network & Storage Savings</span>
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
