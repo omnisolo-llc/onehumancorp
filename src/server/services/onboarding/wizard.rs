@@ -33,9 +33,35 @@ impl InteractiveWizard {
         let mode = if is_cloud { "Cloud-native" } else { "Standalone" };
 
         format!(
-            "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\">\n\
-              <h2 style=\"margin-top: 0; color: #ffffff; font-weight: 600; font-size: 24px;\">OHC Interactive Setup ({})</h2>\n\
-              <p style=\"color: rgba(255, 255, 255, 0.7); font-size: 16px; line-height: 1.5; margin-bottom: 0;\">Please review your configuration options.</p>\n\
+            "<style>\n\
+            .wizard-glassmorphism {{\n\
+                backdrop-filter: blur(30px) saturate(210%);\n\
+                -webkit-backdrop-filter: blur(30px) saturate(210%);\n\
+                background: rgba(255, 255, 255, 0.65);\n\
+                border: 1px solid rgba(255, 255, 255, 0.4);\n\
+                border-radius: 16px;\n\
+                padding: 24px;\n\
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n\
+                font-family: 'Outfit', 'Inter', sans-serif;\n\
+                color: #1D1D1F;\n\
+            }}\n\
+            .wizard-glassmorphism p {{\n\
+                color: #555555;\n\
+            }}\n\
+            @media (prefers-color-scheme: dark) {{\n\
+                .wizard-glassmorphism {{\n\
+                    background: rgba(22, 22, 26, 0.7);\n\
+                    border: 1px solid rgba(255, 255, 255, 0.1);\n\
+                    color: #F5F5F7;\n\
+                }}\n\
+                .wizard-glassmorphism p {{\n\
+                    color: #A1A1A6;\n\
+                }}\n\
+            }}\n\
+            </style>\n\
+            <div class=\"wizard-glassmorphism\">\n\
+              <h2 style=\"margin-top: 0; font-weight: 600; font-size: 24px;\">OHC Interactive Setup ({})</h2>\n\
+              <p style=\"font-size: 16px; line-height: 1.5; margin-bottom: 0;\">Please review your configuration options.</p>\n\
             </div>",
             mode
         )
@@ -91,5 +117,24 @@ mod tests {
         assert!(provisioner::check_environment(false).is_ok());
 
         fs::remove_dir_all(".ohc-local-data").unwrap();
+    }
+
+    #[test]
+    fn test_generate_wizard_ui_styling() {
+        let w = InteractiveWizard::new();
+        let ui = w.generate_wizard_ui(false);
+
+        // Verify light mode specifics
+        assert!(ui.contains("background: rgba(255, 255, 255, 0.65)"));
+        assert!(ui.contains("border: 1px solid rgba(255, 255, 255, 0.4)"));
+
+        // Verify dark mode specifics
+        assert!(ui.contains("@media (prefers-color-scheme: dark)"));
+        assert!(ui.contains("background: rgba(22, 22, 26, 0.7)"));
+        assert!(ui.contains("border: 1px solid rgba(255, 255, 255, 0.1)"));
+
+        // Verify other requirements
+        assert!(ui.contains("border-radius: 16px"));
+        assert!(ui.contains("backdrop-filter: blur(30px) saturate(210%)"));
     }
 }
