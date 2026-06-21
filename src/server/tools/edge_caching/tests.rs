@@ -21,12 +21,12 @@ mod tests {
             agent_id: "".to_string(),
         };
 
-        let res = server.invoke_tool(&req).await.unwrap();
-        let payload: serde_json::Value = serde_json::from_str(&res.payload).unwrap();
+        let res = server.invoke_tool(&req).await.expect("Failed to invoke mcp_seo_generator tool");
+        let payload: serde_json::Value = serde_json::from_str(&res.payload).expect("Failed to parse JSON payload");
 
         assert_eq!(payload["status"], "success");
         assert_eq!(payload["tenant_id"], "tenant_123");
-        assert!(payload["seo_metadata"]["json_ld"]["name"].as_str().unwrap() == "Vegan Chocolate Cake");
+        assert!(payload["seo_metadata"]["json_ld"]["name"].as_str().expect("Missing seo name") == "Vegan Chocolate Cake");
     }
 
     #[tokio::test]
@@ -44,8 +44,8 @@ mod tests {
             agent_id: "".to_string(),
         };
 
-        let res = server.invoke_tool(&req).await.unwrap();
-        let payload: serde_json::Value = serde_json::from_str(&res.payload).unwrap();
+        let res = server.invoke_tool(&req).await.expect("Failed to invoke mcp_edge_kv_sync tool");
+        let payload: serde_json::Value = serde_json::from_str(&res.payload).expect("Failed to parse JSON payload");
 
         assert_eq!(payload["status"], "success");
         assert_eq!(payload["synced_key"], "tenant:tenant_123:product:prod_456:inventory");

@@ -63,7 +63,7 @@ impl EdgeCachingMcpServer {
                         "tenant_id": tenant_id,
                         "seo_metadata": seo_metadata
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap_or_else(|_| "{}".to_string()) })
                 }
                 .instrument(tracing::info_span!("mcp_seo_generator"))
                 .await
@@ -82,7 +82,7 @@ impl EdgeCachingMcpServer {
                         "synced_key": key,
                         "inventory_count": inventory_count
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap_or_else(|_| "{}".to_string()) })
                 }
                 .instrument(tracing::info_span!("mcp_edge_kv_sync"))
                 .await
@@ -108,7 +108,7 @@ impl EdgeCachingMcpServer {
                         "status": "success",
                         "html_shell": html_shell
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap_or_else(|_| "{}".to_string()) })
                 }
                 .instrument(tracing::info_span!("mcp_edge_worker_simulation"))
                 .await
