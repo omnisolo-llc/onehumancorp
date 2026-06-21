@@ -1,13 +1,11 @@
 import { POST } from "./route";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("POST /api/billing/create-checkout-session", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
-
-    // Silence console error for this specific test
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
