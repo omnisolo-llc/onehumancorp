@@ -77,6 +77,33 @@ test.describe('Help Components', () => {
     await expect(page.locator('text=Sorry, I\'m having trouble connecting right now.').first()).toBeVisible({ timeout: 15000 });
   });
 
+  test('Help Chat clears messages', async ({ page }) => {
+    await page.goto('/help?test_chat=true');
+
+    // Open chat
+    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toBeVisible();
+    await chatButton.click();
+
+    // Fill message and send
+    const input = page.locator('input[placeholder="Ask anything..."]');
+    await input.fill('How do I clear this chat?');
+    await page.locator('button[aria-label="Send message"]').click();
+
+    // Verify user message
+    await expect(page.locator('text=How do I clear this chat?').first()).toBeVisible();
+
+    // Click clear
+    const clearButton = page.locator('button[aria-label="Clear chat"]');
+    await expect(clearButton).toBeVisible();
+    await clearButton.click();
+
+    // Verify messages are gone
+    await expect(page.locator('text=How do I clear this chat?')).not.toBeVisible();
+    await expect(page.locator('text=Hi! I\'m your AI Help Agent. Need help setting up your store or understanding payments?').first()).toBeVisible();
+    await expect(clearButton).not.toBeVisible();
+  });
+
   test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {
     await page.goto('/dashboard?test_walkthrough=true');
 
