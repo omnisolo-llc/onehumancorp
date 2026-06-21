@@ -7,8 +7,6 @@ test.describe('Documentation Features CUJ', () => {
     await expect(page.locator('h1')).toContainText('Help Center');
 
     // 2. Open AI Help Chat
-    // Use the force flag in URL to ensure it shows up in E2E
-    await page.goto('/help?test_chat=true');
     const helpChatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(helpChatButton).toBeVisible();
     await helpChatButton.click();
@@ -23,14 +21,13 @@ test.describe('Documentation Features CUJ', () => {
     await expect(page.locator('h1')).toHaveText('Release Notes & Changelog');
 
     // 4. Trigger Walkthrough (Dashboard has a walkthrough button)
-    await page.goto('/dashboard?test_walkthrough=true');
+    await page.goto('/dashboard');
     const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');
-    if (await walkthroughBtn.isVisible()) {
-      await walkthroughBtn.click();
-      await expect(page.locator('.ohc-walkthrough-bubble')).toBeVisible();
-      await page.locator('.ohc-walkthrough-close').click();
-      await expect(page.locator('.ohc-walkthrough-bubble')).not.toBeVisible();
-    }
+    await expect(walkthroughBtn).toBeVisible();
+    await walkthroughBtn.click();
+    await expect(page.locator('.ohc-walkthrough-bubble')).toBeVisible();
+    await page.locator('.ohc-walkthrough-close').click();
+    await expect(page.locator('.ohc-walkthrough-bubble')).not.toBeVisible();
 
     // 5. View API Docs
     await page.goto('/api-docs');
