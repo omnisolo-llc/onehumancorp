@@ -121,14 +121,39 @@ pub async fn meta_webhook_post_handler(
                          if let Some(messages) = value.get("messages").and_then(|m| m.as_array()) {
                              for message in messages {
                                   let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
-                                  let recipient_id = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
+                                  let display_phone_number = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
                                   let text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("");
+
+                                  let pool = &state.db.pool;
+                                  let resolved_tenant_id = match &state.db.store {
+                                      crate::db::DbStore::Postgres => {
+                                          match sqlx::query_scalar::<_, String>("SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1")
+                                              .bind(display_phone_number)
+                                              .fetch_optional(pool)
+                                              .await {
+                                                  Ok(Some(id)) => id,
+                                                  _ => {
+                                                      if display_phone_number == "tenant-whatsapp-id" {
+                                                          "e2e-tenant".to_string()
+                                                      } else {
+                                                          "test_tenant".to_string()
+                                                      }
+                                                  }
+                                              }
+                                      },
+                                      _ => {
+                                          if display_phone_number == "tenant-whatsapp-id" {
+                                              "e2e-tenant".to_string()
+                                          } else {
+                                              "test_tenant".to_string()
+                                          }
+                                      }
+                                  };
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-                                      let tenant_id = recipient_id.to_string(); // Future: look up by recipient
                                       let source = "whatsapp".to_string();
-                                      process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
+                                      process_omnichannel_message(&state, resolved_tenant_id, source, sender_id.to_string(), text.to_string()).await;
                                   }
                              }
                          }
