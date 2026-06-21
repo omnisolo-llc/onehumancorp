@@ -5,7 +5,7 @@ test.describe('In-App Help & Documentation Features', () => {
     await page.goto('/api/ui/help.html');
 
     // Help Center title is visible
-    await expect(page.getByRole('heading', { name: /Help Center/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /In-App Help Center/i })).toBeVisible();
 
     // Verify some articles are loaded
     await expect(page.getByText('Getting Started').first()).toBeVisible();

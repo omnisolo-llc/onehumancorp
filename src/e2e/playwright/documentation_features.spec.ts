@@ -4,7 +4,7 @@ test.describe('Documentation Features CUJ', () => {
   test('User can access help center, use chat, run walkthroughs, view changelog, and API docs', async ({ page }) => {
     // 1. Visit Help Center
     await page.goto('/help');
-    await expect(page.locator('h1')).toContainText('Help Center');
+    await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // 2. Open AI Help Chat
     const helpChatButton = page.locator('button[aria-label="Open help chat"]');

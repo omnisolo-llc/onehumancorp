@@ -64,7 +64,7 @@ test.describe("Help Center", () => {
     await page.goto("/help");
 
     // Verify Help Center title
-    await expect(page.locator("h1", { hasText: "Help Center" })).toBeVisible();
+    await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
 
     // Verify that categories are rendered (Getting Started, My Store, Payments)
     await expect(
@@ -97,14 +97,14 @@ test.describe("Help Center", () => {
     await page.waitForURL("/help/getting-started-1");
 
     await page.goto("/help");
-    await expect(page.locator("h1", { hasText: "Help Center" })).toBeVisible();
+    await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
   });
 
   test("should use backend search for filtering articles", async ({ page }) => {
     await page.goto("/help");
 
     // Verify Help Center title
-    await expect(page.locator("h1", { hasText: "Help Center" })).toBeVisible();
+    await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
 
     // Wait for hydration to complete by checking for initial content
     await expect(

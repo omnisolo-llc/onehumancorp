@@ -8,7 +8,7 @@ test.describe('Documentation full suite', () => {
     // Title should be present
     const title = page.locator('h1');
     await expect(title).toBeVisible();
-    await expect(title).toContainText('Help Center');
+    await expect(title).toContainText('In-App Help Center');
 
     // Make sure search bar exists
     const searchInput = page.getByPlaceholder('Search for help articles and videos...');
