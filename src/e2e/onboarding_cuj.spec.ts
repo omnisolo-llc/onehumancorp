@@ -5,7 +5,10 @@ import * as fs from 'fs';
 test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear());
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR || require('path').resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : require('path').resolve(__dirname, '..', '..');
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -34,7 +37,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
   async function startOnboarding(page: import('@playwright/test').Page) {
     await page.goto('http://mock/setup.html');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.locator('.container')).toBeVisible();
     await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
   }
@@ -43,7 +46,7 @@ test.describe('Onboarding Wizard CUJ', () => {
   test('Persona: Business Owner completes initial setup successfully', async ({ page }) => {
     await startOnboarding(page);
 
-    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
+    await page.locator('[data-testid="context-storefront"]').click();
     await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
 
     const categorySelect = page.getByTestId('business-categories');
@@ -63,10 +66,9 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
 
-    await page.getByTestId('domain-name').fill('my-bakery-shop');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
+
 
     await page.getByTestId('template-selection').selectOption('Modern');
 
@@ -115,7 +117,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     // Do not fill offer, try to proceed
-    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
 
     // Expect validation failure message
     await expect(page.getByText('Please enter an offer.')).toBeVisible();

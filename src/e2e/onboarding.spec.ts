@@ -12,7 +12,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 1: Completes the onboarding flow
   test('Completes the onboarding flow and verifies premium translucent glass styling and flexbox layouts', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
 
     // Step 0: Welcome Screen
     const setupScreen = page.locator('.container');
@@ -55,7 +60,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   test('Validates 44px touch targets on mobile sizes', async ({ page }) => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -72,7 +82,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 3: Verifies input disabled states
   test('Next button fails validation when input is empty', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -99,7 +114,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 4: Enter key submits the first step
   test('Enter key submits the input', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -120,7 +140,12 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 5: Verify text area presence and styling
   test('Verify manual configuration fallback styling', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
   });
@@ -162,7 +187,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     // Test 1: Verifies Instant Build successful generation flow
   test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -186,7 +216,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   });
 
   test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
     await instantBuildButton.click();
 
@@ -200,7 +235,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   });
 
   test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
     await instantBuildButton.click();
 
@@ -215,7 +255,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 2: Verifies Instant Build handles network error gracefully
   test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -240,7 +285,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 3: Verifies empty input behavior
   test('Instant Build prevents submission when the input is empty', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
     await instantBuildButton.click();
 
@@ -257,7 +307,12 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 4: Smart defaults fallback on partial info
   test('Instant Build handles partial information appropriately by falling back to smart defaults', async ({ page }) => {
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
     await instantBuildButton.click();
 
@@ -271,10 +326,47 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await page.waitForTimeout(500);
   });
 
+  test('Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack', async ({ page, baseURL }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Go to the real local server root route which should present setup if unconfigured
+    await page.goto(baseURL || 'http://127.0.0.1:8080');
+
+    // Wait for the container to load
+    const container = page.locator('.container');
+    await expect(container).toBeVisible({ timeout: 15000 });
+
+    // Check .container has no horizontal overflow
+    const containerBox = await container.boundingBox();
+    expect(containerBox?.width).toBeLessThanOrEqual(375);
+
+    // Click step-by-step
+    const stepByStepButton = page.locator('button', { hasText: 'Step-by-step' }).first();
+    await stepByStepButton.click();
+
+    // Check .radio-option
+    const radioOption = page.locator('.radio-option').first();
+    const radioBox = await radioOption.boundingBox();
+    expect(Math.round(radioBox?.height || 0)).toBeGreaterThanOrEqual(44);
+
+    // Next step
+    await page.locator('#btn-next-type').click();
+
+    // Check .persona-chip
+    const personaChip = page.locator('.persona-chip').first();
+    const chipBox = await personaChip.boundingBox();
+    expect(Math.round(chipBox?.height || 0)).toBeGreaterThanOrEqual(44);
+  });
+
   // Test 5: Mobile responsiveness of the Instant Build component
   test('Instant Build respects mobile viewport constraints (375px) with valid touch targets for the conversational flow', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('file://' + path.resolve(__dirname, '../ui/tauri/src/ui/setup.html'));
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..');
+    await page.route('http://mock/setup.html', async route => {
+        const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.goto('http://mock/setup.html');
 
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
     await instantBuildButton.click();

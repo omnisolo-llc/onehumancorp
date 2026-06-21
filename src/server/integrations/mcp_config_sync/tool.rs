@@ -260,7 +260,6 @@ mod mock_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
-    use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
     async fn test_sync_and_get_config() {
@@ -268,7 +267,21 @@ mod db_tests {
         if !url.starts_with("postgres") {
             return;
         }
-        let pool = match PgPoolOptions::new().connect(&url).await {
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+        .before_acquire(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("SET app.current_tenant = ''").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        }).connect(&url).await {
             Ok(p) => p,
             Err(_) => return, // Skip test if database is not available to keep it hermetic
         };

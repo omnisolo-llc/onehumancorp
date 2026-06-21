@@ -203,7 +203,7 @@
             align-items: flex-start;
         }
 
-        .phone-mockup {
+        .phone-container {
             width: 375px;
             height: 812px;
             background: white;
@@ -352,13 +352,25 @@
 
         <div class="panel glassmorphism glassmorphism">
             <h2>Publish & Share</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; margin-bottom: 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <div>
+                    <span style="font-size: 14px; font-weight: 500; color: #111827;">Remove "Powered by OHC" Badge</span>
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 4px; margin-bottom: 0;">Hide the OHC branding from your public page.</p>
+                </div>
+                <label style="position: relative; display: inline-block; width: 48px; height: 24px;">
+                    <input type="checkbox" id="remove-branding-toggle" style="opacity: 0; width: 0; height: 0;">
+                    <span id="remove-branding-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #d1d5db; transition: .2s; border-radius: 24px;">
+                        <span id="remove-branding-knob" style="position: absolute; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .2s; border-radius: 50%;"></span>
+                    </span>
+                </label>
+            </div>
             <button id="copy-btn" class="btn-primary">Copy Link-in-Bio URL</button>
             <p style="text-align: center; font-size: 12px; color: #6b7280; margin-top: 8px;">Add this link to your Instagram, TikTok, or Twitter profile.</p>
         </div>
     </section>
 
     <section class="preview-section">
-        <div class="phone-mockup">
+        <div class="phone-container">
             <div class="notch"></div>
             <div id="preview-content" class="preview-content">
                 <div class="avatar">✨</div>
@@ -389,6 +401,9 @@
         const previewContent = document.getElementById('preview-content');
         const previewLinks = document.getElementById('preview-links');
         const poweredByLink = document.getElementById('powered-by-link');
+        const removeBrandingToggle = document.getElementById('remove-branding-toggle');
+        const removeBrandingSlider = document.getElementById('remove-branding-slider');
+        const removeBrandingKnob = document.getElementById('remove-branding-knob');
 
         let tenant = window.localStorage.getItem('tenant') || window.localStorage.getItem('tenant_id') || 'my-store';
 
@@ -396,24 +411,20 @@
             store_name: '',
             bio: '',
             theme: 'gradient',
-            links: []
+            links: [],
+            remove_branding: false
         };
 
         // Try load from API
         try {
             const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
             if (response.ok) {
-                currentState = await response.json();
-
-                // Keep compatibility with E2E tests that set this localStorage explicitly:
-                try {
-                    const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed.storeName) currentState.store_name = parsed.storeName;
-                        if (parsed.bio) currentState.bio = parsed.bio;
-                    }
-                } catch(e) {}
+                const data = await response.json();
+                currentState.store_name = data.store_name || '';
+                currentState.bio = data.bio || '';
+                currentState.theme = data.theme || 'gradient';
+                currentState.links = data.links || [];
+                currentState.remove_branding = !!data.remove_branding;
             }
         } catch(e) {
             console.error("Failed to load bio config", e);
@@ -421,17 +432,10 @@
 
         storeNameInput.value = currentState.store_name;
         bioInput.value = currentState.bio;
+        removeBrandingToggle.checked = currentState.remove_branding;
 
         let saveTimeout;
         function saveState() {
-            // Keep E2E tests happy by saving to localStorage too
-            window.localStorage.setItem(`ohc_bio_${tenant}`, JSON.stringify({
-                storeName: currentState.store_name,
-                bio: currentState.bio,
-                theme: currentState.theme,
-                links: currentState.links
-            }));
-
             // Debounce API call
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
@@ -464,6 +468,15 @@
             previewTitle.textContent = currentState.store_name;
             previewBio.textContent = currentState.bio;
             poweredByLink.href = `https://ohc.store/join?ref=${tenant}`;
+            poweredByLink.style.display = currentState.remove_branding ? 'none' : 'block';
+
+            if (currentState.remove_branding) {
+                removeBrandingSlider.style.backgroundColor = '#4f46e5';
+                removeBrandingKnob.style.transform = 'translateX(24px)';
+            } else {
+                removeBrandingSlider.style.backgroundColor = '#d1d5db';
+                removeBrandingKnob.style.transform = 'translateX(0)';
+            }
 
             const styles = getThemeStyles(currentState.theme);
             previewContent.style.background = styles.bg;
@@ -512,6 +525,12 @@
                 updatePreview();
                 saveState();
             });
+        });
+
+        removeBrandingToggle.addEventListener('change', (e) => {
+            currentState.remove_branding = e.target.checked;
+            updatePreview();
+            saveState();
         });
 
         copyBtn.addEventListener('click', () => {

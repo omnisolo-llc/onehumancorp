@@ -30,6 +30,8 @@ function browserSupportsPowerSync() {
   return isPowerSyncSupportedForLocation(window.isSecureContext, window.location.hostname);
 }
 
+import { getPowerSyncDB } from './db';
+
 export const PowerSyncProvider = ({
   children,
   fallback,
@@ -48,12 +50,7 @@ export const PowerSyncProvider = ({
     if (!supported) return;
     let _powerSync: PowerSyncDatabase;
     const init = async () => {
-      _powerSync = new PowerSyncDatabase({
-        database: {
-          dbFilename: 'ohc-offline.db'
-        },
-        schema: AppSchema,
-      });
+      _powerSync = await getPowerSyncDB();
 
       await _powerSync.init();
 

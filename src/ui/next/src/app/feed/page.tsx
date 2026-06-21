@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
+import { ProposalDraftCard } from '../../components/feed/ProposalDraftCard';
 
 interface FeedItem {
   id: string;
@@ -48,7 +49,9 @@ export default function FeedPage() {
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
+      const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
       ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
@@ -179,6 +182,21 @@ export default function FeedPage() {
     }
   };
 
+  const simulateDisputeDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-dispute-resolution', { method: 'POST' });
+      // The websocket should pick it up, but we can also refetch
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateAmbassadorDraft = async () => {
     try {
       setLoading(true);
@@ -197,6 +215,7 @@ export default function FeedPage() {
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
+        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal")} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
@@ -229,6 +248,8 @@ export default function FeedPage() {
             const isProcessing = processingId === item.id;
             const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
+            const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
+            const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -237,9 +258,9 @@ export default function FeedPage() {
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#0066FF] dark:text-[#0071E3] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0066FF] dark:bg-[#0071E3] opacity-80"></span>
-                    {isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -247,7 +268,9 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {isAmbassador
+                  {isDisputeResolution
+                    ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Quote'
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
@@ -293,7 +316,38 @@ export default function FeedPage() {
                   </div>
                 ) : (
                   <div className="mb-5">
-                    {isAmbassador ? (
+                    {isDisputeResolution ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-[#FFF5E5] dark:bg-[rgba(255,149,0,0.1)] p-3 rounded-lg border border-[#FFD699] dark:border-[rgba(255,149,0,0.3)]">
+                          <p className="text-[13px] text-[#8C5300] dark:text-[#FF9F0A] italic mb-1">"{disputePayload?.original_message}"</p>
+                          {disputePayload?.past_orders && (
+                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
+                              {disputePayload?.past_orders}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Proposed Resolution</p>
+                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed mb-3">
+                            {disputePayload?.generated_response}
+                          </p>
+                          <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            {disputePayload?.refund_amount && (
+                              <div className="flex items-center gap-3 p-3 border-b border-gray-100 dark:border-gray-700">
+                                <input type="checkbox" defaultChecked className="w-4 h-4 text-[#FF9500] rounded border-gray-300 focus:ring-[#FF9500]" />
+                                <span className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">Issue ${disputePayload?.refund_amount} Refund</span>
+                              </div>
+                            )}
+                            {disputePayload?.operational_action && (
+                              <div className="flex items-center gap-3 p-3">
+                                <input type="checkbox" defaultChecked className="w-4 h-4 text-[#FF9500] rounded border-gray-300 focus:ring-[#FF9500]" />
+                                <span className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">{disputePayload?.operational_action}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : isAmbassador ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                           <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
@@ -323,7 +377,37 @@ export default function FeedPage() {
                 )}
 
                 {!editingId || editingId !== item.id ? (
-                  isAmbassador ? (
+                  isDisputeResolution ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#FF9500] text-white font-medium hover:bg-[#E68A00] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Resolve"
+                        data-testid="feed-approve-resolve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Resolve'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : isAmbassador ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}
@@ -388,13 +472,20 @@ export default function FeedPage() {
         </div>
 
         {/* Hidden test button to trigger simulation easily during development/testing */}
-        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center">
+        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center gap-2">
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
              className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Ambassador Draft
+          </button>
+          <button
+             onClick={simulateDisputeDraft}
+             data-testid="simulate-dispute-btn"
+             className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Dispute
           </button>
         </div>
       </div>

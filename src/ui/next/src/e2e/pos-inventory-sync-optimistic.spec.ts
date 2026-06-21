@@ -15,7 +15,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     await page.getByRole('button', { name: '4', exact: true }).click();
 
     // Wait for the dashboard to load
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
 
     // Wait for the product catalog to be populated
     await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await productButton.click();
 
       // Click the "Charge" button
-      await page.getByRole('button', { name: /Collect Payment \$/ }).click();
+      await page.locator('button', { hasText: 'Charge' }).last().click();
 
       // Immediately verify the stock decreased by 1 without waiting for API
       // Since it's optimistic, it should happen instantly.
@@ -53,7 +53,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     await page.getByRole('button', { name: '3', exact: true }).click();
     await page.getByRole('button', { name: '4', exact: true }).click();
 
-    await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
 
     // Ensure product catalog is populated
     await expect(page.getByText('Vegan Celebration Cake')).toBeVisible({ timeout: 5000 });
@@ -72,7 +72,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await productButton.click();
 
       // Click the "Charge" button to queue the mutation offline
-      await page.getByRole('button', { name: /Collect Payment \$/ }).click();
+      await page.locator('button', { hasText: 'Charge' }).last().click();
 
       // Go back online
       await page.context().setOffline(false);

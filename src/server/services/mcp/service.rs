@@ -87,7 +87,7 @@ impl McpService for MyMcpService {
         // OVERRIDE the request body's spiffe_id with the one from the authenticated session
         // to prevent multi-tenant safety issue where tenant_id is read from request body
         if !spiffe_id_str.is_empty() {
-            req.spiffe_id = spiffe_id_str.clone();
+            req.spiffe_id = spiffe_id_str;
         } else {
             return Err(Status::unauthenticated("missing tenant identity in session"));
         }
@@ -214,8 +214,8 @@ impl McpService for MyMcpService {
             }
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
                 // Determine tenant_id from spiffe_id on each request to ensure multi-tenancy
-                let spiffe_id_str = &req.spiffe_id;
-                let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+                let spiffe_id_str = req.spiffe_id.clone();
+                let parsed = ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
                 let tenant_id = parsed.0;
                 if tenant_id.is_empty() {
                     return Err(Status::unauthenticated("empty tenant ID in SPIFFE ID"));
@@ -240,7 +240,7 @@ impl McpService for MyMcpService {
             Some(info) => info.org_id,
             None => {
                 let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
@@ -296,7 +296,7 @@ impl McpService for MyMcpService {
             Some(info) => info.org_id,
             None => {
                 let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                ::server_auth::parse_spiffe_id(&spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
@@ -352,7 +352,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -370,7 +370,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -393,7 +393,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_missions_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -418,7 +418,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_context_authenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }

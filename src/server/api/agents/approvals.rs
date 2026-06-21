@@ -52,6 +52,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
@@ -199,6 +200,44 @@ async fn simulate_smart_pricing(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate smart pricing: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_dispute_resolution(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "dispute_resolution",
+        "original_message": "The dress arrived damaged",
+        "generated_response": "I'm so sorry your dress was damaged. I've processed a $15 refund and marked the item for return.",
+        "refund_amount": 15,
+        "operational_action": "Mark 1 unit as damaged in inventory",
+        "inbox_message_id": "msg_simulated_dispute_123",
+        "source": "instagram_dm",
+        "original_content": "The dress arrived damaged",
+        "sender_id": "@customer",
+        "customer_id": "cust_simulated_dispute_123",
+        "past_orders": "Returning Customer (2 past orders).",
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+        "Draft dispute resolution for review".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate dispute resolution: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

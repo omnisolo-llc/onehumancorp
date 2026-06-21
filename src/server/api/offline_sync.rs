@@ -159,7 +159,7 @@ pub async fn offline_sync_handler(
 
                         let _ = sqlx::query(
                             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                             VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                             VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
                         )
                         .bind(&ai_task_id)
                         .bind(&tenant_id_clone)
@@ -253,7 +253,7 @@ pub async fn offline_sync_handler(
                     Ok(())
                 }
                 Ok(None) => {
-                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone);
+                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone); // pii-safe
                     Err("Product not found or unauthorized".to_string())
                 }
                 Err(e) => {
@@ -279,12 +279,13 @@ mod tests {
     use super::*;
     use axum::http::HeaderMap;
     use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+    #[allow(unused_imports)]
     use sqlx::postgres::PgPoolOptions;
 
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
@@ -302,7 +303,7 @@ mod tests {
             return;
         }
 
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")

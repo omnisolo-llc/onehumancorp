@@ -54,7 +54,7 @@
     </header>
 
     <main class="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center">
-        <div class="w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8 md:p-12 text-center max-w-2xl relative">
+        <div class="w-full glassmorphism rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-white/10 p-8 md:p-12 text-center max-w-2xl relative">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
 
             <div id="unclaimed-state" class="animate-fade-in">
@@ -74,6 +74,7 @@
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                 </button>
+                <div class="mt-8 text-center"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" class="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ Powered by OHC</a></div>
             </div>
 
             <div id="claimed-state" class="hidden animate-fade-in">
@@ -87,6 +88,7 @@
                 <a href="/dashboard" class="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">
                     Return to Dashboard
                 </a>
+                <div class="mt-8 text-center"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" class="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ Powered by OHC</a></div>
             </div>
         </div>
     </main>
@@ -285,7 +287,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {

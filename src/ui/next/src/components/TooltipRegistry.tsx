@@ -44,9 +44,16 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setWindowWidth(window.innerWidth);
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    let timeoutId: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setWindowWidth(window.innerWidth), 100);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   return (
@@ -54,7 +61,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/65 dark:bg-[#16161a]/70 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 animate-fade-in-up"
+          className="fixed z-[100] bg-white/80 dark:bg-[#16161a]/80 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[40px] saturate-[210%] border border-white/40 dark:border-white/20 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
@@ -88,17 +95,17 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = React.useCallback(() => {
     if (wrapperRef.current) {
       setTooltipRect(wrapperRef.current.getBoundingClientRect());
       setTooltipText(getTooltip(id) || defaultText || id);
       setActiveTooltip(id);
     }
-  };
+  }, [id, defaultText, getTooltip, setActiveTooltip, setTooltipRect]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = React.useCallback(() => {
     setActiveTooltip(null);
-  };
+  }, [setActiveTooltip]);
 
   // Mobile support: Long press
   const timerRef = useRef<NodeJS.Timeout | null>(null);

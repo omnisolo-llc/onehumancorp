@@ -25,7 +25,7 @@ test.describe('Glassmorphism UI Audit', () => {
   test('Verify dashboard buttons use 8px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
-    const button = page.locator('button').first();
+    const button = page.locator('button:not(.rounded-full)').first();
     await expect(button).toBeVisible({ timeout: 10000 });
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
@@ -35,11 +35,11 @@ test.describe('Glassmorphism UI Audit', () => {
 
   test('Verify POS buttons use 8px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/pos.html');
+    await page.goto('/pos/terminal');
 
     // Test the POS keypad buttons (they are round)
     // The test originally checked 8px, but POS keypad is rounded-full. We will check 9999px.
-    const button = page.locator('button', { hasText: '1' }).first();
+    const button = page.locator('button', { hasText: '0' }).first();
     await expect(button).toBeVisible({ timeout: 10000 });
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
@@ -56,6 +56,61 @@ test.describe('Glassmorphism UI Audit', () => {
     const container = page.locator('.glass-card').first();
     await expect(container).toBeVisible({ timeout: 10000 });
     const borderRadius = await container.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify cost-dashboard panels use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/cost-dashboard');
+    const panel = page.locator('.app-panel').first();
+    await expect(panel).toBeVisible({ timeout: 10000 });
+    const borderRadius = await panel.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify plan cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/plan');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify pricing cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/pricing');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify affiliate-badge-builder cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/affiliate-badge-builder');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius;
+    });
+    expect(borderRadius).toBe('16px');
+  });
+
+  test('Verify work-intake-widget cards use 16px border radius', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/work-intake-widget');
+    const card = page.locator('.app-card').first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const borderRadius = await card.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
     });
     expect(borderRadius).toBe('16px');

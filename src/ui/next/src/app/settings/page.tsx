@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
@@ -65,6 +66,7 @@ export default function SettingsPage() {
               voice_receptionist_enabled: data.voice_receptionist_enabled || false,
               voice_receptionist_number: data.voice_receptionist_number || "",
               voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
+              voice_receptionist_instructions: data.voice_receptionist_instructions || "",
             });
           }
         })
@@ -460,6 +462,27 @@ export default function SettingsPage() {
             <button onClick={() => router.push("/dashboard")} className="px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs w-fit" type="button">
               Save New Password
             </button>
+          </div>
+        </section>
+
+        {/* Advanced Section */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Advanced Settings</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">For custom integrations and developers.</div>
+            </div>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">API Documentation</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Interactive API reference for connecting external services to your workspace.</p>
+              </div>
+              <Link href="/api-docs" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition-all active:scale-95 text-xs">
+                View API Docs
+              </Link>
+            </div>
           </div>
         </section>
       </div>

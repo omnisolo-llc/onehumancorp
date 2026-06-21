@@ -728,6 +728,11 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
     }
 }
 
+#[tokio::test]
+async fn test_bench_ai_job_dispatch_latency() {
+    bench_ai_job_dispatch_latency().await;
+}
+
 pub async fn bench_hybrid_latency() {
     println!("--- Running Hybrid Latency Benchmark ---");
 
@@ -1067,5 +1072,50 @@ pub async fn bench_ui_omni_inbox_latency() {
         println!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
     } else {
         println!("  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+    }
+}
+
+pub async fn bench_ai_job_dispatch_latency() {
+    println!("Benchmarking AI Job Dispatch Latency...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue};
+
+    let (queue, is_postgres): (std::sync::Arc<dyn crate::orchestration::queue::queue::TaskQueue>, bool) = if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        (std::sync::Arc::new(PgTaskQueue::new(std::sync::Arc::new(pg_pool))), true)
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, parent_task_id TEXT, job_type TEXT, payload TEXT, status TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, next_retry_at TEXT, locked_until TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_status_job_type_next_retry ON ohc_job_queue (status, job_type, next_retry_at);").execute(&sqlite_pool).await.unwrap();
+        (std::sync::Arc::new(crate::orchestration::queue::sqlite_queue::SQLiteTaskQueue::new(std::sync::Arc::new(sqlite_pool))), false)
+    };
+
+    let mut jobs = Vec::new();
+    for i in 0..100 {
+        jobs.push(Job {
+            id: format!("bench-job-{}", i),
+            tenant_id: "bench_tenant".to_string(),
+            parent_task_id: "bench-parent".to_string(),
+            job_type: "bench-role".to_string(),
+            payload: "{}".to_string(),
+            status: "PENDING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: chrono::Utc::now(),
+            locked_until: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        });
+    }
+
+    let start_sim = std::time::Instant::now();
+    queue.enqueue_batch(jobs).await.unwrap();
+    let duration = start_sim.elapsed();
+    println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
+
+    let _start_sim = std::time::Instant::now();
+    for _ in 0..100 {
+        queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap();
     }
 }

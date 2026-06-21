@@ -16,11 +16,20 @@ export default function POSTerminal() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [isSyncingInitial, setIsSyncingInitial] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [checkoutComplete, setCheckoutComplete] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [receiptSent, setReceiptSent] = useState(false);
   const [reserving, setReserving] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
   const [isOffline, setIsOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string>('');
+
 
   useEffect(() => {
     const checkQueue = async () => {
@@ -45,7 +54,15 @@ export default function POSTerminal() {
       checkQueue();
     };
 
+
     if (typeof window !== 'undefined') {
+        let storedDeviceId = localStorage.getItem('ohc_pos_device_id');
+        if (!storedDeviceId) {
+            storedDeviceId = 'device_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            localStorage.setItem('ohc_pos_device_id', storedDeviceId);
+        }
+        setDeviceId(storedDeviceId);
+
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
@@ -85,6 +102,24 @@ export default function POSTerminal() {
             setActiveStaff(data.staff);
             setLocked(false);
             setPin('');
+
+            // Initialize terminal session
+            try {
+              const sessionRes = await fetch('/api/v1/payments/terminal/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-tenant-id': data.staff.tenant_id },
+                body: JSON.stringify({ device_id: deviceId })
+              });
+              const sessionData = await sessionRes.json();
+              if (sessionData.success) {
+                setSessionId(sessionData.session_id);
+              } else {
+                console.error("Failed to start terminal session", sessionData.error_message);
+              }
+            } catch(e) {
+               console.error("Failed to fetch session", e);
+            }
+
           } else {
             alert(t('Invalid PIN'));
             setPin('');
@@ -141,6 +176,34 @@ export default function POSTerminal() {
     };
 
     await SyncManager.getInstance().enqueue(event);
+  };
+
+  const handleAddToCart = (product: any) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id);
+      if (existing) {
+        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const cartTotal = cart.reduce((sum: number, item: any) => sum + (item.product.price_cents * item.quantity), 0);
+  const cartItemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+
+  const handleCheckoutComplete = () => {
+    setCheckoutComplete(true);
+    setIsCartOpen(false);
+  };
+
+  const handleSendReceipt = () => {
+    setReceiptSent(true);
+    setTimeout(() => {
+      setCheckoutComplete(false);
+      setCart([]);
+      setReceiptSent(false);
+      setCustomerEmail('');
+    }, 2000);
   };
 
   const handleSelectProduct = (product: any) => {
@@ -272,7 +335,10 @@ export default function POSTerminal() {
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
             {isOffline ? (
-              <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
+              <div className="inline-flex items-center gap-1.5 mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                {t('Offline - Changes will sync later')}
+              </div>
             ) : (
               <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
             )}
@@ -324,7 +390,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[16px] text-left shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -332,7 +398,7 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[16px] text-left shadow-lg active:scale-[0.98] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -348,8 +414,8 @@ export default function POSTerminal() {
               ) : inventory.map(product => (
                 <button
                   key={product.id}
-                  onClick={() => handleSelectProduct(product)} disabled={reserving}
-                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/40'}`}
+                  onClick={() => handleAddToCart(product)} disabled={reserving || isCartOpen}
+                  className={`p-4 rounded-[8px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/40'}`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -364,25 +430,102 @@ export default function POSTerminal() {
               ))}
            </div>
 
-           {selectedProduct && (
-             <>
-               <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-4 mb-4">
-                 <div className="flex justify-between items-center">
-                   <span className="text-green-800 text-sm font-bold">Available Rewards</span>
-                   <span className="text-green-800 text-sm font-bold">1 Reward Available</span>
+           {/* Bottom Bar */}
+           {cartItemCount > 0 && !checkoutComplete && (
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
+               <button
+                 onClick={() => setIsCartOpen(true)}
+                 className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
+               >
+                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
+                 <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
+               </button>
+             </div>
+           )}
+
+           {/* Cart Drawer */}
+           {isCartOpen && !checkoutComplete && (
+             <div className="fixed inset-0 z-50 flex flex-col justify-end">
+               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>
+               <div className="relative bg-white/85 backdrop-blur-[40px] saturate-[210%] border-t border-white/40 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+                 <div className="flex justify-between items-center mb-6">
+                   <h2 className="text-xl font-bold font-outfit text-gray-900">Current Order</h2>
+                   <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                   </button>
                  </div>
-                 <p className="text-green-700 text-xs font-medium mt-1">
-                   Tap to Pay to automatically apply reward to this transaction.
-                 </p>
+
+                 <div className="space-y-4 mb-6">
+                   {cart.map((item, idx) => (
+                     <div key={idx} className="flex justify-between items-center p-4 bg-white/50 rounded-xl border border-white/60 shadow-sm">
+                       <div className="flex flex-col">
+                         <span className="font-bold text-gray-900">{item.product.name}</span>
+                         <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
+                       </div>
+                       <span className="font-bold text-gray-900">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</span>
+                     </div>
+                   ))}
+                 </div>
+
+                 <div className="border-t border-gray-200 pt-4 mb-4">
+                   <div className="flex justify-between items-center font-bold text-xl text-gray-900">
+                     <span>Total</span>
+                     <span>${(cartTotal / 100).toFixed(2)}</span>
+                   </div>
+                 </div>
+
+                 <StripeTerminalClient
+                    amount={cartTotal}
+                    productId={cart[0].product.id}
+                    cart={cart}
+                    tenantId={activeStaff?.tenant_id || "default_tenant"}
+                    onOptimisticReserve={() => cart.forEach(item => handleOptimisticReserve(item.product.id))}
+                    onOptimisticRollback={() => cart.forEach(item => handleOptimisticRollback(item.product.id))}
+                    onSuccess={handleCheckoutComplete}
+                 />
                </div>
-                              <StripeTerminalClient
-                  amount={selectedProduct.price_cents}
-                  productId={selectedProduct.id}
-                  tenantId={activeStaff?.tenant_id || "default_tenant"}
-                  onOptimisticReserve={() => handleOptimisticReserve(selectedProduct.id)}
-                  onOptimisticRollback={() => handleOptimisticRollback(selectedProduct.id)}
-               />
-             </>
+             </div>
+           )}
+
+           {/* Post-Sale Screen */}
+           {checkoutComplete && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 backdrop-blur-md">
+               <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
+                 <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                 </div>
+                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
+                 <p className="text-gray-500 mb-8">The total of ${(cartTotal / 100).toFixed(2)} was charged.</p>
+
+                 {!receiptSent ? (
+                   <div className="text-left">
+                     <label className="block text-sm font-bold text-gray-700 mb-2">Add customer details for receipt?</label>
+                     <input
+                       type="email"
+                       placeholder="Customer email"
+                       value={customerEmail}
+                       onChange={(e) => setCustomerEmail(e.target.value)}
+                       className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
+                     />
+                     <button
+                       onClick={handleSendReceipt}
+                       disabled={!customerEmail}
+                       className="w-full bg-[#0066FF] text-white font-bold py-3 px-4 rounded-xl active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
+                     >
+                       Send Receipt & Complete
+                     </button>
+                     <button
+                       onClick={() => { setCheckoutComplete(false); setCart([]); }}
+                       className="w-full mt-3 text-gray-500 font-bold py-3 px-4 rounded-xl hover:bg-gray-50 active:scale-[0.98] min-h-[44px]"
+                     >
+                       No Receipt
+                     </button>
+                   </div>
+                 ) : (
+                   <p className="text-green-600 font-bold animate-pulse">Receipt sent! Loading new order...</p>
+                 )}
+               </div>
+             </div>
            )}
 
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}

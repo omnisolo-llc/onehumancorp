@@ -5,6 +5,8 @@ import { loadStripeTerminal } from '@stripe/terminal-js';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 
 interface StripeTerminalClientProps {
+  onSuccess?: () => void;
+  cart?: { product: any, quantity: number }[];
   amount: number;
   productId: string;
   tenantId: string;
@@ -12,7 +14,7 @@ interface StripeTerminalClientProps {
   onOptimisticRollback?: () => void;
 }
 
-export default function StripeTerminalClient({ amount, productId, tenantId, onOptimisticReserve, onOptimisticRollback }: StripeTerminalClientProps) {
+export default function StripeTerminalClient({ amount, productId, cart, tenantId, onOptimisticReserve, onOptimisticRollback, onSuccess }: StripeTerminalClientProps) {
   const [terminal, setTerminal] = useState<any>(null);
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
@@ -165,26 +167,27 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
              amount_cents: amount,
              amount: amount,
              currency: 'usd',
-             product_id: productId,
-             quantity: 1,
-             payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
+             product_id: cart ? cart[0].product.id : productId,
+             quantity: cart ? cart[0].quantity : 1,
+             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
              timestamp: new Date().toISOString()
           };
 
-          const crdtTx = {
-            id: `crdt_${transactionId}`,
-            type: 'CRDT_MUTATION',
-            timestamp: new Date().toISOString(),
-            payload: {
-               entity_id: productId,
-               data: {
-                  pn_counter_n_increment: 1
-               }
-            }
-          };
-
+          for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
+            const crdtTx = {
+              id: `crdt_${transactionId}_${item.product.id}`,
+              type: 'CRDT_MUTATION',
+              timestamp: new Date().toISOString(),
+              payload: {
+                 entity_id: item.product.id,
+                 data: {
+                    pn_counter_n_increment: item.quantity
+                 }
+              }
+            };
+            await SyncManager.getInstance().enqueue(crdtTx);
+          }
           await SyncManager.getInstance().enqueue(tx);
-          await SyncManager.getInstance().enqueue(crdtTx);
 
           setStatus('Payment saved offline. Will sync when network is restored.');
           setTimeout(() => setStatus('Terminal ready.'), 3000);
@@ -196,22 +199,25 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
     setStatus('Reserving inventory...');
     onOptimisticReserve?.();
 
+    let lockIds: string[] = [];
     let lockId = '';
     try {
-      const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, ttl_seconds: 15 })
-      });
-      const reserveData = await reserveRes.json();
-
-      if (!reserveData.success) {
-        onOptimisticRollback?.();
-        setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
-        setReserving(false);
-        return;
+      for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
+        });
+        const reserveData = await reserveRes.json();
+        if (!reserveData.success) {
+          onOptimisticRollback?.();
+          setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
+          setReserving(false);
+          return;
+        }
+        lockIds.push(reserveData.lock_id);
       }
-      lockId = reserveData.lock_id;
+      lockId = lockIds[0]; // Legacy
     } catch (e: any) {
       onOptimisticRollback?.();
       setStatus('Reservation error: ' + e.message);
@@ -246,22 +252,31 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
         setStatus('Payment successful. Committing inventory...');
 
         try {
-          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tenant_id: tenantId,
-              product_id: productId,
-              quantity: 1,
-              lock_id: lockId,
-              amount_cents: amount
-            })
-          });
-          const commitData = await commitRes.json();
-          if (commitData.success) {
+          let allCommitted = true;
+          const items = cart || [{product: {id: productId}, quantity: 1}];
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const currentLockId = lockIds[i];
+            const commitRes = await fetch('/api/v1/payments/terminal/commit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tenant_id: tenantId,
+                product_id: item.product.id,
+                quantity: item.quantity,
+                lock_id: currentLockId,
+                amount_cents: i === 0 ? amount : 0
+              })
+            });
+            const commitData = await commitRes.json();
+            if (!commitData.success) {
+               allCommitted = false;
+               setStatus('Payment successful, but inventory commit failed for an item: ' + commitData.error_message);
+            }
+          }
+          if (allCommitted) {
             setStatus('Payment successful!');
-          } else {
-            setStatus('Payment successful, but inventory commit failed: ' + commitData.error_message);
+            if (onSuccess) onSuccess();
           }
         } catch (commitErr: any) {
           setStatus('Payment successful, but inventory commit error: ' + commitErr.message);
@@ -280,18 +295,30 @@ export default function StripeTerminalClient({ amount, productId, tenantId, onOp
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-md text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-orange-50/80 border border-orange-200 backdrop-blur-md">
-           <h3 className="text-orange-800 font-bold text-sm mb-2">Needs Reconciliation</h3>
-           <p className="text-orange-700 text-xs mb-3">Some offline sales conflicted with online inventory. The Operations Agent has sent an email to the affected online customers.</p>
-           <ul className="space-y-2">
-             {pendingReconciliation.map((pr, idx) => (
-               <li key={idx} className="text-xs text-orange-900 bg-orange-100/50 p-2 rounded flex justify-between">
-                 <span>Product: {pr.product_id}</span>
-                 <span className="font-bold">Shortage: {pr.shortage}</span>
-               </li>
-             ))}
-           </ul>
-           <button onClick={() => setPendingReconciliation([])} className="mt-3 text-xs bg-orange-200 hover:bg-orange-300 text-orange-800 px-3 py-1.5 rounded-lg transition-colors font-medium">Dismiss</button>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
+             <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
+             <ul className="space-y-2 mb-6">
+               {pendingReconciliation.map((pr, idx) => (
+                 <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
+                   <span className="font-medium">Product: {pr.product_id}</span>
+                   <span className="font-bold text-red-500">Shortage: {pr.shortage}</span>
+                 </li>
+               ))}
+             </ul>
+             <div className="flex flex-col gap-3">
+               <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                 Option A: Refund in-store customer
+               </button>
+               <button className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
+                 Option B: Cancel & refund online order
+               </button>
+               <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
+                 Decide Later
+               </button>
+             </div>
+           </div>
         </div>
       )}
 

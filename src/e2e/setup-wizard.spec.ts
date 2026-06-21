@@ -10,7 +10,7 @@ test.describe('Setup Wizard 375px Flow', () => {
             ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
             : process.cwd();
 
-        const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+        const tauriUiDir = path.join('/app', 'src/ui/tauri/src/ui');
 
         const page = await browser.newPage();
 

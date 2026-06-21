@@ -107,6 +107,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
     updateOfflineCount();
 
+    window.addEventListener("ohc_queue_updated", updateOfflineCount);
+
     setIsOffline(!navigator.onLine);
 
     const handleOnline = async () => {
@@ -137,6 +139,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      window.removeEventListener("ohc_queue_updated", updateOfflineCount);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -239,10 +242,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             // Sort by created_at desc
             combinedItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-            setItems(combinedItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            setItems(combinedItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
 
             // Map items for activity feed as well
-            const mappedActivities = combinedItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+            const mappedActivities = combinedItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
               id: a.id,
               tenant_id: a.tenant_id,
               event_type: a.lifecycle_state,
@@ -323,7 +326,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
     const connect = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/agent-feed/ws`;
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
+      const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
         if (typeof process.env.VITEST !== 'undefined' || process.env.NODE_ENV === 'test') return;
         ws = new WebSocket(wsUrl);
 
@@ -1096,7 +1101,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         <button
                           onClick={() => {
                             setEditingId(approval.id);
-                            setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || "");
+                            setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.draft_reply || "");
                           }}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit Draft"

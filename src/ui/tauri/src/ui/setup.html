@@ -25,12 +25,13 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
         width: 100%;
-        max-width: min(480px, calc(100vw - 20px));
+        max-width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
         max-height: calc(100vh - 40px);
         overflow-y: auto;
       }
+                        /* OHC Premium Glassmorphism */
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -39,6 +40,8 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
+
+
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -66,6 +69,7 @@
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px;
+        min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -75,16 +79,20 @@
       select, textarea, input {
         border-radius: 8px;
       }
-      select, textarea, input {
-        border-radius: 8px;
-      }
       input:focus, textarea:focus, select:focus {
         outline: none;
         border-color: #0071E3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
-      button {
+            button, input, select, textarea, .glassmorphism {
+        min-height: 44px;
+        box-sizing: border-box;
+      }
+      button, input, select, textarea {
+        border-radius: 8px !important;
+      }
+      button { min-width: 44px;
         background-color: #0066FF;
         color: white;
         border: none;
@@ -116,7 +124,7 @@
 
       .text-\[\#FF3B30\] { color: #FF3B30 !important; }
       .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
-      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px !important; padding: 10px !important; }
+      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px; padding: 10px !important; }
 
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
@@ -246,12 +254,8 @@
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .glassmorphism {
-          border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border-color: rgba(255, 255, 255, 0.1);
         }
         h1 {
           color: #F5F5F7;
@@ -460,7 +464,7 @@
         margin-bottom: 24px;
         text-align: left;
       }
-      .context-card {
+      .context-card { min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -509,6 +513,9 @@
         text-align: left;
       }
       .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -569,6 +576,9 @@
         padding-bottom: 10px;
       }
       .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box; min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
         min-height: 44px !important;
@@ -706,6 +716,9 @@
           background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.2);
         }
@@ -742,15 +755,18 @@
           border: none;
         }
         input, select, textarea, button, .radio-option, .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box; min-height: 44px;
           min-height: 44px !important;
         }
       }
 
             @media (max-width: 375px) {
-        .container { padding: 16px; margin: 10px; max-width: calc(100% - 20px); box-sizing: border-box; overflow-x: hidden; height: auto; max-height: calc(100vh - 40px); overflow-y: auto; }
-        .context-card { padding: 12px; }
+        .container { padding: 16px; margin: 0; width: 100vw; max-width: 100vw; box-sizing: border-box; overflow-x: hidden; height: auto; max-height: 100vh; border-radius: 0; overflow-y: auto; border: none; }
+        .context-card { padding: 12px; min-height: 44px; }
         .work-context-cards { grid-template-columns: 1fr; }
-
+        .radio-group { grid-template-columns: 1fr; } /* Added if it was a grid */
         .stepper {
           gap: 4px;
         }
@@ -762,6 +778,9 @@
           transform: scale(1.2);
         }
         .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           padding: 8px 12px;
           font-size: 14px;
         }
@@ -772,11 +791,14 @@
           font-size: 13px;
         }
         .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
           padding: 6px 12px;
           font-size: 12px;
+          min-height: 44px;
         }
       }
-
 
       *:focus-visible {
         outline: 3px solid #0066FF;
@@ -790,25 +812,45 @@
         min-height: 44px;
         min-width: 44px;
       }
-      /* OHC Premium Glassmorphism Overrides */
-      .glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
+
+
+
+
+
+
+      /* macOS-style scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
       }
-      button.glassmorphism,
-      input.glassmorphism,
-      select.glassmorphism,
-      textarea.glassmorphism,
-      .glassmorphism input,
-      .glassmorphism select,
-      .glassmorphism textarea,
-      .glassmorphism button {
-        border-radius: 8px !important;
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
       }
-</style>
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      @media (prefers-color-scheme: dark) {
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+      }
+
+    </style>
 
 <style>
       .capability-toggles {
@@ -920,8 +962,8 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" onclick="goToStep('step-context')">Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context" >Start My Business</button>
+          <button type="button" class="glassmorphism" style="background: #0066FF; color: white; border: none; min-height: 44px; min-width: 44px; margin-top: 10px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);" onclick="document.getElementById('instant-bio').value = ''; goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
@@ -934,7 +976,7 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;" enterkeyhint="next"></textarea>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none; padding: 14px;" enterkeyhint="done"></textarea>
         <input type="url" id="instant-image-url" data-testid="instant-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 20px; width: 100%; min-height: 44px; border-radius: 8px;">
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
@@ -1010,7 +1052,7 @@
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
-        <div class="step-indicator" data-step="step-domain"></div>
+
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
@@ -1079,7 +1121,7 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Custom Cakes" inputmode="text" autocomplete="organization" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
         <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" inputmode="text" autocomplete="off" enterkeyhint="next" />
@@ -1173,7 +1215,7 @@
             </svg>
           </button>
         </div>
-        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
+        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters and contain a number.</div>
 
         <div style="border-top: 1px solid rgba(255,255,255,0.4); margin-top: 24px; padding-top: 16px; text-align: left;">
           <label style="display: block; font-size: 12px; font-weight: 600; color: #1d1d1f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Auto-Configured AI Departments</label>
@@ -1217,31 +1259,16 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" enterkeyhint="next" />
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" inputmode="text" autocomplete="off" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button> <!-- Replaced by script below -->
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
-      <!-- Step 7: Domain -->
-      <div class="step" id="step-domain">
-        <h1>Where will your business live?</h1>
-        <p>Choose a free subdomain for your store.</p>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" style="flex: 1; margin-bottom: 0;" />
-          <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
-        </div>
-        <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
 
-        <div class="btn-group" style="margin-top: 20px;">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
-        </div>
-      </div>
 
       <!-- Step 8: Template -->
       <div class="step" id="step-template">
@@ -1259,7 +1286,7 @@
           <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-domain">Back</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -1429,7 +1456,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1451,7 +1478,7 @@
       });
 
       inputs.adminPassword.addEventListener('input', () => {
-          if (inputs.adminPassword.value.trim().length >= 8) {
+          if (inputs.adminPassword.value.trim().length >= 8 && /\d/.test(inputs.adminPassword.value)) {
               errors.adminPassword.style.display = 'none';
               inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
           }
@@ -1499,14 +1526,14 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               inputs.context.forEach(r => {
                   if (r.value === contextVal) {
                       r.checked = true;
-                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-                      r.closest('.radio-option').classList.add('selected');
+                      document.querySelectorAll('.context-card').forEach(el => el.classList.remove('selected'));
+                      r.closest('.context-card').classList.add('selected');
                   }
               });
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -1538,7 +1565,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
               if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
@@ -1660,18 +1687,6 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
-          else if (stepId === 'step-domain') {
-              const domainVal = inputs.domainName.value.trim();
-              if (domainVal === '' || !/^[a-zA-Z0-9-]+$/.test(domainVal)) {
-                  errors.domainName.style.display = 'block';
-                  if(inputs.domainName) inputs.domainName.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.domainName.style.display = 'none';
-                  if(inputs.domainName) inputs.domainName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.domain = domainVal;
-              }
-          }
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
@@ -1710,7 +1725,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
           }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
           if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
@@ -1754,6 +1769,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
       }
 
       function goToStep(stepId) {
+
           if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
               document.getElementById('instant-bio').value = '';
               const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
@@ -1780,6 +1796,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           });
       });
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
+
+      window.goToStep = goToStep;
 
       // Enter key support for select inputs
       document.querySelectorAll('select').forEach(input => {
@@ -1842,10 +1864,12 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               generateStorefrontBtn.disabled = true;
           }
           instantBioInputEl.addEventListener('input', () => {
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantBioInputEl.style.borderColor = '';
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
-                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+                  instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
               }
               if (generateStorefrontBtn) {
                   generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
@@ -2049,14 +2073,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.classList.add('animate-shake');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   return;
               }
 
               instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
-              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              instantErrorEl.classList.remove('animate-shake');
+                  instantErrorEl.style.color = '';
+                  instantErrorEl.style.borderColor = '';
+              instantBioInputEl.style.borderColor = '';
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
@@ -2175,8 +2203,9 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   const errorMsg = err.message || "Network Error: Failed to fetch";
                   instantErrorEl.innerText = errorMsg;
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
-                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
                   generateStorefrontBtn.disabled = false;
                   generateStorefrontBtn.innerText = "Next";
               }
@@ -2266,7 +2295,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                    payment_pref: "online",
                    admin_email: state.adminEmail || "admin@mybusiness.com",
                    admin_name: state.assistantName || "Admin",
-                   admin_password: state.adminPassword || "password",
+                   admin_password: state.adminPassword || "password123",
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
@@ -2772,7 +2801,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
@@ -2846,7 +2875,7 @@ function initWalkthrough() {
         }
 
         renderStep();
-
+    };
 }
 initWalkthrough();
 </script>

@@ -94,7 +94,7 @@ mod tests {
             assert_eq!(pg_row.0, "1");
             assert_eq!(pg_row.1, None, "NULL handling parity must be maintained between SQLite and Postgres");
             assert!(pg_row.2.timestamp() > 0);
-            sqlx::query(&format!("DROP TABLE {}", table_name)).execute(&pg_pool).await.unwrap();
+            let _ = sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name)).execute(&pg_pool).await;
         }
     }
 
@@ -153,7 +153,7 @@ mod tests {
             println!("Cloud Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
             assert!(p50 < 5000, "p50 latency should be reasonable");
 
-            sqlx::query(&format!("DROP TABLE {}", table_name)).execute(&*pool_arc).await.unwrap();
+            let _ = sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name)).execute(&*pool_arc).await;
         }
     }
 
@@ -389,7 +389,7 @@ mod tests {
             let p = pool_arc.clone();
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
-                let max_attempts = 3;
+                let max_attempts = crate::db::MAX_DB_RETRY_ATTEMPTS;
                 let mut backoff = Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
@@ -432,7 +432,7 @@ mod tests {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mut success = false;
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = crate::db::MAX_DB_RETRY_ATTEMPTS;
         let mut backoff = Duration::from_millis(10);
 
         let simulated_acquire = || async {
@@ -1399,32 +1399,6 @@ mod tests {
                 h.await.unwrap();
             }
 
-            // Cleanup via drop table regardless of asserts using scopeguard or similar.
-            // We can just query the DB. Since we don't have scopeguard easily available,
-            // we will evaluate the counts, run the asserts, and drop the table.
-            // A better way is to do the assertions, but catch panics or just drop table manually inside a Drop trait.
-
-            // To ensure cleanup, let's create a struct with Drop trait.
-            struct TableDropper {
-                table_name: String,
-                pool: std::sync::Arc<sqlx::postgres::PgPool>,
-            }
-            impl Drop for TableDropper {
-                fn drop(&mut self) {
-                    let table_name = self.table_name.clone();
-                    let pool = self.pool.clone();
-                    tokio::spawn(async move {
-                        let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
-                        let _ = sqlx::query(&drop_query).execute(&*pool).await;
-                    });
-                }
-            }
-
-            let _dropper = TableDropper {
-                table_name: table_name.clone(),
-                pool: pg_pool_arc.clone(),
-            };
-
             let count_query_a = format!("SELECT count(*) FROM {} WHERE tenant_id = 'tenant_a'", table_name);
             let count_a_pg: i64 = sqlx::query_scalar(&count_query_a).fetch_one(&*pg_pool_arc).await.unwrap();
 
@@ -1433,6 +1407,9 @@ mod tests {
 
             let count_query_total = format!("SELECT count(*) FROM {}", table_name);
             let count_total_pg: i64 = sqlx::query_scalar(&count_query_total).fetch_one(&*pg_pool_arc).await.unwrap();
+
+            let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
+            let _ = sqlx::query(&drop_query).execute(&*pg_pool_arc).await;
 
             assert_eq!(count_a_pg, 25, "Postgres Tenant A should strictly have 25 records");
             assert_eq!(count_b_pg, 25, "Postgres Tenant B should strictly have 25 records");

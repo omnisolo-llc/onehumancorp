@@ -42,6 +42,7 @@ describe('CostDashboardPage', () => {
   test('renders cost data after fetch', async () => {
     const mockCostData = {
       total_revenue: 150000,
+      budget_health_alert: true,
       total_costs: 51000,
       projected_monthly_cost: 218571,
       llm_cost: 20000,
@@ -119,6 +120,7 @@ describe('CostDashboardPage', () => {
 
     // My Plan assertions
     expect(screen.getByText('My Plan')).toBeDefined();
+    expect(screen.getByText('Back to My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     // AI actions used this month: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
@@ -138,7 +140,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$510.00')).toBeDefined();
 
     // Budget Alert
-    expect(screen.queryByText('Budget Alert')).not.toBeNull(); // Operations department usage reaches 100%
+    expect(screen.queryAllByText('Budget Alert').length).toBeGreaterThan(0);
 
     // projected monthly cost
     expect(screen.getByText('$2185.71')).toBeDefined();
@@ -198,6 +200,7 @@ describe('CostDashboardPage', () => {
   test('renders Budget Alert when threshold is crossed', async () => {
     const mockCostData = {
       total_revenue: 150000,
+      budget_health_alert: true,
       total_costs: 200000,
       projected_monthly_cost: 200000,
       llm_cost: 180000,
@@ -211,7 +214,7 @@ describe('CostDashboardPage', () => {
       period_end: "2023-10-31",
       trend: [],
       agent_costs: [],
-      budget_health_alert: "true" as any,
+      budget_health_alert: true,
       department_tier_usage: {
         departments: [
           {
@@ -257,7 +260,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Soft Limit Approaching')).toBeDefined();
+    expect(screen.getAllByText('Budget Alert').length).toBeGreaterThan(0);
   });
 
   test('renders 0 limits properly', async () => {

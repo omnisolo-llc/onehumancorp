@@ -172,16 +172,16 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/40 dark:border-white/10 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/60 dark:bg-[#16161a]/70 backdrop-blur-[40px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/60 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
-            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[30px]"
+            className="bg-blue-600/90 text-white p-4 flex justify-between items-center backdrop-blur-[40px]"
           >
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
               <div>
-                <h3 className="font-bold font-outfit text-sm tracking-wide text-white/90">
+                <h3 id="ai-chat-header-title" className="font-bold font-outfit text-sm tracking-wide text-white/90">
                   Ask AI Help
                 </h3>
                 <p className="text-xs text-blue-100 font-inter font-medium">
@@ -214,7 +214,7 @@ export function HelpChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent dark:from-white/5 flex flex-col gap-5 font-inter text-sm">
+          <div role="log" aria-live="polite" aria-atomic="false" className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent dark:from-white/5 flex flex-col gap-5 font-inter text-sm custom-scrollbar">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -322,6 +322,12 @@ export function HelpChat() {
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
         .animate-slide-up-chat { animation: slide-up-chat 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom right; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        @media (prefers-color-scheme: dark) {
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        }
       `,
         }}
       />

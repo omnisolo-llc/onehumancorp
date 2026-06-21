@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Ruflo Unique Harness Innovations: Swarm coordination topologies
 /// Hierarchical, mesh, adaptive with consensus.
@@ -13,8 +13,9 @@ pub enum TopologyType {
 pub struct SwarmCoordinator {
     pub topology: TopologyType,
     pub nodes: HashMap<String, String>, // Agent ID to Role
+    // If Adaptive, dynamic consensus is nodes.len() / 2 + 1 if consensus_threshold is 0
     pub consensus_threshold: usize,
-    pub pending_consensus: HashMap<String, usize>, // message_id -> approval count
+    pub pending_consensus: HashMap<String, HashSet<String>>, // message_id -> set of agent_ids who approved
 }
 
 impl SwarmCoordinator {
@@ -29,6 +30,15 @@ impl SwarmCoordinator {
 
     pub fn add_node(&mut self, agent_id: &str, role: &str) {
         self.nodes.insert(agent_id.to_string(), role.to_string());
+    }
+
+    pub fn get_effective_threshold(&self) -> usize {
+        if self.consensus_threshold > 0 {
+            self.consensus_threshold
+        } else {
+            // Dynamic threshold calculation based on total connected nodes
+            (self.nodes.len() / 2) + 1
+        }
     }
 
     pub fn route_message(
@@ -60,20 +70,23 @@ impl SwarmCoordinator {
             }
             TopologyType::Adaptive => {
                 // Adaptive logic requires consensus check before routing
+                let threshold = self.get_effective_threshold();
+
                 let current_votes = self
                     .pending_consensus
                     .entry(message_id.to_string())
-                    .or_insert(0);
-                *current_votes += 1;
+                    .or_insert_with(HashSet::new);
 
-                if *current_votes >= self.consensus_threshold {
+                current_votes.insert(from.to_string());
+
+                if current_votes.len() >= threshold {
                     // Consensus reached, clear pending and route
                     self.pending_consensus.remove(message_id);
                     Ok(())
                 } else {
                     Err(format!(
                         "Pending consensus. Current votes: {}, Required: {}",
-                        current_votes, self.consensus_threshold
+                        current_votes.len(), threshold
                     ))
                 }
             }
@@ -146,12 +159,38 @@ mod tests {
         assert!(res1.is_err());
         assert!(res1.unwrap_err().contains("Pending consensus"));
 
-        // Second attempt (Vote 2) -> Consensus reached
+        // Same agent attempts again, should NOT increase vote count
+        let res_dup = swarm.route_message("agent_A", "agent_C", "msg1", "proposal");
+        assert!(res_dup.is_err());
+        assert!(res_dup.unwrap_err().contains("Current votes: 1"));
+
+        // Second agent attempts (Vote 2) -> Consensus reached
         let res2 = swarm.route_message("agent_B", "agent_C", "msg1", "proposal");
         assert!(res2.is_ok());
 
         // A new message requires consensus again
         let res3 = swarm.route_message("agent_C", "agent_A", "msg2", "new proposal");
         assert!(res3.is_err());
+    }
+
+    #[test]
+    fn test_adaptive_dynamic_threshold() {
+        // threshold 0 triggers dynamic calculation
+        let mut swarm = SwarmCoordinator::new(TopologyType::Adaptive, 0);
+        swarm.add_node("agent_A", "peer");
+        swarm.add_node("agent_B", "peer");
+        swarm.add_node("agent_C", "peer");
+        swarm.add_node("agent_D", "peer");
+        swarm.add_node("agent_E", "peer");
+        // 5 nodes, threshold should be 5 / 2 + 1 = 3
+
+        let res1 = swarm.route_message("agent_A", "agent_E", "msg1", "proposal");
+        assert!(res1.is_err());
+
+        let res2 = swarm.route_message("agent_B", "agent_E", "msg1", "proposal");
+        assert!(res2.is_err());
+
+        let res3 = swarm.route_message("agent_C", "agent_E", "msg1", "proposal");
+        assert!(res3.is_ok()); // Reached 3 votes
     }
 }

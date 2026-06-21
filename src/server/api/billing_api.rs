@@ -634,7 +634,7 @@ fn current_usage_period() -> String {
     chrono::Utc::now().format("%Y-%m").to_string()
 }
 
-fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
+pub fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
     DepartmentTierUsageResponse {
         current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(),
         period: current_usage_period(),
@@ -658,7 +658,7 @@ mod department_tier_usage_tests {
     #[tokio::test]
     async fn test_department_tier_usage_for_tenant_concurrency() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(&database_url)
             .await;

@@ -349,8 +349,8 @@
 
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow border border-gray-200/50 flex items-center gap-2 pointer-events-auto">
-          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
-          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></div>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Offline - Changes will sync later</span>
         </div>
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
@@ -1200,7 +1200,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
@@ -1358,8 +1358,8 @@ initWalkthrough();
         if (!navigator.onLine) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
-            if (text) text.innerText = "Working Offline";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-yellow-400";
+            if (text) text.innerText = "Offline - Changes will sync later";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
@@ -1378,6 +1378,97 @@ initWalkthrough();
             queueIndicator.style.display = "none";
             queueIndicator.classList.add("hidden");
         }
+    }
+
+
+    function showConflictModal(conflict) {
+        let modal = document.getElementById("sync-conflict-modal");
+        if (!modal) {
+            modal = document.createElement("div");
+            modal.id = "sync-conflict-modal";
+            modal.style.position = "fixed";
+            modal.style.top = "0";
+            modal.style.left = "0";
+            modal.style.width = "100%";
+            modal.style.height = "100%";
+            modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+            modal.style.display = "flex";
+            modal.style.justifyContent = "center";
+            modal.style.alignItems = "center";
+            modal.style.zIndex = "9999";
+
+            const modalContent = document.createElement("div");
+            modalContent.className = "glassmorphism";
+            modalContent.style.padding = "24px";
+            modalContent.style.maxWidth = "340px";
+            modalContent.style.width = "90%";
+            modalContent.style.textAlign = "center";
+
+            const title = document.createElement("h2");
+            title.innerText = "Inventory Conflict Detected";
+            title.style.margin = "0 0 16px 0";
+            title.style.fontSize = "20px";
+
+            const bodyText = document.createElement("p");
+            bodyText.id = "conflict-body-text";
+            bodyText.style.margin = "0 0 24px 0";
+            bodyText.style.fontSize = "14px";
+            bodyText.style.color = "#4b5563";
+
+            const btnContainer = document.createElement("div");
+            btnContainer.style.display = "flex";
+            btnContainer.style.flexDirection = "column";
+            btnContainer.style.gap = "12px";
+
+            const btnRefund = document.createElement("button");
+            btnRefund.innerText = "Option A: Refund in-store customer (Requires card)";
+            btnRefund.className = "glassmorphism-btn";
+            btnRefund.style.padding = "12px";
+            btnRefund.style.border = "none";
+            btnRefund.style.backgroundColor = "#fee2e2";
+            btnRefund.style.color = "#b91c1c";
+            btnRefund.style.fontWeight = "bold";
+            btnRefund.style.cursor = "pointer";
+            btnRefund.onclick = () => { modal.style.display = "none"; };
+
+            const btnCancel = document.createElement("button");
+            btnCancel.innerText = "Option B: Cancel & refund online order (Agent will draft apology email)";
+            btnCancel.className = "glassmorphism-btn";
+            btnCancel.style.padding = "12px";
+            btnCancel.style.border = "none";
+            btnCancel.style.backgroundColor = "#dbeafe";
+            btnCancel.style.color = "#1d4ed8";
+            btnCancel.style.fontWeight = "bold";
+            btnCancel.style.cursor = "pointer";
+            btnCancel.onclick = () => { modal.style.display = "none"; };
+
+            const btnLater = document.createElement("button");
+            btnLater.innerText = "Decide Later";
+            btnLater.style.padding = "12px";
+            btnLater.style.border = "none";
+            btnLater.style.background = "transparent";
+            btnLater.style.color = "#6b7280";
+            btnLater.style.fontWeight = "bold";
+            btnLater.style.cursor = "pointer";
+            btnLater.onclick = () => { modal.style.display = "none"; };
+
+            btnContainer.appendChild(btnRefund);
+            btnContainer.appendChild(btnCancel);
+            btnContainer.appendChild(btnLater);
+
+            modalContent.appendChild(title);
+            modalContent.appendChild(bodyText);
+            modalContent.appendChild(btnContainer);
+            modal.appendChild(modalContent);
+
+            document.body.appendChild(modal);
+        }
+
+        const timeStr = conflict.timestamp ? new Date(conflict.timestamp).toLocaleTimeString() : 'recently';
+        const productName = conflict.product_id ? conflict.product_id.replace('e2e-product-', '') : 'item';
+        document.getElementById("conflict-body-text").innerText = `You sold a ${productName} offline, but it was purchased online at ${timeStr}.`;
+
+        modal.style.display = "flex";
     }
 
     async function syncOfflineQueue() {
@@ -1423,7 +1514,14 @@ initWalkthrough();
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
                     body: JSON.stringify({ transactions: posTransactions })
                 });
-                if (!res.ok) allOk = false;
+                if (!res.ok) {
+                    allOk = false;
+                } else {
+                    const data = await res.json();
+                    if (data.pending_reconciliation && data.pending_reconciliation.length > 0) {
+                        showConflictModal(data.pending_reconciliation[0]);
+                    }
+                }
             } catch(e) {
                 allOk = false;
             }

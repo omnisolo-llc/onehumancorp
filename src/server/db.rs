@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::env;
+
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -12,25 +12,31 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
+
+pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
+    sqlx::postgres::PgPoolOptions::new()
+        .before_acquire(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("SET app.current_tenant = ''").await?;
+                Ok(true)
+            })
+        })
+        .after_release(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("DISCARD ALL").await?;
+                Ok(true)
+            })
+        })
+}
+
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        crate::db::secure_pg_pool_options()
             .max_connections(100).acquire_timeout(std::time::Duration::from_millis(15000))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
@@ -69,21 +75,7 @@ pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
 }
 
 pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
-    sqlx::postgres::PgPoolOptions::new()
-        .before_acquire(|conn, _meta| {
-            Box::pin(async move {
-                use sqlx::Executor;
-                conn.execute("SET app.current_tenant = ''").await?;
-                Ok(true)
-            })
-        })
-        .after_release(|conn, _meta| {
-            Box::pin(async move {
-                use sqlx::Executor;
-                conn.execute("DISCARD ALL").await?;
-                Ok(true)
-            })
-        })
+    crate::db::secure_pg_pool_options()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .expect("Failed to connect to in-memory test database")
 }
@@ -176,7 +168,7 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| {
                 let cfg = crate::config::get();
                 cfg.database_url.clone().unwrap_or_else(|| {
@@ -428,26 +420,12 @@ impl DB {
             }
 
             let mut attempt = 0;
-            let max_attempts = env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
+            let max_attempts = std::env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
                 .ok()
                 .and_then(|raw| raw.parse::<u32>().ok())
                 .unwrap_or(30);
             let pool = loop {
-                match sqlx::postgres::PgPoolOptions::new()
-                    .before_acquire(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("SET app.current_tenant = ''").await?;
-                            Ok(true)
-                        })
-                    })
-                    .after_release(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("DISCARD ALL").await?;
-                            Ok(true)
-                        })
-                    })
+                match crate::db::secure_pg_pool_options()
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
                     .await
@@ -512,8 +490,9 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ? OR CAST(total_cost AS TEXT) LIKE ?) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
+                    .bind(&query_lower)
                     .bind(&query_lower)
                     .bind(&query_lower)
                     .fetch_all(sqlite_pool)
@@ -589,7 +568,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&mut *tx)
@@ -651,7 +630,7 @@ impl DB {
         E: std::fmt::Debug + std::fmt::Display + From<String>,
     {
         let mut attempt = 0;
-        let max_attempts = 3;
+        let max_attempts = MAX_DB_RETRY_ATTEMPTS;
         #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
         #[cfg(test)]
@@ -659,18 +638,21 @@ impl DB {
 
         // Enforce the 60-second ML-Resilience rule for database operations
         let start_time = std::time::Instant::now();
-        #[cfg(not(test))]
         let timeout_duration = std::time::Duration::from_secs(60);
-        #[cfg(test)]
-        let timeout_duration = std::time::Duration::from_millis(2000);
 
         loop {
             if start_time.elapsed() > timeout_duration {
                 return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
             }
-            match f().await {
-                Ok(val) => return Ok(val),
-                Err(err) => {
+            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+            let timeout_res = tokio::time::timeout(remaining_time, f()).await;
+
+            match timeout_res {
+                Err(_) => {
+                    return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+                }
+                Ok(Ok(val)) => return Ok(val),
+                Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
                     let is_sqlite_lock = self.is_sqlite()
                         && (err_str.contains("database is locked")
@@ -701,7 +683,10 @@ impl DB {
                             )
                             .await;
                         }
-                        tokio::time::sleep(backoff).await;
+                        // Add jitter to avoid thundering herd on retries
+                        let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
+                        let jittered_backoff = std::time::Duration::from_secs_f64(backoff.as_secs_f64() * jitter_factor);
+                        tokio::time::sleep(jittered_backoff).await;
                         backoff *= 2;
                     } else {
                         return Err(err);
@@ -895,6 +880,22 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        original_content TEXT NOT NULL,
+                        translated_content TEXT NOT NULL,
+                        source_language TEXT,
+                        target_language TEXT NOT NULL,
+                        draft_reply TEXT,
+                        status TEXT NOT NULL DEFAULT 'unread',
+                        sender_id TEXT,
+                        customer_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_feed_items (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -1801,11 +1802,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1814,7 +1813,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
@@ -1832,10 +1830,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1844,7 +1841,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
@@ -1910,21 +1906,7 @@ mod autodream_db_tests {
         .await
         .expect("Database URL or operation failed in test");
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .expect("Database URL or operation failed in test");
 
@@ -1959,10 +1941,9 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1971,7 +1952,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
         // Just checking configuration parses ok for multitenancy logic
@@ -2173,7 +2153,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -2192,7 +2171,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -2214,24 +2192,11 @@ mod e2e_tenant_isolation_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         // Create a basic pool using our implementation logic
-        let pool_opts = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            });
+        let pool_opts = crate::db::secure_pg_pool_options();
 
         let pool = pool_opts.connect(&database_url).await.expect("Database URL or operation failed in test");
 
@@ -2331,15 +2296,15 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
 #[cfg(test)]
 mod e2e_search_workspace_tests {
     use super::*;
-    use std::env;
+
 
     #[tokio::test]
     async fn test_search_workspace_parity() {
-        if env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2412,7 +2377,7 @@ mod e2e_search_workspace_tests {
             .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind(150.25)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
-            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<f64>)
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(0.0f64)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -2444,7 +2409,7 @@ mod e2e_search_workspace_tests {
             .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind("150.25")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, $4, $5::numeric)")
-            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(None::<&str>)
+            .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind("0")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
@@ -2469,3 +2434,4 @@ mod e2e_search_workspace_tests {
         }
     }
 }
+// Proactive optimization: remove unused dead code.

@@ -67,7 +67,7 @@ impl UserRepository for PgUserRepository {
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
             "#
         )
         .bind(&user.id)
@@ -321,13 +321,13 @@ impl UserRepository for PgUserRepository {
 
         let query = if should_bypass {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#
@@ -423,18 +423,12 @@ impl UserRepository for PgUserRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        // GC expired entries
-        let query = if should_bypass {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1"
-        } else {
-            "DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2"
-        };
 
         let now = chrono::Utc::now();
         let _ = if should_bypass {
-            sqlx::query(query).bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -468,7 +462,7 @@ mod security_tests {
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;
-    use sqlx::postgres::PgPoolOptions;
+
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
@@ -482,7 +476,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -535,7 +529,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -581,7 +575,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

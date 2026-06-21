@@ -776,7 +776,7 @@ mod tests {
     #[tokio::test]
     async fn test_referral_flow() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
@@ -825,7 +825,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_score_caching() {
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -847,7 +847,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_quota_caching() {
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
@@ -870,7 +870,7 @@ mod tests {
     #[tokio::test]
     async fn test_submit_review_and_reputation_flow() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
@@ -915,7 +915,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
@@ -950,7 +950,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
@@ -982,7 +982,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));

@@ -278,25 +278,9 @@
             const response = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
             if (response.ok) {
                 data = await response.json();
-            } else {
-                // Try E2E test fallback
-                const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.storeName) data.store_name = parsed.storeName;
-                    if (parsed.bio) data.bio = parsed.bio;
-                }
             }
         } catch(e) {
             console.error("Failed to load from API", e);
-            try {
-                const saved = window.localStorage.getItem(`ohc_bio_${tenant}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.storeName) data.store_name = parsed.storeName;
-                    if (parsed.bio) data.bio = parsed.bio;
-                }
-            } catch(e) {}
         }
 
         // Update UI
@@ -308,11 +292,15 @@
         const badgeHeader = document.getElementById('ohc-badge-header');
         const ctaLink = document.getElementById('badge-cta-link');
 
-        ctaLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_expandable_badge`;
+        if (data.remove_branding) {
+            badge.style.display = 'none';
+        } else {
+            ctaLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_expandable_badge`;
 
-        badgeHeader.addEventListener('click', () => {
-            badge.classList.toggle('expanded');
-        });
+            badgeHeader.addEventListener('click', () => {
+                badge.classList.toggle('expanded');
+            });
+        }
 
         let styles = { bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#1D1D1F', linkBg: 'rgba(255, 255, 255, 0.15)', linkBorder: 'rgba(255, 255, 255, 0.3)' };
         switch(data.theme) {

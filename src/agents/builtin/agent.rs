@@ -565,7 +565,11 @@ impl Agent {
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
             for (tc, res) in ro_results {
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = msg
+                    .tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
 
                 match res {
                     Ok(r) => {
@@ -634,7 +638,11 @@ impl Agent {
                     Err(e) => Err(e),
                 };
 
-                let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = msg
+                    .tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
 
                 match res {
                     Ok(r) => {
@@ -728,6 +736,11 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
+        if cfg.enable_actor_model_message_passing {
+            return self.run_actor_model_message_passing(cfg, initial_message, session_tools.to_vec(), on_event).await;
+        }
+
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
 
@@ -1652,7 +1665,7 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc.id == id).unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc.id == id).expect("Tool call not found in tool_calls array");
                     let tool_name = tool_calls[idx].name.clone();
                     match final_res {
                         Ok(res) => {
@@ -1703,7 +1716,7 @@ impl Agent {
                     let name = tc.name.clone();
                     let args = tc.arguments.clone();
                     let id = tc.id.clone();
-                    let idx = tool_calls.iter().position(|t| t.id == id).unwrap();
+                    let idx = tool_calls.iter().position(|t| t.id == id).expect("Tool call not found in tool_calls array");
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
@@ -3024,10 +3037,14 @@ impl Agent {
             }
 
             // Gather all available tool names to enforce strict checking inside the lazy_load_tool
-            let available_tools_names: Vec<String> = self.tools.iter().map(|t| t.name.clone()).collect();
+            let available_tools_names: Vec<String> =
+                self.tools.iter().map(|t| t.name.clone()).collect();
 
             let active_tools_clone = active_tools.clone();
-            session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone, std::sync::Arc::new(available_tools_names)));
+            session_tools.push(crate::tools::lazy_load::lazy_load_tool(
+                active_tools_clone,
+                std::sync::Arc::new(available_tools_names),
+            ));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
 
@@ -3746,7 +3763,10 @@ impl Agent {
 
             // Emit events and collect results for read-only tools
             for (tc, res) in ro_results {
-                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
                 match res {
                     Err(crate::types::ToolError::Transient(msg)) => {
                         let err = format!("Transient error after retries: {}", msg);
@@ -3895,7 +3915,10 @@ impl Agent {
                             && let Some(human_input) = cb(&msg).await
                         {
                             on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
-                            let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                            let idx = tool_calls
+                                .iter()
+                                .position(|t| t.id == tc.id)
+                                .expect("Tool call not found in tool_calls array");
                             tool_results[idx] = crate::types::ToolResult {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
@@ -3957,7 +3980,10 @@ impl Agent {
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                let idx = tool_calls
+                                    .iter()
+                                    .position(|t| t.id == tc.id)
+                                    .expect("Tool call not found in tool_calls array");
                                 tool_results[idx] = crate::types::ToolResult {
                                     tool_call_id: tc.id.clone(),
                                     content: String::new(),
@@ -4157,7 +4183,10 @@ impl Agent {
                                 on_event(AgentEvent::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
-                                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                let idx = tool_calls
+                                    .iter()
+                                    .position(|t| t.id == tc.id)
+                                    .expect("Tool call not found in tool_calls array");
                                 tool_results[idx] = crate::types::ToolResult {
                                     tool_call_id: tc.id.clone(),
                                     content: String::new(),
@@ -4191,7 +4220,10 @@ impl Agent {
                     }
                 }
 
-                let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                let idx = tool_calls
+                    .iter()
+                    .position(|t| t.id == tc.id)
+                    .expect("Tool call not found in tool_calls array");
                 tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
@@ -4851,9 +4883,8 @@ mod tests {
                 } else {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
-                    let expected_error = crate::types::format_llm_recoverable_error(
-                        "Validation Error (Pydantic-first tool schema): Failing for test",
-                    );
+                    let expected_error =
+                        crate::types::format_llm_recoverable_error("Failing for test");
                     let has_error = last_msg.tool_results.iter().any(|r| {
                         r.content.contains("LLM-Recoverable Error")
                             || r.error.contains(&expected_error)
@@ -4913,9 +4944,7 @@ mod tests {
         assert_eq!(result.unwrap(), "I fixed the error");
 
         // Verify the ToolCall event has the LlmRecoverable message
-        let expected_error = crate::types::format_llm_recoverable_error(
-            "Validation Error (Pydantic-first tool schema): Failing for test",
-        );
+        let expected_error = crate::types::format_llm_recoverable_error("Failing for test");
         let has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
                 result.contains(&expected_error)
@@ -7659,7 +7688,8 @@ mod tests {
         };
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None, None)
+                .build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
@@ -7675,7 +7705,8 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+                .build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7691,7 +7722,8 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+                .build();
         assert_eq!(
             prompt,
             "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
@@ -7702,7 +7734,8 @@ mod tests {
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
         let prompt2 =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None, None)
+                .build();
         assert_eq!(
             prompt2,
             "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
@@ -7718,7 +7751,8 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+                .build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
@@ -7740,7 +7774,8 @@ mod tests {
         cfg.user_instructions.push('€');
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None).build();
+            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+                .build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
         let user_part = prompt.replace(notice, "");
