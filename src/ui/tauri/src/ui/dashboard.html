@@ -1693,7 +1693,7 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/ui/unified_inbox_feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
@@ -1776,6 +1776,35 @@
             const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
+
+
+            if (item.thread && item.triage_actions && item.triage_actions.length > 0) {
+              const action = item.triage_actions[0];
+              const lastMsg = item.messages.length > 0 ? item.messages[item.messages.length - 1].content : "New thread";
+              let payloadObj = {};
+              try { payloadObj = JSON.parse(action.action_payload || '{}'); } catch(e){}
+
+              return `
+              <div class="triage-item glassmorphism" data-testid="unified-triage-card-${item.thread.id}" id="triage-${action.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <span style="font-size: 18px;">💬</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">${item.thread.channel}</strong>
+                  </div>
+                  <div class="triage-priority glassmorphism" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-weight: 500; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
+                  "${lastMsg}"
+                </div>
+                <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
+                  <strong>Draft Reply:</strong><br/>${payloadObj.draft_reply || action.action_type}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="triage-approve-${action.id}" onclick="handleTriageAction('${action.id}', true)" style="flex: 1; min-height: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="flex: 1; min-height: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                </div>
+              </div>
+              `;
+            }
 
             if (item.feature_type === 'onboarding_welcome' || item.context_payload?.feature_type === 'onboarding_welcome') {
                 return `
