@@ -8,6 +8,7 @@ import { PromptInput } from './components/PromptInput.js';
 import { ErrorState } from './components/ErrorState.js';
 import { MasterMenu } from './components/MasterMenu.js';
 import { Marketplace } from './components/Marketplace.js';
+import { VisualWorkflowEditor } from './components/VisualWorkflowEditor.js';
 
 import { useOrchestrator } from './hooks/useOrchestrator.js';
 
@@ -15,6 +16,7 @@ export const App = () => {
   const { status, tools, error, runAgent, output } = useOrchestrator();
   const [inputs, setInputs] = useState<string[]>([]);
   const [showMarketplace, setShowMarketplace] = useState(false);
+  const [showWorkflow, setShowWorkflow] = useState(false);
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   const handleSubmit = async (val: string) => {
@@ -37,7 +39,7 @@ export const App = () => {
             <MarkdownText content={markdown} />
           </Box>
 
-          {showMarketplace ? <Marketplace onBack={() => setShowMarketplace(false)} /> : <MasterMenu onSelect={(option) => { if (option === 'Browse Agent Marketplace') { setShowMarketplace(true); } }} />}
+          {showMarketplace ? <Marketplace onBack={() => setShowMarketplace(false)} /> : showWorkflow ? <VisualWorkflowEditor onBack={() => setShowWorkflow(false)} /> : <MasterMenu onSelect={(option) => { if (option === 'Browse Agent Marketplace') { setShowMarketplace(true); } else if (option === 'Visual Workflow Editor') { setShowWorkflow(true); } }} />}
 
           <Box flexDirection="column">
             {inputs.map((input, idx) => (
