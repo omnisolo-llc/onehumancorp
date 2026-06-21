@@ -194,7 +194,7 @@ mod tests {
 
         let response = cache.get("What is the capital of France?");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
 
         let (response, cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
         // 1,000,000 tokens * 2.50 / 1M = 2.5 dollars = 250 cents
         assert_eq!(cost, 250);
     }
@@ -299,7 +299,7 @@ mod tests {
 
         let response = cache.get("What is the capital of France?");
         assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
+        assert_eq!(response.expect("failed to unwrap").text, "Paris");
 
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
