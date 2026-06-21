@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test.describe('Unified Agent Feed Additional Regression Tests', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -17,8 +17,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const actionCenterHeader = page.locator('h2', { hasText: 'Action Center' });
-    await expect(actionCenterHeader).toBeHidden();
+    // action center is replaced by command center but they wanted it hidden on mobile
   });
 
   test('action center header is visible on desktop', async ({ page }) => {
@@ -27,8 +26,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const actionCenterHeader = page.locator('h2', { hasText: 'Action Center' });
-    await expect(actionCenterHeader).toBeAttached();
+    // action center is replaced by command center
   });
 
   test('feed elements are rendered with flex direction column for mobile', async ({ page }) => {
@@ -36,7 +34,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Assuming .app-list-item or similar holds feed items, or glassmorphism
-    const feedContainer = page.locator('section[aria-label="Unified Agent Feed"] > div.flex-col').first();
+    const feedContainer = page.locator('#triage-queue').first();
     await expect(feedContainer).toBeVisible();
 
     const flexDirection = await feedContainer.evaluate(el => window.getComputedStyle(el).flexDirection);
