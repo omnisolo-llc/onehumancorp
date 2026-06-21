@@ -122,23 +122,23 @@ mod tests {
     #[test]
     fn test_calculate_heuristic_yield() {
         // Test peak hours (17:00 to 20:59)
-        let peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 17, 30, 0).expect("failed to unwrap");
+        let peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 17, 30, 0).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(peak_time_1, 1000), 1150);
 
-        let peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 20, 0, 0).expect("failed to unwrap");
+        let peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 20, 0, 0).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(peak_time_2, 1000), 1150);
 
-        let peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 19, 59, 59).expect("failed to unwrap");
+        let peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 19, 59, 59).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(peak_time_3, 2000), 2300);
 
         // Test non-peak hours
-        let non_peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 16, 59, 59).expect("failed to unwrap");
+        let non_peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 16, 59, 59).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(non_peak_time_1, 1000), 1000);
 
-        let non_peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 21, 0, 0).expect("failed to unwrap");
+        let non_peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 21, 0, 0).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(non_peak_time_2, 1000), 1000);
 
-        let non_peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 12, 0, 0).expect("failed to unwrap");
+        let non_peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 12, 0, 0).single().expect("failed to unwrap");
         assert_eq!(calculate_heuristic_yield(non_peak_time_3, 5000), 5000);
     }
 }
