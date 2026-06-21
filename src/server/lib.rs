@@ -2733,6 +2733,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     department_service.start().await.expect("Failed to start DepartmentService");
 
+    let llm_client = std::sync::Arc::new(crate::minimax::MinimaxClient::new(
+        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string())
+    ));
+    let feed_repo = std::sync::Arc::new(crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(db.pool.clone()));
+    let agent_feed_service = crate::services::agent_feed::service::AgentFeedService::new(bus.clone(), feed_repo, llm_client, db.pool.clone());
+    agent_feed_service.start().await.expect("Failed to start AgentFeedService");
+
     let tm_mesh = handoff_mesh.clone();
     hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
         let payload = match serde_json::to_string(&task) {
