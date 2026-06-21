@@ -91,7 +91,7 @@ export default function TriagePage() {
     setError("");
     try {
       const res = await fetch(
-        `/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`,
+        `/api/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
       );
       if (!res.ok)
         throw new Error("Failed to load triage items from the database");
@@ -133,7 +133,7 @@ export default function TriagePage() {
       setProcessingId(id);
       setActionStatus(approved ? "Approving..." : "Dismissing...");
       const res = await fetch(
-        `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
+        `/api/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -261,7 +261,7 @@ export default function TriagePage() {
                     data-testid="approve-btn"
                     onClick={() => handleDecision(item.id, true)}
                   >
-                    {isProcessing ? "Processing..." : "Approve & Execute"}
+                    {isProcessing ? "Processing..." : (item.action_type === 'Draft Quote' || item.action_type === 'Draft Replies' ? "Approve & Send Drafted Quote ($45)" : "Approve & Send")}
                   </button>
                   <button
                     disabled={isProcessing}
