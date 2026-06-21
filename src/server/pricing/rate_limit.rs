@@ -384,16 +384,23 @@ impl RedisRateLimiter {
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
+        let total_storage: i64 = if delta_bytes == 0 {
+            let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+            used.unwrap_or(0)
+        } else {
+            conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?
+        };
 
         if let Some(store) = &self.telemetry_store {
-            store.storage_bytes_counter.add(
-                delta_bytes as u64,
-                &[
-                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
-                ],
-            );
+            if delta_bytes > 0 {
+                store.storage_bytes_counter.add(
+                    delta_bytes as u64,
+                    &[
+                        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+                        opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                    ],
+                );
+            }
         }
 
         if let Some(limit_mb) = tier.storage_limit_mb() {

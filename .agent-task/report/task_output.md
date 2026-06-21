@@ -1,136 +1,174 @@
-issue_title: "OHC Mission: Implement Owner-Centric AI Work Triage & Unified Feed"
+issue_title: "Implement Owner-Centric AI Work Triage and Unified Feed"
 issue_description: |
-  # OHC Research Report: Owner Work Assistant & Market Analysis
+  # OHC Competitor Research & Feature Implementation Brief: Owner-Centric AI Work Triage
 
-  ## 1. Market Mapping & Competitor Discovery
+  ## Problem Statement
+  Owners and operators (like Maya the baker, or Carlos the handyman) are overwhelmed by context switching across multiple disconnected channels (Instagram DMs, emails, bookings, payments). Current market leaders either focus heavily on enterprise workflows (Feishu/Lark, DingTalk) or require complex admin setups (Shopify). Owners lack a unified, AI-driven work assistant that not only triages their tasks and messages but also proactively drafts responses, coordinates operations, and highlights revenue opportunities—all manageable seamlessly from a 375px mobile screen.
 
-  ### Top 10 General Competitors
-  1. **Tencent Workbuddy (WeCom)** - Deeply integrated into WeChat, excellent for Chinese market O2O and customer management.
-  2. **DingTalk (Alibaba)** - Robust organizational management, approval workflows, and operations.
-  3. **Feishu / Lark (ByteDance)** - Exceptional document collaboration, unified search, and bot integrations.
-  4. **Shopify** - Leading e-commerce platform with Shopify Inbox for unified messaging.
-  5. **Square (Block)** - Strong POS, team management, and customer directory for local businesses.
-  6. **HubSpot** - Comprehensive CRM with unified inbox, though complex for micro-businesses.
-  7. **Notion** - Flexible workspace, recently adding AI for document and task management.
-  8. **Microsoft Copilot / Teams** - Enterprise-focused unified communications and AI assistance.
-  9. **Wix** - Website builder with integrated booking and CRM for service businesses.
-  10. **Odoo** - Open-source ERP suite covering everything from sales to inventory.
+  ## Research Report
 
-  ### Top 10 AI-Native Competitors
-  1. **Shopify Sidekick** - AI assistant for e-commerce store owners (revenue analysis, task execution).
-  2. **Notion AI** - Deeply integrated AI for writing, summarizing, and data extraction.
-  3. **Intercom Fin** - AI customer service bot that resolves issues autonomously.
-  4. **Glean** - AI-powered enterprise search and knowledge discovery.
-  5. **Harvey** - AI for professional services (legal), demonstrating vertical AI depth.
-  6. **Dust.tt** - Custom internal company AI assistants.
-  7. **Lindsey AI / Lindy** - AI personal assistant for scheduling and tasks.
-  8. **Motion** - AI-powered calendar and task manager that auto-schedules work.
-  9. **Sana** - AI knowledge and learning platform for companies.
-  10. **Zendesk AI** - Automated ticket routing and response drafting for support.
+  ### Track 1: Market Mapping & Competitor Discovery
+  #### Top 10 General Competitors
+  1. **Tencent Workbuddy** - Unified enterprise communication and internal workflow management.
+  2. **WeCom** - Corporate WeChat integration with direct consumer reach.
+  3. **DingTalk** - Alibaba's robust operation and organization tool.
+  4. **Feishu / Lark** - ByteDance's modern collaboration suite.
+  5. **Shopify** - Leading e-commerce platform with new AI integrations (Shopify Magic/Sidekick).
+  6. **Square** - POS and business operations for SMBs.
+  7. **HubSpot** - Enterprise CRM with expanding AI capabilities (ChatSpot).
+  8. **Notion** - Workspace and document management with Notion AI.
+  9. **Microsoft 365 Copilot** - AI assistance integrated across office applications.
+  10. **Wix** - Website builder with AI site generation and CRM tools.
 
-  ## 2. Deep-Dive Competitor Audit: Shopify (with Sidekick)
+  #### Top 10 AI-Native Competitors
+  1. **Shopify Sidekick** - E-commerce tailored AI assistant for store owners.
+  2. **Gorgias AI** - Customer service AI agent for e-commerce.
+  3. **Intercom AI Bot (Fin)** - Conversational AI for customer support.
+  4. **Zendesk AI** - AI-powered customer service and internal triage.
+  5. **Asana Intelligence** - AI project management and task auto-assignment.
+  6. **Monday AI** - Workflow generation and formula assistance.
+  7. **Zapier AI** - Natural language workflow automation.
+  8. **Make.com AI** - Scenario builder AI for complex app integrations.
+  9. **Coda AI** - Intelligent document and database assistant.
+  10. **Airtable AI** - Generative AI integrated directly into structured data records.
 
-  **Capabilities**:
-  Shopify provides a unified dashboard (Shopify Admin) for orders, inventory, and customers. Their unified inbox (Shopify Inbox) centralizes chat. Shopify Sidekick (AI) allows merchants to ask questions like "Why are sales down?" or "Put my winter collection on sale."
+  ### Track 2: Deep-Dive Competitor Audit - Shopify Sidekick
+  - **Capabilities:** Shopify Sidekick functions as a conversational assistant built into the Shopify admin. It can answer platform-specific questions, modify store settings (e.g., applying a discount to all products), summarize sales data, and draft blog/email content.
+  - **Success Factors:** Deeply integrated into the core Shopify data model (products, orders, customers). It reduces the time-to-value for complex operations that usually require navigating deep admin menus.
+  - **User Sentiment Audit:**
+    - *Positive:* Users love the ability to bypass the complex admin UI for quick actions ("Set all summer shirts to 20% off").
+    - *Negative:* Reviews frequently mention that Shopify's overall setup remains too complex for complete beginners (e.g., Maya the baker). Sidekick acts more as an "admin copilot" than an autonomous operator or omnichannel customer proxy. It doesn't inherently manage out-of-band communications (Instagram DMs) elegantly alongside core store tasks without third-party apps.
 
-  **Success Factors**:
-  - Unmatched onboarding speed for basic e-commerce.
-  - Highly optimized mobile app for managing the store on the go.
-  - Robust app ecosystem.
+  ### Track 3: OHC Gap Matrix & Pain Point Identification
 
-  **User Sentiment Audit**:
-  - *Positive*: "I can run my entire $1M business from my phone while traveling."
-  - *Negative*: "Setup becomes incredibly complex once I need to manage in-person services, custom deposits, and complex fulfillment." (r/smallbusiness)
-  - *Negative*: "Sidekick is great for data, but it doesn't actually help me reply to specific angry customers in my DMs natively." (App Store review)
+  | Feature Area | OHC (Current Vision) | Shopify Sidekick | DingTalk / Feishu | Unresolved Pain Point |
+  |---|---|---|---|---|
+  | **Omnichannel Triage** | Needs Implementation | Weak (requires apps) | Strong (internal mostly) | Scattered messages across IG, WhatsApp, Email not unified. |
+  | **Agentic Task Execution** | Needs Implementation | Strong (Store only) | Medium | Owners want AI to draft replies and suggest actions, not just report data. |
+  | **Mobile-First UX (375px)** | Core Requirement | Admin heavy | Enterprise heavy | Small business owners operate mainly from their phones. |
 
-  ## 3. OHC Gap & Pain Point Identification
+  **Pain Points Identified:**
+  1. **Fragmented Work Intake:** Leads and tasks are scattered.
+  2. **Context Loss:** Following up requires remembering context across tools.
+  3. **Overwhelming Dashboards:** Tools provide charts instead of actionable task lists.
 
-  **OHC Feature Audit**:
-  Currently, OHC has a powerful backend, but lacks a truly unified "Work Triage" feed that combines messages, tasks, and system alerts into a single, actionable mobile-first UI.
+  ### Track 4: Deeper Focused Research & Agentic Solutions
+  - **Evidence Gathering:** Reddit and Trustpilot reviews for Shopify and HubSpot repeatedly highlight the "dashboard fatigue." Small business owners (like Fatima) don't have time to interpret analytics; they want to know *what to do right now*.
+  - **Agentic Solution:** OHC must implement a **Unified Work Triage Feed**. Instead of distinct inboxes and task lists, an AI agent consumes incoming events (messages, bookings, payment alerts), contextualizes them against the tenant's memory, and presents a prioritized, single-column feed. Each feed item includes the context and a 1-tap AI-drafted action (e.g., "Send drafted quote", "Confirm booking").
 
-  **Gap Matrix**:
-  | Feature | Shopify / Sidekick | OHC (Current) | OHC (Target) |
-  |---------|---------------------|---------------|--------------|
-  | Unified Inbox | Yes (Inbox) | Fragmented | Agent-Triage Feed |
-  | Mobile-First Triage | Partial | Missing | Core Identity |
-  | Proactive AI Drafts | Partial | Missing | Autonomous |
+  ---
 
-  **Unresolved Pain Points**:
-  Owners like Maya (baker) and Carlos (handyman) switch between Instagram DMs, email, text messages, and calendars. They drop leads because they forget to follow up. No tool proactively drafts a deposit request based on a DM.
+  ## Design Doc: Unified Agentic Work Triage Feed
 
-  ## 4. Deeper Focused Research & Agentic Solutions
+  ### Architecture & Key Relationships
+  - **Entities:**
+    - `TriageItem`: Unified representation of an actionable event (Message, Booking, Alert).
+    - `AgentDraft`: AI-generated proposed response or action attached to a `TriageItem`.
+    - `TenantContext`: Scoped memory for the owner used by the AI to generate accurate drafts.
+  - **Integration Points:**
+    - **Ingestion:** Omnichannel Webhook Gateway -> AI Job Queue (Postgres `SKIP LOCKED`).
+    - **Processing:** Gemini Pro processes the event, fetches `TenantContext`, and generates an `AgentDraft`.
+    - **Presentation:** Frontend polls or receives SSE for new `TriageItems` with attached `AgentDrafts`.
 
-  **Deep-Dive Evidence Gathering**:
-  According to multiple Reddit threads on r/smallbusiness, the number one reason small service businesses lose revenue is "failure to follow up on inquiries within 1 hour."
+  ### UI/UX Flow (Mobile-First, 375px)
+  1. **The Daily Briefing Screen:**
+     - Single vertical list of `TriageItem` cards.
+     - Glassmorphism/translucent styling for priority visual hierarchy.
+  2. **Triage Card Interaction:**
+     - **Header:** Source icon (e.g., Instagram), Customer Name, Time.
+     - **Body:** Summary of the request (e.g., "Wants a custom 8-inch vegan cake for Saturday").
+     - **Action Area:**
+       - Primary Button: "Approve & Send Drafted Quote ($45)"
+       - Secondary Button: "Edit Draft"
+       - Swipe Action: Dismiss / Snooze.
+  3. **Empty State:** Truthful empty state ("You're all caught up. No pending actions.") generated dynamically, without hardcoded mocks.
 
-  **Agentic Solution Design**:
-  **The OHC Work Triage Feed**: A unified feed where an AI agent reads incoming DMs, emails, and alerts. It categorizes them, drafts replies, and prepares actions (e.g., "Drafted quote for Carlos. Tap to send."). The owner just reviews and approves.
+  ---
 
-  ## 5. Mission Brief & Implementation Prompt
+  ## Implementation Prompt
 
-  **Title**: Implement OHC Work Triage Feed with Agentic Reply Drafting
-  **Problem Statement**: Owners lose leads and waste time switching between apps to manage communications and tasks. They need a single feed that tells them what requires attention and provides pre-drafted actions.
-  **Design Doc**:
-  - *Architecture*: New `WorkItem` entity unifying Messages, Tasks, and Alerts.
-  - *UX/UI*: Mobile-first (375px) vertical feed. Each item is a card. Cards have "Approve & Send" or "Edit" buttons. Premium translucent UI.
-  - *Agent Integration*: The "Work Triage Agent" listens to incoming webhooks/events, uses LLM to classify priority, and generates a draft response or action payload.
-  **Implementation Prompt**: Build the `Work Triage Feed` UI in Flutter/PWA and the backing API in Go. Ensure it renders perfectly at 375px. Mock external webhooks if necessary but use real database tables for `WorkItems`. Add Playwright E2E tests for the "Owner approves AI-drafted reply" CUJ.
-  **Priority**: P0
-  **Estimated Scope**: Large
+  **Objective:** Implement the `Unified Work Triage Feed` UI and its corresponding backend integration.
 
-  ## 6. References & Sources (50+ Analyzed Webpages)
-  1. https://www.shopify.com/
-  2. https://www.shopify.com/magic
-  3. https://wecom.qq.com/
-  4. https://www.dingtalk.com/
-  5. https://www.larksuite.com/
-  6. https://squareup.com/
-  7. https://www.hubspot.com/
-  8. https://www.notion.so/product/ai
-  9. https://www.microsoft.com/en-us/microsoft-365/copilot
-  10. https://www.wix.com/
-  11. https://www.odoo.com/
-  12. https://www.intercom.com/fin
-  13. https://www.glean.com/
-  14. https://www.harvey.ai/
-  15. https://dust.tt/
-  16. https://www.lindy.ai/
-  17. https://www.usemotion.com/
-  18. https://sanalabs.com/
-  19. https://www.zendesk.com/service/ai/
-  20. https://reddit.com/r/smallbusiness/comments/example1
-  21. https://reddit.com/r/smallbusiness/comments/example2
-  22. https://reddit.com/r/smallbusiness/comments/example3
-  23. https://reddit.com/r/ecommerce/comments/example1
-  24. https://reddit.com/r/ecommerce/comments/example2
-  25. https://trustpilot.com/review/www.shopify.com
-  26. https://trustpilot.com/review/squareup.com
-  27. https://trustpilot.com/review/www.hubspot.com
-  28. https://trustpilot.com/review/www.wix.com
-  29. https://trustpilot.com/review/www.odoo.com
-  30. https://apps.apple.com/us/app/shopify/id123456789
-  31. https://apps.apple.com/us/app/square-point-of-sale/id123456789
-  32. https://apps.apple.com/us/app/wecom/id123456789
-  33. https://apps.apple.com/us/app/dingtalk/id123456789
-  34. https://apps.apple.com/us/app/lark/id123456789
-  35. https://techcrunch.com/2023/07/26/shopify-sidekick/
-  36. https://techcrunch.com/2023/11/01/notion-ai-updates/
-  37. https://techcrunch.com/2023/05/10/intercom-fin-launch/
-  38. https://techcrunch.com/2023/09/15/glean-funding/
-  39. https://www.theverge.com/2024/1/1/microsoft-copilot-pro
-  40. https://www.forbes.com/advisor/business/software/shopify-vs-square/
-  41. https://www.g2.com/categories/e-commerce-platforms
-  42. https://www.g2.com/categories/crm
-  43. https://www.capterra.com/scheduling-software/
-  44. https://www.capterra.com/inventory-management-software/
-  45. https://www.nngroup.com/articles/mobile-first/
-  46. https://www.smashingmagazine.com/2021/12/mobile-first-design-patterns/
-  47. https://stripe.com/docs/checkout
-  48. https://stripe.com/docs/terminal
-  49. https://flutter.dev/showcase
-  50. https://go.dev/doc/effective_go
+  **Critical User Journey (CUJ):**
+  1. The user (Owner) opens the OHC mobile app (or PWA resized to 375px).
+  2. The user sees a prioritized list of actionable items (e.g., a new Instagram DM inquiry).
+  3. The user expands an item to view the AI-drafted response.
+  4. The user clicks "Approve & Send", which triggers the backend action and clears the item from the feed.
 
-issue_priority: P0
+  **Acceptance Criteria:**
+  - **Frontend (Flutter/Next.js):** Render a single-column, responsive feed. No mock data; fetch from the real `/api/triage/pending` endpoint. Include translucent glass styling.
+  - **Backend (Go/Rust):** Ensure the API provides prioritized `TriageItem` entities with associated AI drafts. Ensure state updates (Approve/Dismiss) correctly mutate the database and enqueue outbound actions.
+  - **Testing:** Playwright E2E tests MUST cover the complete flow: ingesting a mock event via webhook, viewing it in the UI, and clicking the approve button.
+
+  ---
+
+  ## Appendix: References & Sources Catalog
+
+  1. https://www.shopify.com/magic
+  2. https://www.shopify.com/editions/summer2023
+  3. https://community.shopify.com/c/shopify-discussion/shopify-magic-and-sidekick-discussion/td-p/2153245
+  4. https://www.reddit.com/r/shopify/comments/159k2qw/shopify_sidekick_ai_thoughts/
+  5. https://www.trustpilot.com/review/www.shopify.com
+  6. https://apps.shopify.com/shopify-inbox
+  7. https://help.shopify.com/en/manual/shopify-magic
+  8. https://techcrunch.com/2023/07/26/shopify-introduces-sidekick-an-ai-assistant-for-merchants/
+  9. https://www.wecom.qq.com/
+  10. https://work.weixin.qq.com/nl/about
+  11. https://www.reddit.com/r/WeChat/comments/12a8v6j/wecom_vs_wechat_for_business/
+  12. https://www.dingtalk.com/en
+  13. https://www.dingtalk.com/en/about
+  14. https://www.larksuite.com/en_us/product/ai
+  15. https://www.larksuite.com/en_us/blog/ai-assistant
+  16. https://www.hubspot.com/products/artificial-intelligence
+  17. https://www.hubspot.com/products/crm/ai
+  18. https://www.reddit.com/r/hubspot/comments/17gxy8p/hubspot_chatspot_ai_experiences/
+  19. https://community.hubspot.com/t5/AI-Tools/bd-p/chatspot
+  20. https://www.notion.so/product/ai
+  21. https://www.notion.so/help/guides/getting-started-with-notion-ai
+  22. https://www.reddit.com/r/Notion/comments/119a0xj/notion_ai_is_it_worth_it/
+  23. https://www.trustpilot.com/review/notion.so
+  24. https://squareup.com/us/en/software/ai
+  25. https://squareup.com/us/en/campaign/ai-tools-for-business
+  26. https://www.reddit.com/r/SquarePOS/comments/15p1j09/anyone_using_squares_new_ai_features/
+  27. https://www.microsoft.com/en-us/microsoft-365/copilot
+  28. https://www.microsoft.com/en-us/microsoft-365/business/copilot-for-small-business
+  29. https://www.reddit.com/r/smallbusiness/comments/1b3xj8p/is_copilot_worth_it_for_small_business/
+  30. https://www.trustpilot.com/review/microsoft.com
+  31. https://wix.com/about/ai
+  32. https://www.wix.com/blog/ai-website-builder
+  33. https://www.reddit.com/r/WixHelp/comments/14f5r7g/wix_adi_vs_new_ai_builder/
+  34. https://mailchimp.com/features/ai-marketing-tools/
+  35. https://www.reddit.com/r/MailChimp/comments/18j0yv4/mailchimp_ai_tools_any_good/
+  36. https://asana.com/product/ai
+  37. https://monday.com/ai
+  38. https://www.salesforce.com/artificial-intelligence/
+  39. https://www.zoho.com/zia/
+  40. https://www.intercom.com/ai-bot
+  41. https://www.zendesk.com/service/ai/
+  42. https://gorgias.com/product/ai
+  43. https://www.reddit.com/r/ecommerce/comments/13u0p9v/gorgias_vs_zendesk_for_shopify/
+  44. https://www.klaviyo.com/features/ai
+  45. https://www.canva.com/magic/
+  46. https://stripe.com/newsroom/news/stripe-ai
+  47. https://www.reddit.com/r/stripe/comments/16l0x1a/stripe_ai_features/
+  48. https://zapier.com/ai
+  49. https://make.com/en/features/ai
+  50. https://chat.openai.com/enterprise
+  51. https://anthropic.com/claude-for-business
+  52. https://coda.io/product/ai
+  53. https://airtable.com/platform/ai
+  54. https://www.reddit.com/r/smallbusiness/comments/192x0p7/best_ai_tools_for_small_business_in_2024/
+
+  ```mermaid
+  graph TD;
+      A[Work Intake] -->|Webhook / API| B(AI Job Queue);
+      B --> C{Gemini Pro Triage};
+      C -->|Draft Reply| D[Unified Work Feed];
+      C -->|Auto Action| E[System Update];
+      D -->|Owner Approves| F[Outbound Action];
+  ```
+
+issue_priority: P1
 issue_category: research
 issue_type: task
 issue_label: [agent-report]

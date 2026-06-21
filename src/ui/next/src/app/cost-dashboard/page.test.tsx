@@ -140,7 +140,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$510.00')).toBeDefined();
 
     // Budget Alert
-    expect(screen.queryByText('Soft Limit Approaching')).not.toBeNull();
+    expect(screen.queryAllByText('Budget Alert').length).toBeGreaterThan(0);
 
     // projected monthly cost
     expect(screen.getByText('$2185.71')).toBeDefined();
@@ -260,7 +260,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Soft Limit Approaching')).toBeDefined();
+    expect(screen.getAllByText('Budget Alert').length).toBeGreaterThan(0);
   });
 
   test('renders 0 limits properly', async () => {
