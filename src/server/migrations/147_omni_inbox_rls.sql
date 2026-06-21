@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Migration 145: Add RLS policy to omni_inbox_messages
+-- Migration 146: Add RLS policy to omni_inbox_messages
 
 DO $$
 BEGIN
