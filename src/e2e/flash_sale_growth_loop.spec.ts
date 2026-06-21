@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Flash Sale Growth Loop', () => {
-    test('Powered by OHC footer is present and works correctly', async ({ page }) => {
+    test('Powered by OHC footer is present and works correctly', async ({ page, loginAs, adminUser }) => {
+        await loginAs(page, adminUser);
         await page.goto('/flash-sale-generator');
 
         const footerLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
