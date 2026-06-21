@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const vl = document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
-                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="alert('Playing video: ' + v.title)">` +
+                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}'); } else { alert('Playing video: ' + '${v.title.replace(/'/g, "\\'")}' + '\\nURL: ' + '${v.video_url}'); }">` +
                             `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
                             `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
                             `</div>`;
