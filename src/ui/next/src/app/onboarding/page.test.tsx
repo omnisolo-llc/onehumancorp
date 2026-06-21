@@ -813,7 +813,8 @@ describe('OnboardingWizard', () => {
 
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
 
-    const backButton = screen.getByRole('button', { name: /Back/i });
+    // Get all back buttons and take the visible one
+    const backButton = screen.getAllByRole('button', { name: /Back/i })[0];
     await user.click(backButton);
 
     expect(screen.getByText('Review Details')).toBeInTheDocument();
@@ -831,7 +832,8 @@ describe('OnboardingWizard', () => {
 
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
 
-    const backButton = screen.getByRole('button', { name: /Back/i });
+    // Get all back buttons and take the visible one
+    const backButton = screen.getAllByRole('button', { name: /Back/i })[0];
     await user.click(backButton);
 
     expect(screen.getByText('10-Minute Setup Wizard')).toBeInTheDocument();
