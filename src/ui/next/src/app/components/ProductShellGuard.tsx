@@ -44,6 +44,7 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
 
 const routesWithOwnShell = new Set([
   "/action-center",
+  "/agents",
   "/assistant",
   "/dashboard",
   "/embed-builder",
