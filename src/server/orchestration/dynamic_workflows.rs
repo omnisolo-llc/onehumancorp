@@ -261,7 +261,7 @@ impl DynamicWorkflowManager {
                     payload: payload.to_string(),
                     status: "PENDING".to_string(),
                     retry_count: 0,
-                    max_retries: 2,
+                    max_retries: 3,
                     next_retry_at: now,
                     locked_until: None,
                     created_at: now,

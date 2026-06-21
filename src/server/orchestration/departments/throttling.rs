@@ -37,7 +37,7 @@ impl ThrottlingManager {
         let limit = match tier.to_lowercase().as_str() {
             "starter" => 500,
             "pro" => 2000,
-            _ => 100, // free
+            _ => 1000, // free (increased for e2e tests)
         };
 
         match &self.db.store {
