@@ -14,6 +14,7 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
+    pub client_mutation_id: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -57,8 +58,45 @@ pub async fn offline_sync_handler(
 
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
-                let mut db_tx = db_clone.begin().await.unwrap();
-                let _ = sqlx::query(
+                let mut db_tx = match db_clone.begin().await {
+                    Ok(tx) => tx,
+                    Err(e) => {
+                        tracing::error!("Failed to begin transaction: {}", e);
+                        return Err("Database error".to_string());
+                    }
+                };
+
+                let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    .bind(&tenant_id_clone)
+                    .execute(&mut *db_tx)
+                    .await;
+
+                if let Some(client_mutation_id) = &mutation.client_mutation_id {
+                    let insert_res = sqlx::query(
+                        "INSERT INTO offline_mutation_log (client_mutation_id, tenant_id, mutation_type, payload) VALUES ($1, $2, $3, $4::jsonb) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(client_mutation_id)
+                    .bind(&tenant_id_clone)
+                    .bind("draft_quote")
+                    .bind(mutation.payload.as_deref().unwrap_or("{}"))
+                    .execute(&mut *db_tx)
+                    .await;
+
+                    match insert_res {
+                        Ok(res) if res.rows_affected() == 0 => {
+                            let _ = db_tx.commit().await;
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to record idempotency key: {}", e);
+                            let _ = db_tx.rollback().await;
+                            return Err("Database error".to_string());
+                        }
+                        _ => {}
+                    }
+                }
+
+                let insert_res = sqlx::query(
                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                      VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
                 )
@@ -70,7 +108,17 @@ pub async fn offline_sync_handler(
                 }).to_string())
                 .execute(&mut *db_tx)
                 .await;
-                db_tx.commit().await.unwrap();
+
+                if let Err(e) = insert_res {
+                    tracing::error!("Failed to insert department_task: {}", e);
+                    let _ = db_tx.rollback().await;
+                    return Err("Database error".to_string());
+                }
+
+                if let Err(e) = db_tx.commit().await {
+                    tracing::error!("Failed to commit transaction: {}", e);
+                    return Err("Database error".to_string());
+                }
                 Ok(())
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
             continue;
@@ -78,21 +126,64 @@ pub async fn offline_sync_handler(
 
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
-                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+                let mut db_tx = match db_clone.begin().await {
+                    Ok(tx) => tx,
+                    Err(e) => {
+                        tracing::error!("Failed to begin transaction: {}", e);
+                        return Err("Database error".to_string());
+                    }
+                };
+
+                let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    .bind(&tenant_id_clone)
+                    .execute(&mut *db_tx)
+                    .await;
+
+                if let Some(client_mutation_id) = &mutation.client_mutation_id {
+                    let insert_res = sqlx::query(
+                        "INSERT INTO offline_mutation_log (client_mutation_id, tenant_id, mutation_type, payload) VALUES ($1, $2, $3, $4::jsonb) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(client_mutation_id)
+                    .bind(&tenant_id_clone)
+                    .bind("agent_intent")
+                    .bind(mutation.payload.as_deref().unwrap_or("{}"))
+                    .execute(&mut *db_tx)
+                    .await;
+
+                    match insert_res {
+                        Ok(res) if res.rows_affected() == 0 => {
+                            let _ = db_tx.commit().await;
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to record idempotency key: {}", e);
+                            let _ = db_tx.rollback().await;
+                            return Err("Database error".to_string());
+                        }
+                        _ => {}
+                    }
+                }
+
                 let job_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
+                let insert_res = sqlx::query(
                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
                 )
                 .bind(&job_id)
                 .bind(&tenant_id_clone)
-                .bind(mutation.payload.unwrap_or_else(|| "{}".to_string()))
+                .bind(mutation.payload.as_deref().unwrap_or("{}"))
                 .execute(&mut *db_tx)
-                .await
-                .map_err(|e| {
+                .await;
+
+                if let Err(e) = insert_res {
                     tracing::error!("Failed to enqueue agent intent: {}", e);
-                    e.to_string()
-                })?;
-                db_tx.commit().await.map_err(|e| e.to_string())?;
+                    let _ = db_tx.rollback().await;
+                    return Err("Database error".to_string());
+                }
+
+                if let Err(e) = db_tx.commit().await {
+                    tracing::error!("Failed to commit transaction: {}", e);
+                    return Err("Database error".to_string());
+                }
                 Ok(())
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
             continue;
@@ -118,8 +209,43 @@ pub async fn offline_sync_handler(
                 }
             };
 
+            let mut db_tx = match db_clone.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {}", e);
+                    return Err("Database error".to_string());
+                }
+            };
 
-            let mut db_tx = db_clone.begin().await.unwrap();
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                .bind(&tenant_id_clone)
+                .execute(&mut *db_tx)
+                .await;
+
+            if let Some(client_mutation_id) = &mutation.client_mutation_id {
+                let insert_res = sqlx::query(
+                    "INSERT INTO offline_mutation_log (client_mutation_id, tenant_id, mutation_type, payload) VALUES ($1, $2, $3, $4::jsonb) ON CONFLICT DO NOTHING"
+                )
+                .bind(client_mutation_id)
+                .bind(&tenant_id_clone)
+                .bind(mutation.mutation_type.as_deref().unwrap_or("inventory_deduction"))
+                .bind(mutation.payload.as_deref().unwrap_or("{}"))
+                .execute(&mut *db_tx)
+                .await;
+
+                match insert_res {
+                    Ok(res) if res.rows_affected() == 0 => {
+                        let _ = db_tx.commit().await;
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to record idempotency key: {}", e);
+                        let _ = db_tx.rollback().await;
+                        return Err("Database error".to_string());
+                    }
+                    _ => {}
+                }
+            }
 
             let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
@@ -234,7 +360,10 @@ pub async fn offline_sync_handler(
                         }
                     });
 
-                    db_tx.commit().await.unwrap();
+                    if let Err(e) = db_tx.commit().await {
+                        tracing::error!("Failed to commit transaction: {}", e);
+                        return Err("Database error".to_string());
+                    }
 
                     // Publish mesh event
                     let event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -324,7 +453,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
@@ -345,7 +474,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
@@ -364,7 +493,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
@@ -376,5 +505,79 @@ mod tests {
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["failed_count"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_offline_sync_idempotency() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline-idem', 'Offline Test Tenant Idem') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-offline-idem-1', 'tenant-offline-idem', 'Test Prod', 5) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS offline_mutation_log (
+                client_mutation_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                mutation_type TEXT,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&pool).await;
+
+        let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let state = State((pool.clone(), mesh.clone()));
+
+        let req = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-idem".to_string(),
+                    product_id: "prod-offline-idem-1".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()),
+                    mutation_type: None,
+                    payload: None,
+                    client_mutation_id: Some("unique-client-id-123".to_string()),
+                },
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-idem".to_string(),
+                    product_id: "prod-offline-idem-1".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()),
+                    mutation_type: None,
+                    payload: None,
+                    client_mutation_id: Some("unique-client-id-123".to_string()),
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline-idem/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Check if the inventory was deducted only once
+        let row = sqlx::query("SELECT inventory_count FROM products WHERE id = 'prod-offline-idem-1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+        // Started with 5, deducted 1, the second one should be ignored
+        assert_eq!(stock, 4);
     }
 }
