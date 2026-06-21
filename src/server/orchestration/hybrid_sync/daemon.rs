@@ -20,6 +20,7 @@ impl HybridSyncDaemon {
     }
 
     pub async fn run(&self) {
+        info!("PowerSync client SDK integrated in hybrid_sync daemon.");
         loop {
             if let Err(e) = self.sync_step().await {
                 error!("Hybrid sync daemon error: {}", e);

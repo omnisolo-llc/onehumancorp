@@ -26,14 +26,37 @@ const omniInboxMessages = new Table({
 });
 
 const pendingActions = new Table({
-  id: column.text, // added id column to make the insert work properly
+  id: column.text,
   type: column.text,
   payload: column.text,
   timestamp: column.integer
 });
 
+const posOfflineTransactions = new Table({
+  tenant_id: column.text,
+  client_id: column.text,
+  amount_cents: column.integer,
+  currency: column.text,
+  payload: column.text,
+  status: column.text,
+  _sync_status: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const swarmTruthEmbeddings = new Table({
+  tenant_id: column.text,
+  memory_text: column.text,
+  embedding: column.text,
+  metadata_payload: column.text,
+  sync_status: column.text,
+  last_sync_at: column.text
+});
+
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions
+  pending_actions: pendingActions,
+  pos_offline_transactions: posOfflineTransactions,
+  swarm_truth_embeddings: swarmTruthEmbeddings
 });
