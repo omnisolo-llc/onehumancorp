@@ -218,6 +218,7 @@ where
                 }
             }
 
+
             if has_expired {
                 for k in &removed_keys {
                     local.remove(k);
@@ -228,8 +229,15 @@ where
                         local.remove(&key_to_remove);
                         removed_keys.push(key_to_remove);
                     }
+
+                    // LFU decay: halve all access counts
+                    for item in local.iter() {
+                        let current = item.access_count.load(Ordering::Relaxed);
+                        item.access_count.store(current / 2, Ordering::Relaxed);
+                    }
                 }
             }
+
 
             // Clean up tags
             if !removed_keys.is_empty() {

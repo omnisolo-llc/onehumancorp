@@ -23,13 +23,16 @@ pub struct Appointment {
     pub status: String,
     pub scheduled_start_time: Option<DateTime<Utc>>,
     pub scheduled_end_time: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub location_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct GetAppointmentsQuery {
     pub tenant_id: String,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -41,7 +44,29 @@ pub async fn get_appointments(
     State(state): State<Arc<FieldOpsState>>,
     Query(query): Query<GetAppointmentsQuery>,
 ) -> Result<Json<GetAppointmentsResponse>, (axum::http::StatusCode, String)> {
-    let rows = sqlx::query(
+
+
+
+    let query_str = if query.mobile_optimized.unwrap_or(false) {
+        r#"
+        SELECT
+            a.id,
+            a.customer_id,
+            c.name as customer_name,
+            a.job_template_id,
+            jt.name as job_name,
+            a.status,
+            a.scheduled_start_time,
+            a.scheduled_end_time,
+            NULL as location_address,
+            NULL as notes
+        FROM appointments a
+        LEFT JOIN customers c ON a.customer_id = c.id
+        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+        WHERE a.tenant_id = $1
+        ORDER BY a.scheduled_start_time ASC
+"#
+    } else {
         r#"
         SELECT
             a.id,
@@ -59,17 +84,21 @@ pub async fn get_appointments(
         LEFT JOIN job_templates jt ON a.job_template_id = jt.id
         WHERE a.tenant_id = $1
         ORDER BY a.scheduled_start_time ASC
-        "#,
-    )
-    .bind(&query.tenant_id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?;
+"#
+    };
+
+    let rows = sqlx::query(query_str)
+        .bind(&query.tenant_id)
+        .fetch_all(&state.pool)
+        .await
+        .map_err(|e| {
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                e.to_string(),
+            )
+        })?;
+
+
 
     let mut appointments = Vec::new();
     for row in rows {
@@ -82,8 +111,8 @@ pub async fn get_appointments(
             status: row.get("status"),
             scheduled_start_time: row.get("scheduled_start_time"),
             scheduled_end_time: row.get("scheduled_end_time"),
-            location_address: row.get("location_address"),
-            notes: row.get("notes"),
+            location_address: row.try_get("location_address").unwrap_or(None),
+            notes: row.try_get("notes").unwrap_or(None),
         });
     }
 
@@ -94,6 +123,7 @@ pub async fn get_appointments(
 pub struct UpdateAppointmentRequest {
     pub id: String,
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
 }
 
@@ -102,6 +132,7 @@ pub struct UpdateAppointmentResponse {
     pub success: bool,
     pub id: String,
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
 }
 

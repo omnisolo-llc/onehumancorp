@@ -1114,8 +1114,11 @@ pub async fn bench_ai_job_dispatch_latency() {
     let duration = start_sim.elapsed();
     println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
 
+
     let _start_sim = std::time::Instant::now();
     for _ in 0..100 {
         queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap();
     }
+    let duration_deq = _start_sim.elapsed();
+    println!("  - AI Job Dispatch (Dequeue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration_deq);
 }
