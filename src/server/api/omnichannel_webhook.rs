@@ -270,6 +270,48 @@ pub async fn handle_omnichannel_webhook(
         payload: payload_json,
     };
 
+
+    let agent_feed_item_id = format!("triage-{}", Uuid::new_v4());
+    let action_payload = format!("Hi there! Thanks for your message: '{}'. How can we help?", message);
+    let context_summary = "Customer inquiry received.".to_string();
+
+    let _ = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+            )
+            .bind(&agent_feed_item_id)
+            .bind(tenant_id)
+            .bind(channel)
+            .bind(serde_json::json!({
+                "customer_message": message,
+                "context": context_summary,
+            }))
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": action_payload,
+            }))
+            .execute(&state.db.pool).await
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&agent_feed_item_id)
+            .bind(tenant_id)
+            .bind(channel)
+            .bind(serde_json::json!({
+                "customer_message": message,
+                "context": context_summary,
+            }).to_string())
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": action_payload,
+            }).to_string())
+            .execute(sqlite_pool).await
+        }
+    };
+
     let orchestrator_clone = state.orchestrator.clone();
     tokio::spawn(async move {
         let _ = orchestrator_clone.dispatch_event(event).await;
