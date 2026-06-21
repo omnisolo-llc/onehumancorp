@@ -326,11 +326,18 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await page.waitForTimeout(500);
   });
 
-  test('Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack', async ({ page, baseURL }) => {
+  test('Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using mock ui', async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
-    // Go to the real local server root route which should present setup if unconfigured
-    await page.goto(baseURL || 'http://127.0.0.1:8080');
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, "..", ".."), process.env.TEST_WORKSPACE) : path.resolve(__dirname, "..", "..");
+    await page.route("**/api/onboarding/draft", async route => route.fulfill({ status: 200, body: "{}" }));
+    await page.route("**/api/onboarding/state*", async route => route.fulfill({ status: 200, body: "{}" }));
+    await page.route("http://mock/setup.html", async route => {
+        const htmlContent = require("fs").readFileSync(require("path").join(workspaceRoot, "src/ui/tauri/src/ui/setup.html"), "utf-8");
+        await route.fulfill({ contentType: "text/html", body: htmlContent });
+    });
+    await page.goto("http://mock/setup.html");
+
 
     // Wait for the container to load
     const container = page.locator('.container');
