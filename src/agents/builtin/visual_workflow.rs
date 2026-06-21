@@ -291,7 +291,7 @@ impl WorkflowExecutor {
                     let result_str = match result {
                         Ok(res) => res,
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("dynamic".to_string(), &msg).error
                         }
                         Err(e) => {
                             return Err(format!("Tool {} execution failed: {}", tool_name, e));
@@ -499,7 +499,7 @@ impl WorkflowExecutor {
                         let result_str = match result {
                             Ok(res) => res,
                             Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("dynamic".to_string(), &msg).error
                             }
                             Err(e) => {
                                 return Err(format!("Tool {} execution failed: {}", tool_name, e));

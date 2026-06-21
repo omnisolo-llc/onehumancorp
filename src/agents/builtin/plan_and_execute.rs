@@ -217,8 +217,8 @@ impl PlanAndExecuteOrchestrator {
                         Ok(r) => Ok::<_, String>((task.task_id, r)),
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                             Ok::<_, String>((
-                                task.task_id,
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg),
+                                task.task_id.clone(),
+                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(task.task_id.clone(), &msg).error,
                             ))
                         }
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
