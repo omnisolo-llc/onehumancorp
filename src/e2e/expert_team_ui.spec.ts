@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
   test('User can execute task and view synthesized results', async ({ page }) => {
     // Navigate to the Expert Team page
-    await page.goto('http://localhost:3000/expert-team');
+    await page.goto('/expert-team');
 
     // Wait for the page to load
     await expect(page.getByRole('heading', { name: 'Collaborative Expert Team' })).toBeVisible();
@@ -36,7 +36,7 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
 
   test('User handles quality gate errors from backend', async ({ page }) => {
     // Navigate to the Expert Team page
-    await page.goto('http://localhost:3000/expert-team');
+    await page.goto('/expert-team');
 
     // Fill in the task context
     const taskInput = page.getByPlaceholder(/Write a comprehensive business plan/);

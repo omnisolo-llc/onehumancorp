@@ -5,7 +5,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
   await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('http://127.0.0.1:3000/login');
+    await page.goto('/login');
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
     await page.getByRole('button', { name: 'Log In' }).click();
 
@@ -24,25 +24,25 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
     await expect(card).toHaveCSS('border-radius', '16px');
 
-    // await page.goto('http://127.0.0.1:3000/agents');
+    // await page.goto('/agents');
     // await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
 
-    // await page.goto('http://127.0.0.1:3000/website-builder');
+    // await page.goto('/website-builder');
     // await expect(page.getByRole('heading', { name: 'Setup Assistant' }).first()).toBeVisible({ timeout: 5000 });
 
-    await page.goto('http://127.0.0.1:3000/integrations');
+    await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible({ timeout: 5000 });
 
-    await page.goto('http://127.0.0.1:3000/customer-referral-program');
+    await page.goto('/customer-referral-program');
     await expect(page.getByRole('heading', { name: 'Customer Referral Program' }).first()).toBeVisible({ timeout: 5000 });
 
-    await page.goto('http://127.0.0.1:3000/storefront-builder');
+    await page.goto('/storefront-builder');
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
 
     // const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     // expect(ogCard.ok()).toBeTruthy();
 
-    await page.goto('http://127.0.0.1:3000/cost-dashboard');
+    await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible();
 
@@ -78,7 +78,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
     // Verify Milestones Page and Embed code generation
-    await page.goto('http://127.0.0.1:3000/milestones');
+    await page.goto('/milestones');
     await expect(page.locator('h1', { hasText: 'Success Milestones 🏆' }).first()).toBeVisible({ timeout: 15000 });
 
     // Wait for data to load
