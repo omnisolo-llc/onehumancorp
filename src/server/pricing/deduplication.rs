@@ -72,7 +72,7 @@ impl RequestDeduplicator {
         };
 
         if is_leader {
-            let tx = tx.unwrap();
+            let tx = tx.expect("tx should be initialized when is_leader is true");
             let result = fetcher().await;
 
             let _ = tx.send(DeduplicationState::Completed(result.clone()));

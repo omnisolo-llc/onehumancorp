@@ -28,7 +28,7 @@ pub async fn apply_dynamic_pricing(
         use sqlx::Row;
         // Postgres BIGINT is i64
         actual_base_price = row.try_get::<i64, _>("base_price_cents").unwrap_or(base_price_cents);
-        let json: serde_json::Value = row.try_get("rules_json").unwrap_or(serde_json::json!([]));
+        let json: serde_json::Value = row.try_get("rules_json").unwrap_or_else(|_| serde_json::json!([]));
         if let Ok(r) = serde_json::from_value::<Vec<PricingRule>>(json) {
             rules.extend(r);
         }
