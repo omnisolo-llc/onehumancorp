@@ -66,10 +66,9 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
 
-    await page.getByTestId('domain-name').fill('my-bakery-shop');
-    await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
+
 
     await page.getByTestId('template-selection').selectOption('Modern');
 
@@ -118,7 +117,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     // Do not fill offer, try to proceed
-    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
 
     // Expect validation failure message
     await expect(page.getByText('Please enter an offer.')).toBeVisible();
