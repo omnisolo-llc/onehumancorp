@@ -1,39 +1,58 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
 import { NextRequest } from 'next/server';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-describe('/api/help/search GET', () => {
+const mockFetch = vi.fn();
+
+describe('Help Search API Route', () => {
   beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch);
+    process.env.BACKEND_URL = 'http://test-backend';
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it('fetches search from the backend and returns them', async () => {
-    const mockArticles = [
-      { category: 'Getting Started', title: 'Getting Started', desc: 'Learn', link: '/help/getting-started-1' }
-    ];
-
-    global.fetch = vi.fn().mockResolvedValue({
+  it('fetches search results from backend successfully', async () => {
+    const mockData = [{ id: '1', title: 'Test Article' }];
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(mockArticles),
+      json: async () => mockData
     });
 
-    const request = new NextRequest('http://localhost:3000/api/help/search?q=started');
+    const request = new NextRequest('http://localhost/api/help/search?q=test');
     const response = await GET(request);
-    expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data).toEqual(mockArticles);
+
+    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/help/search?q=test');
+    expect(response.status).toBe(200);
+    expect(data).toEqual(mockData);
   });
 
-  it('returns fallback search on backend error', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+  it('returns empty array on backend error', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 404,
+      status: 500
     });
-    const request = new NextRequest('http://localhost:3000/api/help/search?q=adding');
+
+    const request = new NextRequest('http://localhost/api/help/search?q=test');
     const response = await GET(request);
-    expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.length).toBe(1);
-    expect(data[0].id).toEqual("add-products");
+
+    expect(response.status).toBe(200);
+    expect(data).toEqual([]);
+  });
+
+  it('handles fetch exceptions gracefully with empty array', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const request = new NextRequest('http://localhost/api/help/search?q=test');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toEqual([]);
   });
 });

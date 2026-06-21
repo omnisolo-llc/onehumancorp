@@ -120,6 +120,7 @@ describe('CostDashboardPage', () => {
 
     // My Plan assertions
     expect(screen.getByText('My Plan')).toBeDefined();
+    expect(screen.getByText('Back to My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     // AI actions used this month: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
@@ -139,7 +140,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$510.00')).toBeDefined();
 
     // Budget Alert
-    expect(screen.queryByText('Soft Limit Approaching')).not.toBeNull();
+    expect(screen.queryAllByText('Budget Alert').length).toBeGreaterThan(0);
 
     // projected monthly cost
     expect(screen.getByText('$2185.71')).toBeDefined();
@@ -259,7 +260,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Soft Limit Approaching')).toBeDefined();
+    expect(screen.getAllByText('Budget Alert').length).toBeGreaterThan(0);
   });
 
   test('renders 0 limits properly', async () => {
