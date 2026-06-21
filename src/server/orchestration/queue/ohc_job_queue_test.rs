@@ -66,7 +66,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     queue.dequeue(vec![job_type]).await.unwrap().unwrap();
 
     // 1st fail
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id, 3, "fail 1").await.unwrap();
     let status_retry: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
         .fetch_one(&pool)
@@ -80,7 +80,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
 
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id, 3, "fail 2").await.unwrap();
     let status_retry2: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
         .fetch_one(&pool)
@@ -92,7 +92,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     // 3rd fail (should dead letter)
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id, 3, "fail 3").await.unwrap();
 
     let status_retry3: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
@@ -232,7 +232,7 @@ async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
         .unwrap();
 
     // Trigger failure that exceeds max_retries
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id, 3, "fail").await.unwrap();
 
     // Verify job is marked as FAILED
     let status_retry: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")

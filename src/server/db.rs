@@ -136,16 +136,18 @@ impl DB {
                     // Sqlite might return string or integer for DateTime depending on the setup.
                     // To handle safely:
                     let start_time = match row.try_get::<String, _>("start_time") {
-                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
-                            .with_timezone(&chrono::Utc),
+                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
                     };
 
                     let end_time = match row.try_get::<String, _>("end_time") {
-                        Ok(s) => chrono::DateTime::parse_from_rfc3339(&s)
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
-                            .with_timezone(&chrono::Utc),
+                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
+                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
                     };
 
@@ -829,7 +831,7 @@ impl DB {
                     DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         title TEXT NOT NULL,
                         description TEXT,
@@ -874,7 +876,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
-                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
                     CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
