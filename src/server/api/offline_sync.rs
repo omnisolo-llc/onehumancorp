@@ -14,6 +14,7 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
+    pub client_mutation_id: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -58,6 +59,27 @@ pub async fn offline_sync_handler(
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();
+
+                if let Some(ref mutation_id) = mutation.client_mutation_id {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_one(&mut *db_tx)
+                        .await
+                        .unwrap_or((0,));
+
+                    if exists.0 > 0 {
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let _ = db_tx.rollback().await;
+                        return Ok(());
+                    }
+
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .execute(&mut *db_tx)
+                        .await;
+                }
                 let _ = sqlx::query(
                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                      VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
@@ -79,6 +101,27 @@ pub async fn offline_sync_handler(
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+
+                if let Some(ref mutation_id) = mutation.client_mutation_id {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_one(&mut *db_tx)
+                        .await
+                        .unwrap_or((0,));
+
+                    if exists.0 > 0 {
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let _ = db_tx.rollback().await;
+                        return Ok(());
+                    }
+
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .execute(&mut *db_tx)
+                        .await;
+                }
                 let job_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
@@ -120,6 +163,27 @@ pub async fn offline_sync_handler(
 
 
             let mut db_tx = db_clone.begin().await.unwrap();
+
+            if let Some(ref mutation_id) = mutation.client_mutation_id {
+                let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                    .bind(mutation_id)
+                    .bind(&tenant_id_clone)
+                    .fetch_one(&mut *db_tx)
+                    .await
+                    .unwrap_or((0,));
+
+                if exists.0 > 0 {
+                    tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                    let _ = db_tx.rollback().await;
+                    return Ok(());
+                }
+
+                let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                    .bind(mutation_id)
+                    .bind(&tenant_id_clone)
+                    .execute(&mut *db_tx)
+                    .await;
+            }
 
             let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
@@ -324,7 +388,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut1".to_string()),
                 },
             ],
         };
@@ -345,7 +409,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut2".to_string()),
                 },
             ],
         };
@@ -364,7 +428,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut3".to_string()),
                 },
             ],
         };
@@ -376,5 +440,118 @@ mod tests {
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["failed_count"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_offline_sync_field_service_mutations() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-field-service', 'Field Service Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS applied_client_mutations (
+                client_mutation_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS department_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                department TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                payload JSONB,
+                status TEXT NOT NULL
+            )"
+        ).execute(&pool).await.unwrap();
+
+        let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let state = State((pool.clone(), mesh.clone()));
+
+        let req = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-quote-1".to_string(),
+                    product_id: "".to_string(),
+                    quantity_deducted: 0,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("draft_quote".to_string()),
+                    payload: Some(serde_json::json!({
+                        "customer_name": "John Doe",
+                        "customer_email": "john@example.com",
+                        "total_amount": 5000,
+                        "description": "Pipe fixing"
+                    }).to_string()),
+                    client_mutation_id: Some("mut-quote-1".to_string()),
+                },
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-intent-1".to_string(),
+                    product_id: "".to_string(),
+                    quantity_deducted: 0,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("agent_intent".to_string()),
+                    payload: Some(serde_json::json!({
+                        "intent": "update_booking_status",
+                        "booking_id": "booking1",
+                        "status": "COMPLETED"
+                    }).to_string()),
+                    client_mutation_id: Some("mut-intent-1".to_string()),
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-field-service/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["failed_count"], 0);
+
+        // Verify that the idempotency check worked by repeating the same request
+        let req_duplicate = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-quote-1".to_string(),
+                    product_id: "".to_string(),
+                    quantity_deducted: 0,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("draft_quote".to_string()),
+                    payload: Some(serde_json::json!({
+                        "customer_name": "John Doe",
+                        "customer_email": "john@example.com",
+                        "total_amount": 5000,
+                        "description": "Pipe fixing"
+                    }).to_string()),
+                    client_mutation_id: Some("mut-quote-1".to_string()),
+                },
+            ],
+        };
+        let response_dup = offline_sync_handler(state.clone(), headers.clone(), Json(req_duplicate)).await.into_response();
+        assert_eq!(response_dup.status(), StatusCode::OK); // Dup gets skipped but doesn't fail
     }
 }

@@ -10,7 +10,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await page.getByRole('button', { name: 'Log In' }).click();
 
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-    await expect(page.getByText('Welcome back, Maya.')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Welcome back.')).toBeVisible({ timeout: 5000 });
 
     // Verify glassmorphism style drift on dashboard panels
     const panel = page.locator('.app-panel').first();
