@@ -836,7 +836,7 @@
         <a href="referrals.html" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
         <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
-        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
+        <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" onclick="window.triggerWalkthrough('dashboard')">Start Tour</button></div>
         <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
       </div>
 
@@ -2916,15 +2916,15 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('store-setup')">
                 <h4>Set up your store</h4>
                 <p>Learn how to add products and customize your storefront.</p>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('payments')">
                 <h4>Accept your first payment</h4>
                 <p>Connect your account to start receiving money.</p>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('assistant-activate')">
                 <h4>Activate your AI Support Agent</h4>
                 <p>Let AI handle customer queries for you.</p>
             </div>

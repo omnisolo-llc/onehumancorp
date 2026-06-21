@@ -288,15 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('store-setup')">
                 <h4>Set up your store</h4>
                 <p>Learn how to add products and customize your storefront.</p>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('payments')">
                 <h4>Accept your first payment</h4>
                 <p>Connect your account to start receiving money.</p>
             </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
+            <div class="ohc-tour-card" onclick="window.triggerWalkthrough && window.triggerWalkthrough('assistant-activate')">
                 <h4>Activate your AI Support Agent</h4>
                 <p>Let AI handle customer queries for you.</p>
             </div>
@@ -490,6 +490,22 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(window.touchTimer);
         hideTooltip();
     });
+
+
+    if (!window.triggerWalkthrough) {
+        window.triggerWalkthrough = function(pageName) {
+            fetch('/api/walkthrough/' + encodeURIComponent(pageName))
+                .then(r => r.json())
+                .then(steps => {
+                    if (steps && steps.length > 0) {
+                        window.startWalkthrough(steps);
+                    } else {
+                        console.warn("No walkthrough steps found for " + pageName);
+                    }
+                })
+                .catch(e => console.error("Failed to load walkthrough steps", e));
+        };
+    }
 
     // Walkthroughs
     if (!window.startWalkthrough) {
