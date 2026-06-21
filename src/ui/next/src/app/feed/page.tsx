@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
-import { ProposalDraftCard } from '../../components/feed/ProposalDraftCard';
 
 interface FeedItem {
   id: string;
@@ -215,7 +214,6 @@ export default function FeedPage() {
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
-        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal")} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
@@ -445,7 +443,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Proposal' ? 'Review Proposal' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}

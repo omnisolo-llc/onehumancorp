@@ -12,7 +12,7 @@ test.describe('Viral Social Proof Nudge', () => {
         await page.goto('/social-proof-nudge');
 
         // Check the page header
-        await expect(page.locator('h1', { hasText: 'Social Proof Nudge' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Social Proof Nudge', exact: true })).toBeVisible();
 
         // 3. Configure the nudge
         const productNameInput = page.getByPlaceholder('e.g. Signature Coffee Blend');
