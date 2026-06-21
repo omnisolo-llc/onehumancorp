@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch team invites aggregated metrics' }, { status: backendRes.status });
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching team invites aggregated metrics:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error fetching team invites aggregated metrics:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

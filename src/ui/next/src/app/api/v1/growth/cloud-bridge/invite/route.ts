@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error generating cloud bridge invite link:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error generating cloud bridge invite link:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to extend trial' }, { status: backendRes.status });
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error extending trial:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error extending trial:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

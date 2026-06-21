@@ -30,8 +30,8 @@ export default function KDSPage() {
 
   // Initial Data Load
   useEffect(() => {
-    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.warn);
-    fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.warn);
+    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
+    fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {

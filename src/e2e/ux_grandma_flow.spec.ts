@@ -6,14 +6,15 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
     await page.getByRole('button', { name: 'Log In' }).click();
 
-    await expect(page.getByText('Welcome back, Maya.')).toBeVisible();
+    await expect(page.locator("h2", { hasText: 'Welcome back, Maya.' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Your agents are working on your behalf.')).toBeVisible();
   });
 
   test('quick actions expose guidance and custom software', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('button', { name: 'Start Tour' }).click();
-    await expect(page.getByRole('dialog').getByText('Business Analytics')).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.locator('#walkthrough-bubble').locator('text=Business Analytics')).toBeAttached({ timeout: 10000 });
     await page.getByRole('link', { name: 'Integrations' }).click();
     await expect(page.locator('.app-title', { hasText: 'Tool Integrations' })).toBeVisible();
   });

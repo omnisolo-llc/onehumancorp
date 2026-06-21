@@ -401,7 +401,7 @@ mod ledger_tests {
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 

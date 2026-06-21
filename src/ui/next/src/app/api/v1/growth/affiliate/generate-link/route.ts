@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error generating affiliate link:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error generating affiliate link:", error);
 
     // Fallback for tests
     return NextResponse.json(

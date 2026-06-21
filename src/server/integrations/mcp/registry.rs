@@ -296,7 +296,7 @@ mod tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 
         // Testing PostgreSQL RLS using before_acquire
-        let pool_tenant_a = PgPoolOptions::new()
+        let pool_tenant_a = crate::db::secure_pg_pool_options()
 
             .acquire_timeout(Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
@@ -309,7 +309,7 @@ mod tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let pool_tenant_b = PgPoolOptions::new()
+        let pool_tenant_b = crate::db::secure_pg_pool_options()
 
             .acquire_timeout(Duration::from_millis(50))
             .before_acquire(|conn, _meta| {

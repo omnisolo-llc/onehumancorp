@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use chrono::{Utc, DateTime};
+use chrono::{Utc, DateTime, Timelike};
 use crate::dynamic::{DynamicPricingEngine, PricingBounds, ContextSignals, PricingRule};
 use uuid::Uuid;
 
@@ -75,6 +75,14 @@ pub async fn apply_dynamic_pricing(
     result.price_cents
 }
 
+pub fn calculate_heuristic_yield(start_time: DateTime<Utc>, base_price_cents: i64) -> i64 {
+    if start_time.hour() >= 17 && start_time.hour() <= 20 {
+        (base_price_cents as f64 * 1.15) as i64
+    } else {
+        base_price_cents
+    }
+}
+
 pub async fn apply_yield_management(
     pool: &PgPool,
     tenant_id: &str,
@@ -87,10 +95,8 @@ pub async fn apply_yield_management(
 
     // 2. Fallback to heuristic yield management if no rules changed the price
     if price == base_price_cents {
-        use chrono::Timelike;
-        if start_time.hour() >= 17 && start_time.hour() <= 20 {
-            let surge_price = (base_price_cents as f64 * 1.15) as i64;
-
+        let surge_price = calculate_heuristic_yield(start_time, base_price_cents);
+        if surge_price != base_price_cents {
             let _ = sqlx::query("INSERT INTO price_history (id, tenant_id, target_id, old_price_cents, new_price_cents, reason) VALUES ($1, $2, $3, $4, $5, $6)")
                 .bind(Uuid::new_v4())
                 .bind(tenant_id)
@@ -106,4 +112,33 @@ pub async fn apply_yield_management(
     }
 
     price
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn test_calculate_heuristic_yield() {
+        // Test peak hours (17:00 to 20:59)
+        let peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 17, 30, 0).unwrap();
+        assert_eq!(calculate_heuristic_yield(peak_time_1, 1000), 1150);
+
+        let peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 20, 0, 0).unwrap();
+        assert_eq!(calculate_heuristic_yield(peak_time_2, 1000), 1150);
+
+        let peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 19, 59, 59).unwrap();
+        assert_eq!(calculate_heuristic_yield(peak_time_3, 2000), 2300);
+
+        // Test non-peak hours
+        let non_peak_time_1 = Utc.with_ymd_and_hms(2023, 10, 25, 16, 59, 59).unwrap();
+        assert_eq!(calculate_heuristic_yield(non_peak_time_1, 1000), 1000);
+
+        let non_peak_time_2 = Utc.with_ymd_and_hms(2023, 10, 25, 21, 0, 0).unwrap();
+        assert_eq!(calculate_heuristic_yield(non_peak_time_2, 1000), 1000);
+
+        let non_peak_time_3 = Utc.with_ymd_and_hms(2023, 10, 25, 12, 0, 0).unwrap();
+        assert_eq!(calculate_heuristic_yield(non_peak_time_3, 5000), 5000);
+    }
 }

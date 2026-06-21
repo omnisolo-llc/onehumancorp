@@ -16,6 +16,7 @@ describe('Walkthrough API Route', () => {
   });
 
   it('returns empty array on error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const req = new NextRequest('http://localhost:3000/api/walkthrough/test-page');

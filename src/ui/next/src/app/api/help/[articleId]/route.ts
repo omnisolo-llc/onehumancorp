@@ -1,5 +1,4 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { fallbackArticles } from '../fallback';
 
 export async function GET(
   request: NextRequest,
@@ -16,23 +15,13 @@ export async function GET(
       return NextResponse.json(data);
     }
 
-    // Fallback logic
-    const article = fallbackArticles.find(a => a.id === articleId);
-    if (article) {
-       return NextResponse.json(article, { status: 200 });
-    }
-
     if (res && res.status === 404) {
        return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
     return NextResponse.json({ error: "Article not found" }, { status: 404 });
   } catch (e) {
-    if (process.env.NODE_ENV !== "test") console.error("Failed to fetch article from backend:", e);
-    const article = fallbackArticles.find(a => a.id === articleId);
-    if (article) {
-       return NextResponse.json(article, { status: 200 });
-    }
+    if (process.env.NODE_ENV !== "test") console.warn("Failed to fetch article from backend:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

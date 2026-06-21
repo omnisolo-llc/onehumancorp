@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching affiliate stats:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error fetching affiliate stats:", error);
 
     // Fallback for tests
     return NextResponse.json(

@@ -45,7 +45,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: sessionId, status: 'OFFLINE' })
-            }).catch(console.warn);
+            }).catch(console.error);
           }
         }
       });
@@ -62,7 +62,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
           body: JSON.stringify({ session_id: sessionId }),
           keepalive: true
-        }).catch(console.warn);
+        }).catch(console.error);
       }
     };
   }, [sessionId]);
@@ -74,7 +74,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
-        }).catch(console.warn);
+        }).catch(console.error);
       }
     };
     const handleOffline = async () => {
@@ -295,18 +295,30 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-md text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-orange-50/80 border border-orange-200 backdrop-blur-md">
-           <h3 className="text-orange-800 font-bold text-sm mb-2">Needs Reconciliation</h3>
-           <p className="text-orange-700 text-xs mb-3">Some offline sales conflicted with online inventory. The Operations Agent has sent an email to the affected online customers.</p>
-           <ul className="space-y-2">
-             {pendingReconciliation.map((pr, idx) => (
-               <li key={idx} className="text-xs text-orange-900 bg-orange-100/50 p-2 rounded flex justify-between">
-                 <span>Product: {pr.product_id}</span>
-                 <span className="font-bold">Shortage: {pr.shortage}</span>
-               </li>
-             ))}
-           </ul>
-           <button onClick={() => setPendingReconciliation([])} className="mt-3 text-xs bg-orange-200 hover:bg-orange-300 text-orange-800 px-3 py-1.5 rounded-lg transition-colors font-medium">Dismiss</button>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
+             <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
+             <ul className="space-y-2 mb-6">
+               {pendingReconciliation.map((pr, idx) => (
+                 <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
+                   <span className="font-medium">Product: {pr.product_id}</span>
+                   <span className="font-bold text-red-500">Shortage: {pr.shortage}</span>
+                 </li>
+               ))}
+             </ul>
+             <div className="flex flex-col gap-3">
+               <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                 Option A: Refund in-store customer
+               </button>
+               <button className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
+                 Option B: Cancel & refund online order
+               </button>
+               <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
+                 Decide Later
+               </button>
+             </div>
+           </div>
         </div>
       )}
 

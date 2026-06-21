@@ -164,7 +164,7 @@ export default function ZeroClickBuilderPage() {
                   }}
                   className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white px-6 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
                 >
-                  Launch My Store
+                  1-Tap Launch
                 </button>
               </div>
             </div>

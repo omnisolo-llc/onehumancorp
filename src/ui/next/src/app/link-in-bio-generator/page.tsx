@@ -13,6 +13,7 @@ export default function LinkInBioGeneratorPage() {
     { id: '2', title: 'Book an Appointment', url: '/booking' },
   ]);
   const [theme, setTheme] = useState('gradient');
+  const [removeBranding, setRemoveBranding] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('my-store');
 
@@ -52,6 +53,7 @@ export default function LinkInBioGeneratorPage() {
           setBio(data.bio);
           setTheme(data.theme);
           setLinks(data.links);
+          if (data.remove_branding !== undefined) setRemoveBranding(data.remove_branding);
         }
       } catch (err) {
         console.warn("Failed to load Link-in-Bio config", err);
@@ -67,7 +69,8 @@ export default function LinkInBioGeneratorPage() {
         store_name: storeName,
         bio,
         theme,
-        links
+        links,
+        remove_branding: removeBranding
       };
       const res = await fetch('/api/v1/growth/link-in-bio', {
         method: 'POST',
@@ -87,15 +90,6 @@ export default function LinkInBioGeneratorPage() {
       setPublishing(false);
     }
   };
-
-  // Keep local storage write for backwards-compat during transition if needed,
-  // but main persistence is now the API via handlePublish.
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-        const payload = { storeName, bio, links, theme };
-        localStorage.setItem(`ohc_bio_${tenant}`, JSON.stringify(payload));
-    }
-  }, [storeName, bio, links, theme, tenant]);
 
   const shareLink = `http://localhost:3000/bio/${tenant}`;
 
@@ -198,6 +192,16 @@ export default function LinkInBioGeneratorPage() {
 
             <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Publish & Share</h2>
+                <div className="flex items-center justify-between p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div>
+                        <span className="text-sm font-medium text-gray-900">Remove "Powered by OHC" Badge</span>
+                        <p className="text-xs text-gray-500 mt-1">Hide the OHC branding from your public page.</p>
+                    </div>
+                    <div className="relative inline-block w-12 h-6 rounded-full transition-colors ease-in-out duration-200 cursor-pointer" style={{ backgroundColor: removeBranding ? '#4f46e5' : '#d1d5db' }} onClick={() => setRemoveBranding(!removeBranding)}>
+                        <input type="checkbox" className="opacity-0 w-0 h-0" checked={removeBranding} onChange={(e) => setRemoveBranding(e.target.checked)} aria-label="Remove branding" />
+                        <span className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ease-in-out duration-200" style={{ transform: removeBranding ? 'translateX(24px)' : 'translateX(0)' }}></span>
+                    </div>
+                </div>
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={handlePublish}
@@ -261,11 +265,13 @@ export default function LinkInBioGeneratorPage() {
                          ))}
                      </div>
 
-                     <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
-                             ⚡ Powered by OHC
-                         </a>
-                     </div>
+                     {!removeBranding && (
+                         <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
+                             <a href={`https://ohc.store/join?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
+                                 ⚡ Powered by OHC
+                             </a>
+                         </div>
+                     )}
                  </div>
              </div>
         </section>

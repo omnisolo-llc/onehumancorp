@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.2s;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #ohc-floating-help-btn:hover {
             transform: scale(1.05);
@@ -76,10 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
             #ohc-floating-help-widget {
                 bottom: 0;
                 right: 0;
-                width: 100%;
+                width: 100vw;
                 height: 100%;
                 max-height: 100vh;
                 border-radius: 0;
+                box-sizing: border-box;
             }
         }
         #ohc-floating-help-header {

@@ -128,7 +128,7 @@ impl MinimaxClient {
 
         // 1. Check Cache
         if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count); // pii-safe
             return Ok(cached.text);
         }
 
@@ -250,7 +250,7 @@ impl MinimaxClient {
 
         // 1. Check Cache
         if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
-            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count); // pii-safe
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
@@ -451,7 +451,7 @@ impl LocalLLMClient {
         };
 
         if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &self.model) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count); // pii-safe
             return Ok(cached.text);
         }
 

@@ -54,10 +54,14 @@ impl PromptCache {
     }
 
     pub fn get_with_cost_cents(&self, prompt: &str, model: &str) -> (Option<CachedResponse>, i64) {
-        tracing::info!("💰 Miser telemetry: Prompt cache lookup");
+        if self.telemetry_store.is_some() {
+            tracing::info!("💰 Miser telemetry: Prompt cache lookup recorded");
+        } else {
+            tracing::info!("💰 Miser telemetry: Prompt cache lookup");
+        }
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
-            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
+            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count); // pii-safe
 
             if let Some(store) = &self.telemetry_store {
                 store.llm_cost_counter.add(0, &[
@@ -114,10 +118,16 @@ impl PromptCache {
             .map(|kv| (kv.key().clone(), kv.value().created_at))
             .collect();
 
-        entries.sort_unstable_by_key(|(_, time)| *time);
-
-        for (key, _) in entries.into_iter().take(to_remove) {
-            self.cache.remove(&key);
+        // Use select_nth_unstable_by_key for O(N) performance instead of O(N log N) sorting
+        if entries.len() > to_remove {
+            let (to_remove_slice, _, _) = entries.select_nth_unstable_by_key(to_remove, |(_, time)| *time);
+            for (key, _) in to_remove_slice.iter() {
+                self.cache.remove(key);
+            }
+        } else {
+            for (key, _) in entries.into_iter() {
+                self.cache.remove(&key);
+            }
         }
     }
 
@@ -154,8 +164,10 @@ impl PromptCache {
 
         // Try to truncate at a word boundary to keep it "intelligent"
         if let Some(last_space) = truncated.rfind(char::is_whitespace) {
-            // Keep at least some content if the last space is too early
-            if last_space > byte_index / 2 {
+            // Keep at least some content if the last space is too early.
+            // Using char_count / 2 to avoid slicing a UTF-8 character based on bytes.
+            let space_char_count = truncated[..last_space].chars().count();
+            if space_char_count > char_count / 2 {
                 truncated.truncate(last_space);
             }
         }
@@ -203,6 +215,32 @@ mod tests {
         cache.clear_expired();
 
         assert!(cache.cache.is_empty());
+    }
+
+    #[test]
+    fn test_prompt_cache_clear_expired_partial() {
+        let cache = PromptCache::new(Duration::from_millis(100));
+        cache.set_with_ttl("Expired", "Data", 1, Duration::from_millis(10));
+        cache.set_with_ttl("Keep", "Data", 1, Duration::from_millis(1000));
+
+        thread::sleep(Duration::from_millis(20));
+        cache.clear_expired();
+
+        assert!(cache.get("Expired").is_none());
+        assert!(cache.get("Keep").is_some());
+    }
+
+    #[test]
+    fn test_prompt_cache_with_telemetry() {
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        let cache = PromptCache::new(Duration::from_secs(10)).with_telemetry(store.clone());
+
+        cache.set("What is the capital of France?", "Paris", 100);
+        let (response, _cost) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+
+        assert!(response.is_some());
+        // Since telemetry doesn't have an easily readable getter in this mock test without accessing the internal structure,
+        // we're primarily testing that it doesn't crash and the path is executed.
     }
 
     #[test]
@@ -311,5 +349,14 @@ mod tests {
         // max_tokens = 2 -> 8 chars -> "Sentence"
         let res3 = PromptCache::truncate_context(text3, 2);
         assert_eq!(res3, "Sentence...");
+    }
+
+    #[test]
+    fn test_truncate_context_multibyte_characters() {
+        let text = "こんにちは世界！これは長い文字列です。";
+        // 1 token = 4 chars. max_tokens = 2 -> 8 chars.
+        // The text has 19 chars.
+        let res = PromptCache::truncate_context(text, 2);
+        assert_eq!(res, "こんにちは世界！..."); // 8 chars + "..."
     }
 }

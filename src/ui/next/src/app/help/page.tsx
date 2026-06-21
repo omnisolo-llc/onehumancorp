@@ -23,14 +23,14 @@ export default function HelpCenterPage() {
     fetch(url)
       .then(res => res.json())
       .then(data => setArticles(Array.isArray(data) ? data : []))
-      .catch(console.warn);
+      .catch(console.error);
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
     fetch('/api/videos')
       .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))
-      .catch(console.warn);
+      .catch(console.error);
   }, []);
 
   const filteredArticles = articles.filter(a => a.category !== "Advanced");
@@ -44,14 +44,18 @@ export default function HelpCenterPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">Help Center</h1>
 
-        <div className="mb-8 sm:mb-10 w-full sm:w-3/4 mx-auto">
-          <input
-            type="text"
-            placeholder="Search for help articles and videos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40 backdrop-blur-[30px] saturate-[210%] border border-white/80 dark:border-white/20 hover:bg-white/80 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-2xl"
-          />
+        <div className="mb-8 sm:mb-10 w-full sm:w-3/4 mx-auto block">
+          <div className="w-full block">
+            <WithTooltip id="help-search-tooltip">
+              <input
+                type="text"
+                placeholder="Search for help articles and videos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 bg-white/60 dark:bg-black/40 backdrop-blur-[40px] saturate-[210%] border border-white/60 dark:border-white/20 hover:bg-white/80 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-2xl"
+              />
+            </WithTooltip>
+          </div>
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (

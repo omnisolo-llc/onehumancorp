@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
+import { SyncManager } from '../../lib/sync/SyncManager';
+import { getActions } from '../utils/offlineQueue';
+
 
 type ApprovalRequest = {
   id: string;
@@ -17,6 +20,9 @@ export default function ActionCenterPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineActionsCount, setOfflineActionsCount] = useState(0);
+
 
   const fetchApprovals = async () => {
     try {
@@ -44,9 +50,47 @@ export default function ActionCenterPage() {
 
   useEffect(() => {
     fetchApprovals();
+
+    const updateOfflineCount = async () => {
+      try {
+        const actions = await getActions();
+        setOfflineActionsCount(actions.length);
+      } catch (err) {}
+    };
+    updateOfflineCount();
+
+    setIsOffline(!navigator.onLine);
+
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    const handleQueueUpdated = () => updateOfflineCount();
+    window.addEventListener('ohc_queue_updated', handleQueueUpdated);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
+    };
   }, []);
 
+
   const handleApprove = async (id: string) => {
+    if (isOffline) {
+      await SyncManager.getInstance().enqueue({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        type: 'advisory_action',
+        payload: { id, approved: true },
+        timestamp: Date.now()
+      });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+      setActionStatus("Action approved offline.");
+      setTimeout(() => setActionStatus(""), 3000);
+      return;
+    }
+
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
@@ -72,6 +116,19 @@ export default function ActionCenterPage() {
   };
 
   const handleDismiss = async (id: string) => {
+    if (isOffline) {
+      await SyncManager.getInstance().enqueue({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        type: 'advisory_action',
+        payload: { id, approved: false },
+        timestamp: Date.now()
+      });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+      setActionStatus("Action dismissed offline.");
+      setTimeout(() => setActionStatus(""), 3000);
+      return;
+    }
+
      try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
@@ -125,6 +182,16 @@ export default function ActionCenterPage() {
       actions={[{ label: "Team", href: "/team" }]}
     >
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
+        {isOffline && (
+          <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+            <span>📡</span> You are offline. Actions will sync when online.
+          </div>
+        )}
+        {offlineActionsCount > 0 && (
+          <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+            <span>🔄</span> Pending Sync ({offlineActionsCount})
+          </div>
+        )}
         {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
         {loading ? (

@@ -2,7 +2,7 @@ use super::postgres_store::UserRepository;
 use super::postgres_store::PgUserRepository;
 use super::User;
 use std::time::Duration;
-use sqlx::postgres::PgPoolOptions;
+
 use std::sync::Mutex;
 
 static ENV_MUTEX: Mutex<()> = Mutex::new(());
@@ -20,7 +20,7 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
         return; // Postgres-specific test
     }
 
-    let pool = PgPoolOptions::new()
+    let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -61,7 +61,7 @@ async fn test_standalone_mode_allows_system_org_id() {
         return;
     }
 
-    let pool = PgPoolOptions::new()
+    let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -103,7 +103,7 @@ async fn test_revoke_token_tenant_isolation() {
         return;
     }
 
-    let pool = PgPoolOptions::new()
+    let pool = sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

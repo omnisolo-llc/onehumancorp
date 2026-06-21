@@ -40,7 +40,7 @@ export default function LoyaltyProgramPage() {
       });
 
       const data = await response.json();
-      setGeneratedDraft(data.message);
+      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
     } catch (error) {
       console.warn("Failed to generate draft", error);
       setGeneratedDraft("Failed to generate email draft. Please try again.");

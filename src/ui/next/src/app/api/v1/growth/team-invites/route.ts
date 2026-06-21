@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch team invites' }, { status: backendRes.status });
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching team invites:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error fetching team invites:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to generate team invite' }, { status: backendRes.status });
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error generating team invite:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error generating team invite:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

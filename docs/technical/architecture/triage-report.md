@@ -5,7 +5,7 @@
 -   Audited K8s resource limits, finding redundant VPA and HPA.
 ## Phase 2: Hygiene
 -   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
--   Removed redundant resources and cleaned up unused components in K8s configs.
+-   Removed redundant resources and cleaned up unused components in K8s configs. Also applied Signal Hygiene to worker_pool.rs.
 ## Phase 3: Architectural Audit
 -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
 ## Phase 4: Verify

@@ -36,6 +36,7 @@ pub trait TaskQueue: Send + Sync {
         async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String>;
     async fn requeue(&self, job: Job) -> Result<(), String>;
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String>;
 }
 
 pub struct MemoryTaskQueue {
@@ -143,6 +144,30 @@ impl TaskQueue for MemoryTaskQueue {
         let mut q = queue.lock().unwrap();
         q.push_back(id);
         Ok(())
+    }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let stale_threshold = Utc::now() - chrono::Duration::hours(1);
+        let mut count = 0;
+        let mut to_update = Vec::new();
+
+        for job in self.jobs.iter() {
+            if job.status == "RUNNING" && job.updated_at < stale_threshold {
+                to_update.push(job.id.clone());
+            }
+        }
+
+        for id in to_update {
+            if let Some(mut job) = self.jobs.get_mut(&id) {
+                if job.status == "RUNNING" && job.updated_at < stale_threshold {
+                    job.status = "FAILED".to_string();
+                    job.updated_at = Utc::now();
+                    count += 1;
+                }
+            }
+        }
+
+        Ok(count)
     }
 }
 
@@ -378,6 +403,23 @@ impl TaskQueue for PostgresTaskQueue {
             .map_err(|e| e.to_string())?;
             
         Ok(())
+    }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        let result = sqlx::query(
+            "UPDATE sub_agent_queue
+             SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(result.rows_affected())
     }
 }
 
@@ -1070,6 +1112,22 @@ impl TaskQueue for SqliteTaskQueue {
             .map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        // Fallback or explicit cleanup if sub_agent_queue table exists in standalone mode
+        let result = sqlx::query(
+            "UPDATE sub_agent_queue
+             SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hour')"
+        )
+        .execute(&self.pool)
+        .await;
+
+        match result {
+            Ok(r) => Ok(r.rows_affected()),
+            Err(_) => Ok(0), // Ignore errors if table doesn't exist or isn't used
+        }
+    }
 }
 
 pub struct RedisTaskQueue {
@@ -1248,6 +1306,46 @@ impl TaskQueue for RedisTaskQueue {
             .map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let mut conn = self.get_connection().await?;
+        let processing_key = format!("{}_processing", self.queue_name);
+
+        // HGETALL returns pairs of (job_id, payload)
+        let hash_map: std::collections::HashMap<String, Vec<u8>> = redis::cmd("HGETALL")
+            .arg(&processing_key)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let stale_threshold_ms = (Utc::now() - chrono::Duration::hours(1)).timestamp_millis();
+        let mut stale_count = 0;
+
+        for (job_id, payload_bytes) in hash_map {
+            if let Ok(mut queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+                if queue_job.updated_at_ms < stale_threshold_ms {
+                    // Fail the job and remove from processing queue
+                    queue_job.status = "FAILED".to_string();
+                    queue_job.updated_at_ms = Utc::now().timestamp_millis();
+
+                    let mut pipe = redis::pipe();
+                    pipe.atomic();
+                    // We remove it from the processing queue. It's marked FAILED.
+                    // The job payload itself is dropped since it's failed, but we could re-enqueue if needed.
+                    // The original implementation deletes it when complete or failed, so we HDEL here.
+                    let _: () = redis::cmd("HDEL")
+                        .arg(&processing_key)
+                        .arg(&job_id)
+                        .query_async(&mut conn)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    stale_count += 1;
+                }
+            }
+        }
+
+        Ok(stale_count)
+    }
 }
 
 #[cfg(test)]
@@ -1291,7 +1389,7 @@ mod tests {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = crate::db::secure_pg_pool_options()
 
 
                 .connect_lazy(&db_url)
@@ -1344,7 +1442,7 @@ mod tests {
     #[tokio::test]
     async fn test_queue_manager_tenant_isolation() {
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = crate::db::secure_pg_pool_options()
                 .connect_lazy(&db_url)
                 .unwrap();
 
@@ -1430,7 +1528,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_queue_service_fail_task() {
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = crate::db::secure_pg_pool_options()
 
                 .connect_lazy(&db_url)
                 .unwrap();
@@ -1482,7 +1580,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_queue_service_with_dependencies() {
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
-            let pool = sqlx::postgres::PgPoolOptions::new()
+            let pool = crate::db::secure_pg_pool_options()
 
 
                 .connect_lazy(&db_url)

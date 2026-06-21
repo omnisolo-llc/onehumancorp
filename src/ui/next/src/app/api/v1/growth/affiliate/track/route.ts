@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     return res;
 
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error tracking affiliate link:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error tracking affiliate link:", error);
 
     // Fallback for tests
     return NextResponse.json(

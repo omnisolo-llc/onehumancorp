@@ -26,7 +26,7 @@ export default function AbandonedCartPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setResult(data.message);
+        setResult(`${data.message}\n\n⚡ Powered by OHC`);
       } else {
         setResult('Error generating campaign.');
       }

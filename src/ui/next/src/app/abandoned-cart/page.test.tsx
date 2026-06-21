@@ -36,7 +36,7 @@ describe('AbandonedCartPage', () => {
   });
 
   test('calls API and displays result', async () => {
-    const mockMessage = 'Hi Alice, you left some items in your cart. Powered by OHC';
+    const mockMessage = 'Hi Alice, you left some items in your cart.';
     (global.fetch as any).mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({ message: mockMessage }),
@@ -55,7 +55,7 @@ describe('AbandonedCartPage', () => {
     expect(screen.getByText('Generating...')).toBeDefined();
 
     await waitFor(() => {
-      expect(screen.getByText(mockMessage)).toBeDefined();
+      expect(screen.getByText((content, element) => content.includes(mockMessage) && content.includes('⚡ Powered by OHC'))).toBeDefined();
     });
 
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/campaign/generate-cart', expect.objectContaining({

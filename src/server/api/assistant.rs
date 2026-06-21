@@ -1601,7 +1601,7 @@ mod real_feature_state_tests {
     }
 
     async fn create_dummy_pg_pool() -> sqlx::PgPool {
-        sqlx::postgres::PgPoolOptions::new()
+        crate::db::secure_pg_pool_options()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

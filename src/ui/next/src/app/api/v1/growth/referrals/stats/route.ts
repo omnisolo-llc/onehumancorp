@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch referral stats' }, { status: backendRes.status });
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching referral stats:", error);
+    if (process.env.NODE_ENV !== "test") console.warn("Error fetching referral stats:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

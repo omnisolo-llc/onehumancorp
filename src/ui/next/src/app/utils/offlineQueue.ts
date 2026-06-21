@@ -72,7 +72,7 @@ export async function getActions(): Promise<OfflineAction[]> {
   try {
     const db = await getPowerSyncDB();
     const result = await db.getAll('SELECT * FROM local_pending_actions ORDER BY timestamp ASC');
-    return result.map(row => ({
+    return result.map((row: any) => ({
       id: row.id,
       type: row.type,
       payload: JSON.parse(row.payload),
