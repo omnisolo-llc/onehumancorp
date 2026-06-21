@@ -258,9 +258,9 @@ export default function FeedPage() {
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
-                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : isAmbassador ? 'text-[#5856D6] dark:text-[#5E5CE6]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : isAmbassador ? 'bg-[#5856D6] dark:bg-[#5E5CE6]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'THE AMBASSADOR' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -271,7 +271,7 @@ export default function FeedPage() {
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
                     : isAmbassador
-                    ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
+                    ? `Drafted Reply for ${ambassadorPayload.sender_id || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Quote'
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Follow-up'
@@ -350,6 +350,10 @@ export default function FeedPage() {
                     ) : isAmbassador ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <div className="flex justify-between items-center mb-1">
+                             <p className="text-[11px] font-bold text-gray-400 uppercase">Incoming Message</p>
+                             <span className="text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{ambassadorPayload.source}</span>
+                          </div>
                           <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
                           {ambassadorPayload.past_orders && (
                             <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
@@ -358,7 +362,7 @@ export default function FeedPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
+                          <p className="text-[11px] font-bold text-[#5856D6] dark:text-[#5E5CE6] uppercase mb-1">Proposed Reply</p>
                           <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed">
                             {ambassadorPayload.generated_response}
                           </p>
@@ -408,34 +412,36 @@ export default function FeedPage() {
                       </button>
                     </div>
                   ) : isAmbassador ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                    <div className="flex flex-col gap-3 w-full">
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}
                         disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#5856D6] text-white font-bold hover:bg-[#4845D2] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Send Draft"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : 'Send Draft'}
+                        {isProcessing ? 'Processing...' : 'Approve & Send'}
                       </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Draft"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => startEditing(item)}
+                          disabled={isProcessing}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          aria-label="Edit Draft"
+                          data-testid="feed-edit-btn"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleAction(item.id, 'DISMISSED')}
+                          disabled={isProcessing}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          aria-label="Discard Draft"
+                          data-testid="feed-dismiss-btn"
+                        >
+                          Discard
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">

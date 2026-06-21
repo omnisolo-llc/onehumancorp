@@ -1187,17 +1187,19 @@ impl DepartmentOrchestrator {
                             }
                         }
 
+                        let event_type = if dep == "ambassador" { "agent:ambassador:approved" } else { "agent:customer_success:approved" };
+
                         let approved_event = crate::orchestration::departments::types::DepartmentEvent {
                             id: uuid::Uuid::new_v4().to_string(),
                             tenant_id: tenant_id.to_string(),
-                            event_type: "agent:customer_success:approved".to_string(),
+                            event_type: event_type.to_string(),
                             payload: serde_json::json!({
                                 "original_payload": payload,
                                 "approval_id": request_id
                             }),
                         };
                         if let Err(e) = self.dispatch_event(approved_event).await {
-                            tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
+                            tracing::error!("Failed to dispatch {} event: {}", event_type, e);
                         }
                     }
                 }

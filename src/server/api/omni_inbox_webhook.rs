@@ -130,11 +130,14 @@ pub async fn omni_inbox_post_handler(
         tracing::error!("Failed to enqueue message_triage job: {}", e);
     }
 
+    let mut event_payload = payload_json.clone();
+    event_payload["inbox_message_id"] = serde_json::json!(inbox_id);
+
     let event = crate::orchestration::departments::types::DepartmentEvent {
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: payload_json,
+        payload: event_payload,
     };
 
     let orchestrator_clone = state.orchestrator.clone();
