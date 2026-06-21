@@ -445,6 +445,7 @@ pub mod services {
     pub mod ops;
     pub mod mcp;
     pub mod org;
+    pub mod loyalty;
     pub mod scheduler;
     pub mod agent;
     pub mod autodream;
@@ -6571,6 +6572,7 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(health_router)
+        .merge(crate::api::loyalty::routes())
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")

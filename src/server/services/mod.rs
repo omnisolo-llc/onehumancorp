@@ -11,6 +11,7 @@ pub mod integration;
 pub mod ops;
 pub mod mcp;
 pub mod org;
+pub mod loyalty;
 pub mod scheduler;
 pub mod agent;
 pub mod autodream;
