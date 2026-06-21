@@ -10,7 +10,7 @@ exports_files(
         "quoting/mod.rs",
         "inventory_sync.rs",
         "inventory/mod.rs",
-        "inventory/service.rs",
+                        "inventory/service.rs",
         ],
     visibility = ["//visibility:public"],
 )
@@ -26,7 +26,7 @@ rust_library(
         "quoting/mod.rs",
         "inventory_sync.rs",
         "inventory/mod.rs",
-        "inventory/service.rs",
+                        "inventory/service.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
