@@ -157,7 +157,7 @@ mod tests {
         let res = process_telemetry_rows(rows);
         assert_eq!(res.len(), 7);
         let today_str = today.format("%Y-%m-%d").to_string();
-        let today_data = res.iter().find(|r| r.date == today_str).unwrap();
+        let today_data = res.iter().find(|r| r.date == today_str).expect("failed to unwrap");
         assert_eq!(today_data.llm_cost, 500);
         assert_eq!(today_data.compute_cost, 200);
         assert_eq!(today_data.email_cost, 50);
@@ -187,7 +187,7 @@ mod tests {
         ];
         let res = process_telemetry_rows(rows);
         let today_str = today.format("%Y-%m-%d").to_string();
-        let today_data = res.iter().find(|r| r.date == today_str).unwrap();
+        let today_data = res.iter().find(|r| r.date == today_str).expect("failed to unwrap");
 
         assert_eq!(today_data.storage_cost, 50);
         assert_eq!(today_data.network_cost, 150);
@@ -230,6 +230,7 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
         WHERE tenant_id = $1
           AND metric_name = 'ohc_llm_cost_total_cents'
           AND timestamp >= CURRENT_DATE - INTERVAL '30 days'
+          AND labels_json IS NOT NULL
         GROUP BY (labels_json::jsonb)->>'agent_id'
         ORDER BY total DESC
         "#

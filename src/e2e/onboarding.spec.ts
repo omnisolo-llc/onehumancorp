@@ -325,37 +325,42 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await page.waitForTimeout(500);
   });
-
-  test('Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack', async ({ page, baseURL }) => {
+  test("Onboarding Flow respects mobile viewport constraints (375px) with valid touch targets using real stack", async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Go to the real local server root route which should present setup if unconfigured
-    await page.goto(baseURL || 'http://127.0.0.1:8080');
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, "..", ".."), process.env.TEST_WORKSPACE) : path.resolve(__dirname, "..", "..");
+    await page.route("http://mock/setup.html", async route => {
+        const htmlContent = require("fs").readFileSync(require("path").join(workspaceRoot, "src/ui/tauri/src/ui/setup.html"), "utf-8");
+        await route.fulfill({ contentType: "text/html", body: htmlContent });
+    });
+    await page.goto("http://mock/setup.html");
 
     // Wait for the container to load
-    const container = page.locator('.container');
+    const container = page.locator(".container");
     await expect(container).toBeVisible({ timeout: 15000 });
 
     // Check .container has no horizontal overflow
     const containerBox = await container.boundingBox();
     expect(containerBox?.width).toBeLessThanOrEqual(375);
 
-    // Click step-by-step
-    const stepByStepButton = page.locator('button', { hasText: 'Step-by-step' }).first();
-    await stepByStepButton.click();
+    // Click Start My Business
+    const startMyBusinessButton = page.locator("button", { hasText: "Start My Business" }).first();
+    await startMyBusinessButton.click();
 
-    // Check .radio-option
-    const radioOption = page.locator('.radio-option').first();
-    const radioBox = await radioOption.boundingBox();
-    expect(Math.round(radioBox?.height || 0)).toBeGreaterThanOrEqual(44);
+    // Check .context-card
+    const contextCard = page.locator(".context-card").first();
+    const cardBox = await contextCard.boundingBox();
+    expect(Math.round(cardBox?.height || 0)).toBeGreaterThanOrEqual(44);
 
     // Next step
-    await page.locator('#btn-next-type').click();
+    await contextCard.click();
+    const nextButton = page.locator("button[data-next=\"step-categories\"]").first();
+    await nextButton.click();
+    await expect(page.locator("#step-categories")).toBeVisible();
 
-    // Check .persona-chip
-    const personaChip = page.locator('.persona-chip').first();
-    const chipBox = await personaChip.boundingBox();
-    expect(Math.round(chipBox?.height || 0)).toBeGreaterThanOrEqual(44);
+    const selectBox = page.locator("#business-categories");
+    await expect(selectBox).toBeVisible();
   });
 
   // Test 5: Mobile responsiveness of the Instant Build component

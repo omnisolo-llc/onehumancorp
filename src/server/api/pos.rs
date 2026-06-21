@@ -184,7 +184,7 @@ async fn get_inventory_handler(
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
     let pool = crate::db::get_pool();
 
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&pool)
         .await
@@ -198,6 +198,9 @@ async fn get_inventory_handler(
             "price_cents": row.get::<i64, _>("price_cents"),
             "currency": row.get::<String, _>("currency"),
             "stock": row.get::<i32, _>("inventory_count"),
+            "is_subscribable": row.try_get::<bool, _>("is_subscribable").unwrap_or(false),
+            "subscription_discount_percent": row.try_get::<i32, _>("subscription_discount_percent").unwrap_or(0),
+            "subscription_frequency": row.try_get::<String, _>("subscription_frequency").unwrap_or_default(),
         })
     }).collect();
 
