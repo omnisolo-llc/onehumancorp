@@ -558,3 +558,6 @@ VALUES
 INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb);
+INSERT INTO business_milestones (id, tenant_id, milestone_type, title, description, reached, reached_at) VALUES
+('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', '💰 Four-Figure Club', 'Your business has surpassed $1,000 in total revenue!', true, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;

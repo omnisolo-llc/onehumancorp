@@ -2,21 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Growth Viral Loop', () => {
   test('revenue milestone detection and celebration', async ({ page }) => {
-    // Mock the milestones API to simulate reaching $1k revenue
-    await page.route('**/api/v1/growth/milestones/check*', async route => {
-      const json = {
-        milestones: [
-          {
-            id: 'revenue_1k',
-            title: '💰 Four-Figure Club',
-            description: 'Your business has surpassed $1,000 in total revenue!',
-            reached: true
-          }
-        ]
-      };
-      await route.fulfill({ json });
-    });
-
+    // Rely on e2e-seed.sql to provide the milestone
     await page.goto('/milestones');
 
     // Verify milestone is reached and title is correct
@@ -27,13 +13,12 @@ test.describe('Growth Viral Loop', () => {
   });
 
   test('referral reward attribution', async ({ page }) => {
-    await page.route('**/api/v1/growth/referrals/generate', async route => {
-      await route.fulfill({
-        json: { referral_link: 'https://ohc.app/ref/test-code' }
-      });
-    });
-
     await page.goto('/settings/referrals');
-    await expect(page.locator('text=https://ohc.app/ref/test-code')).toBeVisible();
+
+    // We expect the button to exist and generate the real URL via real interaction
+    await page.locator('button:has-text("Generate Referral Link")').click();
+
+    // Wait for the URL to be displayed in the UI.
+    await expect(page.locator('text=/https:\\/\\/ohc\\.app\\/ref\\/[a-zA-Z0-9_-]+/')).toBeVisible();
   });
 });
