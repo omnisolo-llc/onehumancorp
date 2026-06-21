@@ -2167,7 +2167,7 @@ mod tests {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .acquire_timeout(std::time::Duration::from_secs(5))
             .max_connections(1)
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB");

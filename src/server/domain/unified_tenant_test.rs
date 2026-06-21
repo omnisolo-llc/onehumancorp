@@ -6,7 +6,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
-        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(100))
+        let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(5))
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 

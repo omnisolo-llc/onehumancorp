@@ -659,7 +659,7 @@ mod department_tier_usage_tests {
     async fn test_department_tier_usage_for_tenant_concurrency() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
         let pool = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .acquire_timeout(std::time::Duration::from_secs(5))
             .connect(&database_url)
             .await;
 

@@ -285,7 +285,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_secs(5)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 

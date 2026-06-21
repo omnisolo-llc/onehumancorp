@@ -93,7 +93,7 @@ mod tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = crate::db::secure_pg_pool_options()
 
-            .acquire_timeout(std::time::Duration::from_millis(50))
+            .acquire_timeout(std::time::Duration::from_secs(5))
             .connect_lazy(database_url)
             .unwrap();
 

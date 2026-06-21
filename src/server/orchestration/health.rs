@@ -181,7 +181,7 @@ mod tests {
             provider_type: "test".to_string(),
         });
 
-        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();
@@ -209,7 +209,7 @@ mod tests {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
-        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();
