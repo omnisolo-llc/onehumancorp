@@ -120,7 +120,7 @@ async fn test_sqlite_fail_backoff() {
 
     queue.enqueue(job).await.unwrap();
     // For SQLite enqueue doesn't preserve retry_count (defaults to 0), so we must update it
-    sqlx::query("UPDATE ohc_job_queue SET retry_count = 2 WHERE id = 'job-fail-sqlite-dead'").execute(&pool).await.unwrap();
+    sqlx::query("UPDATE ohc_job_queue SET retry_count = 0 WHERE id = 'job-fail-1'").execute(&pool).await.unwrap();
 
     let before_fail = chrono::Utc::now();
     queue.fail("job-fail-1", "test").await.unwrap();
