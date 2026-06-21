@@ -16,7 +16,7 @@ Experience the platform in seconds with the "Hello World" agent. It leverages th
 
 <div style="background: rgba(0, 0, 0, 0.2); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); margin: 16px 0;">
 Run the compiled Go agent directly using our intuitive Bazel aliases:
-<pre style="margin: 8px 0 0 0; background: transparent; border: none;"><code>bazelisk run //:hello-world</code></pre>
+<pre style="margin: 8px 0 0 0; background: transparent; border: none;"><code>bazel run //src/examples/hello-world-agent:hello_world_agent</code></pre>
 </div>
 
 *Expected Output: A successful boot log and a friendly "Hello World" message.*
@@ -27,11 +27,11 @@ The `examples` directory serves as a template and testing ground for new agent b
 <div style="display: flex; gap: 16px; margin: 16px 0;">
   <div style="flex: 1; background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
     <strong>Build all examples:</strong>
-    <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazelisk build //examples/...</code></pre>
+    <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazel build //src/examples/...</code></pre>
   </div>
   <div style="flex: 1; background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
     <strong>Test all examples:</strong>
-    <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazelisk test //examples/...</code></pre>
+    <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazel test //src/examples/...</code></pre>
   </div>
 </div>
 

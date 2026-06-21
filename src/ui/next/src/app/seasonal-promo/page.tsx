@@ -21,11 +21,30 @@ export default function SeasonalPromoPage() {
     }
   }, []);
 
-  const generatePromo = () => {
+  const generatePromo = async () => {
     setIsGenerating(true);
-    const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}\n\n⚡ Powered by OHC`);
-    setIsGenerating(false);
+    try {
+        const response = await fetch('/api/v1/growth/seasonal-promo/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ occasion, discount }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setResult(data.content);
+        } else {
+          console.error("Failed to generate promo");
+          setResult("Error generating promo");
+        }
+    } catch (e) {
+        console.error("Error generating promo", e);
+        setResult("Error generating promo");
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   const handleGenerate = () => {

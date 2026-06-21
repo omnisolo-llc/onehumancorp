@@ -1432,7 +1432,7 @@ impl HubService for MyHubService {
         let period_start = start_of_month.format("%Y-%m-%d").to_string();
         let period_end = now.format("%Y-%m-%d").to_string();
 
-        let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") || tenant_id == "default" {
+        let elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")  {
             7
         } else {
             now.day()
@@ -1459,7 +1459,7 @@ impl HubService for MyHubService {
 
         let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
         let _ = budget_manager.record_spend_cents(projected_cents);
-        let budget_health_alert = budget_manager.check_alert_threshold() || tenant_id == "default";
+        let budget_health_alert = budget_manager.check_alert_threshold();
 
         let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -5168,7 +5168,11 @@ async fn ui_dashboard_unified_feed_handler(
         "priority_tasks": priority_tasks,
     });
 
-    let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
+    if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
+        let cache_key_set = cache_key.clone();
+        let cacheable_result_set = cacheable_result.clone();
+        let _ = tokio::spawn(async move { c.set(&cache_key_set, cacheable_result_set, std::time::Duration::from_secs(10)).await; });
+    }
 
     // Add supply to the final result
     let mut final_result = cacheable_result;
