@@ -14,9 +14,10 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
+    pub client_mutation_id: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct OfflineSyncRequest {
     pub mutations: Vec<OfflineMutation>,
 }
@@ -55,21 +56,60 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
+        if let Some(client_mutation_id) = &mutation.client_mutation_id {
+            let exists: Option<i64> = sqlx::query_scalar(
+                "SELECT 1 FROM pos_offline_transactions WHERE tenant_id = $1 AND client_mutation_id = $2 LIMIT 1"
+            )
+            .bind(&tenant_id_clone)
+            .bind(client_mutation_id)
+            .fetch_optional(&db_clone)
+            .await
+            .unwrap_or(None);
+
+            if exists.is_some() {
+                tracing::info!("Skipping duplicate mutation {} for tenant {}", client_mutation_id, tenant_id_clone);
+                continue;
+            }
+        }
+
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
+            let client_mutation_id_clone = mutation.client_mutation_id.clone();
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();
+                let job_id = uuid::Uuid::new_v4().to_string();
+                let payload_json = serde_json::json!({
+                    "action": "OperationsAgent: review drafted quote, enrich with historical context, and automatically send finalized version to customer.",
+                    "drafted_quote": mutation.payload.unwrap_or_default(),
+                    "client_mutation_id": client_mutation_id_clone,
+                    "product_id": mutation.product_id,
+                });
+
                 let _ = sqlx::query(
-                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                     VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_intent', $3::jsonb)"
                 )
-                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&job_id)
                 .bind(&tenant_id_clone)
-                .bind(serde_json::json!({
-                    "source": "offline_app",
-                    "message": mutation.payload.unwrap_or_default()
-                }).to_string())
+                .bind(payload_json.to_string())
                 .execute(&mut *db_tx)
                 .await;
+
+                if let Some(client_mutation_id) = client_mutation_id_clone {
+                    let _ = sqlx::query(
+                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, client_mutation_id)
+                         VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'SYNCED', 'synced', $7)
+                         ON CONFLICT (id) DO NOTHING"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id_clone)
+                    .bind("offline_sync")
+                    .bind(0)
+                    .bind("USD")
+                    .bind(payload_json.to_string())
+                    .bind(&client_mutation_id)
+                    .execute(&mut *db_tx)
+                    .await;
+                }
+
                 db_tx.commit().await.unwrap();
                 Ok(())
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
@@ -234,6 +274,23 @@ pub async fn offline_sync_handler(
                         }
                     });
 
+                    if let Some(client_mutation_id) = mutation.client_mutation_id.clone() {
+                        let _ = sqlx::query(
+                            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, client_mutation_id)
+                             VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'SYNCED', 'synced', $7)
+                             ON CONFLICT (id) DO NOTHING"
+                        )
+                        .bind(mutation.transaction_id.clone())
+                        .bind(&tenant_id_clone)
+                        .bind("offline_sync")
+                        .bind(mutation.amount.unwrap_or(0))
+                        .bind(mutation.currency.clone().unwrap_or_else(|| "USD".to_string()))
+                        .bind(serde_json::to_value(&mutation).unwrap_or(serde_json::json!({})))
+                        .bind(&client_mutation_id)
+                        .execute(&mut *db_tx)
+                        .await;
+                    }
+
                     db_tx.commit().await.unwrap();
 
                     // Publish mesh event
@@ -250,6 +307,7 @@ pub async fn offline_sync_handler(
                         }).to_string().into_bytes(),
                     };
                     let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
+
                     Ok(())
                 }
                 Ok(None) => {
@@ -324,7 +382,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
@@ -345,7 +403,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
@@ -364,17 +422,57 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: None,
                 },
             ],
         };
 
-        let response_fail = offline_sync_handler(state, headers, Json(req_fail)).await.into_response();
+        let response_fail = offline_sync_handler(state.clone(), headers.clone(), Json(req_fail)).await.into_response();
         assert_eq!(response_fail.status(), StatusCode::OK);
 
         let body_bytes = axum::body::to_bytes(response_fail.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["failed_count"], 1);
+
+        // Test Idempotency with client_mutation_id and quote logic
+        let req_idempotent = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx4".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()),
+                    mutation_type: Some("draft_quote".to_string()),
+                    payload: Some("{\"customer\":\"John\"}".to_string()),
+                    client_mutation_id: Some("idem_mut_1".to_string()),
+                },
+            ],
+        };
+
+        // First submit should succeed
+        let response_idem_1 = offline_sync_handler(state.clone(), headers.clone(), Json(req_idempotent.clone())).await.into_response();
+        assert_eq!(response_idem_1.status(), StatusCode::OK);
+
+        let jobs_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = 'tenant-offline' AND job_type = 'agent_intent'")
+            .fetch_one(&pool).await.unwrap_or(0);
+        assert!(jobs_count >= 1);
+
+        let initial_count_jobs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_job_queue")
+            .fetch_one(&pool).await.unwrap_or(0);
+
+        // Second submit with same client_mutation_id should be skipped
+        let response_idem_2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_idempotent)).await.into_response();
+        assert_eq!(response_idem_2.status(), StatusCode::OK);
+
+        let after_count_jobs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_job_queue")
+            .fetch_one(&pool).await.unwrap_or(0);
+
+        // Assert no new job was created for the duplicate
+        assert_eq!(initial_count_jobs, after_count_jobs);
     }
 }
