@@ -2383,8 +2383,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
         });
       }
 
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
+      // Enter key support for text, email, and password inputs
+      document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]').forEach(input => {
           input.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
                   e.preventDefault();
