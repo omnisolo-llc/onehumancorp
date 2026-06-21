@@ -244,11 +244,13 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal-content">
       <h3>Upgrade to Pro</h3>
-      <p>Removing the "Powered by OHC" branding requires a Pro plan. Upgrade your account to unlock this feature.</p>
-      <div class="modal-actions">
-        <button class="btn-secondary" id="close-paywall-btn">Cancel</button>
-        <button class="btn-primary" style="width: auto;">Upgrade Now</button>
+      <p>Removing the "Powered by OHC" branding requires a Pro plan. Upgrade your account to unlock this feature, or share on X to unlock a 7-day Pro trial for free.</p>
+      <div class="modal-actions" style="flex-direction: column; align-items: stretch; gap: 12px;">
+        <button class="btn-primary" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <button class="btn-primary" id="upgrade-btn" style="width: auto;">Upgrade Now</button>
+        <button class="btn-secondary" id="close-paywall-btn" style="width: auto;">Cancel</button>
       </div>
+      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
     </div>
   </div>
 
@@ -274,6 +276,9 @@
 
     const paywallModal = document.getElementById('paywall-modal');
     const closePaywallBtn = document.getElementById('close-paywall-btn');
+    const upgradeBtn = document.getElementById('upgrade-btn');
+    const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+    const softPaywallStatus = document.getElementById('soft-paywall-status');
 
     const codeModal = document.getElementById('code-modal');
     const closeCodeBtn = document.getElementById('close-code-btn');
@@ -305,6 +310,67 @@
     closePaywallBtn.addEventListener('click', () => {
       paywallModal.style.display = 'none';
     });
+
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', () => {
+        window.location.href = 'pricing.html';
+      });
+    }
+
+    if (shareToUnlockBtn) {
+      shareToUnlockBtn.addEventListener('click', async () => {
+        const tenantId = tenantInput.value || 'demo-tenant';
+        const message = `Check out my new Work Intake Widget built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+        // Open share dialog
+        window.open(shareUrl, '_blank');
+
+        shareToUnlockBtn.style.display = 'none';
+        softPaywallStatus.style.display = 'block';
+        softPaywallStatus.innerText = 'Verifying Share...';
+
+        try {
+          let url = '/api/v1/growth/trial-extension/claim';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+          }
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (response.ok) {
+            softPaywallStatus.innerText = 'Unlocked!';
+            localStorage.setItem('has_pro', 'true');
+
+            setTimeout(() => {
+              paywallModal.style.display = 'none';
+              removeBrandingCheckbox.checked = true;
+
+              // reset state for next time
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+            }, 1500);
+          } else {
+            softPaywallStatus.innerText = 'Failed to claim trial extension.';
+            setTimeout(() => {
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        } catch (e) {
+          console.error(e);
+          softPaywallStatus.innerText = 'Error claiming trial extension.';
+          setTimeout(() => {
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+          }, 3000);
+        }
+      });
+    }
 
     getCodeBtn.addEventListener('click', () => {
       const tenant = encodeURIComponent(tenantInput.value || 'demo-tenant');

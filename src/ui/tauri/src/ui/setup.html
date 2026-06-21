@@ -41,6 +41,12 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
 
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
 
       h1 {
         margin-top: 0;
@@ -74,6 +80,13 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
       }
 
       select, textarea, input {
@@ -2370,8 +2383,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
         });
       }
 
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
+      // Enter key support for text, email, and password inputs
+      document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]').forEach(input => {
           input.addEventListener('keydown', (e) => {
               if (e.key === 'Enter') {
                   e.preventDefault();

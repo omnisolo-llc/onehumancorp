@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log('Connecting Twilio for WhatsApp with body:', body);
+    // console.log removed to prevent PII/Secret leakage
 
     const backendUrl = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
