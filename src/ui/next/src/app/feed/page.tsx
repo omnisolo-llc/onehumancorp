@@ -200,11 +200,25 @@ export default function FeedPage() {
   const simulateAmbassadorDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
-      // The websocket should pick it up, but we can also refetch
+      await fetch('/api/v1/webhooks/unified_inbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            tenant_id: localStorage.getItem('tenant_id') || 'default',
+            source: 'Instagram DM Message',
+            identifier: 'user123',
+            message: 'Can I order a vegan cake for tomorrow?'
+        })
+      });
+      // Try to refetch
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+
+      // We don't trigger voice-command-processed here anymore since we want to avoid reloading if possible.
+      // But feed/page.tsx renders its own feed, maybe it renders UnifiedAgentFeed inside it? No, feed/page.tsx renders items.
+      // Let's also dispatch an event we can listen to, but we already refetched `items`.
+      window.dispatchEvent(new CustomEvent('triage-feed-updated'));
     } catch (err) {
       console.error(err);
     } finally {

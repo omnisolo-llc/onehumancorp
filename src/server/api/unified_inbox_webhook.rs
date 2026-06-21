@@ -81,11 +81,40 @@ fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
     query.tenant_id.clone().or(query.tenant.clone()).unwrap_or_else(|| "default".to_string())
 }
 
+
+#[derive(Deserialize)]
+pub struct UnifiedActionUpdate {
+    pub status: String,
+}
+
+pub async fn update_unified_inbox_action(
+    State(state): State<AppState>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(payload): Json<UnifiedActionUpdate>,
+) -> impl IntoResponse {
+    match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            let _ = sqlx::query("UPDATE unified_triage_actions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                .bind(&payload.status)
+                .bind(&id)
+                .execute(&state.db.pool).await;
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let _ = sqlx::query("UPDATE unified_triage_actions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(&payload.status)
+                .bind(&id)
+                .execute(sqlite_pool).await;
+        }
+    }
+    (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+}
+
 pub fn router(db: Arc<DB>) -> Router {
     let state = AppState { db };
     Router::new()
         .route("/api/v1/webhooks/unified_inbox", post(handle_unified_webhook))
         .route("/api/ui/unified_inbox_feed", get(get_unified_feed))
+        .route("/api/ui/unified_inbox_action/{id}", post(update_unified_inbox_action))
         .with_state(state)
 }
 
@@ -134,7 +163,10 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+
+            let prompt = format!("Draft a helpful, polite reply to the following customer message. Message: '{}'", payload.message);
+            let draft_reply = crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message));
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
@@ -163,7 +195,10 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+
+            let prompt = format!("Draft a helpful, polite reply to the following customer message. Message: '{}'", payload.message);
+            let draft_reply = crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message));
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
@@ -190,7 +225,7 @@ pub async fn get_unified_feed(
 
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
-    let mut threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error> = Ok(vec![]);
+    let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
     match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")

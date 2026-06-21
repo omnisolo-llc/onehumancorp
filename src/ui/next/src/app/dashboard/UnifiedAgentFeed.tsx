@@ -88,338 +88,64 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     const handleVoiceCommandProcessed = (event: CustomEvent) => {
       // Wait a moment for backend DB write consistency, then reload the feed completely.
       setTimeout(() => {
-        window.location.reload();
+        // window.location.reload();
+        fetchTriage();
       }, 500);
     };
+    const handleTriageUpdated = () => fetchTriage();
+
     window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
-    return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
-  }, []);
-
-  useEffect(() => {
-    const updateOfflineCount = async () => {
-      try {
-        const actions = await getActions();
-        setOfflineActionsCount(actions.length);
-        const ids = new Set<string>();
-        actions.forEach(a => { if (a.payload && a.payload.id) ids.add(a.payload.id) });
-        setQueuedActionIds(ids);
-      } catch (err) {}
-    };
-    updateOfflineCount();
-
-    window.addEventListener("ohc_queue_updated", updateOfflineCount);
-
-    setIsOffline(!navigator.onLine);
-
-    const handleOnline = async () => {
-      setIsOffline(false);
-      // Sync queued offline actions
-      try {
-        const actions = await getActions();
-        for (const action of actions) {
-          if (action.type === 'approve_agent_feed') {
-            await submitDecision(action.payload.id, action.payload.approved);
-            await removeAction(action.id);
-            setOfflineActionsCount(prev => Math.max(0, prev - 1));
-            setQueuedActionIds(prev => {
-              const newSet = new Set(prev); newSet.delete(action.payload.id); return newSet;
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to sync offline actions", err);
-      }
-    };
-
-    const handleOffline = () => {
-      setIsOffline(true);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
+    window.addEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
     return () => {
-      window.removeEventListener("ohc_queue_updated", updateOfflineCount);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+        window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+        window.removeEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
     };
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function fetchTriage() {
-      setTriageLoading(true);
-      setTriageError("");
-      try {
-        const tenant = tenantId();
-        const res = await fetch(`/api/triage/pending?tenant_id=${encodeURIComponent(tenant)}`);
-        if (!res.ok) throw new Error("Failed to load triage items from the database");
-        const data = await res.json();
-        const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
-        if (mounted) setTriageItems(rows);
-      } catch (e: any) {
-        if (mounted) setTriageError(e?.message || "Failed to load triage items");
-      } finally {
-        if (mounted) setTriageLoading(false);
-      }
-    }
-
-    async function fetchAll() {
-      try {
-        setLoading(true);
-        setActivityLoading(true);
-        const tenant = tenantId();
-
-        let unifiedData = initialData;
-
-        if (!unifiedData) {
-          const [unifiedRes, _] = await Promise.all([
-            fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-              headers: {
-                "x-tenant-id": tenant,
-                "x-user-id": "default",
-              },
-            }),
-            fetchTriage()
-          ]);
-
-          if (!unifiedRes.ok) {
-            throw new Error("Failed to load agent feed");
-          }
-
-          unifiedData = await unifiedRes.json();
-        } else {
-          fetchTriage();
-        }
-
-        if (mounted) {
-          if (unifiedData?.items) {
-            let combinedItems = [...unifiedData.items];
-
-            // Integrate Priority Tasks
-            if (unifiedData.priority_tasks && Array.isArray(unifiedData.priority_tasks)) {
-              combinedItems = [...combinedItems, ...unifiedData.priority_tasks.map((pt: any) => ({
-                id: pt.id,
-                tenant_id: pt.tenant_id || "default",
-                event_source: "task",
-                context_payload: { description: pt.description || pt.title },
-                proposed_action: { message: "Task Pending", action_type: "complete_task" },
-                lifecycle_state: pt.status === "PENDING" ? "PENDING_APPROVAL" : "DISMISSED",
-                created_at: pt.created_at || new Date().toISOString(),
-                updated_at: pt.updated_at || new Date().toISOString()
-              }))];
-            }
-
-            // Integrate Triage Items (Messages)
-            if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
-              combinedItems = [...combinedItems, ...unifiedData.triage.map((ti: any) => ({
-                id: ti.id,
-                tenant_id: ti.tenant_id || "default",
-                event_source: "triage",
-                context_payload: { description: ti.context || "Message requires attention" },
-                proposed_action: { message: ti.action_payload || "Triage item", action_type: ti.action_type || "resolve" },
-                lifecycle_state: ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
-                created_at: ti.created_at || new Date().toISOString(),
-                updated_at: ti.created_at || new Date().toISOString()
-              }))];
-            }
-
-            // Integrate Orders
-            if (unifiedData.orders && Array.isArray(unifiedData.orders)) {
-              combinedItems = [...combinedItems, ...unifiedData.orders.map((or: any) => ({
-                id: or.id,
-                tenant_id: or.tenant_id || "default",
-                event_source: "order",
-                context_payload: { description: `Order ${or.id} needs fulfillment` },
-                proposed_action: { message: "Fulfill Order", action_type: "fulfill_order" },
-                lifecycle_state: or.status === "pending" || or.status === "unfulfilled" ? "PENDING_APPROVAL" : "DISMISSED",
-                created_at: or.created_at || new Date().toISOString(),
-                updated_at: or.created_at || new Date().toISOString()
-              }))];
-            }
-
-            // Sort by created_at desc
-            combinedItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-            setItems(combinedItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
-
-            // Map items for activity feed as well
-            const mappedActivities = combinedItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
-              id: a.id,
-              tenant_id: a.tenant_id,
-              event_type: a.lifecycle_state,
-              department: a.event_source,
-              payload: JSON.stringify({ original_payload: { description: a.proposed_action?.message || a.proposed_action?.action_type || a.event_source } }),
-              created_at: a.updated_at || a.created_at || new Date().toISOString()
-            }));
-            setActivities(mappedActivities);
-          }
-        }
-
-        if (mounted) {
-          // Listen to SSE updates
-          if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
-
-          eventSource.onmessage = (event) => {
-            try {
-              const payload = JSON.parse(event.data);
-
-              if (payload.event_type === "approval_request") {
-                setItems((prev) => {
-                  if (prev.find((a) => a.id === payload.data.id)) return prev;
-                  return [payload.data, ...prev];
-                });
-              } else if (payload.event_type === "approval_decision") {
-                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
-                setActivities((prev) => {
-                  const newActivity = {
-                    id: crypto.randomUUID(),
-                    tenant_id: tenant,
-                    event_type: payload.data.status || 'APPROVED',
-                    department: payload.data.department || 'general',
-                    payload: payload.data,
-                    created_at: new Date().toISOString(),
-                  };
-                  return [newActivity, ...prev];
-                });
-              }
-            } catch (e) {
-              console.error("Error parsing SSE event", e);
-            }
-          };
-
-          eventSource.onerror = (error) => {
-            console.error("SSE connection error", error);
-            eventSource.close();
-          };
-
-          return () => {
-            eventSource.close();
-            mounted = false;
-          };
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setError(err.message || "Failed to load feed");
-        }
-        console.error("Failed to load activity", err);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-          setActivityLoading(false);
-        }
-      }
-    }
-
-    const cleanup = fetchAll();
-    return () => {
-      mounted = false;
-      cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
+    const handleVoiceCommandProcessed = (event: CustomEvent) => {
+      // Wait a moment for backend DB write consistency, then reload the feed completely.
+      setTimeout(() => {
+        // window.location.reload();
+        fetchTriage();
+      }, 500);
     };
-  }, [initialData]);
+    const handleTriageUpdated = () => fetchTriage();
+
+    window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+    window.addEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
+    return () => {
+        window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+        window.removeEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
-      const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
-        if (typeof process.env.VITEST !== 'undefined' || process.env.NODE_ENV === 'test') return;
-        ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.error) {
-             console.error("Agent feed WS error:", data.error);
-             return;
-          }
-
-          // Depending on your message structure from agent-feed:
-          // The redis pub/sub payload is currently just the AgentFeedItem JSON.
-          const item = data;
-
-          if (!item?.id) return;
-
-          // If it's PENDING_APPROVAL add to the feed
-          if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
-            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-
-            // Also map and remove from activities if it somehow got back to pending (unlikely)
-            setActivities((current) => current.filter((existing) => existing.id !== item.id));
-
-          } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
-            // It's an activity event (Approved, Rejected, etc.)
-            setActivities((current) => {
-              const mappedActivity = {
-                id: item.id,
-                tenant_id: item.tenant_id || "default",
-                event_type: item.lifecycle_state,
-                department: item.event_source || "system",
-                payload: typeof item.proposed_action === 'object' ? JSON.stringify({ original_payload: item.proposed_action }) : item.proposed_action,
-                created_at: new Date().toISOString()
-              };
-              return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-            });
-            // Also remove from approvals
-            setItems((current) => current.filter((existing) => existing.id !== item.id));
-          } else {
-             // Fallback for legacy SSE structure matching
-             if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-                setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-              } else if (item.status) {
-                setActivities((current) => {
-                  const mappedActivity = {
-                    id: item.id,
-                    tenant_id: item.tenant_id || "default",
-                    event_type: item.status,
-                    department: item.department,
-                    payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-                    created_at: new Date().toISOString()
-                  };
-                  return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-                });
-                setItems((current) => current.filter((existing) => existing.id !== item.id));
-              }
-          }
-        } catch (err) {
-          console.error('Failed to parse websocket feed event:', err);
-        }
-      };
-
-      ws.onclose = () => {
-        // Attempt to reconnect
-        reconnectTimeout = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = (err) => {
-        console.error("Websocket error:", err);
-      };
+    const handleVoiceCommandProcessed = (event: CustomEvent) => {
+      // Wait a moment for backend DB write consistency, then reload the feed completely.
+      setTimeout(() => {
+        // window.location.reload();
+        fetchTriage();
+      }, 500);
     };
+    const handleTriageUpdated = () => fetchTriage();
 
-    connect();
-
+    window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+    window.addEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
     return () => {
-      clearTimeout(reconnectTimeout);
-      if (ws) {
-        ws.onclose = null; // Prevent reconnection on unmount
-        ws.close();
-      }
+        window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+        window.removeEventListener('triage-feed-updated', handleTriageUpdated as EventListener);
     };
   }, []);
 
 
   const handleTriageDecision = async (id: string, approved: boolean) => {
     try {
-      const res = await fetch(`/api/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+      const status = approved ? "approved" : "rejected";
+      const res = await fetch(`/api/ui/unified_inbox_action/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ triage_item_id: id, approved })
+        body: JSON.stringify({ status })
       });
       if (!res.ok) throw new Error("Failed to update action");
 

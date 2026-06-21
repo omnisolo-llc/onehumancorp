@@ -26,11 +26,11 @@ test.describe('Agent Feed', () => {
     await page.getByTestId('simulate-ambassador-btn').click();
 
     // 4. Verify new card appears in UI
-    const card = page.getByTestId('agent-feed-card').first();
+    const card = page.locator('div[data-testid^="triage-card-"]').first();
     await expect(card).toBeVisible({ timeout: 15000 });
 
     // Verify it has the approve button
-    const approveBtn = card.getByTestId('feed-approve-btn');
+    const approveBtn = card.locator('button[data-testid^="triage-approve-"]').first();
     await expect(approveBtn).toBeVisible();
 
     // 5. Acknowledge/Complete
