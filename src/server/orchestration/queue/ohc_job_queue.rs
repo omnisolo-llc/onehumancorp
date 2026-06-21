@@ -154,7 +154,7 @@ impl OHCJobQueue {
         Ok(result.rows_affected() + stagnant_result.rows_affected())
     }
 
-    pub async fn fail(&self, job_id: &str, max_retries: i32) -> Result<(), String> {
+    pub async fn fail(&self, job_id: &str, max_retries: i32, reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -180,7 +180,7 @@ impl OHCJobQueue {
                     .bind("job_failed")
                     .bind("job_queue")
                     .bind(&payload_str)
-                    .bind("Max retries exceeded")
+                    .bind(reason)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;

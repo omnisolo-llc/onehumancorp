@@ -25,7 +25,7 @@ impl ThrottlingManager {
                 row.map(|(t,)| t).unwrap_or_else(|| "free".to_string())
             }
             DbStore::Sqlite(pool) => {
-                let row: Option<(String,)> = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = ?")
+                let row: Option<(String,)> = sqlx::query_as("SELECT tier FROM tenants WHERE id = ?")
                     .bind(tenant_id)
                     .fetch_optional(pool)
                     .await
