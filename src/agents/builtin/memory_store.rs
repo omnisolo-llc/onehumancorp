@@ -1093,6 +1093,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     }
 
     /// 3-Tier: Pull a detailed topic file on demand
+    /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
+
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
         Err("Not implemented".to_string())
     }
@@ -1254,6 +1264,16 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
         Ok(())
     }
 
+    /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
+
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
         self.memory
             .read_topic(topic_name)
@@ -1323,6 +1343,16 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn get_lightweight_index(&self) -> Result<String, String> {
         self.memory.read_index().await.map_err(|e| e.to_string())
+    }
+
+    /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
     }
 
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
