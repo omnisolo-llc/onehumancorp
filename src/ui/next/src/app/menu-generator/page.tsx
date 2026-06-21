@@ -168,6 +168,10 @@ export default function MenuGeneratorPage() {
             </div>
           </div>
         )}
+
+        <div className="mt-6 text-center">
+          <a href="/onboarding?ref=menu" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+        </div>
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
