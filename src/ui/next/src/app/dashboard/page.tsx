@@ -278,6 +278,7 @@ export default function Dashboard() {
         const ordersData = unifiedData.orders || [];
         const inboxData = unifiedData.inbox || [];
         const supplyData = unifiedData.supply || {};
+        const triageData = unifiedData.triage || [];
 
         if (onboardingData?.wizardState?.aiAgents) {
           setActiveDepartments(onboardingData.wizardState.aiAgents);
@@ -288,6 +289,7 @@ export default function Dashboard() {
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setInitialTriage(Array.isArray(triageData) ? triageData : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
