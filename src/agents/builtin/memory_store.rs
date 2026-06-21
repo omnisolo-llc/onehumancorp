@@ -438,6 +438,39 @@ impl VectorRepository {
     /// Prunes stale context to prevent unbounded memory growth.
     /// It deletes records older than `older_than` where `owner_override = FALSE`,
     /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
+
+    /// Archives stale context to prevent unbounded memory growth while keeping history.
+    /// It moves records older than `older_than` to an `archived_memory` table (if it exists) or deletes them.
+    pub async fn archive_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                sqlx::query("WITH moved AS (DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE) RETURNING *) INSERT INTO archived_memory SELECT * FROM moved")
+                    .bind(older_than)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+                sqlx::query("INSERT INTO archived_memory SELECT * FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                    .bind(older_than)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                    .bind(older_than)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -3645,5 +3678,112 @@ mod additional_tests_fallback {
         let (a, b) = &conflicts[0];
         assert_eq!(a.id, "rec_fallback_a");
         assert_eq!(b.id, "rec_fallback_b");
+    }
+
+    #[tokio::test]
+    async fn test_archive_stale_moves_records() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS archived_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(181);
+
+        let record_to_archive = EmbeddingRecord {
+            id: "archive_me".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old stuff".to_string(),
+            embedding: vec![1.0; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record_to_keep = EmbeddingRecord {
+            id: "keep_me".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "new stuff".to_string(),
+            embedding: vec![1.0; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_to_archive).await.unwrap();
+        repo.upsert(&record_to_keep).await.unwrap();
+
+        // Perform archive
+        repo.archive_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Verify consolidated_memory
+        let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consolidated_memory")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(remaining, 1, "Only 1 record should remain in consolidated memory");
+
+        let remaining_id: String = sqlx::query_scalar("SELECT id FROM consolidated_memory")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(remaining_id, "keep_me", "The recent record should remain");
+
+        // Verify archived_memory
+        let archived: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM archived_memory")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(archived, 1, "1 record should be in archived memory");
+
+        let archived_id: String = sqlx::query_scalar("SELECT id FROM archived_memory")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(archived_id, "archive_me", "The stale record should be archived");
     }
 }

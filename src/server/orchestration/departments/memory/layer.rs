@@ -35,6 +35,7 @@ mod tests {
         .execute(&pool)
         .await
         .expect("Failed to create consolidated_memory table");
+        sqlx::query("CREATE TABLE IF NOT EXISTS archived_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.expect("Failed to create archived_memory table");
 
         // The VectorRepository's `semantic_search` uses vector functions for Postgres.
         // For SQLite, it uses `vec_distance_cosine`, or falls back to returning all matches or none
@@ -134,6 +135,7 @@ mod tests {
         .execute(&pool)
         .await
         .expect("Failed to create consolidated_memory table");
+        sqlx::query("CREATE TABLE IF NOT EXISTS archived_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.expect("Failed to create archived_memory table");
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 

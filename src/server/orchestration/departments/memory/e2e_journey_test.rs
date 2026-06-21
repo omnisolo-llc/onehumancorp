@@ -31,6 +31,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     .execute(&pool)
     .await
     .expect("Failed to create consolidated_memory table");
+        sqlx::query("CREATE TABLE IF NOT EXISTS archived_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.expect("Failed to create archived_memory table");
 
     let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 
@@ -162,6 +163,7 @@ async fn test_tenant_isolation_e2e_journey() {
     .execute(&pool)
     .await
     .expect("Failed to create consolidated_memory table");
+        sqlx::query("CREATE TABLE IF NOT EXISTS archived_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.expect("Failed to create archived_memory table");
 
     let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
 

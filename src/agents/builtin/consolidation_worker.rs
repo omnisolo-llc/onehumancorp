@@ -40,7 +40,7 @@ impl ConsolidationWorker {
         };
 
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_success = match self.repository.prune_stale(threshold_date).await {
+        let pruning_success = match self.repository.archive_stale(threshold_date).await {
             Ok(_) => true,
             Err(e) => {
                 tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
@@ -51,6 +51,8 @@ impl ConsolidationWorker {
             }
         };
 
+
+        tracing::info!("Consolidation Worker: Resolved {} conflicts, pruning success: {}", conflicts_resolved, pruning_success);
         Ok((conflicts_resolved, pruning_success))
     }
 
@@ -82,6 +84,27 @@ mod tests {
 
         let _ = sqlx::query(
             "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS archived_memory (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,

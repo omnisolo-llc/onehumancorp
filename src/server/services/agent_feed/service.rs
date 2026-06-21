@@ -5,7 +5,7 @@ use chrono::Utc;
 use serde_json::Value;
 
 pub struct AgentFeedService {
-    pool: PgPool,
+
     repo: AgentFeedRepository,
 }
 
@@ -13,7 +13,7 @@ impl AgentFeedService {
     pub fn new(pool: PgPool) -> Self {
         Self {
             repo: AgentFeedRepository::new(pool.clone()),
-            pool,
+
         }
     }
 
