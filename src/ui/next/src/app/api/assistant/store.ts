@@ -1275,11 +1275,6 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
   };
 
   const createdAt = now();
-  const primaryArtifact = artifactForFormat(normalized.outputFormat);
-  const artifacts = [primaryArtifact, chartArtifact()];
-  if (normalized.outputFormat.toLowerCase().includes('code') || normalized.outputFormat.toLowerCase().includes('app')) {
-    artifacts.push(appPreviewArtifact());
-  }
   const task: AssistantTask = {
     id: id('task'),
     title: titleFromPrompt(prompt),
@@ -1299,25 +1294,9 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
     permissionProfile: normalized.permissionProfile,
     currentStep: 'Planning and preparing tools',
     riskSummary: buildRiskSummary(normalized),
-    artifacts,
-    changes: [
-      {
-        id: id('change'),
-        path: `${normalized.workDirectory.replace(/\/$/, '')}/${primaryArtifact.filename}`,
-        changeType: 'created',
-        summary: 'Generated output file will be written after approval if required.',
-        approvalStatus: normalized.permissionProfile === 'Guarded' ? 'pending' : 'not_required',
-      },
-    ],
-    messages: [
-      { id: id('msg'), role: 'user', content: prompt, createdAt },
-      {
-        id: id('msg'),
-        role: 'assistant',
-        content: `Agent planned the task with ${normalized.skills.length || 'default'} skills and ${normalized.connectors.length || 'no'} connectors.`,
-        createdAt,
-      },
-    ],
+    artifacts: [],
+    changes: [],
+    messages: [],
     actions: actionsForTask(normalized.outputFormat, normalized.permissionProfile),
     createdAt,
     updatedAt: createdAt,
@@ -2418,219 +2397,12 @@ export function listAgentParity() {
 }
 
 export function resetAssistantStore() {
-  tasks = [
-    {
-      id: 'task-weekly-brief',
-      title: 'Create this week\'s operating brief',
-      prompt: 'Summarize this week and prepare a brief.',
-      workspace: 'Personal OS',
-      status: 'running',
-      mode: 'Plan',
-      model: 'Auto',
-      provider: 'Auto',
-      workDirectory: '/workspace/reports',
-      outputFormat: 'Document',
-      constraints: 'Keep it concise.',
-      contextReferences: '@calendar @notes',
-      attachments: [],
-      skills: ['Web Research', 'Document Writer'],
-      connectors: ['Google Drive'],
-      permissionProfile: 'Guarded',
-      currentStep: 'Drafting report',
-      riskSummary: ['Guarded mode is active', 'External sends require approval'],
-      artifacts: [
-        {
-          id: 'artifact-weekly-brief',
-          type: 'document',
-          filename: 'weekly-brief.md',
-          mimeType: 'text/markdown',
-          preview: 'Weekly brief draft with action items.',
-        },
-      ],
-      changes: [
-        {
-          id: 'change-weekly-brief',
-          path: '/workspace/reports/weekly-brief.md',
-          changeType: 'created',
-          summary: 'Creates a markdown brief.',
-          approvalStatus: 'pending',
-        },
-      ],
-      messages: [
-        {
-          id: 'msg-weekly-user',
-          role: 'user',
-          content: 'Summarize this week and prepare a brief.',
-          createdAt: '2026-06-07T00:00:00.000Z',
-        },
-        {
-          id: 'msg-weekly-assistant',
-          role: 'assistant',
-          content: 'I am gathering context and drafting the brief.',
-          createdAt: '2026-06-07T00:01:00.000Z',
-        },
-      ],
-      actions: [
-        { id: 'action-seed-stop', label: 'Stop', kind: 'control', approvalRequired: false },
-        { id: 'action-seed-approve', label: 'Approve Changes', kind: 'approval', approvalRequired: true },
-        { id: 'action-seed-download', label: 'Download File', kind: 'download', approvalRequired: false },
-      ],
-      pinned: true,
-      createdAt: '2026-06-07T00:00:00.000Z',
-      updatedAt: '2026-06-07T00:01:00.000Z',
-    },
-    {
-      id: 'task-downloads-cleanup',
-      title: 'Organize Downloads by file type',
-      prompt: 'Organize Downloads by file type.',
-      workspace: 'Files',
-      status: 'blocked',
-      mode: 'Craft',
-      model: 'MiniMax M2.5',
-      provider: 'Auto',
-      workDirectory: '/Users/me/Downloads',
-      outputFormat: 'Table',
-      constraints: 'Ask before moving files.',
-      contextReferences: '@Downloads',
-      attachments: [],
-      skills: ['File Organizer'],
-      connectors: [],
-      permissionProfile: 'Guarded',
-      currentStep: 'Waiting for folder permission',
-      riskSummary: ['Needs permission for Downloads'],
-      artifacts: [],
-      changes: [],
-      messages: [
-        {
-          id: 'msg-downloads-assistant',
-          role: 'assistant',
-          content: 'I need permission to read Downloads before continuing.',
-          createdAt: '2026-06-07T00:03:00.000Z',
-        },
-      ],
-      actions: [
-        { id: 'action-seed-grant', label: 'Grant Folder Access', kind: 'permission', approvalRequired: true },
-      ],
-      pinned: false,
-      createdAt: '2026-06-07T00:02:00.000Z',
-      updatedAt: '2026-06-07T00:03:00.000Z',
-    },
-    {
-      id: 'task-investor-plan',
-      title: 'Plan investor update automation',
-      prompt: 'Plan an investor update automation before executing it.',
-      workspace: 'Research',
-      status: 'planning',
-      mode: 'Plan',
-      model: 'Agent',
-      provider: 'Auto',
-      workDirectory: '/workspace/research',
-      outputFormat: 'Document',
-      constraints: 'Confirm the outline first.',
-      contextReferences: '@metrics @notes',
-      attachments: [],
-      skills: ['Web Research', 'Document Writer'],
-      connectors: [],
-      permissionProfile: 'Guarded',
-      currentStep: 'Analyzing requirements',
-      riskSummary: ['Guarded mode is active'],
-      artifacts: [],
-      changes: [],
-      messages: [
-        {
-          id: 'msg-investor-plan',
-          role: 'assistant',
-          content: 'I am organizing the plan before execution.',
-          createdAt: '2026-06-07T00:04:00.000Z',
-        },
-      ],
-      actions: [
-        { id: 'action-seed-stop-planning', label: 'Stop', kind: 'control', approvalRequired: false },
-      ],
-      pinned: false,
-      createdAt: '2026-06-07T00:04:00.000Z',
-      updatedAt: '2026-06-07T00:04:00.000Z',
-    },
-    {
-      id: 'task-slack-confirmation',
-      title: 'Wait for Slack confirmation',
-      prompt: 'Send the generated report after Slack confirmation.',
-      workspace: 'Remote Control',
-      status: 'pending',
-      mode: 'Agent',
-      model: 'Auto',
-      provider: 'Auto',
-      workDirectory: '/workspace/remote',
-      outputFormat: 'Document',
-      constraints: 'Do not send externally until approved.',
-      contextReferences: '@weekly-brief',
-      attachments: [],
-      skills: ['Document Writer'],
-      connectors: ['Slack'],
-      permissionProfile: 'Guarded',
-      currentStep: 'Waiting for remote confirmation',
-      riskSummary: ['External sends require approval'],
-      artifacts: [],
-      changes: [],
-      messages: [
-        {
-          id: 'msg-slack-confirmation',
-          role: 'assistant',
-          content: 'I need a Slack confirmation before continuing.',
-          createdAt: '2026-06-07T00:05:00.000Z',
-        },
-      ],
-      actions: [
-        { id: 'action-seed-request-confirmation', label: 'Request Confirmation', kind: 'approval', approvalRequired: true },
-      ],
-      pinned: false,
-      createdAt: '2026-06-07T00:05:00.000Z',
-      updatedAt: '2026-06-07T00:05:00.000Z',
-    },
-  ];
+  tasks = [];
   remotes = [];
   automations = [];
-  memories = [
-    {
-      id: 'memory-concise-citations',
-      scope: 'global',
-      content: 'Prefer concise technical summaries with citations.',
-      source: 'seed',
-      editable: true,
-    },
-    {
-      id: 'memory-approval',
-      scope: 'workspace',
-      content: 'Ask before sending messages or modifying original files.',
-      source: 'seed',
-      editable: true,
-    },
-  ];
-  skills = [
-    { id: 'skill-web-research', name: 'Web Research', category: 'Research', status: 'installed' },
-    { id: 'skill-document-writer', name: 'Document Writer', category: 'Artifacts', status: 'installed' },
-    { id: 'skill-chart-builder', name: 'Chart Builder', category: 'Data', status: 'installed' },
-    { id: 'skill-slash-command-runner', name: 'Slash Command Runner', category: 'Commands', status: 'installed' },
-    { id: 'skill-expert-ranking', name: 'Expert Ranking', category: 'Expert Center', status: 'available' },
-    { id: 'skill-custom-expert-builder', name: 'Custom Expert Builder', category: 'Expert Center', status: 'available' },
-    ...featuredSkills,
-  ];
-  connectors = [
-    { id: 'connector-github', name: 'GitHub', kind: 'repository', status: 'available' },
-    { id: 'connector-gitlab', name: 'GitLab', kind: 'repository', status: 'available' },
-    { id: 'connector-jira', name: 'Jira', kind: 'work_management', status: 'available' },
-    { id: 'connector-confluence', name: 'Confluence', kind: 'knowledge', status: 'available' },
-    { id: 'connector-google-calendar', name: 'Google Calendar', kind: 'calendar', status: 'available', oauth: true, features: ['OAuth Flow', 'Calendar Events', 'Meeting Prep'] },
-    { id: 'connector-google-drive', name: 'Google Drive', kind: 'files', status: 'connected' },
-    { id: 'connector-gmail', name: 'Gmail', kind: 'mail', status: 'available' },
-    { id: 'connector-notion', name: 'Notion', kind: 'knowledge', status: 'available' },
-    { id: 'connector-slack', name: 'Slack', kind: 'remote', status: 'available' },
-    { id: 'connector-mcp', name: 'MCP Endpoint', kind: 'tools', status: 'available', features: [...assistantCapabilities.mcpFeatures] },
-    { id: 'connector-tencent-docs', name: 'Tencent Docs', kind: 'office', status: 'available' },
-    { id: 'connector-tencent-meeting', name: 'Tencent Meeting', kind: 'office', status: 'available' },
-    { id: 'connector-wecom-docs', name: 'WeCom Docs', kind: 'office', status: 'available' },
-    { id: 'connector-qq-mail', name: 'QQ Mail', kind: 'office', status: 'available' },
-  ];
+  memories = [];
+  skills = [];
+  connectors = [];
   sharedFiles = [
     { id: 'shared-weekly-brief', filename: 'weekly-brief.md', workspace: 'Personal OS', access: 'shared' },
     { id: 'shared-chart', filename: 'assistant-chart.png', workspace: 'Personal OS', access: 'shared' },
