@@ -1,4 +1,4 @@
-import { test, expect } from "../../../e2e/fixtures";
+import { test, expect } from "../../../../e2e/fixtures";
 
 test.describe("Offline Field Operations", () => {
   test("Carlos can view jobs, go offline, add notes, and complete a job which generates a quote request", async ({
