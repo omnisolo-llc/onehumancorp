@@ -1052,7 +1052,7 @@
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
-        <div class="step-indicator" data-step="step-domain"></div>
+
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
@@ -1262,28 +1262,13 @@
         <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. I bake custom vegan cakes" inputmode="text" autocomplete="off" enterkeyhint="next" />
         <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-domain">Next</button> <!-- Replaced by script below -->
+          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button> <!-- Replaced by script below -->
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
-      <!-- Step 7: Domain -->
-      <div class="step" id="step-domain">
-        <h1>Where will your business live?</h1>
-        <p>Choose a free subdomain for your store.</p>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism" placeholder="my-business" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" style="flex: 1; margin-bottom: 0;" />
-          <span style="font-size: 16px; color: #555;">.onehumancorp.com</span>
-        </div>
-        <div id="domain-error" class="error-msg" aria-live="polite" style="margin-top: 15px;">Please enter a valid domain name (alphanumeric and hyphens only).</div>
 
-        <div class="btn-group" style="margin-top: 20px;">
-          <button class="next-step-btn" aria-label="Next Step" title="Next Step" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
-        </div>
-      </div>
 
       <!-- Step 8: Template -->
       <div class="step" id="step-template">
@@ -1301,7 +1286,7 @@
           <div id="submit-error" class="error-msg" aria-live="polite"></div>
           <button id="finish-btn" data-testid="finish-btn" aria-label="Launch Store" title="Launch Store">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn" aria-label="Save Draft" title="Save Draft" data-testid="save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-domain">Back</button>
+          <button class="btn-secondary prev-step-btn" aria-label="Previous Step" title="Previous Step" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -1471,7 +1456,7 @@
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -1548,7 +1533,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+              const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -1580,7 +1565,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
-              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
+              stepNumber = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template', 'step-instant', 'step-chat'].indexOf(activeStep.id);
               if (stepNumber === -1) stepNumber = 0;
           }
           state.step = stepNumber;
@@ -1702,18 +1687,6 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
-          else if (stepId === 'step-domain') {
-              const domainVal = inputs.domainName.value.trim();
-              if (domainVal === '' || !/^[a-zA-Z0-9-]+$/.test(domainVal)) {
-                  errors.domainName.style.display = 'block';
-                  if(inputs.domainName) inputs.domainName.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.domainName.style.display = 'none';
-                  if(inputs.domainName) inputs.domainName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.domain = domainVal;
-              }
-          }
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
@@ -1752,7 +1725,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
           }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
           if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
