@@ -93,7 +93,11 @@ const titleOverrides: Record<string, string> = {
   "/booking": "Booking",
   "/brand-studio": "Brand Studio",
   "/builder": "Builder",
+<<<<<<< HEAD
+  "/onboarding": "Setup",
+=======
   "/business-setup": "Business Setup",
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
   "/cart-recovery": "Cart Recovery",
   "/changelog": "Changelog",
   "/chaos-report": "Chaos Report",

@@ -14,7 +14,10 @@ exports_files(
         "deposit_follow_up_worker.rs",
         "missed_lead_recovery_worker.rs",
         "lifecycle_engagement_worker.rs",
+<<<<<<< HEAD
+=======
         "estimator_worker.rs",
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
         "mod.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",
@@ -38,7 +41,10 @@ rust_library(
         "deposit_follow_up_worker.rs",
         "missed_lead_recovery_worker.rs",
         "lifecycle_engagement_worker.rs",
+<<<<<<< HEAD
+=======
         "estimator_worker.rs",
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
         "mod.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",

@@ -60,7 +60,11 @@ impl Forecaster {
         let mut recent_usage = HashMap::new();
         for row in rows {
             use sqlx::Row;
+<<<<<<< HEAD
+            let val: f64 = row.get("value");
+=======
             let val: f32 = row.get("value");
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
             let labels_json: String = row.get("labels_json");
 
             if let Ok(parsed) = serde_json::from_str::<Value>(&labels_json) {
@@ -169,7 +173,11 @@ mod tests {
         forecaster.run_forecast_cycle().await.unwrap();
 
         // Check if predicted_24h is recorded
+<<<<<<< HEAD
+        let row: (f64,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+=======
         let row: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 
@@ -178,7 +186,11 @@ mod tests {
 
         // Cycle 2: No new tokens, should decay
         forecaster.run_forecast_cycle().await.unwrap();
+<<<<<<< HEAD
+        let row2: (f64,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+=======
         let row2: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 

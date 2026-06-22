@@ -1419,7 +1419,11 @@ mod tests {
 
 #[cfg(test)]
 mod additional_chaos_tests {
+<<<<<<< HEAD
+
+=======
     use super::*;
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
 
     #[tokio::test]
     async fn test_chaos_simulate_sql_sync_lag() {

@@ -65,11 +65,19 @@ impl TelemetrySyncDaemon {
 
             // Extract the data from rows since `Row` might not be Send/Sync
             // or easily parallelizable directly. We consume it into an iterator.
+<<<<<<< HEAD
+            let extracted_data: Vec<(i32, String, String, f64, String, DateTime<Utc>)> = rows.into_iter().map(|row| {
+                let id: i32 = row.get("id");
+                let metric_name: String = row.get("metric_name");
+                let metric_type: String = row.get("metric_type");
+                let value: f64 = row.get("value");
+=======
             let extracted_data: Vec<(i32, String, String, f32, String, DateTime<Utc>)> = rows.into_iter().map(|row| {
                 let id: i32 = row.get("id");
                 let metric_name: String = row.get("metric_name");
                 let metric_type: String = row.get("metric_type");
                 let value: f32 = row.get("value");
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
                 let labels_json: String = row.get("labels_json");
                 let timestamp: DateTime<Utc> = row.get("timestamp");
                 (id, metric_name, metric_type, value, labels_json, timestamp)
@@ -120,7 +128,11 @@ impl TelemetrySyncDaemon {
                 let id: i32 = row.get("id");
                 let metric_name: String = row.get("metric_name");
                 let metric_type: String = row.get("metric_type");
+<<<<<<< HEAD
+                let value: f64 = row.get("value");
+=======
                 let value: f32 = row.get("value");
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
                 let labels_json: String = row.get("labels_json");
                 let timestamp: DateTime<Utc> = row.get("timestamp");
 

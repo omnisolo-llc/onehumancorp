@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { memberPage } from './fixtures';
-import { e2eDbQuery as executeSql } from './db_utils';
+import { executeSql } from './db_utils';
 
 test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
   let customerId: string;
@@ -31,7 +31,19 @@ test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
     `);
     serviceLeadId = leadRes[0].id;
 
-    // Trigger the backend flow for the Estimator Agent
+    // Simulate the Estimator agent creating a draft estimate
+    const estimateRes = await executeSql(`
+      INSERT INTO estimates (id, tenant_id, service_lead_id, customer_id, description, min_price_cents, max_price_cents, status)
+      VALUES ('est-' || gen_random_uuid(), 'e2e-tenant', '${serviceLeadId}', '${customerId}', 'Fix broken pipe under sink', 15000, 25000, 'draft')
+      RETURNING id
+    `);
+    estimateId = estimateRes[0].id;
+
+    // Simulate the deposit requirement (20% deposit)
+    await executeSql(`
+      INSERT INTO deposit_requirements (id, tenant_id, estimate_id, amount_cents, percentage, status)
+      VALUES ('dep-' || gen_random_uuid(), 'e2e-tenant', '${estimateId}', 5000, 20.00, 'pending')
+    `);
   });
 
   test('Owner can view and approve the drafted estimate on mobile', async ({ page, request }) => {
@@ -70,17 +82,16 @@ test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
   });
 
   test('Customer deposit payment updates booking state', async ({ page }) => {
-      // Find the quote ID dynamically
-      const res = await executeSql(`SELECT id FROM quotes WHERE customer_id = (SELECT customer_id FROM service_leads WHERE description = 'Fix broken pipe under sink' LIMIT 1) LIMIT 1`);
-      if (res.length > 0) {
-        const qid = res[0].id;
-        // Simulate the Stripe webhook success by updating the deposit requirement
-        await executeSql(`
-            UPDATE quotes SET status = 'ACCEPTED' WHERE id = '${qid}';
-        `);
+      // Simulate the Stripe webhook success by updating the deposit requirement
+      await executeSql(`
+          UPDATE deposit_requirements SET status = 'paid' WHERE estimate_id = '${estimateId}';
+          UPDATE estimates SET status = 'approved' WHERE id = '${estimateId}';
+      `);
 
-        const finalEstimate = await executeSql(`SELECT status FROM quotes WHERE id = '${qid}'`);
-        expect(finalEstimate[0].status).toBe('ACCEPTED');
-      }
+      const updatedDeposit = await executeSql(`SELECT status FROM deposit_requirements WHERE estimate_id = '${estimateId}'`);
+      expect(updatedDeposit[0].status).toBe('paid');
+
+      const finalEstimate = await executeSql(`SELECT status FROM estimates WHERE id = '${estimateId}'`);
+      expect(finalEstimate[0].status).toBe('approved');
   });
 });

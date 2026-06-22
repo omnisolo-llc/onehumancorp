@@ -513,6 +513,8 @@ mod tests {
     use std::env;
     use sqlx::Row;
 
+<<<<<<< HEAD
+=======
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
@@ -521,6 +523,7 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap()
     }
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
 
     #[tokio::test]
     async fn test_delegate_mission_tc1_no_context_root() {

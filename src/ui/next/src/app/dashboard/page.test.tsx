@@ -64,4 +64,9 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/feed");
   expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
   expect(screen.getByText("Assistant Tasks")).toBeDefined();
+<<<<<<< HEAD
+  expect(screen.getByText("My Plan")).toBeDefined();
+
+=======
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
 });

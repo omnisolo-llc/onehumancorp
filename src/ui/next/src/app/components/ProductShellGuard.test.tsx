@@ -3,7 +3,11 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { ProductShellGuard } from "./ProductShellGuard";
 
 const navigationMock = vi.hoisted(() => ({
+<<<<<<< HEAD
+  pathname: "/onboarding",
+=======
   pathname: "/business-setup",
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,7 +25,11 @@ vi.mock("./AppShell", () => ({
 }));
 
 beforeEach(() => {
+<<<<<<< HEAD
+  navigationMock.pathname = "/onboarding";
+=======
   navigationMock.pathname = "/business-setup";
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
 });
 
 test("wraps dashboard workspace routes that do not own an app shell", () => {
@@ -32,7 +40,11 @@ test("wraps dashboard workspace routes that do not own an app shell", () => {
   );
 
   expect(screen.getByTestId("app-shell")).toBeDefined();
+<<<<<<< HEAD
+  expect(screen.getByRole("heading", { name: "Setup" })).toBeDefined();
+=======
   expect(screen.getByRole("heading", { name: "Business Setup" })).toBeDefined();
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
   expect(screen.getByText("Workspace content")).toBeDefined();
 });
 

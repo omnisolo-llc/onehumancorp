@@ -42,7 +42,11 @@ impl McpSyncWorker {
         for row in &rows {
             let metric_name: String = row.get("metric_name");
             let metric_type: String = row.get("metric_type");
+<<<<<<< HEAD
+            let value: f64 = row.get("value");
+=======
             let value: f32 = row.get("value");
+>>>>>>> dac923c2 (Fix Vitest environment and onboarding adminName logic (#30375))
             let labels_json: String = row.get("labels_json");
             let timestamp: chrono::NaiveDateTime = row.get("timestamp");
 
