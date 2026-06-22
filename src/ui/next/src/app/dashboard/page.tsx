@@ -401,7 +401,7 @@ export default function Dashboard() {
         >
           Start Tour
         </button>
-        <button type="button" onClick={() => router.push("/business-setup")} className="app-button min-h-[44px]">
+        <button type="button" onClick={() => router.push("/onboarding")} className="app-button min-h-[44px]">
           Launch Site
         </button>
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button min-h-[44px]">
