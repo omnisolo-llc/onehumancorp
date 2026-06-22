@@ -1235,8 +1235,8 @@ mod tests {
         let _resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
         // Test Agent Marketplace am_publish_agent method
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
-        let _resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
-        let resp_am_publish: JsonRpcResponse = serde_json::from_str(&_resp_json_am_publish).unwrap();
+        let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
+        let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
         assert!(resp_am_publish.error.is_none());
         let publish_result = resp_am_publish.result.unwrap();
         assert_eq!(publish_result.get("status").unwrap().as_str().unwrap(), "success");
