@@ -1,20 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Documentation UI Components', () => {
 
-    test('Voice Assistant tooltip renders on hover', async ({ page }) => {
-        await page.goto('/dashboard');
+    test('Help Chat opens properly', async ({ page }) => {
+        await page.goto('/api/ui/help.html');
 
-        // Ensure Voice Assistant button exists
-        const voiceButton = page.locator('button[aria-label="Voice Assistant"]');
-        await expect(voiceButton).toBeVisible();
+        const chatButton = page.locator('button[aria-label="Open help chat"]');
+        await expect(chatButton).toBeVisible();
 
-        // Hover to display tooltip
-        await voiceButton.hover();
+        await chatButton.click();
 
-        // Wait for the tooltip text
-        const tooltipText = page.locator('div', { hasText: 'Hold to speak a command to your AI Assistant.' }).last();
-        await expect(tooltipText).toBeVisible({ timeout: 5000 });
+        const chatOverlay = page.locator('#ohc-help-chat-overlay');
+        await expect(chatOverlay).toBeVisible({ timeout: 5000 });
     });
 
     test('Help Widget API fetches tooltips successfully', async ({ request }) => {

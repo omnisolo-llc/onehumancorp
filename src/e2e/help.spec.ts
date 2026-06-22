@@ -29,7 +29,7 @@ test.describe('Help Center', () => {
 
     // There should be search results
     await page.waitForTimeout(1000); // Wait for debounce
-    await expect(page.getByText('Getting Paid').first()).toBeVisible();
+    await expect(page.getByText('Accepting Payments').first()).toBeVisible();
   });
 
   test('should display contact support option', async ({ page }) => {
@@ -38,6 +38,8 @@ test.describe('Help Center', () => {
     // Should see contact options
     const searchInput = page.locator('input[placeholder*="Search"]');
     await searchInput.fill('NotAFunnySearchWord12398', { force: true });
-    await expect(page.locator('text=Contact Support').or(page.locator('text=Ask AI Support Agent'))).toBeVisible();
+
+    // Test for a specific button instead of using multiple ORs that conflict
+    await expect(page.locator('button[id="ask-ai-tooltip"]').first()).toBeVisible();
   });
 });
