@@ -558,8 +558,8 @@ VALUES
 INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb);
-INSERT INTO business_milestones (id, tenant_id, milestone_type, title, description, reached, reached_at) VALUES
-('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', '💰 Four-Figure Club', 'Your business has surpassed $1,000 in total revenue!', true, CURRENT_TIMESTAMP)
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
+('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
 INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
@@ -618,3 +618,6 @@ SET username = EXCLUDED.username,
     active = EXCLUDED.active,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = EXCLUDED.updated_at;
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('m-e2e-1', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
