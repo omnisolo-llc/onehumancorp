@@ -1250,7 +1250,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS tenants (
                 id TEXT PRIMARY KEY,
-                tier TEXT NOT NULL
+                plan_tier TEXT NOT NULL
             );"
         ).execute(&pool).await.unwrap();
 
@@ -1271,9 +1271,9 @@ mod tests {
 
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(db);
 
-        // Explicitly setup tenant tier = "starter" (which has a hard limit of 500)
+        // Explicitly setup tenant plan_tier = "starter" (which has a hard limit of 500)
         let tenant_id = "tenant_starter_test";
-        sqlx::query("INSERT INTO tenants (id, tier) VALUES (?, 'starter')")
+        sqlx::query("INSERT INTO tenants (id, plan_tier) VALUES (?, 'starter')")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 

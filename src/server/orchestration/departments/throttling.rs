@@ -15,9 +15,9 @@ impl ThrottlingManager {
         let now = Utc::now();
         let year_month = now.format("%Y-%m").to_string();
 
-        let tier: String = match &self.db.store {
+        let plan_tier: String = match &self.db.store {
             DbStore::Postgres => {
-                let row: Option<(String,)> = sqlx::query_as("SELECT tier FROM tenants WHERE id = $1")
+                let row: Option<(String,)> = sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = $1")
                     .bind(tenant_id)
                     .fetch_optional(&self.db.pool)
                     .await
@@ -25,7 +25,7 @@ impl ThrottlingManager {
                 row.map(|(t,)| t).unwrap_or_else(|| "free".to_string())
             }
             DbStore::Sqlite(pool) => {
-                let row: Option<(String,)> = sqlx::query_as("SELECT tier FROM tenants WHERE id = ?")
+                let row: Option<(String,)> = sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = ?")
                     .bind(tenant_id)
                     .fetch_optional(pool)
                     .await
@@ -34,7 +34,7 @@ impl ThrottlingManager {
             }
         };
 
-        let limit = match tier.to_lowercase().as_str() {
+        let limit = match plan_tier.to_lowercase().as_str() {
             "starter" => 500,
             "pro" => 2000,
             _ => 1000, // free (increased for e2e tests)
@@ -48,7 +48,7 @@ impl ThrottlingManager {
                     .map_err(|e| e.to_string())?;
 
                 let _ = sqlx::query(
-                    "INSERT INTO tenants (id, name, tier)
+                    "INSERT INTO tenants (id, name, plan_tier)
                      VALUES ($1, $2, 'free')
                      ON CONFLICT (id) DO NOTHING"
                 )
