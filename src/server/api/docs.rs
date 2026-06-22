@@ -322,18 +322,33 @@ pub fn get_changelog_data() -> Vec<ChangelogSection> {
     let mut current_version = String::new();
     let mut current_lines = Vec::new();
 
+    let mut current_screenshot: Option<String> = None;
+
     for line in content.lines() {
         if line.starts_with("## ") {
             if !current_version.is_empty() {
                 sections.push(ChangelogSection {
                     version: current_version.clone(),
-                    screenshot_url: None,
+                    screenshot_url: current_screenshot.clone(),
                     content_lines: current_lines.clone(),
                 });
             }
             current_version = line.trim_start_matches("## ").trim().to_string();
             current_lines = Vec::new();
+            current_screenshot = None;
         } else if !current_version.is_empty() && !line.trim().is_empty() {
+            // Check for markdown image format: ![alt text](url)
+            if line.starts_with("![") {
+                if let Some(start_idx) = line.find("](") {
+                    if let Some(end_idx) = line.find(")") {
+                        if current_screenshot.is_none() {
+                            let url = &line[start_idx + 2..end_idx];
+                            current_screenshot = Some(url.to_string());
+                        }
+                        continue; // Skip adding image line to content_lines
+                    }
+                }
+            }
             current_lines.push(line.to_string());
         }
     }
@@ -341,7 +356,7 @@ pub fn get_changelog_data() -> Vec<ChangelogSection> {
     if !current_version.is_empty() {
         sections.push(ChangelogSection {
             version: current_version,
-            screenshot_url: None,
+            screenshot_url: current_screenshot,
             content_lines: current_lines,
         });
     }
@@ -844,6 +859,14 @@ mod tests {
     async fn test_list_videos() {
         let res = list_videos().await;
         assert!(!res.0.is_empty());
+    }
+
+    #[test]
+    fn test_get_changelog_data_with_screenshots() {
+        // We will indirectly test it since get_changelog_data pulls directly from CHANGELOG.md via include_str!
+        // but for now let's just make sure it parses properly.
+        let data = get_changelog_data();
+        assert!(!data.is_empty());
     }
 
     #[tokio::test]

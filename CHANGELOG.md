@@ -1,5 +1,7 @@
 ## v0.4.48 (Cloud) / v0.4.48+1 (Standalone)
 
+![New Dashboard UI](https://via.placeholder.com/600x400)
+
 ### Cloud Scaling Improvements
 - Optimize Multi-Environment Promotion capabilities for multi-tenant K8s to better support high-load environments.
 
