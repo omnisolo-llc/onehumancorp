@@ -51,9 +51,22 @@ test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
     // 2. Wait for the EstimatorAgentWorker to process the LeadReceived job
     await page.waitForTimeout(5000);
 
-    // Instead of testing UI elements that might not exist, we just verify the data model and backend flow work as designed.
-    const updatedEstimate = await executeSql(`SELECT status FROM quotes WHERE customer_id = (SELECT customer_id FROM service_leads WHERE description = 'Fix broken pipe under sink' LIMIT 1) LIMIT 1`);
+    // Verify the data model and backend flow work as designed.
+    const updatedEstimate = await executeSql(`SELECT id, status FROM quotes WHERE customer_id = (SELECT customer_id FROM service_leads WHERE description = 'Fix broken pipe under sink' LIMIT 1) LIMIT 1`);
     expect(updatedEstimate.length).toBeGreaterThan(0);
+
+    // Simulate UI action of approving quote
+    const quoteId = updatedEstimate[0].id;
+    const approveResponse = await request.patch(`/api/v1/quotes/${quoteId}/approve`, {
+        headers: {
+            'x-tenant-id': 'e2e-tenant'
+        }
+    });
+    expect(approveResponse.ok()).toBeTruthy();
+
+    // Verify approval updated DB
+    const finalState = await executeSql(`SELECT status FROM quotes WHERE id = '${quoteId}'`);
+    expect(finalState[0].status).toBe('ACCEPTED');
   });
 
   test('Customer deposit payment updates booking state', async ({ page }) => {
