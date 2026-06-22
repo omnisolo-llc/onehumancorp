@@ -254,7 +254,7 @@ export default function CostDashboardPage() {
                 </svg>
                 <div>
                     <h3 className="text-sm font-semibold text-amber-800">Budget Alert</h3>
-                    <p className="text-sm text-amber-700 mt-1">Your projected monthly cost ({formatCurrency(data.projected_monthly_cost)}) is reaching your plan's soft limit. Keep your business momentum with a higher tier for better bulk rates!</p>
+                    <p className="text-sm text-amber-700 mt-1">Your projected monthly cost ({formatCurrency(data.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching. Keep your business momentum with a higher tier for better bulk rates!</p>
                 </div>
             </div>
         )}
