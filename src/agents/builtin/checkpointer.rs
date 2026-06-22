@@ -329,21 +329,32 @@ impl CheckpointSaver for GitCheckpointer {
             checkpoint_id.to_string(),
         ];
 
-        // Pre-clean to remove any untracked files that might block the checkout
-        let _pre_clean = Command::new("git")
+        // 1. Pre-clean to remove any untracked files that might block the checkout
+        let pre_clean = Command::new("git")
             .arg("clean")
             .arg("-fdx")
             .current_dir(&self.repo_path)
             .output()
-            .await;
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let _reset_head = Command::new("git")
+        if !pre_clean.status.success() {
+            tracing::warn!("Pre-clean failed: {}", String::from_utf8_lossy(&pre_clean.stderr));
+        }
+
+        // 2. Reset HEAD to ensure we are in a clean state before checkout
+        let reset_head = Command::new("git")
             .arg("reset")
             .arg("--hard")
             .arg("HEAD")
             .current_dir(&self.repo_path)
             .output()
-            .await;
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !reset_head.status.success() {
+            tracing::warn!("Reset HEAD failed: {}", String::from_utf8_lossy(&reset_head.stderr));
+        }
 
         let branch_name = format!(
             "agent-restore-{}",
@@ -352,6 +363,7 @@ impl CheckpointSaver for GitCheckpointer {
         let mut success = false;
         let mut last_err = String::new();
 
+        // 3. Checkout the target tag into a new branch
         for target_ref in refs_to_try {
             let output = Command::new("git")
                 .arg("checkout")
@@ -378,7 +390,23 @@ impl CheckpointSaver for GitCheckpointer {
             ));
         }
 
-        // Robust Restore Edge Cases: Clean remaining untracked and ignored files to ensure spotless working tree.
+        // 4. Robust Restore Edge Cases: Reset to HEAD of the new branch and clean remaining untracked and ignored files to ensure spotless working tree.
+        let reset_branch = Command::new("git")
+            .arg("reset")
+            .arg("--hard")
+            .arg("HEAD")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !reset_branch.status.success() {
+            return Err(format!(
+                "Failed to restore workspace (reset branch): {}",
+                String::from_utf8_lossy(&reset_branch.stderr)
+            ));
+        }
+
         let clean_output = Command::new("git")
             .arg("clean")
             .arg("-fdx")
@@ -393,10 +421,6 @@ impl CheckpointSaver for GitCheckpointer {
                 String::from_utf8_lossy(&clean_output.stderr)
             ));
         }
-
-        // Additional edge case: detached HEAD cleanup / checkout logic if needed,
-        // but `git reset --hard` along with `git clean -fdx` usually leaves the working tree spotless.
-        // By doing this we make sure the progress file matches the checkpoint itself.
 
         Ok(())
     }
