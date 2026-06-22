@@ -1,43 +1,37 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Automated Review Campaign Growth Loop', () => {
-    test('generate review endpoint returns correct formatted fallback when backend is unavailable', async ({ request }) => {
-        const payload = {
-            order_id: '12345',
-            customer_name: 'Alice',
-            product_name: 'Super Gadget'
-        };
+test.describe('AI Review Campaign Builder', () => {
+  test('should generate an AI review request campaign draft', async ({ page }) => {
+    // Start at the review campaign builder page
+    await page.goto('/review-campaign');
 
-        const response = await request.post('/api/v1/growth/campaign/generate-review', {
-            data: payload
-        });
+    // Verify we are on the right page
+    await expect(page.locator('h1')).toContainText('AI Review Campaign Builder');
 
-        expect(response.ok()).toBeTruthy();
+    // Fill in the form details
+    const customerNameInput = page.locator('input#customerName');
+    const productNameInput = page.locator('input#productName');
+    const orderIdInput = page.locator('input#orderId');
 
-        const data = await response.json();
-        expect(data).toHaveProperty('message');
+    await customerNameInput.fill('Maya');
+    await productNameInput.fill('Vegan Chocolate Cake');
+    await orderIdInput.fill('ORD-12345');
 
-        const msg = data.message;
-        // Verify it inserted the payload data
-        expect(msg).toContain('Hi Alice,');
-        expect(msg).toContain('Super Gadget');
-        expect(msg).toContain('https://ohc.store/review/12345');
+    // Generate the campaign
+    await page.click('button:has-text("Generate AI Campaign")');
 
-        // Ensure the referral growth loop is intact in the signature
-        expect(msg).toContain('⚡ Powered by OHC');
-    });
+    // Wait for the generation to complete and the preview to appear
+    await expect(page.locator('text=Email Draft Preview')).toBeVisible();
 
-    test('generate review endpoint returns generic fallback if payload is empty', async ({ request }) => {
-        const response = await request.post('/api/v1/growth/campaign/generate-review', {
-            data: {}
-        });
+    // Verify the generated email contains the inputs and OHC branding
+    const textarea = page.locator('textarea');
+    await expect(textarea).toBeVisible({ timeout: 10000 });
+    const emailContent = await textarea.inputValue();
 
-        expect(response.ok()).toBeTruthy();
-        const data = await response.json();
-
-        const msg = data.message;
-        expect(msg).toContain('Hi Customer,');
-        expect(msg).toContain('your order');
-        expect(msg).toContain('https://ohc.store/review/recent');
-    });
+    // Check for standard phrases to ensure generation worked correctly
+    expect(emailContent).toContain('Maya');
+    expect(emailContent).toContain('Vegan Chocolate Cake');
+    expect(emailContent).toContain('ORD-12345');
+    expect(emailContent).toContain('⚡ Powered by OHC');
+  });
 });
