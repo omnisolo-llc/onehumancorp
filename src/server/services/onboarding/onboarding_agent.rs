@@ -3151,6 +3151,7 @@ mod tests {
             ai_auto_respond: false,
         };
 
+
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
 
         assert_eq!(state["unified_storefront"], true);
