@@ -1,137 +1,100 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 
-export default function LinkInBioPublicPage() {
-    const params = useParams();
-    const tenantId = typeof params?.tenant === 'string' ? params.tenant : 'my-store';
+interface Link {
+  title: string;
+  url: string;
+}
 
-    // In a real implementation, we would fetch data from the backend here.
-    // Since this is a lightweight platform, we'll try to load from localStorage
-    // to simulate the saved data (if running locally). In prod, it should fetch.
-    const [storeName, setStoreName] = useState('My Store');
-    const [bio, setBio] = useState('Welcome to my storefront!');
-    const [links, setLinks] = useState<any[]>([
-        { id: '1', title: 'Visit My Store', url: '/website-builder' },
-        { id: '2', title: 'Book an Appointment', url: '/booking' },
-    ]);
-    const [theme, setTheme] = useState('gradient');
-    const [removeBranding, setRemoveBranding] = useState(false);
-    const [loading, setLoading] = useState(true);
+interface BioConfig {
+  store_name: string;
+  bio: string;
+  theme: 'light' | 'dark';
+  links: Link[];
+}
 
-    useEffect(() => {
-        // Fetch from API
-        const fetchBioData = async () => {
-            try {
-                const res = await fetch(`/api/v1/growth/link-in-bio/${tenantId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setStoreName(data.store_name || 'My Store');
-                    setBio(data.bio || 'Welcome to my storefront!');
-                    setLinks(data.links || []);
-                    setTheme(data.theme || 'gradient');
-                    if (data.remove_branding !== undefined) setRemoveBranding(data.remove_branding);
-                } else if (typeof localStorage !== 'undefined') {
-                    // Fallback to localStorage if API fails (e.g. not found)
-                    const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
-                    if (savedData) {
-                        const parsed = JSON.parse(savedData);
-                        setStoreName(parsed.storeName || 'My Store');
-                        setBio(parsed.bio || 'Welcome to my storefront!');
-                        setLinks(parsed.links || []);
-                        setTheme(parsed.theme || 'gradient');
-                        if (parsed.removeBranding !== undefined) setRemoveBranding(parsed.removeBranding);
-                    } else {
-                        const storedName = localStorage.getItem('business_name');
-                        if (storedName) setStoreName(storedName);
-                    }
-                }
-            } catch (e) {
-                console.error("Error loading bio data:", e);
-                // Fallback to localStorage on network error
-                if (typeof localStorage !== 'undefined') {
-                    const savedData = localStorage.getItem(`ohc_bio_${tenantId}`);
-                    if (savedData) {
-                        const parsed = JSON.parse(savedData);
-                        setStoreName(parsed.storeName || 'My Store');
-                        setBio(parsed.bio || 'Welcome to my storefront!');
-                        setLinks(parsed.links || []);
-                        setTheme(parsed.theme || 'gradient');
-                        if (parsed.removeBranding !== undefined) setRemoveBranding(parsed.removeBranding);
-                    }
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchBioData();
-    }, [tenantId]);
+export default function PublicBioPage() {
+  const params = useParams();
+  const tenant = params.tenant as string;
+  const [config, setConfig] = useState<BioConfig | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    const getThemeStyles = () => {
-        switch(theme) {
-            case 'dark': return { background: '#1D1D1F', color: '#ffffff' };
-            case 'light': return { background: '#ffffff', color: '#1D1D1F' };
-            case 'purple': return { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#ffffff' };
-            case 'gradient': default: return { background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#1D1D1F' };
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
+        if (res.ok) {
+          const data = await res.json();
+          setConfig(data);
+        } else {
+          // Defaults if not found
+          setConfig({
+            store_name: tenant,
+            bio: 'Welcome to my storefront!',
+            theme: 'light',
+            links: [{ title: 'Visit Store', url: '/' }]
+          });
         }
+      } catch (e) {
+         setConfig({
+            store_name: tenant,
+            bio: 'Welcome to my storefront!',
+            theme: 'light',
+            links: [{ title: 'Visit Store', url: '/' }]
+          });
+      } finally {
+        setLoading(false);
+      }
     };
-
-    if (loading) {
-        return <div className="min-h-screen flex items-center justify-center font-inter">Loading...</div>;
+    if (tenant) {
+      fetchConfig();
     }
+  }, [tenant]);
 
-    return (
-        <div className="min-h-screen flex justify-center font-inter" style={{ backgroundColor: theme === 'light' ? '#f3f4f6' : '#000' }}>
-             <div className="w-full max-w-[480px] min-h-screen relative flex flex-col items-center shadow-2xl transition-all duration-300" style={getThemeStyles()}>
-                 <div className="w-full h-full flex flex-col items-center overflow-y-auto pt-16 pb-12 px-6">
+  if (loading || !config) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black text-gray-500">Loading...</div>;
+  }
 
-                     <div className="w-24 h-24 rounded-full bg-white/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-6 mt-4 border border-white/30 text-4xl">
-                         ✨
-                     </div>
+  const { store_name, bio, theme, links } = config;
 
-                     <h1 className="text-3xl font-bold font-outfit mb-3 text-center drop-shadow-sm">
-                         {storeName}
-                     </h1>
+  return (
+    <div className={`min-h-screen w-full flex justify-center ${theme === 'dark' ? 'bg-[#111111] text-white' : 'bg-[#F5F5F7] text-gray-900'} font-inter`}>
+      <div className="w-full max-w-md px-6 py-12 flex flex-col items-center">
 
-                     <p className="text-base font-medium opacity-90 text-center mb-10 max-w-xs drop-shadow-sm leading-relaxed">
-                         {bio}
-                     </p>
-
-                     <div className="w-full flex flex-col gap-4">
-                         {links.map((link: any) => (
-                             <a
-                                 key={link.id}
-                                 href={link.url}
-                                 target="_blank"
-                                 rel="noopener noreferrer"
-                                 className="w-full py-4 px-6 rounded-2xl text-center font-bold text-[15px] transition-transform hover:scale-[1.02] active:scale-95 shadow-sm"
-                                 style={{
-                                     background: theme === 'light' ? '#ffffff' : 'rgba(255, 255, 255, 0.15)',
-                                     border: theme === 'light' ? '1px solid #e5e7eb' : '1px solid rgba(255, 255, 255, 0.3)',
-                                     backdropFilter: 'blur(10px)',
-                                     color: theme === 'light' ? '#111827' : '#ffffff'
-                                 }}
-                             >
-                                 {link.title || 'Untitled Link'}
-                             </a>
-                         ))}
-                     </div>
-
-                     {!removeBranding && (
-                         <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
-                             <a href={`https://ohc.store/join?ref=${tenantId}`} className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-                                 ⚡ Powered by OHC
-                             </a>
-                         </div>
-                     )}
-                 </div>
-             </div>
-             <style dangerouslySetInnerHTML={{__html: `
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-                .font-inter { font-family: 'Inter', sans-serif; }
-                .font-outfit { font-family: 'Outfit', sans-serif; }
-              `}} />
+        {/* Avatar Placeholder */}
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 mb-6 shadow-xl flex items-center justify-center text-4xl text-white font-bold">
+          {store_name.charAt(0).toUpperCase()}
         </div>
-    );
+
+        <h1 className="text-3xl font-bold font-outfit text-center mb-3 tracking-tight">{store_name}</h1>
+        <p className={`text-center mb-10 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
+
+        <div className="w-full space-y-4 flex-1">
+          {links && links.map((link, i) => (
+            <a
+              key={i}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-lg transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-gray-900 shadow-md hover:shadow-lg'}`}
+            >
+              {link.title}
+            </a>
+          ))}
+        </div>
+
+        {/* Viral Loop / Soft Paywall */}
+        <div className="mt-12 pt-8">
+          <a
+            href={`/onboarding?ref=linkinbio_${tenant}`}
+            className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            ⚡ Powered by OHC
+          </a>
+        </div>
+      </div>
+    </div>
+  );
 }

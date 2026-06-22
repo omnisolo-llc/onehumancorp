@@ -74,7 +74,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
-        border-radius: 16px;
+        border-radius: 8px;
         min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -1048,7 +1048,7 @@
 
 
       <!-- Step 0: Initial Screen -->
-      <div class="step active" id="step-initial">
+      <div class="step" id="step-initial">
         <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
           <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1066,9 +1066,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
+
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
@@ -1105,10 +1103,8 @@
       </div>
 
       <!-- Step Chat: Conversational Build -->
-      <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
+      <div class="step active" id="step-chat">
+
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
 
@@ -1116,11 +1112,18 @@
             <div class="chat-message assistant"><div class="chat-sender">Assistant</div><div class="chat-bubble">What do you do? (e.g. I make custom vegan cakes in Austin)</div></div>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 16px;">
-            <div style="display: flex; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; position: relative;">
+            <div id="chat-image-container" style="display: none; width: 100%;">
+                <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 16px;">
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" id="chat-upload-btn" class="glassmorphism" style="width: 44px; height: 44px; min-width: 44px; border-radius: 16px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 102, 255, 0.1); color: #0066FF;" onclick="document.getElementById('chat-image-container').style.display = document.getElementById('chat-image-container').style.display === 'none' ? 'block' : 'none';">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </button>
                 <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." enterkeyhint="send" style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 16px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 16px;">Send</button>
+                <button id="chat-send-btn" data-testid="chat-send-btn" class="glassmorphism" style="width: 44px; height: 44px; min-width: 44px; border-radius: 16px; padding: 0; display: flex; align-items: center; justify-content: center; background: #0066FF; color: white;">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
             </div>
         </div>
       </div>
@@ -1571,17 +1574,24 @@
                 populateForm();
             }
         })
-        .catch(err => console.error('Failed to load cross-device state:', err));
-      }
-
-
-      if (state.step === undefined || state.step === 0) {
-         goToStep('step-initial');
-      } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
-         if (state.step < steps.length) {
-            goToStep(steps[state.step]);
-         }
+        .catch(err => console.error('Failed to load cross-device state:', err))
+        .finally(() => {
+            if (!state.step) {
+                const stored = localStorage.getItem('onboardingState');
+                if (stored) {
+                    state = { ...state, ...JSON.parse(stored) };
+                    populateForm();
+                }
+            }
+            if (state.step === undefined || state.step === 0) {
+               goToStep('step-initial');
+            } else {
+               const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+               if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+               }
+            }
+        });
       }
 
             // Clear name error on typing if valid
@@ -2070,7 +2080,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant', 'X-User-ID': localStorage.getItem('user_id') || 'e2e-admin-user' },
                   body: JSON.stringify({ messages: chatHistory })
               });
 
@@ -2120,22 +2130,54 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
 
                   window.pendingOnboardingReq = req;
-                  const approvalDetails = document.getElementById('approval-details');
-                  if (approvalDetails) {
-                      let productsHtml = '';
-                      if (req.initial_products && req.initial_products.length > 0) {
-                          productsHtml = req.initial_products.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
-                      } else {
-                          productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
-                      }
+                  let productsHtml = '';
+                  if (req.initial_products && req.initial_products.length > 0) {
+                      productsHtml = req.initial_products.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
+                  } else {
+                      productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+                  }
 
-                      approvalDetails.innerHTML = `
+                  const summaryCard = document.createElement('div');
+                  summaryCard.className = 'glassmorphism';
+                  summaryCard.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 24px 24px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);';
+
+                  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                      summaryCard.style.background = 'rgba(22, 22, 26, 0.85)';
+                      summaryCard.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+                      summaryCard.style.color = '#F5F5F7';
+                  }
+
+                  summaryCard.innerHTML = `
+                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
+                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
                           <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
                           <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
-                      `;
-                  }
-                  await goToStep('step-approval');
+                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
+                      </div>
+                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 16px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
+                  `;
+
+                  document.getElementById('step-chat').style.position = 'relative';
+                  document.getElementById('step-chat').style.overflow = 'hidden';
+                  document.getElementById('step-chat').appendChild(summaryCard);
+
+                  // Trigger slide up
+                  requestAnimationFrame(() => {
+                      summaryCard.style.transform = 'translateY(0)';
+                  });
+
+                  document.getElementById('approve-publish-btn-chat').addEventListener('click', async () => {
+                      const btn = document.getElementById('approve-publish-btn-chat');
+                      btn.disabled = true;
+                      btn.innerHTML = '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+
+                      const approvePublishBtn = document.getElementById('approve-publish-btn');
+                      if (approvePublishBtn) {
+                         approvePublishBtn.click();
+                      }
+                  });
+                  // Scroll to bottom
+                  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
               }
           } catch (e) {
               chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -2235,7 +2277,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
 
-      if (generateStorefrontBtn) {
+            if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
               const bioInput = instantBioInputEl.value;
               const imageUrlInput = document.getElementById("instant-image-url");
@@ -2261,14 +2303,52 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
               try {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
-                  const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
+                  const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': 'e2e-tenant',
+                          'X-User-ID': 'e2e-admin-user'
+                      },
+                      body: JSON.stringify({ prompt: bioInput + (imageUrl ? " " + imageUrl : "") })
+                  });
 
-                  let intakeData = null;
+                  if (!res.ok) {
+                      const errData = await res.json().catch(()=>({}));
+                      throw new Error(errData.error || errData.message || 'Failed to generate storefront');
+                  }
 
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput, imageUrl: imageUrl || undefined });
-                  } else {
+                  const data = await res.json();
+
+                  if (data.organization_id) {
+                      localStorage.setItem('tenant_id', data.organization_id);
+                      localStorage.setItem('tenant', data.organization_id);
+                  }
+                  if (data.user_id) {
+                      localStorage.setItem('user_id', data.user_id);
+                  }
+
+                  localStorage.removeItem('onboardingState');
+                  localStorage.setItem('has_onboarded', 'true');
+
+                  setTimeout(() => {
+                    window.location.href = "success.html";
+                  }, 1500);
+
+              } catch (err) {
+                  console.error(err);
+                  goToStep('step-instant');
+                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  instantErrorEl.innerText = errorMsg;
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Next";
+              }
+          });
+      } else {
                      const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
                          method: 'POST',
                          headers: {

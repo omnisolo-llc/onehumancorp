@@ -605,7 +605,7 @@ export default function OnboardingWizard() {
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: adminEmail,
-          admin_name: adminName || businessName + ' Admin',
+          admin_name: adminName || (businessName ? businessName + ' Admin' : 'Admin'),
           admin_password: adminPassword,
           website_template: websiteTemplate,
           first_product_name: firstProductName,
@@ -669,7 +669,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4 font-inter">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism shadow-[0_18px_44px_rgba(15,23,42,0.12)] rounded-[16px]">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
@@ -915,7 +915,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -982,7 +982,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -1049,7 +1049,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1116,7 +1116,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1184,7 +1184,7 @@ export default function OnboardingWizard() {
                       setBusinessName(e.target.value);
                       setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessName && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -1199,7 +1199,7 @@ export default function OnboardingWizard() {
                       setBusinessType(e.target.value);
                       setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessType && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -1211,7 +1211,7 @@ export default function OnboardingWizard() {
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                    className="w-full p-3 sm:p-4 border border-white/40 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1223,7 +1223,7 @@ export default function OnboardingWizard() {
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                        className="w-full p-3 sm:p-4 border border-white/40 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                       />
                    </div>
                    <div>
@@ -1240,7 +1240,7 @@ export default function OnboardingWizard() {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-white/40 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -1360,7 +1360,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/40 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -1387,7 +1387,7 @@ export default function OnboardingWizard() {
                       }
                     }}
                     placeholder="you@example.com"
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/40 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
@@ -1410,7 +1410,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-white/40 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                       />
                       {validationErrors.adminPassword && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>

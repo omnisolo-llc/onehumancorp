@@ -382,7 +382,7 @@
                 </div>
 
                 <div class="footer">
-                    <a id="powered-by-link" href="https://ohc.store/join?ref=my-store">⚡ Powered by OHC</a>
+                    <a id="powered-by-link" href="/api/v1/growth/referrals/click?target=/setup.html&ref=my-store&source=bio_page">⚡ Powered by OHC</a>
                 </div>
             </div>
         </div>
@@ -467,7 +467,7 @@
         function updatePreview() {
             previewTitle.textContent = currentState.store_name;
             previewBio.textContent = currentState.bio;
-            poweredByLink.href = `https://ohc.store/join?ref=${tenant}`;
+            poweredByLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}&source=bio_page`;
             poweredByLink.style.display = currentState.remove_branding ? 'none' : 'block';
 
             if (currentState.remove_branding) {

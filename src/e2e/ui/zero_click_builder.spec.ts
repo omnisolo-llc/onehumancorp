@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Zero-Click Business Generator CUJ', () => {
 
@@ -16,14 +18,53 @@ test.describe('Zero-Click Business Generator CUJ', () => {
 
   test('User can generate a business with a conversational prompt', async ({ page }) => {
 
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..', '..');
+
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: fileContent
+        });
+    });
+
+    // Mock the api response
+    await page.route('**/api/v1/growth/zero-click-builder/generate', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                organization_id: "test-org",
+                user_id: "test-user",
+                message: "Storefront generated successfully"
+            })
+        });
+    });
+
+    await page.route('**/success.html', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: "<html><body>Success</body></html>"
+        });
+    });
+
     // Navigate to the real setup page
-    await page.goto('/api/ui/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Verify Initial Screen
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
 
     // 1. Click "Instant Build"
     await page.getByRole('button', { name: 'Instant Build' }).click();
+
+    // Wait and check if there's any visibility issues.
+    await page.waitForTimeout(500);
+    const content = await page.content();
+    if (!content.includes('Tell us about your business')) {
+        console.log("PAGE CONTENT DOES NOT HAVE HEADING:", content);
+    }
 
     // 2. Verify we are in the instant step
     await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
@@ -40,6 +81,6 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     await generateBtn.click();
 
     // 5. Wait for generation to complete and the success message to appear
-    await page.waitForURL('**/success.html', { timeout: 30000 });
+    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
   });
 });

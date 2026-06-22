@@ -8,14 +8,16 @@ test.describe('Wizard Refinement E2E', () => {
     await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
   });
 
-  test('exposes AI helper and prompt tuning areas', async ({ page }) => {
+  test('exposes AI helper and prompt tuning areas', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'AI Departments' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
     await expect(page.getByText('The Promoter')).toBeVisible();
   });
 
-  test('settings remain accessible from dashboard quick actions', async ({ page }) => {
+  test('settings remain accessible from dashboard quick actions', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();

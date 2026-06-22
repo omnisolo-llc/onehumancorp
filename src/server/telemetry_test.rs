@@ -159,7 +159,7 @@ mod tests {
 
         use sqlx::Row;
         let _ = pool;
-        let value: f32 = row.get("value");
+        let value: f64 = row.get("value");
         assert_eq!(value, 15000.0);
 
         let labels_json: String = row.get("labels_json");
@@ -185,7 +185,7 @@ mod tests {
 
         use sqlx::Row;
         let _ = pool;
-        let value: f32 = row.get("value");
+        let value: f64 = row.get("value");
         assert_eq!(value, 1.5);
 
         let labels_json: String = row.get("labels_json");
@@ -213,7 +213,7 @@ mod tests {
 
         use sqlx::Row;
         let _ = pool;
-        let value: f32 = row.get("value");
+        let value: f64 = row.get("value");
         assert_eq!(value, 0.5);
 
         let labels_json: String = row.get("labels_json");
@@ -240,7 +240,7 @@ mod tests {
 
         use sqlx::Row;
         let _ = pool;
-        let value: f32 = row.get("value");
+        let value: f64 = row.get("value");
         assert_eq!(value, 125.0);
 
         let labels_json: String = row.get("labels_json");
