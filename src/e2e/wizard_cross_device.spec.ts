@@ -15,7 +15,16 @@ test.describe('Wizard Cross Device E2E', () => {
     // The first screen is "10-Minute Setup Wizard", clicking "Start My Business" moves to step 1
     await page.getByRole('button', { name: 'Back' }).click();
     await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
+
+    await page.getByText("I'm a Baker").click();
+    await page.locator('#step-context .next-step-btn').click();
+
+    await expect(page.getByRole('heading', { name: /What's your category?/ })).toBeVisible();
+    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#step-categories .next-step-btn').click();
+
+    await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();
 
     // 3. Move to step 2 and enter business name
     // It's already at the "What's the name of your business?" step. We fill the input.
@@ -38,8 +47,8 @@ test.describe('Wizard Cross Device E2E', () => {
     }).toBe('Cross Device Wizard');
 
     // Also trigger save to backend
-    await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
+    await page.locator('#step-name .next-step-btn').click();
+    await expect(page.getByRole('heading', { name: "Set up your Assistant" })).toBeVisible();
     await page.waitForTimeout(1000);
 
     // 4. Simulate a cross-device session with a new browser context
@@ -63,8 +72,8 @@ test.describe('Wizard Cross Device E2E', () => {
     await newPage.waitForLoadState('networkidle');
 
     // 5. Verify the business name and step was properly restored
-    await expect(newPage.getByRole('heading', { name: 'What do you sell?' })).toBeVisible({ timeout: 10000 });
-    await newPage.locator('button:has-text("Back")').first().click();
+    await expect(newPage.getByRole('heading', { name: 'Set up your Assistant' })).toBeVisible({ timeout: 10000 });
+    await newPage.locator('#step-assistant .prev-step-btn').first().click();
     await expect(newPage.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await expect(newPage.getByPlaceholder("e.g. Maya's Custom Cakes")).toHaveValue('Cross Device Wizard', { timeout: 10000 });
 
