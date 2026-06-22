@@ -1,0 +1,11 @@
+--- src/agents/builtin/tool_executor_engine_tests.rs
++++ src/agents/builtin/tool_executor_engine_tests.rs
+@@ -477,7 +477,7 @@
+     }
+
+-    #[tokio::test(start_paused = true)]
++    #[tokio::test]
+     async fn test_transient_retry_fails_first_then_succeeds() {
+         let call_count = Arc::new(AtomicUsize::new(0));
+         let tool = Tool {
+             name: "dummy".to_string(),
