@@ -47,7 +47,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
     // The chat assistant should have an initial message
     const chatMessages = page.locator('#chat-messages');
-    await expect(chatMessages).toContainText('Assistant: What do you do?');
+    await expect(chatMessages).toContainText('AssistantWhat do you do?');
 
     // Send the first message
     const chatInput = page.locator('#chat-input');
@@ -61,16 +61,16 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await sendBtn.click();
 
     // Check that the user message appears
-    await expect(chatMessages).toContainText('User: I am a plumber fixing pipes and stuff.');
+    await expect(chatMessages).toContainText('YouI am a plumber fixing pipes and stuff.');
     // Check that the assistant replies (via the real backend fallback)
-    await expect(chatMessages).toContainText('Assistant: Great! Could you provide an example photo or a little more detail about what you sell?');
+    await expect(chatMessages).toContainText('Great! Could you provide an example photo or a little more detail about what you sell?');
 
     // Send the second message to trigger `is_complete = true`
     await chatInput.fill("I fix leaky pipes and install faucets.");
     await sendBtn.click();
 
-    await expect(chatMessages).toContainText('User: I fix leaky pipes and install faucets.');
-    await expect(chatMessages).toContainText("Assistant: Give me a minute... I'm building your business.");
+    await expect(chatMessages).toContainText('YouI fix leaky pipes and install faucets.');
+    await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
 
     // It should automatically transition to the approval step
     await expect(page.getByRole('heading', { name: "Ready to Launch" })).toBeVisible({ timeout: 10000 });
