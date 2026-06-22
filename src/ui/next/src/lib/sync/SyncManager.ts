@@ -244,6 +244,16 @@ export class SyncManager {
           allOk = false;
           throw new Error(`General Sync failed with status ${resGen.status}`);
         }
+        try {
+          const resGenData = await resGen.json();
+          if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
+             if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
+             }
+          }
+        } catch (e) {
+          console.error("Failed to parse General Sync response", e);
+        }
       }
 
       // Sync triage actions
