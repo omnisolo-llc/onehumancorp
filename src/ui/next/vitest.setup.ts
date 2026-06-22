@@ -189,7 +189,7 @@ Object.defineProperty(window, 'localStorage', {
 // Silence React act() warnings
 const originalError = console.error;
 console.error = (...args: any[]) => {
-  if (typeof args[0] === 'string' && args[0].includes('Warning: The current testing environment is not configured to support act')) {
+  if (typeof args[0] === 'string' && (args[0].includes('not configured to support act') || args[0].includes('was not wrapped in act') || args[0].includes('Sync WebSocket error'))) {
     return;
   }
   originalError(...args);

@@ -80,10 +80,14 @@ export { expect };
 
 export async function adminPage(browserOrPage: any, context?: any) {
   let page;
-  if (browserOrPage.newPage) {
+  if (browserOrPage && browserOrPage.newPage) {
       page = await browserOrPage.newPage();
-  } else {
+  } else if (browserOrPage && browserOrPage.goto) {
       page = browserOrPage;
+  } else if (context && context.newPage) {
+      page = await context.newPage();
+  } else {
+      throw new Error('No valid browser or page object provided to adminPage');
   }
   await loginAs(page, E2E_ADMIN_USER);
   return page;

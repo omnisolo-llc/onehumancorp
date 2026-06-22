@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { adminPage } from './fixtures';
 
 test.describe('Growth: Footer Branding Loop Generator', () => {
-  adminPage('creates a footer branding snippet and shows soft paywall for removing branding', async ({ page }) => {
+  test('creates a footer branding snippet and shows soft paywall for removing branding', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard.html');
 
