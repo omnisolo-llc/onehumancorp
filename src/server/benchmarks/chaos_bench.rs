@@ -21,11 +21,11 @@ mod tests {
         );
 
         // Agent 1 grabs lock
-        let acquired1 = transport.acquire_lock(&resource, "agent_1", 2).await.unwrap();
+        let acquired1 = transport.acquire_lock(&resource, "agent_1", 2).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         assert!(acquired1);
 
         // Agent 2 attempts, but fails
-        let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
+        let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         assert!(!acquired2);
 
         // Simulate lag / timeout -> wait for TTL to pass.
@@ -36,7 +36,7 @@ mod tests {
         let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false);
         assert!(acquired2_retry, "Agent 2 failed to acquire lock after wait");
 
-        transport.release_lock(&resource, "agent_2").await.unwrap();
+        transport.release_lock(&resource, "agent_2").await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     }
 
     #[tokio::test]
