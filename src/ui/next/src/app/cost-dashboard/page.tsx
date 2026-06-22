@@ -200,14 +200,17 @@ export default function CostDashboardPage() {
                       </div>
                   )}
               </div>
-              <div className="mt-6 flex flex-col md:flex-row gap-4">
-                  <button
-                      onClick={handleManageBilling}
-                      className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
-                  >
-                      Manage Billing
-                  </button>
-              </div>
+              {data?.department_tier_usage?.current_plan !== 'Free' && (
+                  <div className="mt-6 flex flex-col md:flex-row gap-4">
+                      <button
+                          id="manage-billing-btn"
+                          onClick={handleManageBilling}
+                          className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
+                      >
+                          Manage Billing
+                      </button>
+                  </div>
+              )}
               {actionMessage && (
                   <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-sm font-medium text-[#0f766e] dark:text-[#6ac5bd] shadow-sm" role="status">
                       {actionMessage}
