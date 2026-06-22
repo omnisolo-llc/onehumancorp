@@ -37,23 +37,24 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     const container = page.locator('.container');
     await expect(container).toBeVisible({ timeout: 30000 });
 
-    // Step 0: Welcome Screen -> Click "Conversational Setup"
-    const chatButton = page.locator('button', { hasText: 'Conversational Setup' });
-    await expect(chatButton).toBeVisible();
-    await chatButton.click();
-
-    // Now we should be in the chat step
+    // Since we made it the default active step, we should be in the chat step
     await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
 
     // The chat assistant should have an initial message
     const chatMessages = page.locator('#chat-messages');
     await expect(chatMessages).toContainText('Assistant: What do you do?');
 
+    // Make sure we have the 44x44 image upload button
+    const uploadBtn = page.locator('#chat-upload-btn');
+    const uploadBtnBox = await uploadBtn.boundingBox();
+    expect(uploadBtnBox?.width || 0).toBeGreaterThanOrEqual(44);
+    expect(uploadBtnBox?.height || 0).toBeGreaterThanOrEqual(44);
+
     // Send the first message
     const chatInput = page.locator('#chat-input');
     await chatInput.fill("I am a plumber fixing pipes and stuff.");
 
-    // We expect the button to have a height >= 44px
+    // We expect the send button to have a height >= 44px
     const sendBtn = page.locator('#chat-send-btn');
     const sendBtnBox = await sendBtn.boundingBox();
     expect(sendBtnBox?.height || 0).toBeGreaterThanOrEqual(44);
@@ -72,14 +73,14 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await expect(chatMessages).toContainText('User: I fix leaky pipes and install faucets.');
     await expect(chatMessages).toContainText("Assistant: Give me a minute... I'm building your business.");
 
-    // It should automatically transition to the approval step
+    // It should automatically transition to show the Ready to Launch sliding summary card
     await expect(page.getByRole('heading', { name: "Ready to Launch" })).toBeVisible({ timeout: 10000 });
 
     const approvalDetails = page.locator('#approval-details');
     // Ensure the intake correctly derived the type/products from the fallback or real API
     await expect(approvalDetails).toContainText('Business Name:');
 
-    const approveBtn = page.locator('#approve-publish-btn');
+    const approveBtn = page.locator('#approve-publish-btn-chat');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
