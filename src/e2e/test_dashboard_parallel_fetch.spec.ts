@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Dashboard Parallel Fetch', () => {
-  test('displays all parallel-fetched components', async ({ page }) => {
+  test('displays all parallel-fetched components', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
@@ -14,13 +16,12 @@ test.describe('Dashboard Parallel Fetch', () => {
     // Optionally check if we have the fallback rendering in case of no data
     const ordersContainer = page.locator('text=Recent Orders').locator('..').locator('..');
     const ordersHasTable = await ordersContainer.locator('table').count() > 0;
-    const ordersHasEmpty = await ordersContainer.locator('.app-empty').count() > 0 || await page.locator('text=No recent orders').count() > 0;
 
     // Fix: Wait for the fallback component to be reliably visible if empty
     if (!ordersHasTable) {
-        await expect(ordersContainer.locator('.app-empty').or(page.locator('text=No recent orders'))).toBeVisible();
+        await expect(ordersContainer.locator('.app-empty').or(page.locator('text=No order rows found for this tenant.'))).toBeVisible();
     }
-    const ordersHasEmptyResolved = await ordersContainer.locator('.app-empty').count() > 0 || await page.locator('text=No recent orders').count() > 0;
+    const ordersHasEmptyResolved = await ordersContainer.locator('.app-empty').count() > 0 || await page.locator('text=No order rows found for this tenant.').count() > 0;
 
     expect(ordersHasTable || ordersHasEmptyResolved).toBeTruthy();
   });

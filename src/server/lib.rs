@@ -5394,12 +5394,18 @@ async fn list_ui_orders_handler(
 async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+            } else {
                 "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-            )
+            };
+            match sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(&db.pool)
             .await {
@@ -5427,12 +5433,18 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+            } else {
                 "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-            )
+            };
+            match sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await {
