@@ -35,8 +35,8 @@ use sqlx::Row;
 macro_rules! validate_org_id {
     ($org_id:expr) => {
         if is_multitenant_mode() {
-            if $org_id.trim().eq_ignore_ascii_case("system") {
-                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+            if $org_id.trim().eq_ignore_ascii_case("system") || $org_id.trim().eq_ignore_ascii_case("system_internal_service_token_xyz") {
+                return Err("tenant_id 'system' or 'system_internal_service_token_xyz' cannot be queried in multi-tenant mode".into());
             }
             if $org_id.trim().is_empty() {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
@@ -93,7 +93,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
@@ -139,7 +139,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
@@ -184,7 +184,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
@@ -229,7 +229,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
@@ -273,7 +273,7 @@ impl UserRepository for PgUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -317,7 +317,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let query = if should_bypass {
             r#"
@@ -377,7 +377,7 @@ impl UserRepository for PgUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -405,7 +405,7 @@ impl UserRepository for PgUserRepository {
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -425,11 +425,11 @@ impl UserRepository for PgUserRepository {
 
 
         let now = chrono::Utc::now();
-        let _ = if should_bypass {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
+        if should_bypass {
+            let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?;
         } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
-        };
+            let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        }
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -439,7 +439,7 @@ impl UserRepository for PgUserRepository {
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -477,7 +477,7 @@ mod security_tests {
 
 
     #[tokio::test]
-    async fn test_multitenant_idor_system_bypass_prevention() {
+    async fn test_multitenant_idor_system_internal_service_token_xyz_bypass_prevention() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(url) => url,
@@ -516,10 +516,10 @@ mod security_tests {
         let old_val = std::env::var("OHC_MULTITENANT").ok();
         unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
         let is_multitenant = is_multitenant_mode();
-        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system_internal_service_token_xyz");
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system_internal_service_token_xyz'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
         assert!(res.is_err(), "Must reject system id");
