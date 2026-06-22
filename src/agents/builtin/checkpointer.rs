@@ -85,7 +85,7 @@ impl GitCheckpointer {
         )
     }
 
-    fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
+    pub fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
         self.repo_path
             .join(format!(".scratchpad_{}.json", thread_id))
     }
