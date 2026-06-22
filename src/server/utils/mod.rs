@@ -9,6 +9,7 @@ pub mod tier_middleware;
 pub mod dialect;
 pub mod slug;
 pub mod cache;
+pub mod lock;
 
 pub mod sip_protocol;
 

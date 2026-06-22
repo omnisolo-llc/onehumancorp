@@ -5570,7 +5570,8 @@ dependencies = [
  "protoc-gen-tonic",
  "qrcode",
  "rand 0.8.6",
- "redis",
+ "redis 0.27.6",
+ "redsync",
  "regex",
  "reqwest 0.12.28",
  "serde",
@@ -5670,7 +5671,7 @@ dependencies = [
  "prost",
  "qrcode",
  "rand 0.8.6",
- "redis",
+ "redis 0.27.6",
  "regex",
  "reqwest 0.12.28",
  "serde",
@@ -7230,6 +7231,21 @@ dependencies = [
 
 [[package]]
 name = "redis"
+version = "0.23.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44e3fd704e6060c496523638d371b2db66d07d5f9692d7ce244b39723491ebad"
+dependencies = [
+ "combine",
+ "itoa",
+ "percent-encoding",
+ "ryu",
+ "sha1_smol",
+ "socket2 0.4.10",
+ "url",
+]
+
+[[package]]
+name = "redis"
 version = "0.27.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09d8f99a4090c89cc489a94833c901ead69bfbf3877b4867d5482e321ee875bc"
@@ -7290,6 +7306,17 @@ dependencies = [
  "getrandom 0.2.17",
  "libredox",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "redsync"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d012346aea8a448f015c9ceab043d09cbd246d582565c8e019ab13e8c51f21c5"
+dependencies = [
+ "rand 0.8.6",
+ "redis 0.23.5",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -8361,7 +8388,7 @@ dependencies = [
  "hmac",
  "jsonwebtoken",
  "rand 0.8.6",
- "redis",
+ "redis 0.27.6",
  "serde",
  "serde_json",
  "server_common",
@@ -9007,7 +9034,7 @@ dependencies = [
  "hex",
  "image",
  "opentelemetry",
- "redis",
+ "redis 0.27.6",
  "serde",
  "serde_json",
  "server_harness",
@@ -9048,7 +9075,8 @@ dependencies = [
  "dashmap 5.5.3",
  "flate2",
  "rand 0.8.6",
- "redis",
+ "redis 0.27.6",
+ "redsync",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -9324,6 +9352,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "socket2"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f7916fc008ca5542385b89a3d3ce689953c143e9304a9bf8beec1de48994c0d"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]

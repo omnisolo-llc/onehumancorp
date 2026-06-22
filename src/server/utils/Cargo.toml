@@ -9,6 +9,7 @@ dashmap = "5"
 flate2 = "1"
 rand = "0.8"
 redis = { version = "0.27.6", features = ["tokio-comp"] }
+redsync = "1.0.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 server_auth = { path = "../auth" }
