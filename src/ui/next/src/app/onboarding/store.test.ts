@@ -67,6 +67,19 @@ describe('useOnboardingStore', () => {
     expect(state.domainChoice).toBe('custom');
   });
 
+  it('should support updating multiple state slice with updateState', () => {
+    useOnboardingStore.getState().updateState({
+      step: 4,
+      businessDescription: 'Bulk Description',
+      businessName: 'Bulk Name',
+    });
+
+    const state = useOnboardingStore.getState();
+    expect(state.step).toBe(4);
+    expect(state.businessDescription).toBe('Bulk Description');
+    expect(state.businessName).toBe('Bulk Name');
+  });
+
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
