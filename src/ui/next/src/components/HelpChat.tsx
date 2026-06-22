@@ -151,6 +151,12 @@ export function HelpChat() {
     ]);
   };
 
+  useEffect(() => {
+    const handleOpenHelpChat = () => setIsOpen(true);
+    window.addEventListener("open-help-chat", handleOpenHelpChat);
+    return () => window.removeEventListener("open-help-chat", handleOpenHelpChat);
+  }, []);
+
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const forceChat =
     typeof window !== "undefined" &&
