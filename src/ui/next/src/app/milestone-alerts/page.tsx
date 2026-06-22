@@ -11,7 +11,7 @@ interface Milestone {
   reached: boolean;
 }
 
-export default function MilestonesPage() {
+export default function MilestoneAlertsPage() {
   const router = useRouter();
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
