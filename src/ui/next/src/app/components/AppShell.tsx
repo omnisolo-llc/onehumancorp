@@ -57,7 +57,7 @@ const primaryNav: NavItem[] = [
   { label: "Lead Magnets", href: "/lead-magnet-generator", icon: "campaigns" },
   { label: "Settings", href: "/settings", icon: "settings" },
   { label: "AI Usage", href: "/ai-usage-paywall", icon: "activity" },
-  { label: "Changelog", href: "/changelog", icon: "activity" },
+  { label: "What's New", href: "/changelog", icon: "activity" },
 ];
 
 const secondaryNav: NavItem[] = [

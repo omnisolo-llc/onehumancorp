@@ -350,6 +350,7 @@ where
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
+        .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
@@ -1710,6 +1711,111 @@ async fn handle_check_milestones(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct MilestoneQuery {
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MilestoneResponse {
+    pub title: String,
+    pub subtitle: String,
+    #[serde(rename = "shareText")]
+    pub share_text: String,
+    pub reward: String,
+}
+
+async fn handle_get_milestone(
+    Extension(state): Extension<GrowthState>,
+    claims: Option<Extension<::server_common::Claims>>,
+    axum::extract::Query(query): axum::extract::Query<MilestoneQuery>,
+) -> impl IntoResponse {
+    let fallback_tenant = "DEFAULT".to_string();
+    let tenant_id = query.tenant_id.clone().or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or(fallback_tenant);
+
+    // Check business milestones to find highest achievement
+    let mut best_milestone_id = "first_sale".to_string();
+
+    if tenant_id != "DEFAULT" {
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+
+        use sqlx::Row;
+        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+
+        if types.contains(&"revenue_100k".to_string()) {
+            best_milestone_id = "revenue_100k".to_string();
+        } else if types.contains(&"100_orders".to_string()) {
+            best_milestone_id = "100_orders".to_string();
+        } else if types.contains(&"revenue_1k".to_string()) {
+            best_milestone_id = "revenue_1k".to_string();
+        } else if types.contains(&"10th_order".to_string()) {
+            best_milestone_id = "10th_order".to_string();
+        } else if types.contains(&"5_referrals".to_string()) {
+            best_milestone_id = "5_referrals".to_string();
+        } else if types.contains(&"100_visitors".to_string()) {
+            best_milestone_id = "100_visitors".to_string();
+        } else if types.contains(&"first_sale".to_string()) {
+            best_milestone_id = "first_sale".to_string();
+        }
+    }
+
+    let (title, subtitle, share_text, reward) = match best_milestone_id.as_str() {
+        "revenue_100k" => (
+            "Six-Figure Club! 🌟",
+            "You crossed $100k in revenue. Share to unlock $500 in credits.",
+            "I just hit $100k in revenue running my business on OHC! 🚀",
+            "$500 Credit"
+        ),
+        "100_orders" => (
+            "100th Order Delivered! 🎉",
+            "You're growing fast. Share your success to unlock $50 in OHC credits.",
+            "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+            "$50 Credit"
+        ),
+        "revenue_1k" => (
+            "Four-Figure Club! 💰",
+            "You crossed $1k in revenue. Share to unlock $25 in credits.",
+            "I just hit my first $1k in revenue running my business on OHC! 🚀",
+            "$25 Credit"
+        ),
+        "10th_order" => (
+            "10th Order! 📈",
+            "Business is booming. Share your success to unlock $10 in credits.",
+            "I just hit my 10th order using OHC! 🚀 Get $50 off your first month:",
+            "$10 Credit"
+        ),
+        "5_referrals" => (
+            "High Connector! 🤝",
+            "You've referred 5 businesses. Share to unlock $100 in credits.",
+            "I just helped 5 other businesses start on OHC! 🚀 Get $50 off your first month:",
+            "$100 Credit"
+        ),
+        "100_visitors" => (
+            "100 Visitors! 🚀",
+            "Traffic is soaring. Share to unlock $5 in credits.",
+            "I just had 100 visitors to my new OHC storefront! 🚀 Check it out and get $50 off your first month:",
+            "$5 Credit"
+        ),
+        _ => (
+            "First Sale! 💸",
+            "You got your first sale! Share your success to unlock $5 in credits.",
+            "I just got my first sale using OHC to run my business! 🚀 Start your business and get $50 off your first month:",
+            "$5 Credit"
+        ),
+    };
+
+    Json(MilestoneResponse {
+        title: title.to_string(),
+        subtitle: subtitle.to_string(),
+        share_text: share_text.to_string(),
+        reward: reward.to_string(),
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
@@ -2948,7 +3054,7 @@ pub async fn handle_zero_click_generate(
 }
 
 pub async fn handle_embed_widget(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
 ) -> axum::response::Html<String> {
     let tenant = query.tenant_id.unwrap_or_else(|| "default-tenant".to_string());
@@ -3180,7 +3286,7 @@ pub struct GeneratePromoResponse {
 }
 
 pub async fn handle_promo_generate(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::Json(req): axum::Json<GeneratePromoRequest>,
 ) -> impl axum::response::IntoResponse {
     let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
