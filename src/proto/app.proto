@@ -441,3 +441,35 @@ message CreateUnifiedBookingResponse {
     UnifiedBooking booking = 2;
     string error = 3;
 }
+
+message FundingOpportunity {
+  string id = 1;
+  string tenant_id = 2;
+  string grant_name = 3;
+  int64 amount = 4;
+  string draft_proposal_text = 5;
+  string status = 6;
+  string deadline = 7;
+}
+
+message GetFundingOpportunitiesRequest {
+  string tenant_id = 1;
+}
+
+message GetFundingOpportunitiesResponse {
+  repeated FundingOpportunity opportunities = 1;
+}
+
+message SubmitFundingOpportunityRequest {
+  string tenant_id = 1;
+  string opportunity_id = 2;
+}
+
+message SubmitFundingOpportunityResponse {
+  bool success = 1;
+}
+
+service FundingEngineService {
+  rpc GetFundingOpportunities(GetFundingOpportunitiesRequest) returns (GetFundingOpportunitiesResponse);
+  rpc SubmitFundingOpportunity(SubmitFundingOpportunityRequest) returns (SubmitFundingOpportunityResponse);
+}
