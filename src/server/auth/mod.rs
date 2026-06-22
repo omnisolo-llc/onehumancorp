@@ -180,6 +180,16 @@ impl Store {
                 let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
                     let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                                if (perms.mode() & 0o777) != 0o600 {
+                                    perms.set_mode(0o600);
+                                    let _ = std::fs::set_permissions(&secret_path, perms);
+                                }
+                            }
+                        }
                         if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return Some(bytes.trim().to_string());

@@ -335,6 +335,8 @@ impl UserRepository for SqliteUserRepository {
         let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
@@ -344,30 +346,44 @@ impl UserRepository for SqliteUserRepository {
         .bind(jti)
         .bind(exp)
         .bind(org_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
 
         let now = chrono::Utc::now();
         if should_bypass {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e: sqlx::Error| e.to_string())?;
         } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e: sqlx::Error| e.to_string())?;
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $3 AND tenant_id = $2")
-            .bind(jti)
-            .bind(org_id)
-            .bind(chrono::Utc::now())
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
+        let row = if should_bypass {
+            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2")
+                .bind(jti)
+                .bind(chrono::Utc::now())
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e: sqlx::Error| e.to_string())?
+        } else {
+            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $3 AND tenant_id = $2")
+                .bind(jti)
+                .bind(org_id)
+                .bind(chrono::Utc::now())
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e: sqlx::Error| e.to_string())?
+        };
 
         let count: i32 = row.get(0);
         Ok(count > 0)
