@@ -59,7 +59,7 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     }
 }
 
-async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpAddr), String> {
+async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpAddr, u16), String> {
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
     if url.scheme() != "http" && url.scheme() != "https" {
         return Err("invalid scheme".to_string());
@@ -80,7 +80,12 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     }
     
     let ip = valid_ip.ok_or_else(|| "URL resolves to blocked IP or no IPs found".to_string())?;
-    Ok((host.to_string(), ip))
+    Ok((host.to_string(), ip, port))
+}
+
+#[cfg(test)]
+pub async fn validate_url_and_get_ip_internal_for_test(url_str: &str) -> Result<(String, std::net::IpAddr, u16), String> {
+    validate_url_and_get_ip(url_str).await
 }
 
 async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
@@ -95,10 +100,10 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
 
     let disc_url = format!("{}/.well-known/openid-configuration", issuer_url.trim_end_matches('/'));
     
-    let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
+    let (host, ip, port) = validate_url_and_get_ip(&disc_url).await?;
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
-        .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
+        .resolve(&host, std::net::SocketAddr::new(ip, port))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -110,10 +115,10 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         .await
         .map_err(|e| e.to_string())?;
         
-    let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
+    let (jwks_host, jwks_ip, jwks_port) = validate_url_and_get_ip(&disc.jwks_uri).await?;
     let jwks_client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
-        .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
+        .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, jwks_port))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -150,6 +155,8 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_audience(&[&cfg.client_id]);
     validation.set_issuer(&[&cfg.issuer_url]);
+    validation.validate_exp = true;
+    validation.validate_nbf = true;
     
     let token_data = decode::<serde_json::Value>(token_str, &decoding_key, &validation).map_err(|e| {
         ::server_telemetry::record_error_signal("[security] OIDC token validation failed");
@@ -173,6 +180,10 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         if nbf > current_ts {
             return Err("OIDC token not yet valid".to_string());
         }
+    }
+
+    if raw.get("iat").is_none() {
+        return Err("OIDC token missing iat".to_string());
     }
     
     let mut roles = Vec::new();
@@ -254,8 +265,9 @@ mod tests {
     async fn test_validate_url_and_get_ip_valid() {
         let res = validate_url_and_get_ip("https://example.com").await;
         assert!(res.is_ok());
-        let (host, ip) = res.unwrap();
+        let (host, ip, port) = res.unwrap();
         assert_eq!(host, "example.com");
+        assert_eq!(port, 443);
         assert!(!is_blocked_ip(ip));
     }
 

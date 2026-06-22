@@ -593,7 +593,7 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        if let Ok(header) = jsonwebtoken::decode_header(_token) {
+        let claims = if let Ok(header) = jsonwebtoken::decode_header(_token) {
             if header.alg == jsonwebtoken::Algorithm::RS256 {
                 let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
                 let oidc_cfg = crate::oidc::OIDCConfig {
@@ -602,71 +602,35 @@ impl Store {
                     enabled: oidc_cfg_internal.enabled,
                 };
                 if oidc_cfg.enabled {
-                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
-                    if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
-                    }
-                    if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                    }
-                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
-                        return Err("token revoked".to_string());
-                    }
-                    return Ok(claims);
+                    crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?
+                } else {
+                    return Err("OIDC disabled but RS256 token received".to_string());
                 }
+            } else {
+                let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+                jsonwebtoken::decode::<Claims>(
+                    _token,
+                    &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+                    &validation
+                ).map(|d| d.claims).map_err(|e| format!("Invalid HS256 token: {}", e))?
             }
+        } else {
+            return Err("Invalid token header".to_string());
+        };
+
+        // Standardized post-validation checks for all token types
+        if claims.sub.trim().is_empty() || claims.jti.trim().is_empty() {
+            return Err("Invalid token: missing mandatory sub or jti claims".to_string());
         }
 
-        let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-            let token_data = jsonwebtoken::decode::<Claims>(
-                _token,
-                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
-                &validation
-            );
+        let org_id = claims.organization_id.clone().unwrap_or_default();
+        self.validate_org_id(&org_id).map_err(|e| format!("Token organization error: {}", e))?;
 
-            match token_data {
-                Ok(data) => {
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token: empty claims".to_string());
-                    }
-                    if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
-                    }
-                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                    }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
-                        return Err("token revoked".to_string());
-                    }
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token claims".to_string());
-                    }
-                    Ok(data.claims)
-                }
-                Err(_) => {
-                    let oidc_cfg = {
-                        let c = self.oidc_cfg.read().unwrap();
-                        crate::oidc::OIDCConfig {
-                            issuer_url: c.issuer_url.clone(),
-                            client_id: c.client_id.clone(),
-                            enabled: c.enabled,
-                        }
-                    };
-                    if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                        if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                            return Err("Invalid token: organization_id is required in cloud mode".to_string());
-                        }
-                        if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
-                            return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                        }
-                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
-                            return Err("token revoked".to_string());
-                        }
-                        return Ok(claims);
-                    }
-                    Err("Invalid token".to_string())
-                }
+        if self.is_revoked(&claims.jti, &org_id).await {
+            return Err("token revoked".to_string());
         }
+
+        Ok(claims)
     }
 }
 

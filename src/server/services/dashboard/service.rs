@@ -180,9 +180,9 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_products_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let q = if mobile_optimized {
-            "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+            "SELECT id, '' as tenant_id, title as name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '' as metadata FROM products WHERE tenant_id = $1 LIMIT 10"
         } else {
-            "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+            "SELECT id, tenant_id, title as name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE tenant_id = $1 LIMIT 10"
         };
         use sqlx::Row;
         let mut results = Vec::new();
@@ -192,7 +192,7 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -448,9 +448,9 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_org_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let q = if mobile_optimized {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+            "SELECT id, name, tier FROM tenants WHERE id = $1 LIMIT 1"
         } else {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+            "SELECT id, name, tier FROM tenants WHERE id = $1 LIMIT 1"
         };
         use sqlx::Row;
         let mut org = None;
@@ -458,8 +458,8 @@ impl MyDashboardService {
             crate::db::DbStore::Postgres => {
                 if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await {
                     org = Some(::server_ohc::organization::Organization {
-                        id: row.try_get("tenant_id").unwrap_or_default(),
-                        name: row.try_get("business_name").unwrap_or_default(),
+                        id: row.try_get("id").unwrap_or_default(),
+                        name: row.try_get("name").unwrap_or_default(),
                         domain: "".to_string(),
                         ceo_id: "".to_string(),
                         created_at_unix: 0,
@@ -472,8 +472,8 @@ impl MyDashboardService {
             crate::db::DbStore::Sqlite(pool) => {
                 if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
                     org = Some(::server_ohc::organization::Organization {
-                        id: row.try_get("tenant_id").unwrap_or_default(),
-                        name: row.try_get("business_name").unwrap_or_default(),
+                        id: row.try_get("id").unwrap_or_default(),
+                        name: row.try_get("name").unwrap_or_default(),
                         domain: "".to_string(),
                         ceo_id: "".to_string(),
                         created_at_unix: 0,
@@ -937,14 +937,14 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(database_url).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, tenant_id TEXT, title TEXT, name TEXT, description TEXT, price_cents INTEGER, fulfillment_strategy TEXT, currency TEXT, metadata TEXT, is_subscribable BOOLEAN, subscription_frequency TEXT, subscription_discount_percent INTEGER)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'test_org', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, price_cents) VALUES ('prod_1', 'test_org', 'Test Product', 10000)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
 
         let pg_pool = crate::db::get_pool();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
