@@ -18,26 +18,41 @@ export function AIFeaturePaywallWidget() {
     }
   }, []);
 
-  const handleGenerateLink = () => {
+  const handleGenerateLink = async () => {
     setGenerating(true);
-    // Use the official viral loop click tracking endpoint
-    setTimeout(() => {
-      const link = `${window.location.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=ai_feature_paywall`;
-      setReferralLink(link);
+    try {
+      // Use the official viral loop click tracking endpoint
+      const response = await fetch(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=ai_feature_paywall`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        const link = `${window.location.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=ai_feature_paywall`;
+        setReferralLink(link);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
       setGenerating(false);
-    }, 800);
+    }
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (navigator.clipboard && referralLink) {
       navigator.clipboard.writeText(referralLink);
       setCopied(true);
 
       // Simulate "unlocking" immediately after the user engages with the share intent
       // In a real system, this would happen via websocket/webhook after the referral signs up
-      setTimeout(() => {
+      try {
+         await fetch('/api/v1/agents/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
+         });
          setUnlocked(true);
-      }, 1500);
+      } catch (e) {
+         console.error(e);
+      }
 
       setTimeout(() => setCopied(false), 2000);
     }
@@ -45,20 +60,32 @@ export function AIFeaturePaywallWidget() {
 
   const shareText = `Start your business on OHC! Use my link to get $50 off your first month: ${referralLink}`;
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-     // Optimistically unlock after sharing
-     setTimeout(() => {
+     try {
+         await fetch('/api/v1/agents/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
+         });
          setUnlocked(true);
-     }, 1500);
+      } catch (e) {
+         console.error(e);
+      }
   };
 
-  const handleTwitterShare = () => {
+  const handleTwitterShare = async () => {
      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
-     // Optimistically unlock after sharing
-     setTimeout(() => {
+     try {
+         await fetch('/api/v1/agents/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
+         });
          setUnlocked(true);
-     }, 1500);
+      } catch (e) {
+         console.error(e);
+      }
   };
 
   if (unlocked) {

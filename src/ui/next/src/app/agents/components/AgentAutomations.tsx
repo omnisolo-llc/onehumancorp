@@ -6,12 +6,24 @@ export default function AgentAutomations() {
   const [weeklyInsightsEnabled, setWeeklyInsightsEnabled] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
 
-  const toggleAgent = (agent: string, current: boolean, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+  const toggleAgent = async (agent: string, current: boolean, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
     setLoading(agent);
-    setTimeout(() => {
-      setter(!current);
+    try {
+      const response = await fetch('/api/v1/agents/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agent, enabled: !current }),
+      });
+      if (response.ok) {
+        setter(!current);
+      }
+    } catch (e) {
+      console.error("Failed to toggle agent", e);
+    } finally {
       setLoading(null);
-    }, 500);
+    }
   };
 
   return (
