@@ -1,29 +1,26 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::Tool;
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
+
+#[derive(Deserialize)]
+struct SuperpowersSkillArgs {
+    skill_name: String,
+    #[serde(default)]
+    context: String,
+}
 
 struct SuperpowersSkillExecutor {}
 
 #[async_trait::async_trait]
-impl ToolExecutor for SuperpowersSkillExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let skill_name = args
-            .get("skill_name")
-            .and_then(Value::as_str)
-            .ok_or_else(|| ToolError::LlmRecoverable("skill_name is required".to_string()))?;
-
-        let context = args
-            .get("context")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-
+impl PydanticToolExecutor<SuperpowersSkillArgs> for SuperpowersSkillExecutor {
+    async fn execute_typed(&self, args: SuperpowersSkillArgs) -> Result<String, ToolError> {
         Ok(format!(
             "Superpowers skill '{}' executed with context: {}. Please follow the instructions injected in your prompt for this skill.",
-            skill_name, context
+            args.skill_name, args.context
         ))
     }
 }
@@ -47,6 +44,6 @@ pub fn superpowers_skill_tool() -> Tool {
             },
             "required": ["skill_name"]
         }),
-        execute: Arc::new(SuperpowersSkillExecutor {}),
+        execute: Arc::new(PydanticAdapter::new(SuperpowersSkillExecutor {})),
     }
 }

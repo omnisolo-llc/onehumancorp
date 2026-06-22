@@ -290,7 +290,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = marketplace.download_agent(agent_id);
-            let resp = match result {
+            let _resp = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
@@ -1231,7 +1231,7 @@ mod tests {
 
         // Test Agent Marketplace am_fetch_agent method
         let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "Senior Rust Developer"}}"#;
-        let resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
+        let _resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
         // Test Agent Marketplace am_publish_agent method
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
