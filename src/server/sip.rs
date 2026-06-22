@@ -513,14 +513,6 @@ mod tests {
     use std::env;
     use sqlx::Row;
 
-    // Helper to get a dummy pgpool for testing
-    async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&db_url)
-            .unwrap()
-    }
 
     #[tokio::test]
     async fn test_delegate_mission_tc1_no_context_root() {

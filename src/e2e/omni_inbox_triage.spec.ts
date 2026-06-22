@@ -24,6 +24,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
 
         // Wait for feed to load
         await page.waitForSelector('.app-list-item');
+        await expect(page.getByTestId(/triage-card-/).first()).toBeVisible();
 
         // Step 4: Verify the message appears in the feed
         const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();

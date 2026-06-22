@@ -184,15 +184,33 @@ export default function CostDashboardPage() {
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
+                  {myPlanData?.storage_limit_bytes && myPlanData?.storage_used_bytes != null && (
+                      <div className="p-4 app-card ohc-growth-card glass-card md:col-span-2 lg:col-span-4">
+                          <div className="flex justify-between text-sm text-gray-600 mb-1">
+                              <span>{myPlanData.storage_limit_bytes > 0 ? `${formatStorage(myPlanData.storage_limit_bytes).replace('.0 MB', ' MB').replace('.0 GB', ' GB')} Storage Quota` : 'Unlimited Storage Quota'}</span>
+                              <span>
+                                  {myPlanData.storage_limit_bytes > 0 ? (
+                                      myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'Limit reached' : `${formatStorage(myPlanData.storage_used_bytes)} used (${Math.round((myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100)}%)`
+                                  ) : `${formatStorage(myPlanData.storage_used_bytes)} used`}
+                              </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                              <div className={`h-2.5 rounded-full ${myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'bg-red-600' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, Math.max(0, (myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100))}%` }}></div>
+                          </div>
+                      </div>
+                  )}
               </div>
-              <div className="mt-6 flex flex-col md:flex-row gap-4">
-                  <button
-                      onClick={handleManageBilling}
-                      className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
-                  >
-                      Manage Billing
-                  </button>
-              </div>
+              {data?.department_tier_usage?.current_plan !== 'Free' && (
+                  <div className="mt-6 flex flex-col md:flex-row gap-4">
+                      <button
+                          id="manage-billing-btn"
+                          onClick={handleManageBilling}
+                          className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
+                      >
+                          Manage Billing
+                      </button>
+                  </div>
+              )}
               {actionMessage && (
                   <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-sm font-medium text-[#0f766e] dark:text-[#6ac5bd] shadow-sm" role="status">
                       {actionMessage}
@@ -239,7 +257,7 @@ export default function CostDashboardPage() {
                 </svg>
                 <div>
                     <h3 className="text-sm font-semibold text-amber-800">Budget Alert</h3>
-                    <p className="text-sm text-amber-700 mt-1">Your projected monthly cost ({formatCurrency(data.projected_monthly_cost)}) is reaching your plan's soft limit. Keep your business momentum with a higher tier for better bulk rates!</p>
+                    <p className="text-sm text-amber-700 mt-1">Your projected monthly cost ({formatCurrency(data.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching. Keep your business momentum with a higher tier for better bulk rates!</p>
                 </div>
             </div>
         )}
@@ -416,6 +434,20 @@ export default function CostDashboardPage() {
             )}
         </section>
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .ohc-growth-card {
+            backdrop-filter: blur(20px) saturate(200%);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Outfit', 'Inter', sans-serif;
+            border-radius: 12px;
+            padding: 24px;
+        }
+      `}} />
     </AppShell>
   );
 }
