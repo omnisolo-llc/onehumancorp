@@ -4,6 +4,8 @@ use flate2::Compression;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use std::io::{Write, Read, Cursor};
+use dashmap::DashMap;
+use std::sync::OnceLock;
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
@@ -38,8 +40,16 @@ static STOP_WORDS: &[&str] = &[
     "about", "as", "of",
 ];
 
+static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, String>> = OnceLock::new();
+
 pub fn reduce_tokens(data: &str) -> String {
-    data.split_whitespace()
+    let cache = REDUCE_TOKENS_CACHE.get_or_init(|| DashMap::new());
+
+    if let Some(cached) = cache.get(data) {
+        return cached.clone();
+    }
+
+    let reduced = data.split_whitespace()
         .filter(|word| {
             !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
         })
@@ -49,7 +59,15 @@ pub fn reduce_tokens(data: &str) -> String {
             }
             acc.push_str(w);
             acc
-        })
+        });
+
+    // Optionally bounds check the cache to prevent infinite memory growth
+    if cache.len() > 10_000 {
+        cache.clear();
+    }
+
+    cache.insert(data.to_string(), reduced.clone());
+    reduced
 }
 
 

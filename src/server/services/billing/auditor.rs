@@ -45,6 +45,8 @@ pub struct CostAuditor {
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     pub tenant_api_calls: Mutex<HashMap<String, u64>>,
     pub tenant_email_sends: Mutex<HashMap<String, u64>>,
+    tenant_anomalies: Mutex<HashMap<String, Vec<String>>>,
+    tenant_cost_history: Mutex<HashMap<String, Vec<f64>>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     api_calls_counter: opentelemetry::metrics::Counter<u64>,
     email_sends_counter: opentelemetry::metrics::Counter<u64>,
@@ -87,6 +89,8 @@ impl CostAuditor {
             agent_storage_bytes: Mutex::new(HashMap::new()),
             tenant_api_calls: Mutex::new(HashMap::new()),
             tenant_email_sends: Mutex::new(HashMap::new()),
+            tenant_anomalies: Mutex::new(HashMap::new()),
+            tenant_cost_history: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             api_calls_counter,
             email_sends_counter,
@@ -129,9 +133,29 @@ impl CostAuditor {
         // Is there any other cost recorded in tenant_costs? No.
         // So auditor.get_tenant_cost_cents() is correct for LLM cost.
 
-        // Detect anomalies (simple threshold check)
-        if cost > 10.0 {
-            tracing::warn!("Anomaly detected: High token usage cost ({})", cost); // pii-safe
+        // Detect anomalies (Dynamic threshold check)
+        let mut cost_history = self.tenant_cost_history.lock().unwrap();
+        let history = cost_history.entry(event.tenant_id.clone()).or_insert_with(Vec::new);
+
+        let avg_cost = if history.is_empty() {
+            0.0
+        } else {
+            history.iter().sum::<f64>() / history.len() as f64
+        };
+
+        if avg_cost > 0.0 && cost > avg_cost * 3.0 && cost > 0.05 {
+            let msg = format!("Anomaly detected: High token usage cost (${:.4}) compared to average (${:.4})", cost, avg_cost);
+            tracing::warn!("{}", msg); // pii-safe
+
+            let mut anomalies = self.tenant_anomalies.lock().unwrap();
+            anomalies.entry(event.tenant_id.clone()).or_insert_with(Vec::new).push(msg);
+        } else if cost > 10.0 {
+             tracing::warn!("Anomaly detected: Extremely high individual token usage cost ({})", cost); // pii-safe
+        }
+
+        history.push(cost);
+        if history.len() > 100 {
+            history.remove(0); // Keep last 100
         }
         *total_cost += cost;
 
@@ -315,6 +339,11 @@ impl CostAuditor {
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_anomalies(&self, tenant_id: &str) -> Vec<String> {
+        let anomalies = self.tenant_anomalies.lock().unwrap();
+        anomalies.get(tenant_id).cloned().unwrap_or_default()
     }
 
 
@@ -701,5 +730,45 @@ mod tests {
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use ::server_pricing::calculator::CostConfig;
+
+    #[test]
+    fn test_anomaly_tracking() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let mut event = AuditEvent {
+            agent_id: "agent1".to_string(),
+            tenant_id: "tenant_anomaly".to_string(),
+            input_tokens: 10,
+            output_tokens: 5,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        // Baseline cost: 10 * 0.001 + 5 * 0.002 = 0.01 + 0.01 = 0.02
+        auditor.record_event(event.clone());
+        auditor.record_event(event.clone());
+        auditor.record_event(event.clone());
+
+        // Spike
+        event.input_tokens = 1000;
+        event.output_tokens = 500;
+        // Cost: 1000 * 0.001 + 500 * 0.002 = 1.0 + 1.0 = 2.0
+        auditor.record_event(event.clone());
+
+        let anomalies = auditor.get_tenant_anomalies("tenant_anomaly");
+        assert_eq!(anomalies.len(), 1);
+        assert!(anomalies[0].contains("Anomaly detected"));
     }
 }
