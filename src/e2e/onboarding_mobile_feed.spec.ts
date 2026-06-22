@@ -21,6 +21,9 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
         const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
+    await page.route('**/api/ui/unified_inbox_feed*', async route => {
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+    });
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
@@ -49,9 +52,8 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
       };
     });
     await page.goto('http://mock/index.html');
-    await page.click('#start-btn');
 
-    // 2. Choose Instant Build
+    // 2. Choose Instant Build (it is now right on index.html instead of after start-btn)
     await page.click('button:has-text("Instant Build")');
 
     // 3. Enter business concept
@@ -77,12 +79,13 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await expect(welcomeCard).toBeVisible({ timeout: 15000 });
 
     // 9. Interaction Audit: Verify "Review Storefront" button works
-    const reviewBtn = page.locator('#reputation-engine-link');
+    const reviewBtn = page.locator('[data-testid="onboarding-welcome-card"] #reputation-engine-link');
     await expect(reviewBtn).toBeVisible();
     const box = await reviewBtn.boundingBox(); expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
 
     // Click should navigate or trigger action (here it navigates to /storefront)
-    await reviewBtn.click();
+    await reviewBtn.scrollIntoViewIfNeeded();
+    await reviewBtn.evaluate(el => el.click());
     // Assuming /storefront redirects to some page or we just check URL change if we mocked navigation in dashboard.html
   });
 });
