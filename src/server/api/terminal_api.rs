@@ -310,6 +310,8 @@ pub struct PosOfflineTransaction {
     pub currency: String,
     pub payload: String,
     pub timestamp: Option<String>,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
     pub device_signature: Option<String>,
 }
 
@@ -414,7 +416,7 @@ pub async fn sync_offline_transactions_handler(
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature) "
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature, terminal_session_id, product_id, quantity) "
         );
 
         let tenant_id_clone = tenant_id.clone();
@@ -425,6 +427,9 @@ pub async fn sync_offline_transactions_handler(
             let currency = tx.currency.clone();
             let payload_str = tx.payload.clone();
             let device_signature = tx.device_signature.clone();
+            let session_id_clone = session_id.clone();
+            let product_id = tx.product_id.clone();
+            let quantity = tx.quantity.clone().unwrap_or(1);
 
             b.push_bind(tx_id)
              .push_bind(tenant_id_clone.clone())
@@ -434,7 +439,10 @@ pub async fn sync_offline_transactions_handler(
              .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
              .push_bind("PENDING")
              .push_bind("pending")
-             .push_bind(device_signature);
+             .push_bind(device_signature)
+             .push_bind(session_id_clone)
+             .push_bind(product_id)
+             .push_bind(quantity);
         });
 
         query_builder.push(" ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload");
