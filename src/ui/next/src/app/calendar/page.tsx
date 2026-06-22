@@ -4,8 +4,10 @@ import Link from 'next/link';
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [morningBriefing, setMorningBriefing] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
 
   useEffect(() => {
     const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
@@ -18,8 +20,9 @@ export default function CalendarPage() {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setAppointments(data.map((b: any) => {
+          const formattedAppointments = data.map((b: any) => {
             const startDate = new Date(b.start_time);
+            const isPast = startDate < new Date();
             return {
               id: b.id,
               customer: b.customer_name || 'Customer',
@@ -27,10 +30,22 @@ export default function CalendarPage() {
               time: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               date: startDate.toLocaleDateString(),
               status: b.status || 'pending',
-              ai_scheduled: true, // Assuming OHC Operations AI manages these
-              link: '' // No link for physical bookings by default, could add if it's a virtual service
+              ai_scheduled: true,
+              link: '',
+              isPast,
+              rawDate: startDate,
+              paymentStatus: b.status === 'confirmed' ? 'Paid' : 'Deposit Required',
+              aiSummary: b.ai_summary || `AI Details for ${b.product_title || 'Service Booking'}`
             };
-          }));
+          });
+          setAppointments(formattedAppointments);
+
+          const futureAppointments = formattedAppointments.filter(a => !a.isPast);
+          const unpaidAppointments = futureAppointments.filter(a => a.paymentStatus === 'Deposit Required').length;
+
+          setMorningBriefing({
+             message: `You have ${futureAppointments.length} appointments today. ${unpaidAppointments > 0 ? `${unpaidAppointments} client(s) still need to pay their deposit.` : 'All deposits are paid.'}`
+          });
         }
         setIsLoading(false);
       })
@@ -40,8 +55,6 @@ export default function CalendarPage() {
          setIsLoading(false);
       });
   }, []);
-
-  const [aiActivity, setAiActivity] = useState<any[]>([]);
 
   const [aiEnabled, setAiEnabled] = useState(true);
 
@@ -56,7 +69,7 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Calendar & Bookings</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">AI Scheduling (Zero-Setup)</span>
+          <span className="text-sm font-medium text-gray-700">AI Scheduling</span>
           <button
             aria-label="Toggle AI Scheduling"
             aria-pressed={aiEnabled}
@@ -72,8 +85,19 @@ export default function CalendarPage() {
 
         {/* Appointments Column */}
         <div className="md:col-span-2 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
-            <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
+          {/* AI Morning Briefing Card */}
+          {morningBriefing && (
+             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                   <span className="text-lg">✨</span>
+                   <h2 className="font-semibold text-blue-900 font-outfit">Morning Briefing</h2>
+                </div>
+                <p className="text-blue-800 text-sm">{morningBriefing.message}</p>
+             </div>
+          )}
+
+          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+            <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Today</h2>
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center flex flex-col items-center justify-center gap-3">
@@ -87,23 +111,19 @@ export default function CalendarPage() {
               ) : appointments.length === 0 ? (
                 <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center">No upcoming appointments.</div>
               ) : appointments.map(apt => (
-                <div key={apt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
+                <div
+                  key={apt.id}
+                  onClick={() => setSelectedAppointment(apt)}
+                  className={`cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg hover:shadow-md transition-shadow ${apt.isPast ? 'bg-gray-50 opacity-70 border-gray-100' : 'bg-white border-gray-200'}`}
+                >
                   <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{apt.service}</h3>
+                    <h3 className={`font-semibold text-lg ${apt.isPast ? 'text-gray-500' : 'text-gray-900'}`}>{apt.service}</h3>
                     <p className="text-sm text-gray-500">{apt.date} at {apt.time} • {apt.customer}</p>
-                    {apt.ai_scheduled && (
-                      <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
-                    )}
                   </div>
                   <div className="mt-2 sm:mt-0 flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                       {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                     </span>
-                    {apt.link && (
-                      <a href={apt.link} target="_blank" rel="noreferrer" className="px-3 py-1.5 text-xs font-bold rounded bg-blue-600 text-white hover:bg-blue-700 transition">
-                        Join Meeting
-                      </a>
-                    )}
                   </div>
                 </div>
               ))}
@@ -111,32 +131,51 @@ export default function CalendarPage() {
           </section>
         </div>
 
-        {/* AI Operations Activity Feed */}
+        {/* Appointment Details Column */}
         <div className="md:col-span-1 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">🤖</span>
-              <h2 className="text-xl font-semibold font-outfit text-gray-900">Operations Agent</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Real-time activity of your AI managing bookings and inquiries.</p>
+          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white sticky top-24" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+            <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Appointment Details</h2>
+            {!selectedAppointment ? (
+              <p className="text-sm text-gray-500 text-center py-8">Select an appointment to view details.</p>
+            ) : (
+               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3">
+                     <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
+                        {selectedAppointment.customer.charAt(0)}
+                     </div>
+                     <div>
+                        <h3 className="font-bold text-gray-900">{selectedAppointment.customer}</h3>
+                        <p className="text-xs text-gray-500">{selectedAppointment.time} • {selectedAppointment.service}</p>
+                     </div>
+                  </div>
 
-            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px  before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-              {aiActivity.length === 0 ? (
-                <div className="text-sm text-gray-500 text-center py-4">No recent AI activity.</div>
-              ) : aiActivity.map((activity, idx) => (
-                <div key={activity.id} className="relative flex items-center justify-between  group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-100 text-blue-500 shadow shrink-0  z-10">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                     <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block mb-1">AI Summary</span>
+                     <p className="text-sm text-blue-900">{selectedAppointment.aiSummary}</p>
                   </div>
-                  <div className="w-[calc(100%-4rem)]  bg-white p-4 rounded border border-gray-100 shadow-sm ml-4 ">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-gray-500">{activity.time}</span>
-                    </div>
-                    <p className="text-sm text-gray-800">{activity.action}</p>
+
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                     <span className="text-sm text-gray-600">Payment Status</span>
+                     <span className={`text-sm font-semibold ${selectedAppointment.paymentStatus === 'Paid' ? 'text-green-600' : 'text-orange-600'}`}>
+                        {selectedAppointment.paymentStatus}
+                     </span>
                   </div>
-                </div>
-              ))}
-            </div>
+
+                  <div className="space-y-2 pt-2">
+                     <button className="w-full py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition">
+                        Message Client
+                     </button>
+                     {selectedAppointment.paymentStatus === 'Deposit Required' && (
+                        <button className="w-full py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                           Request Payment
+                        </button>
+                     )}
+                     <button className="w-full py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                        Reschedule
+                     </button>
+                  </div>
+               </div>
+            )}
           </section>
         </div>
 
