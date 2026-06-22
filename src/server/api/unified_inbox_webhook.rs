@@ -231,82 +231,69 @@ pub async fn get_unified_feed(
     }
 
     if let Ok(threads_rows) = threads_res_mapped {
+        let mut futures = vec![];
         for thread in threads_rows {
-            let thread_id = thread.id.clone();
+            let state_clone = state.clone();
+            futures.push(tokio::spawn(async move {
+                let thread_id = thread.id.clone();
 
-            let mut messages: Vec<UnifiedMessage> = vec![];
-            let mut triage_actions: Vec<UnifiedTriageAction> = vec![];
+                let mut messages: Vec<UnifiedMessage> = vec![];
+                let mut triage_actions: Vec<UnifiedTriageAction> = vec![];
 
-            match &state.db.store {
-                crate::db::DbStore::Postgres => {
-                    if let Ok(msg_rows) = sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = $1 ORDER BY created_at ASC")
-                        .bind(&thread_id).fetch_all(&state.db.pool).await {
-                        for m_row in msg_rows {
-                            messages.push(UnifiedMessage {
-                                id: m_row.get("id"),
-                                tenant_id: m_row.get("tenant_id"),
-                                thread_id: m_row.get("thread_id"),
-                                sender_type: m_row.get("sender_type"),
-                                content: m_row.get("content"),
-                                created_at: m_row.try_get("created_at").unwrap_or_default(),
-                            });
+                match &state_clone.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let pool = state_clone.db.pool.clone();
+                        let (msg_res, action_res) = tokio::join!(
+                            sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = $1 ORDER BY created_at ASC").bind(&thread_id).fetch_all(&pool),
+                            sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = $1").bind(&thread_id).fetch_all(&pool)
+                        );
+                        if let Ok(msg_rows) = msg_res {
+                            for m_row in msg_rows {
+                                use sqlx::Row;
+                                messages.push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                            }
                         }
-                    }
-
-                    if let Ok(action_rows) = sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = $1")
-                        .bind(&thread_id).fetch_all(&state.db.pool).await {
-                        for a_row in action_rows {
-                            triage_actions.push(UnifiedTriageAction {
-                                id: a_row.get("id"),
-                                tenant_id: a_row.get("tenant_id"),
-                                thread_id: a_row.get("thread_id"),
-                                action_type: a_row.get("action_type"),
-                                action_payload: a_row.try_get("action_payload").ok(),
-                                status: a_row.get("status"),
-                                created_at: a_row.try_get("created_at").unwrap_or_default(),
-                                updated_at: a_row.try_get("updated_at").unwrap_or_default(),
-                            });
+                        if let Ok(action_rows) = action_res {
+                            for a_row in action_rows {
+                                use sqlx::Row;
+                                triage_actions.push(UnifiedTriageAction { id: a_row.get("id"), tenant_id: a_row.get("tenant_id"), thread_id: a_row.get("thread_id"), action_type: a_row.get("action_type"), action_payload: a_row.try_get("action_payload").ok(), status: a_row.get("status"), created_at: a_row.try_get("created_at").unwrap_or_default(), updated_at: a_row.try_get("updated_at").unwrap_or_default() });
+                            }
                         }
-                    }
-                },
-                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    if let Ok(msg_rows) = sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ? ORDER BY created_at ASC")
-                        .bind(&thread_id).fetch_all(sqlite_pool).await {
-                        for m_row in msg_rows {
-                            messages.push(UnifiedMessage {
-                                id: m_row.get("id"),
-                                tenant_id: m_row.get("tenant_id"),
-                                thread_id: m_row.get("thread_id"),
-                                sender_type: m_row.get("sender_type"),
-                                content: m_row.get("content"),
-                                created_at: m_row.try_get("created_at").unwrap_or_default(),
-                            });
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let pool = sqlite_pool.clone();
+                        let (msg_res, action_res) = tokio::join!(
+                            sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ? ORDER BY created_at ASC").bind(&thread_id).fetch_all(&pool),
+                            sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ?").bind(&thread_id).fetch_all(&pool)
+                        );
+                        if let Ok(msg_rows) = msg_res {
+                            for m_row in msg_rows {
+                                use sqlx::Row;
+                                messages.push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                            }
                         }
-                    }
-
-                    if let Ok(action_rows) = sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ?")
-                        .bind(&thread_id).fetch_all(sqlite_pool).await {
-                        for a_row in action_rows {
-                            triage_actions.push(UnifiedTriageAction {
-                                id: a_row.get("id"),
-                                tenant_id: a_row.get("tenant_id"),
-                                thread_id: a_row.get("thread_id"),
-                                action_type: a_row.get("action_type"),
-                                action_payload: a_row.try_get("action_payload").ok(),
-                                status: a_row.get("status"),
-                                created_at: a_row.try_get("created_at").unwrap_or_default(),
-                                updated_at: a_row.try_get("updated_at").unwrap_or_default(),
-                            });
+                        if let Ok(action_rows) = action_res {
+                            for a_row in action_rows {
+                                use sqlx::Row;
+                                triage_actions.push(UnifiedTriageAction { id: a_row.get("id"), tenant_id: a_row.get("tenant_id"), thread_id: a_row.get("thread_id"), action_type: a_row.get("action_type"), action_payload: a_row.try_get("action_payload").ok(), status: a_row.get("status"), created_at: a_row.try_get("created_at").unwrap_or_default(), updated_at: a_row.try_get("updated_at").unwrap_or_default() });
+                            }
                         }
                     }
                 }
-            }
 
-            feed_items.push(UnifiedFeedItem {
-                thread,
-                messages,
-                triage_actions,
-            });
+                UnifiedFeedItem {
+                    thread,
+                    messages,
+                    triage_actions,
+                }
+            }));
+        }
+
+        let results = futures::future::join_all(futures).await;
+        for res in results {
+            if let Ok(item) = res {
+                feed_items.push(item);
+            }
         }
     }
 
