@@ -268,7 +268,7 @@ impl SyncService for MySyncService {
                           data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = $6
                           WHERE crdt_deltas.updated_at < excluded.updated_at";
 
-            match sqlx::query(query)
+            let result = sqlx::query(query)
                 .bind(&tenant_id)
                 .bind(&delta.id)
                 .bind(&delta.entity_id)
@@ -276,10 +276,32 @@ impl SyncService for MySyncService {
                 .bind(&delta.updated_at)
                 .bind(true)
                 .execute(&mut *tx)
-                .await
-            {
-                Ok(_) => {
-                    synced_count += 1;
+                .await;
+
+            match result {
+                Ok(res) => {
+                    if res.rows_affected() == 0 {
+                        // This means the WHERE condition failed, which means we have a version conflict.
+                        // We enqueue a job for the AI Agent (The Conciliator) to handle this sync conflict.
+                        let ai_task_id = uuid::Uuid::new_v4().to_string();
+                        let ai_payload = serde_json::json!({
+                            "entity_id": delta.entity_id,
+                            "delta_id": delta.id,
+                            "message": format!("Sync conflict detected for CRDT delta {} on entity {}. Manual review or AI resolution required.", delta.id, delta.entity_id)
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'sync.crdt.conflict', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(&tenant_id)
+                        .bind(&ai_payload)
+                        .execute(&mut *tx)
+                        .await;
+                    } else {
+                        synced_count += 1;
+                    }
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("[bug] failed to upsert CRDT delta: error=");

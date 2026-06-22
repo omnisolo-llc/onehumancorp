@@ -155,10 +155,12 @@ export default function Dashboard() {
       // ignore
     }
 
-    const updateOfflineStatus = () => {
+    const updateOfflineStatus = async () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        const { getActions } = await import("../utils/offlineQueue");
+        const actions = await getActions();
+        setOfflineQueueCount(actions.length);
       } catch {
         setOfflineQueueCount(0);
       }
@@ -167,8 +169,8 @@ export default function Dashboard() {
     const handleSync = async () => {
       if (!navigator.onLine) return;
       try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
+        const { getActions, removeAction } = await import("../utils/offlineQueue");
+        const queue = await getActions();
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         setIsSyncing(true);
@@ -186,14 +188,13 @@ export default function Dashboard() {
             setSyncErrorCount(data.failed_count);
           }
 
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
+          // Remove exactly the items we just synced
+          for (const item of queue) {
+             await removeAction(item.id);
+          }
+
+          const currentQueue = await getActions();
+          setOfflineQueueCount(currentQueue.length);
         }
       } catch (e) {
         console.error("Sync failed", e);
@@ -840,6 +841,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
             </Link>
 
+            <Link href="/zero-click-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Zero-Click Builder</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate a business in 30 seconds to show friends how fast OHC is.</p>
+            </Link>
+
             <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
@@ -983,6 +993,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">WhatsApp Link Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create shareable WhatsApp links to start conversations instantly.</p>
+            </Link>
+
+            <Link href="/calendar" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📅</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Schedule</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Calendar</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">View upcoming appointments and sync with your AI operations assistant.</p>
             </Link>
 
             <Link href="/giveaway" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
