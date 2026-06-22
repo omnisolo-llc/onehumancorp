@@ -36,7 +36,7 @@ test.describe('Help Components', () => {
     await page.goto('/help');
 
     // Wait for at least one article title to appear
-    await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
+    await expect(page.locator('h1:has-text("In-App Help Center")')).toBeVisible();
     await expect(page.locator('h2:has-text("Getting Started")')).toBeVisible();
     await expect(page.locator('h3:has-text("Getting Started with Your Store")')).toBeVisible();
 

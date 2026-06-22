@@ -294,6 +294,9 @@ export default function Dashboard() {
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
         setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        if (unifiedData.triage) {
+          setInitialTriage(unifiedData.triage);
+        }
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -1064,6 +1067,14 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create discount code widgets for your customers.</p>
             </Link>
 
+            <Link href="/spin-to-win-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎡</div>
+                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Gamification</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Spin to Win Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create interactive discount wheels to capture emails.</p>
+            </Link>
             <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>

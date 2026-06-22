@@ -92,7 +92,7 @@ test.describe("Documentation User Journey", () => {
     await page.goto("/help");
 
     // Verify Help Center is loaded
-    await expect(page.locator("h1", { hasText: "Help Center" })).toBeVisible();
+    await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
 
     // Verify Categories from the mock we added
     await expect(

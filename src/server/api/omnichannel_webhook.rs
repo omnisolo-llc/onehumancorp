@@ -291,7 +291,8 @@ pub async fn handle_omnichannel_webhook(
                 "action_type": "Draft Reply",
                 "draft_reply": action_payload,
             }))
-            .execute(&state.db.pool).await
+            .execute(&state.db.pool).await;
+            Ok(())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
@@ -308,7 +309,8 @@ pub async fn handle_omnichannel_webhook(
                 "action_type": "Draft Reply",
                 "draft_reply": action_payload,
             }).to_string())
-            .execute(sqlite_pool).await
+            .execute(sqlite_pool).await;
+            Ok::<(), ()>(())
         }
     };
 

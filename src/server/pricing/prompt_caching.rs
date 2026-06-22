@@ -160,7 +160,7 @@ impl PromptCache {
             return String::new();
         }
 
-        let max_chars = max_tokens * 4;
+        let max_chars = max_tokens * 4; // Fast heuristic assuming 4 chars per token
 
         let mut char_count = 0;
         let mut byte_index = context.len();
