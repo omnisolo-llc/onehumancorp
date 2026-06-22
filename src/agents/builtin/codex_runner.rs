@@ -309,6 +309,7 @@ impl AppServer {
                     meta: None,
                 },
             };
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
