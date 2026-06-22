@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 #![allow(clippy::empty_line_after_doc_comments)]
 #![allow(unused_mut, clippy::useless_format)]
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
