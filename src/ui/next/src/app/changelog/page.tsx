@@ -29,7 +29,7 @@ export default function ChangelogPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
+        <h1 data-testid="changelog-title" className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
           Release Notes & Changelog
         </h1>
         <div className="space-y-8">
