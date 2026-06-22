@@ -50,18 +50,21 @@ impl MissedLeadRecoveryWorker {
                         r.get::<String, _>("tenant_id"),
                         r.get::<String, _>("source"),
                         r.get::<String, _>("original_content"),
-                        r.try_get::<String, _>("customer_id").ok()
+                        r.try_get::<String, _>("customer_id").ok(),
+                        r.get::<String, _>("tone")
                     )
                 })
             },
             crate::db::DbStore::Sqlite(pool) => {
                 sqlx::query(
                     r#"
-                    SELECT id, tenant_id, source, original_content, customer_id
-                    FROM omni_inbox_messages
-                    WHERE status = 'unread'
-                      AND created_at < datetime('now', '-2 hours')
-                      AND (draft_reply IS NULL OR draft_reply = '')
+                    SELECT m.id, m.tenant_id, m.source, m.original_content, m.customer_id, COALESCE(p.tone_instructions, '') as tone
+                    FROM omni_inbox_messages m
+                    LEFT JOIN auto_reply_policies p ON m.tenant_id = p.tenant_id
+                    WHERE m.status = 'unread'
+                      AND m.created_at < datetime('now', '-' || COALESCE(p.delay_minutes, 5) || ' minutes')
+                      AND (p.enabled IS NULL OR p.enabled = 1)
+                      AND (m.draft_reply IS NULL OR m.draft_reply = '')
                     LIMIT 1
                     "#
                 )
@@ -74,13 +77,14 @@ impl MissedLeadRecoveryWorker {
                         r.get::<String, _>("tenant_id"),
                         r.get::<String, _>("source"),
                         r.get::<String, _>("original_content"),
-                        r.try_get::<String, _>("customer_id").ok()
+                        r.try_get::<String, _>("customer_id").ok(),
+                        r.get::<String, _>("tone")
                     )
                 })
             }
         };
 
-        if let Some((message_id, tenant_id, source, original_content, customer_id)) = row_data {
+        if let Some((message_id, tenant_id, source, original_content, customer_id, tone)) = row_data {
             let customer_name = if let Some(cid) = &customer_id {
                 match &self.db.store {
                     crate::db::DbStore::Postgres => {
@@ -106,13 +110,24 @@ impl MissedLeadRecoveryWorker {
                 "Customer".to_string()
             };
 
+            #[derive(serde::Deserialize, Default)]
+            struct IntentResponse {
+                is_safe: bool,
+                draft_reply: String,
+            }
+
             let prompt = format!(
                 "You are an AI assistant acting as the Customer Relationship Agent for a business. \
-                A customer ({}) sent an inquiry via {} 2 hours ago and we haven't replied yet. \
-                Their message: '{}'\n\
-                Draft a friendly, short follow-up message to apologize for the delay and see how we can help. \
-                If it seems they wanted a booking or a quote, mention we can get that sorted for them.",
-                customer_name, source, original_content
+                A customer ({}) sent an inquiry via {} a while ago and we haven't replied. \
+                Their message: '{}'
+\
+                Instructions from the owner: '{}'
+\
+                First, determine if this is a safe, new inquiry (e.g. asking for a quote, booking, or service) \
+                versus an angry complaint, spam, or a message that requires human intervention. \
+                If it is safe, draft a friendly, short follow-up message to apologize for the delay, ask for necessary details (like address or photo if relevant), and mention we can get a quote/booking sorted. \
+                Reply strictly in JSON format with two keys: `is_safe` (boolean) and `draft_reply` (string).",
+                customer_name, source, original_content, tone
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
@@ -121,6 +136,7 @@ impl MissedLeadRecoveryWorker {
                 "Hi {}, sorry for the delay! We're currently reviewing your request and will get back to you shortly. Did you still need help?",
                 customer_name
             );
+            let mut is_safe = true;
 
             let max_retries = 3;
             let mut retry_count = 0;
@@ -147,9 +163,21 @@ impl MissedLeadRecoveryWorker {
                 match tokio::time::timeout(Duration::from_secs(30), llm_call).await {
                     Ok(Ok(reply)) => {
                         if !reply.trim().is_empty() {
-                            follow_up_msg = reply.trim().to_string();
-                            break;
+                            // Extract JSON block if surrounded by markdown
+                            let json_str = reply.trim();
+                            let start_idx = json_str.find('{').unwrap_or(0);
+                            let end_idx = json_str.rfind('}').unwrap_or(json_str.len() - 1);
+
+                            if start_idx <= end_idx {
+                                let clean_json = &json_str[start_idx..=end_idx];
+                                if let Ok(parsed) = serde_json::from_str::<IntentResponse>(clean_json) {
+                                    is_safe = parsed.is_safe;
+                                    follow_up_msg = parsed.draft_reply;
+                                    break;
+                                }
+                            }
                         }
+                        retry_count += 1;
                     }
                     _ => {
                         retry_count += 1;
@@ -157,10 +185,31 @@ impl MissedLeadRecoveryWorker {
                 }
             }
 
+            if !is_safe {
+                // If it's not safe, mark it as skipped so we don't keep polling
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'skipped_auto_reply' WHERE id = $1 AND tenant_id = $2")
+                            .bind(&message_id)
+                            .bind(&tenant_id)
+                            .execute(&self.db.pool)
+                            .await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'skipped_auto_reply' WHERE id = ? AND tenant_id = ?")
+                            .bind(&message_id)
+                            .bind(&tenant_id)
+                            .execute(pool)
+                            .await;
+                    }
+                }
+                return Ok(true);
+            }
+
             let agent_feed_item_id = Uuid::new_v4().to_string();
 
             let context_payload = serde_json::json!({
-                "description": format!("The customer ({}) hasn't received a reply for 2 hours.", customer_name)
+                "description": format!("The customer ({}) hasn't received a reply for the configured threshold.", customer_name)
             });
 
             let proposed_action = serde_json::json!({
@@ -243,6 +292,11 @@ mod tests {
             pool,
         };
         crate::db::DB::run_migrations(&db).await.unwrap();
+        // create auto_reply_policies table for test since migrations might not run correctly or we just need the table
+        if let DbStore::Sqlite(pool) = &db.store {
+            sqlx::query("CREATE TABLE IF NOT EXISTS auto_reply_policies (id TEXT PRIMARY KEY, tenant_id TEXT, enabled BOOLEAN, delay_minutes INTEGER, tone_instructions TEXT)")
+                .execute(pool).await.unwrap();
+        }
         Some(Arc::new(db))
     }
 
@@ -264,7 +318,7 @@ mod tests {
                 .unwrap();
 
             // Insert a stale unread message
-            sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, customer_id, created_at) VALUES (?, ?, 'instagram_dm', 'How much for a cake?', 'How much for a cake?', 'English', 'unread', ?, datetime('now', '-3 hours'))")
+            sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, customer_id, created_at) VALUES (?, ?, 'instagram_dm', 'How much for a cake?', 'How much for a cake?', 'English', 'unread', ?, datetime('now', '-6 minutes'))")
                 .bind(&msg_id)
                 .bind(&tenant_id)
                 .bind(&customer_id)
