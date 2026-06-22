@@ -17,6 +17,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
+import { PostPurchaseShareWidget } from "../components/PostPurchaseShareWidget";
 import { AIUsageLimitWidget } from "./AIUsageLimitWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
@@ -120,6 +121,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
+  const [tenantName, setTenantName] = useState("");
   const [remainingActions, setRemainingActions] = useState<number | null>(null);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
@@ -150,6 +152,13 @@ export default function Dashboard() {
       const storedName = localStorage.getItem("user_name");
       if (storedName) {
         setUserName(storedName);
+      }
+
+      const storedTenantName = localStorage.getItem("tenant_name");
+      if (storedTenantName) {
+        setTenantName(storedTenantName);
+      } else {
+        setTenantName("My Store");
       }
     } catch {
       // ignore
@@ -815,6 +824,7 @@ export default function Dashboard() {
 
         <section className="mt-4">
           <DashboardViralInviteWidget />
+          <PostPurchaseShareWidget tenantId={tenantId()} storeName={tenantName || "My Business"} />
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
