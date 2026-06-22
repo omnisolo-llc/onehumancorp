@@ -267,12 +267,69 @@ async fn simulate_ambassador_draft(
 
     match orchestrator.execute_action(
         crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-        "Draft email for review".to_string(),
-        tenant_id,
+        "Customer Inquiry Reply Draft".to_string(),
+        tenant_id.clone(),
         crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
+        payload.clone(),
     ).await {
-        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Ok(_) => {
+            let pool = crate::db::get_pool();
+            let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
+            let message = payload.get("original_message").and_then(|v| v.as_str()).unwrap_or("");
+            let action_payload = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Insert mock feed item so it shows up in UI Unified Agent Feed correctly
+            let insert_res = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite") || std::env::var("OHC_DATABASE_URL").is_err() {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind("instagram_dm")
+                .bind(serde_json::json!({
+                    "customer_message": message,
+                    "feature_type": "instagram_dm",
+                    "priority": "Medium",
+                    "context": "Simulated context",
+                    "inbox_message_id": "msg_simulated_123",
+                    "customer_id": "cust_simulated_123"
+                }).to_string())
+                .bind(serde_json::json!({
+                    "action_type": "Draft Reply",
+                    "draft_reply": action_payload,
+                    "inbox_message_id": "msg_simulated_123",
+                    "feature_type": "ambassador_reply"
+                }).to_string())
+                .execute(&pool).await.map(|_| ())
+            } else {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind("instagram_dm")
+                .bind(serde_json::json!({
+                    "customer_message": message,
+                    "feature_type": "instagram_dm",
+                    "priority": "Medium",
+                    "context": "Simulated context",
+                    "inbox_message_id": "msg_simulated_123",
+                    "customer_id": "cust_simulated_123"
+                }))
+                .bind(serde_json::json!({
+                    "action_type": "Draft Reply",
+                    "draft_reply": action_payload,
+                    "inbox_message_id": "msg_simulated_123",
+                    "feature_type": "ambassador_reply"
+                }))
+                .execute(&pool).await.map(|_| ())
+            };
+            if let Err(e) = insert_res {
+                tracing::error!("Failed to insert simulated agent feed item: {}", e);
+            }
+
+            (StatusCode::OK, Json(DecisionResponse { success: true })).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to simulate ambassador draft: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
