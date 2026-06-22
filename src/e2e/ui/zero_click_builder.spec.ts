@@ -14,7 +14,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  test('User can generate a business with a single prompt', async ({ page }) => {
+  test('User can generate a business with a conversational prompt', async ({ page }) => {
 
     // Navigate to the real setup page
     await page.goto('/api/ui/setup.html');

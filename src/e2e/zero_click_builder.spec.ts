@@ -1,11 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Zero Click Builder Viral Growth Loop', () => {
-  test('should allow an owner to generate a store from a single prompt and see viral share option', async ({ page, request, loginAs, adminUser }) => {
+  test('should allow an owner to generate a store via chat and see viral share option', async ({ page, request, loginAs, adminUser }) => {
     // Navigate to the new growth feature
     await loginAs(page, adminUser);
 
-    await page.goto('/zero-click-builder');
+    await page.goto('/api/ui/zero-click-builder.html');
 
     // Verify mobile-first layout
     await page.setViewportSize({ width: 375, height: 812 });
@@ -16,18 +16,22 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Verify "Powered by OHC" branding is present (viral loop)
     await expect(page.getByText('⚡ Powered by OHC')).toBeVisible();
 
-    // The generate button should be disabled initially
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
-    await expect(generateBtn).toBeDisabled();
+    // Verify the first message from the agent
+    await expect(page.getByText("Hi! I'm the Zero-Click Onboarding Agent")).toBeVisible();
 
-    // Fill in the prompt
-    await page.fill('textarea[id="prompt"]', 'I am a local coffee roaster in Seattle needing a storefront.');
+    // Step 1: Send business name
+    await page.fill('input[id="prompt"]', 'My Seattle Coffee Roasters');
+    await page.locator('button[id="send-btn"]').click();
 
-    // The button should now be enabled
-    await expect(generateBtn).toBeEnabled();
+    // Check that user message is displayed
+    await expect(page.getByText('My Seattle Coffee Roasters')).toBeVisible();
 
-    // Submit the form
-    await generateBtn.click();
+    // Check that agent replies
+    await expect(page.getByText('Great! Can you upload a photo')).toBeVisible();
+
+    // Step 2: Send description
+    await page.fill('input[id="prompt"]', 'I sell freshly roasted coffee beans.');
+    await page.locator('button[id="send-btn"]').click();
 
     // Wait for the loading state to complete and the result to appear
     await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 20000 });
