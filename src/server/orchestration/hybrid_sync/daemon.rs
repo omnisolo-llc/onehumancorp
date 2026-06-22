@@ -476,7 +476,7 @@ impl HybridSyncDaemon {
             }
         }
 
-        let res_queued_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')")
+        let res_queued_sqlite = sqlx::query("DELETE FROM sub_agent_queue WHERE status = \'QUEUED\' AND created_at < datetime(\'now\', \'-24 hour\')")
             .execute(&self.sqlite_pool)
             .await;
         if let Ok(res) = res_queued_sqlite {
@@ -495,7 +495,7 @@ impl HybridSyncDaemon {
             }
         }
 
-        let res_queued_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
+        let res_queued_pg = sqlx::query("DELETE FROM sub_agent_queue WHERE status = \'QUEUED\' AND created_at < NOW() - INTERVAL \'24 hours\'")
             .execute(&self.pg_pool)
             .await;
         if let Ok(res) = res_queued_pg {
