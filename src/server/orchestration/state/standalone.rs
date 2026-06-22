@@ -322,7 +322,7 @@ impl StateManager for StandaloneStateManager {
                     parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
                     dependencies,
                     title: row.get("title"),
-                    description: row.try_get("description").unwrap_or_default(),
+                    description: row.try_get("description").ok().flatten(),
                     assigned_agent_id: row.try_get("assigned_agent_id").unwrap_or_default(),
                     status: row.get("status"),
                     priority: row.try_get("priority").unwrap_or_else(|_| "P2".to_string()),
