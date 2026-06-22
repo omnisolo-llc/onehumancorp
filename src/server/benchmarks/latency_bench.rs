@@ -93,7 +93,7 @@ pub async fn bench_db_query_time() {
         }
         let mut pg_times = Vec::new();
         for handle in pg_handles {
-            pg_times.push(handle.await.unwrap());
+            pg_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
         }
         pg_times.sort();
         println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -112,7 +112,7 @@ pub async fn bench_db_query_time() {
                 })
             })
             .max_connections(1) // Single connection for in-memory SQLite to avoid lock contention
-            .connect("sqlite::memory:?cache=shared").await.unwrap();
+            .connect("sqlite::memory:?cache=shared").await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -157,7 +157,7 @@ pub async fn bench_api_response_time() {
         }
         let mut cloud_times = Vec::new();
         for handle in cloud_handles {
-            cloud_times.push(handle.await.unwrap());
+            cloud_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
         }
         cloud_times.sort();
         println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -177,7 +177,7 @@ pub async fn bench_api_response_time() {
             })
             .max_connections(100)
             .min_connections(100)
-            .connect("sqlite::memory:?cache=shared").await.unwrap();
+            .connect("sqlite::memory:?cache=shared").await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
@@ -201,7 +201,7 @@ pub async fn bench_api_response_time() {
     }
     let mut standalone_times = Vec::new();
     for handle in standalone_handles {
-        standalone_times.push(handle.await.unwrap());
+        standalone_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
     }
     standalone_times.sort();
     println!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -220,7 +220,7 @@ pub async fn bench_api_response_time() {
     }
     let mut standalone_mobile_times = Vec::new();
     for handle in standalone_mobile_handles {
-        standalone_mobile_times.push(handle.await.unwrap());
+        standalone_mobile_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
     }
     standalone_mobile_times.sort();
     println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_mobile_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -296,10 +296,10 @@ pub async fn bench_agent_snapshot() {
             org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
-        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap());
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
 
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap().into_inner();
+        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
@@ -317,10 +317,10 @@ pub async fn bench_agent_snapshot() {
             org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
-        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap());
-        request.metadata_mut().insert("x-mobile-optimized", "true".parse().unwrap());
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
+        request.metadata_mut().insert("x-mobile-optimized", "true".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap().into_inner();
+        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
         mobile_fetch_times.push(start.elapsed().as_micros());
     }
     mobile_fetch_times.sort();
@@ -339,9 +339,9 @@ pub async fn bench_dashboard_snapshot() {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         // Run minimal migrations for benchmark
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
 
         let pg_pool = crate::db::get_pool();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
@@ -405,7 +405,7 @@ pub async fn bench_dashboard_snapshot() {
             agent_id: "test".to_string(),
         });
 
-        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
+        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
@@ -434,8 +434,8 @@ pub async fn bench_dashboard_snapshot() {
     });
 
 
-    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
-    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
+    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
 
     if !res_mobile.meetings.is_empty() {
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
@@ -476,11 +476,11 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
             };
 
             let start = Instant::now();
-            q.enqueue_batch(vec![job]).await.unwrap();
+            q.enqueue_batch(vec![job]).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
             let elapsed_enqueue = start.elapsed();
 
             let start_deq = Instant::now();
-            let _ = q.dequeue(vec!["test_agent".to_string()]).await.unwrap();
+            let _ = q.dequeue(vec!["test_agent".to_string()]).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
             let elapsed_dequeue = start_deq.elapsed();
 
             (elapsed_enqueue.as_micros(), elapsed_dequeue.as_micros())
@@ -488,7 +488,7 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     }
 
     for handle in join_handles {
-        let (enq, deq) = handle.await.unwrap();
+        let (enq, deq) = handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         enqueue_times.push(enq);
         dequeue_times.push(deq);
     }
@@ -547,7 +547,7 @@ pub async fn bench_get_analytics() {
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
     let start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
     let _ = org_service.get_analytics(request_cold).await;
@@ -557,7 +557,7 @@ pub async fn bench_get_analytics() {
     let mut fetch_times = Vec::new();
     for _ in 0..iterations {
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
 
         let start = std::time::Instant::now();
         let _ = org_service.get_analytics(request).await;
@@ -1130,8 +1130,8 @@ pub async fn bench_ai_job_dispatch_latency() {
         (std::sync::Arc::new(PgTaskQueue::new(std::sync::Arc::new(pg_pool))), true)
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, parent_task_id TEXT, job_type TEXT, payload TEXT, status TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, next_retry_at TEXT, locked_until TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await.unwrap();
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_status_job_type_next_retry ON ohc_job_queue (status, job_type, next_retry_at);").execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, parent_task_id TEXT, job_type TEXT, payload TEXT, status TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, next_retry_at TEXT, locked_until TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_status_job_type_next_retry ON ohc_job_queue (status, job_type, next_retry_at);").execute(&sqlite_pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         (std::sync::Arc::new(crate::orchestration::queue::sqlite_queue::SQLiteTaskQueue::new(std::sync::Arc::new(sqlite_pool))), false)
     };
 
@@ -1154,14 +1154,14 @@ pub async fn bench_ai_job_dispatch_latency() {
     }
 
     let start_sim = std::time::Instant::now();
-    queue.enqueue_batch(jobs).await.unwrap();
+    queue.enqueue_batch(jobs).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     let duration = start_sim.elapsed();
     println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
 
 
     let _start_sim = std::time::Instant::now();
     for _ in 0..100 {
-        queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap();
+        queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     }
     let duration_deq = _start_sim.elapsed();
     println!("  - AI Job Dispatch (Dequeue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration_deq);
