@@ -822,6 +822,45 @@ describe('OnboardingWizard', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
+  it('navigates from step -1 to step 0', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Ensure the fetch mocking returns wizardState step 0 so that on mount it doesn't change from 0 to 4
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/draft') || url.includes('/api/onboarding/state')) {
+        return Promise.resolve({ ok: true, json: async () => ({ wizardState: { step: 0 } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 0 });
+    });
+
+    await renderOnboardingWizard();
+
+    // We expect "Instant Build" button on step 0
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Instant Build/i })).toBeInTheDocument();
+    });
+
+    const instantBuildBtn = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantBuildBtn);
+
+    // Wait for the transition to step -1
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(-1);
+    });
+
+    const backButton = screen.getByRole('button', { name: /Back/i });
+    await user.click(backButton);
+
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().step).toBe(0);
+    });
+  });
+
   it('can go back from the first question to the intro screen', async () => {
     const user = userEvent.setup({ delay: null });
 
