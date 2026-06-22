@@ -129,7 +129,7 @@ impl SqliteMemoryStore {
     /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
     /// Searches session messages using FTS5 MATCH across ALL sessions, returning ranked snippets,
     /// and summarizing them using the LLM to synthesize information drawn from multiple sessions.
-    pub async fn search_cross_session_messages(
+    pub async fn _search_cross_session_messages_internal(
         &self,
         query: &str,
         limit: usize,
@@ -270,6 +270,15 @@ impl LongTermMemory for SqliteMemoryStore {
         &self,
     ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         None
+    }
+
+    async fn search_cross_session_messages(
+        &self,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        self._search_cross_session_messages_internal(query, limit, summarize).await
     }
 }
 

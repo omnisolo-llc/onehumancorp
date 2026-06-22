@@ -1106,6 +1106,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         None
     }
+
+    /// Searches cross-session messages using FTS5 MATCH across all sessions
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
 }
 
 pub struct PersistentMemoryStore {
