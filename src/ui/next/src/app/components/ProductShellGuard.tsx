@@ -93,7 +93,7 @@ const titleOverrides: Record<string, string> = {
   "/booking": "Booking",
   "/brand-studio": "Brand Studio",
   "/builder": "Builder",
-  "/business-setup": "Business Setup",
+  "/onboarding": "Setup",
   "/cart-recovery": "Cart Recovery",
   "/changelog": "Changelog",
   "/chaos-report": "Chaos Report",

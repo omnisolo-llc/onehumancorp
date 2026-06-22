@@ -5,283 +5,244 @@ import { useRouter } from 'next/navigation';
 
 export default function LinkInBioGeneratorPage() {
   const router = useRouter();
-
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
-  const [links, setLinks] = useState([
-    { id: '1', title: 'Visit My Store', url: '/website-builder' },
-    { id: '2', title: 'Book an Appointment', url: '/booking' },
-  ]);
-  const [theme, setTheme] = useState('gradient');
-  const [removeBranding, setRemoveBranding] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://ohc.app' }]);
   const [tenant, setTenant] = useState('my-store');
+  const [isSaving, setIsSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-        const storedName = localStorage.getItem('business_name');
-        if (storedName) setStoreName(storedName);
+    const tid = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store') : 'my-store';
+    setTenant(tid);
 
-        const storedTenant = localStorage.getItem('tenant') || localStorage.getItem('tenant_id') || 'my-store';
-        setTenant(storedTenant);
-    }
-  }, []);
-
-  const addLink = () => {
-    setLinks([...links, { id: Date.now().toString(), title: 'New Link', url: 'https://' }]);
-  };
-
-  const updateLink = (id: string, field: 'title' | 'url', value: string) => {
-    setLinks(links.map(link => link.id === id ? { ...link, [field]: value } : link));
-  };
-
-  const removeLink = (id: string) => {
-    setLinks(links.filter(link => link.id !== id));
-  };
-
-  const [publishing, setPublishing] = useState(false);
-
-  useEffect(() => {
-    if (!tenant || tenant === 'my-store') return;
-
-    const fetchConfig = async () => {
+    // Load existing config if available
+    const loadConfig = async () => {
       try {
-        const res = await fetch(`/api/v1/growth/link-in-bio/${tenant}`);
+        const res = await fetch(`/api/v1/growth/link-in-bio/${tid}`);
         if (res.ok) {
           const data = await res.json();
-          setStoreName(data.store_name);
-          setBio(data.bio);
-          setTheme(data.theme);
-          setLinks(data.links);
-          if (data.remove_branding !== undefined) setRemoveBranding(data.remove_branding);
+          if (data && data.store_name) {
+             setStoreName(data.store_name);
+             setBio(data.bio || '');
+             setTheme(data.theme || 'light');
+             setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://ohc.app' }]);
+          }
         }
-      } catch (err) {
-        console.error("Failed to load Link-in-Bio config", err);
+      } catch (e) {
+        // ignore
       }
     };
-    fetchConfig();
-  }, [tenant]);
+    loadConfig();
+  }, []);
 
-  const handlePublish = async () => {
-    setPublishing(true);
+  const handleAddLink = () => {
+    setLinks([...links, { title: 'New Link', url: 'https://' }]);
+  };
+
+  const handleLinkChange = (index: number, field: 'title' | 'url', value: string) => {
+    const newLinks = [...links];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setLinks(newLinks);
+  };
+
+  const handleRemoveLink = (index: number) => {
+    const newLinks = links.filter((_, i) => i !== index);
+    setLinks(newLinks);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
     try {
-      const payload = {
-        store_name: storeName,
-        bio,
-        theme,
-        links,
-        remove_branding: removeBranding
-      };
       const res = await fetch('/api/v1/growth/link-in-bio', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_name: storeName,
+          bio,
+          theme,
+          links
+        })
       });
-      if (!res.ok) {
-        throw new Error('Failed to publish changes');
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
       }
-      alert('Changes published successfully!');
-    } catch (err) {
-      console.error("Failed to publish", err);
-      alert('Failed to publish changes.');
+    } catch (e) {
+      console.error(e);
     } finally {
-      setPublishing(false);
+      setIsSaving(false);
     }
   };
 
-  const shareLink = `http://localhost:3000/bio/${tenant}`;
+  const linkUrl = `https://ohc.app/bio/${tenant}`;
 
-  const getThemeStyles = () => {
-      switch(theme) {
-          case 'dark': return { background: '#1D1D1F', color: '#ffffff' };
-          case 'light': return { background: '#ffffff', color: '#1D1D1F', border: '1px solid #e5e7eb' };
-          case 'purple': return { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#ffffff' };
-          case 'gradient': default: return { background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#1D1D1F' };
-      }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(linkUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Link-in-Bio Generator 🔗</h1>
-         <div className="flex items-center gap-3">
-             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
-               Back to Dashboard
-             </button>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                 AC
-             </div>
-         </div>
-      </header>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 md:p-8 font-inter">
+      <div className="max-w-6xl mx-auto">
+        <button onClick={() => router.back()} className="mb-6 flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          Back to Dashboard
+        </button>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
-        {/* Editor Settings */}
-        <section className="w-full md:w-1/2 flex flex-col gap-6">
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Profile Details</h2>
-                <div className="flex flex-col gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                        <input
-                            aria-label="Business name"
-                            type="text"
-                            value={storeName}
-                            onChange={(e) => setStoreName(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg">
+            🔗
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white tracking-tight">Link in Bio Generator</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">One link to rule them all. Drive social traffic to your store.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Builder Controls */}
+          <div className="flex-1 space-y-6">
+            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+              <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Profile Info</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="storeNameInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Store / Creator Name</label>
+                  <input
+                    id="storeNameInput"
+                    type="text"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    aria-label="Store / Creator Name"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bioInput" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bio / Description</label>
+                  <textarea
+                    id="bioInput"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    aria-label="Bio / Description"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white h-24"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+              <div className="flex items-center justify-between mb-4">
+                 <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Your Links</h2>
+                 <button onClick={handleAddLink} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Add Link</button>
+              </div>
+
+              <div className="space-y-4">
+                {links.map((link, index) => (
+                  <div key={index} className="flex flex-col gap-2 p-4 bg-gray-50 dark:bg-[#1C1C1E] rounded-xl border border-gray-100 dark:border-white/5">
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Link {index + 1}</span>
+                        {links.length > 1 && (
+                            <button onClick={() => handleRemoveLink(index)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                        )}
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Bio / Tagline</label>
-                        <textarea
-                            aria-label="Bio tagline"
-                            rows={2}
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                        <div className="flex gap-2">
-                            <button aria-label="Gradient theme" aria-pressed={theme === 'gradient'} onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
-                            <button aria-label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
-                            <button aria-label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
-                            <button aria-label="Purple theme" aria-pressed={theme === 'purple'} onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
+                    <input
+                        type="text"
+                        value={link.title}
+                        onChange={(e) => handleLinkChange(index, 'title', e.target.value)}
+                        placeholder="Link Title (e.g. Shop My Collection)"
+                        aria-label={`Link ${index + 1} Title`}
+                        className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
+                    />
+                    <input
+                        type="text"
+                        value={link.url}
+                        onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
+                        placeholder="URL (e.g. https://...)"
+                        aria-label={`Link ${index + 1} URL`}
+                        className="w-full px-3 py-2 bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-white/10 rounded-lg text-sm outline-none text-gray-900 dark:text-white"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+              <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Theme</h2>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all ${theme === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-400'}`}
+                >
+                  Light
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-all ${theme === 'dark' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-400'}`}
+                >
+                  Dark
+                </button>
+              </div>
+            </div>
+
+            <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg shadow-lg transition-all flex justify-center items-center gap-2"
+            >
+                {isSaving ? 'Saving...' : saveSuccess ? 'Saved! ✅' : 'Save & Publish'}
+            </button>
+          </div>
+
+          {/* Live Preview */}
+          <div className="w-full lg:w-[400px] flex-shrink-0">
+             <div className="sticky top-8">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Live Preview</h2>
+                    <button onClick={handleCopy} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors">
+                        {copied ? 'Copied URL!' : 'Copy Link'}
+                    </button>
+                </div>
+
+                {/* Mobile Device Mockup */}
+                <div className="relative w-[340px] h-[680px] mx-auto border-[12px] border-black rounded-[40px] shadow-2xl overflow-hidden bg-white">
+                    <div className="absolute top-0 inset-x-0 h-6 bg-black z-20 rounded-b-3xl"></div> {/* Notch */}
+
+                    <div className={`w-full h-full overflow-y-auto ${theme === 'dark' ? 'bg-[#111111] text-white' : 'bg-[#fafafa] text-black'} flex flex-col items-center pt-16 pb-8 px-6`}>
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 mb-4 shadow-lg flex items-center justify-center text-4xl text-white">
+                            {storeName.charAt(0).toUpperCase()}
+                        </div>
+                        <h1 className="text-2xl font-bold font-outfit text-center mb-2">{storeName || 'Store Name'}</h1>
+                        <p className={`text-center text-sm mb-8 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{bio}</p>
+
+                        <div className="w-full space-y-4">
+                            {links.map((link, i) => (
+                                <a
+                                    key={i}
+                                    href="#"
+                                    onClick={(e) => e.preventDefault()}
+                                    className={`block w-full py-4 px-6 rounded-2xl text-center font-bold text-sm transition-transform hover:scale-[1.02] ${theme === 'dark' ? 'bg-[#222222] text-white hover:bg-[#333333]' : 'bg-white text-black shadow-md hover:shadow-lg'}`}
+                                >
+                                    {link.title || 'Link Title'}
+                                </a>
+                            ))}
+                        </div>
+
+                        <div className="mt-auto pt-8 pb-4">
+                             <a href="#" className={`text-xs font-semibold flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                ⚡ Powered by OHC
+                             </a>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Links</h2>
-                <div className="flex flex-col gap-4">
-                    {links.map((link, index) => (
-                        <div key={link.id} className="p-4 border border-gray-200 rounded-lg bg-white">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link {index + 1}</span>
-                                <button onClick={() => removeLink(link.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Remove</button>
-                            </div>
-                            <input
-                                aria-label={`Link ${index + 1} title`}
-                                type="text"
-                                placeholder="Title (e.g. Visit my Shop)"
-                                value={link.title}
-                                onChange={(e) => updateLink(link.id, 'title', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm mb-2"
-                            />
-                            <input
-                                aria-label={`Link ${index + 1} URL`}
-                                type="url"
-                                placeholder="URL (e.g. https://...)"
-                                value={link.url}
-                                onChange={(e) => updateLink(link.id, 'url', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                            />
-                        </div>
-                    ))}
-                    <button
-                        onClick={addLink}
-                        className="w-full py-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
-                    >
-                        + Add Another Link
-                    </button>
-                </div>
-            </div>
-
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Publish & Share</h2>
-                <div className="flex items-center justify-between p-4 mb-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div>
-                        <span className="text-sm font-medium text-gray-900">Remove "Powered by OHC" Badge</span>
-                        <p className="text-xs text-gray-500 mt-1">Hide the OHC branding from your public page.</p>
-                    </div>
-                    <div className="relative inline-block w-12 h-6 rounded-full transition-colors ease-in-out duration-200 cursor-pointer" style={{ backgroundColor: removeBranding ? '#4f46e5' : '#d1d5db' }} onClick={() => setRemoveBranding(!removeBranding)}>
-                        <input type="checkbox" className="opacity-0 w-0 h-0" checked={removeBranding} onChange={(e) => setRemoveBranding(e.target.checked)} aria-label="Remove branding" />
-                        <span className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ease-in-out duration-200" style={{ transform: removeBranding ? 'translateX(24px)' : 'translateX(0)' }}></span>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-3">
-                    <button
-                        onClick={handlePublish}
-                        disabled={publishing}
-                        className={`w-full py-3 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700`}
-                    >
-                        {publishing ? 'Publishing...' : 'Publish Changes'}
-                    </button>
-                    <button
-                        onClick={() => {
-                            navigator.clipboard.writeText(shareLink);
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                        }}
-                        className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                    >
-                        {copied ? 'Copied Link!' : 'Copy Link-in-Bio URL'}
-                    </button>
-                    <p className="text-xs text-gray-500 text-center mt-1">Add this link to your Instagram, TikTok, or Twitter profile.</p>
-                </div>
-            </div>
-        </section>
-
-        {/* Live Preview */}
-        <section className="w-full md:w-1/2 flex justify-center items-start">
-             <div className="w-[375px] h-[812px] bg-white rounded-[40px] shadow-2xl overflow-hidden relative border-[8px] border-gray-900 flex flex-col items-center">
-                 {/* Notch */}
-                 <div className="absolute top-0 w-40 h-6 bg-gray-900 rounded-b-2xl z-50"></div>
-
-                 <div className="w-full h-full flex flex-col items-center overflow-y-auto pt-16 pb-12 px-6 transition-all duration-300" style={getThemeStyles()}>
-
-                     <div className="w-24 h-24 rounded-full bg-white/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-4 mt-4 border border-white/30 text-4xl">
-                         ✨
-                     </div>
-
-                     <h1 className="text-2xl font-bold font-outfit mb-2 text-center drop-shadow-sm">
-                         {storeName || 'My Store'}
-                     </h1>
-
-                     <p className="text-sm font-medium opacity-90 text-center mb-8 max-w-xs drop-shadow-sm">
-                         {bio || 'Welcome to my storefront!'}
-                     </p>
-
-                     <div className="w-full flex flex-col gap-4">
-                         {links.map((link) => (
-                             <a
-                                 key={link.id}
-                                 href={link.url}
-                                 target="_blank"
-                                 rel="noopener noreferrer"
-                                 className="w-full py-4 px-6 rounded-[16px] text-center font-semibold text-sm transition-transform hover:scale-[1.02] active:scale-95 shadow-sm"
-                                 style={{
-                                     background: theme === 'light' ? '#f3f4f6' : 'rgba(255, 255, 255, 0.15)',
-                                     border: theme === 'light' ? '1px solid #e5e7eb' : '1px solid rgba(255, 255, 255, 0.3)',
-                                     backdropFilter: 'blur(10px)',
-                                     color: theme === 'light' ? '#111827' : '#ffffff'
-                                 }}
-                             >
-                                 {link.title || 'Untitled Link'}
-                             </a>
-                         ))}
-                     </div>
-
-                     {!removeBranding && (
-                         <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                             <a href={`https://ohc.store/join?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
-                                 ⚡ Powered by OHC
-                             </a>
-                         </div>
-                     )}
-                 </div>
              </div>
-        </section>
-      </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

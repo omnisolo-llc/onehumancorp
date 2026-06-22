@@ -290,7 +290,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = marketplace.download_agent(agent_id);
-            let resp = match result {
+            let response = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
@@ -309,11 +309,11 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&response).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
-            let resp = match agent {
+            let response = match agent {
                 Ok(a) => match marketplace.publish_agent(a) {
                     Ok(_) => JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -344,7 +344,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&response).unwrap_or_default();
 
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
