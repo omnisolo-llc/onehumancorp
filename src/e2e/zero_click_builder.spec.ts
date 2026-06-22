@@ -40,6 +40,10 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
     await expect(launchBtn).toBeVisible();
 
+    // Share button
+    const shareBtn = page.getByRole('button', { name: /Share on X/i });
+    await expect(shareBtn).toBeVisible();
+
     // Click the launch button to verify redirect
     await launchBtn.click();
     await expect(page).toHaveURL(/\/dashboard/);

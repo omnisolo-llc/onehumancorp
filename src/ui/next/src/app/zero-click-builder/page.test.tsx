@@ -65,7 +65,7 @@ describe('ZeroClickBuilderPage', () => {
     }, { timeout: 3000 });
 
     expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /1-Tap Launch/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch My Store/i })).toBeInTheDocument();
   });
 
   it('redirects to dashboard when launch button is clicked', async () => {
@@ -88,8 +88,28 @@ describe('ZeroClickBuilderPage', () => {
     }, { timeout: 3000 });
 
     expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
-    const launchBtn = screen.getByRole('button', { name: /1-Tap Launch/i });
+    const launchBtn = screen.getByRole('button', { name: /Launch My Store/i });
     fireEvent.click(launchBtn);
+  });
+
+  it('opens a tweet intent when the share button is clicked', async () => {
+    const mockOpen = vi.fn();
+    window.open = mockOpen;
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        organization_id: 'org_123',
+        user_id: 'user_123'
+      }),
+    });
+
+    render(<ZeroClickBuilderPage />);
+    const textarea = screen.getByPlaceholderText(/I am a home baker/i);
+    fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
+    fireEvent.click(screen.getByRole('button', { name: /Generate My Business/i }));
+    await waitFor(() => expect(screen.getByText('Your business is live!')).toBeInTheDocument(), { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: /Share on X/i }));
+    expect(mockOpen).toHaveBeenCalled();
   });
 
   it('renders Powered by OHC branding', () => {
