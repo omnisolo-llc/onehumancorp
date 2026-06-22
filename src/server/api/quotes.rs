@@ -1,4 +1,5 @@
 use axum::{
+    extract::Extension,
     extract::{Path, State, Query},
     http::StatusCode,
     response::IntoResponse,
@@ -37,7 +38,6 @@ pub struct QuoteQuery {
 
 #[derive(Deserialize)]
 pub struct CreateQuoteRequest {
-    pub tenant_id: String,
     pub customer_id: String,
     pub total_amount: Option<i64>,
     pub required_deposit: Option<i64>,
@@ -65,7 +65,9 @@ pub struct QuoteLineItemRequest {
 async fn create_quote(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateQuoteRequest>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
+    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
     let quote_id = Uuid::new_v4();
 
     let mut tx = match pool.begin().await {
@@ -80,7 +82,7 @@ async fn create_quote(
         "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
     )
     .bind(quote_id)
-    .bind(&payload.tenant_id)
+    .bind(&tenant_id)
     .bind(&payload.customer_id)
     .bind(payload.total_amount)
     .bind(payload.required_deposit)
