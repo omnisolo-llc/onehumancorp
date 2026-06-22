@@ -86,6 +86,9 @@ impl Hub {
 
                 let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
+                let total_tokens = event.input_tokens + event.output_tokens;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_tenant_token_usage_total", "counter", total_tokens as f32, labels.clone()).await;
+
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0).round() as i64;
                 let mut labels_cents = labels.clone();
