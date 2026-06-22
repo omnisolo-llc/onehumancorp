@@ -188,7 +188,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
@@ -215,7 +215,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(pool).await {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
@@ -288,7 +288,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
@@ -304,7 +304,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
@@ -368,7 +368,7 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let start_time: DateTime<Utc> = r.try_get("start_time").unwrap_or_else(|_| Utc::now());
                         let end_time: Option<DateTime<Utc>> = r.try_get("end_time").ok();
@@ -386,7 +386,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                if let Ok(rows) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_all(pool).await {
                     for r in rows {
                         // For sqlite, datetime might come back as string depending on setup, but typically we handle it in sqlite specific way or parse it.
                         // Assuming it matches what orders table handles, which doesn't query dates in sqlite branch for some reason.
@@ -456,7 +456,7 @@ impl MyDashboardService {
         let mut org = None;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await {
+                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_optional(&self.db.pool).await {
                     org = Some(::server_ohc::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
@@ -470,7 +470,7 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).bind(&auth_info.agent_id).fetch_optional(pool).await {
                     org = Some(::server_ohc::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
@@ -795,15 +795,15 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let cache_key = format!("onboarding_state_{}", org_id);
+        let cache_key = format!("onboarding_state_{}_{}", org_id, auth_info.agent_id);
         let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
         if let Some(cached) = cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
-            .bind(&org_id)
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(&org_id).bind(&auth_info.agent_id)
             .fetch_optional(&self.db.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -894,7 +894,7 @@ impl DashboardService for MyDashboardService {
         match update_res {
             Ok(Ok(_)) => {
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
@@ -904,7 +904,7 @@ impl DashboardService for MyDashboardService {
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
@@ -912,7 +912,7 @@ impl DashboardService for MyDashboardService {
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
                 let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                state_cache.invalidate(&format!("onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))

@@ -328,7 +328,7 @@ Your response:",
         cache.invalidate(&cache_key).await;
 
         // Invalidate the Dashboard cache as well
-        let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
+        let dashboard_cache_key = format!("onboarding_state_{}_{}", tenant_id, user_id);
         let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
         tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key); // pii-safe
         dashboard_cache.invalidate(&dashboard_cache_key).await;
@@ -2916,7 +2916,7 @@ mod tests {
         agent.save_onboarding_state(tenant_id, user_id, 1, &state1).await.unwrap();
 
         // Prime the dashboard cache
-        let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
+        let dashboard_cache_key = format!("onboarding_state_{}_{}", tenant_id, user_id);
         let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client.clone()));
         let dashboard_resp = ::server_ohc::app::GetOnboardingStateResponse {
             state: Some(::server_ohc::app::OnboardingState {

@@ -104,15 +104,15 @@
         box-sizing: border-box;
       }
       button, input, select, textarea {
-        border-radius: 16px !important;
+
       }
-      button { min-width: 44px;
+      button {
+        border-radius: 8px !important; min-width: 44px;
         background-color: #0066FF;
         color: white;
         border: none;
         padding: 14px 24px;
         min-height: 44px !important;
-        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -1623,7 +1623,7 @@
 
       inputs.firstOffer.addEventListener('input', () => {
           if (inputs.firstOffer.value.trim().length > 0) {
-              errors.firstOffer.style.display = 'none';
+              errors.firstOffer.style.display = 'none'; inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
           }
       });
@@ -1740,11 +1740,10 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           }
           else if (stepId === 'step-categories') {
-              if (inputs.categories.value.trim() === '') {
-                  errors.categories.style.display = 'block';
-                  isValid = false;
+              if (inputs.categories.value.trim().length < 2) {
+                  errors.categories.style.display = 'block'; inputs.categories.style.borderColor = '#FF3B30'; isValid = false;
               } else {
-                  errors.categories.style.display = 'none';
+                  errors.categories.style.display = 'none'; inputs.categories.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                   state.categories = inputs.categories.value.trim();
               }
           }
@@ -1810,9 +1809,8 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               }
           }
           else if (stepId === 'step-offer') {
-              if (inputs.firstOffer.value.trim() === '') {
-                  errors.firstOffer.style.display = 'block';
-                  isValid = false;
+              if (inputs.firstOffer.value.trim().length < 3) {
+                  errors.firstOffer.style.display = 'block'; inputs.firstOffer.style.borderColor = '#FF3B30'; isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
                   state.first_offer = inputs.firstOffer.value.trim();
@@ -1821,20 +1819,18 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
           else if (stepId === 'step-domain') {
               if (inputs.domainName.value.trim().length < 3) {
-                  errors.domainName.style.display = 'block';
-                  isValid = false;
+                  errors.domainName.style.display = 'block'; inputs.domainName.style.borderColor = '#FF3B30'; isValid = false;
               } else {
-                  errors.domainName.style.display = 'none';
+                  errors.domainName.style.display = 'none'; inputs.domainName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                   state.domain = inputs.domainName.value.trim();
               }
           }
 
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
-                  errors.templateSelection.style.display = 'block';
-                  isValid = false;
+                  errors.templateSelection.style.display = 'block'; inputs.templateSelection.style.borderColor = '#FF3B30'; isValid = false;
               } else {
-                  errors.templateSelection.style.display = 'none';
+                  errors.templateSelection.style.display = 'none'; inputs.templateSelection.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                   state.templateSelection = inputs.templateSelection.value;
               }
           }
