@@ -92,8 +92,6 @@ pub struct RetryWithErrorOutputParser<'a, T> {
     llm: Arc<dyn LlmClientForParser>,
 }
 
-
-
 impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     pub fn new(
         parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
@@ -761,8 +759,6 @@ mod retry_tests {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests_clamped {
