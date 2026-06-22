@@ -886,7 +886,7 @@ mod tests_clamped {
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_retry_parser_clamped_to_two() {
         let failing_client = Arc::new(FailingLlmClient {
             call_count: Mutex::new(0),
