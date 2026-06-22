@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Link in Bio Generator', () => {
-  test('should allow creating and visiting a link in bio', async ({ adminPage: page }) => {
+  test('should allow creating and visiting a link in bio', async ({ page, adminUser }) => {
     // 1. Visit the dashboard and click the Link in Bio Generator card
     await page.goto('/dashboard');
     await page.getByRole('link', { name: /Link in Bio Generator/i }).click();
