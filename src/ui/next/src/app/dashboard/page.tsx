@@ -155,10 +155,12 @@ export default function Dashboard() {
       // ignore
     }
 
-    const updateOfflineStatus = () => {
+    const updateOfflineStatus = async () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        const { getActions } = await import("../utils/offlineQueue");
+        const actions = await getActions();
+        setOfflineQueueCount(actions.length);
       } catch {
         setOfflineQueueCount(0);
       }
@@ -167,8 +169,8 @@ export default function Dashboard() {
     const handleSync = async () => {
       if (!navigator.onLine) return;
       try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
+        const { getActions, removeAction } = await import("../utils/offlineQueue");
+        const queue = await getActions();
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         setIsSyncing(true);
@@ -186,14 +188,13 @@ export default function Dashboard() {
             setSyncErrorCount(data.failed_count);
           }
 
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
+          // Remove exactly the items we just synced
+          for (const item of queue) {
+             await removeAction(item.id);
+          }
+
+          const currentQueue = await getActions();
+          setOfflineQueueCount(currentQueue.length);
         }
       } catch (e) {
         console.error("Sync failed", e);
