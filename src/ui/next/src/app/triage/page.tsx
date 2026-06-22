@@ -215,7 +215,7 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="w-full bg-white/60 dark:bg-black/60 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden"
+                className="ohc-card w-full bg-white/60 dark:bg-black/60 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden"
               >
                 {/* Header Context */}
                 <div className="p-5 border-b border-gray-200 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-sm">
@@ -223,7 +223,7 @@ export default function TriagePage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{getSourceIcon(item.source || "")}</span>
                       <span className="font-outfit font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">
-                        {item.source || "Unknown Source"}
+                        {item.customer_id || item.source || "Unknown Source"}
                       </span>
                     </div>
                     <span className={`app-badge ${badgeTone(item.priority)}`}>
