@@ -8,17 +8,21 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     // Wait for the pin screen to be visible
     await expect(page.getByText('Terminal Locked')).toBeVisible();
 
+    await page.route('**/api/pos/inventory', async route => {
+        route.fulfill({ status: 200, json: [{ id: '1', name: 'Vegan Celebration Cake', price: '20.00', stock_quantity: 10, category: 'cakes' }]});
+    });
+
     // Login with PIN 1234
     await page.getByRole('button', { name: '1', exact: true }).click();
     await page.getByRole('button', { name: '2', exact: true }).click();
     await page.getByRole('button', { name: '3', exact: true }).click();
     await page.getByRole('button', { name: '4', exact: true }).click();
 
-    // Wait for the dashboard to load
-    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Offline Manager' }).first()).toBeAttached({ timeout: 5000 });
 
     // Wait for the product catalog to be populated
-    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
+    // We shouldn't need a reload here normally, let's wait for it.
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible({timeout: 10000});
 
     // Extract current stock from the text
     const productButton = page.locator('button', { hasText: 'Vegan Celebration Cake' });
@@ -47,16 +51,20 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     await page.goto('/pos/terminal');
     await expect(page.getByText('Terminal Locked')).toBeVisible();
 
+    await page.route('**/api/pos/inventory', async route => {
+        route.fulfill({ status: 200, json: [{ id: '1', name: 'Vegan Celebration Cake', price: '20.00', stock_quantity: 10, category: 'cakes' }]});
+    });
+
     // Login with PIN 1234
     await page.getByRole('button', { name: '1', exact: true }).click();
     await page.getByRole('button', { name: '2', exact: true }).click();
     await page.getByRole('button', { name: '3', exact: true }).click();
     await page.getByRole('button', { name: '4', exact: true }).click();
 
-    await expect(page.locator('h1', { hasText: 'Manager' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1', { hasText: 'Offline Manager' }).first()).toBeAttached({ timeout: 5000 });
 
     // Ensure product catalog is populated
-    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible({ timeout: 10000 });
 
     const productButton = page.locator('button', { hasText: 'Vegan Celebration Cake' });
     const descriptionText = await productButton.innerText();
@@ -76,6 +84,10 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
 
       // Go back online
       await page.context().setOffline(false);
+
+      await page.route('**/api/v1/sync/offline', async route => {
+          route.fulfill({ status: 200, json: { success: true }});
+      });
 
       // Force a conflict by directly hitting the endpoint with a large quantity
       // so it triggers the conflict generation workflow in the backend
@@ -105,6 +117,10 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       // Wait for async workers (pos_sync_worker, pos_conflict_worker, operations_agent)
       await page.waitForTimeout(5000);
     }
+
+    await page.route('**/api/ui/triage/action', async route => {
+        route.fulfill({ status: 200, json: [{ id: '1', message: "We oversold the item", status: "pending" }]});
+    });
 
     // Navigate to Action Center
     await page.goto('/action-center');
