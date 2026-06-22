@@ -7,6 +7,22 @@ use tracing::{error, info, warn};
 pub struct ToolExecutionEngine;
 
 impl ToolExecutionEngine {
+    /// Parses tool arguments strictly according to the defined generic schema `T`.
+    /// If parsing fails, it converts the error into an LLM-recoverable error formatted with
+    /// the 'Validation Error (Pydantic-first tool schema)' message.
+    pub fn parse_tool_args<T: serde::de::DeserializeOwned>(
+        value: serde_json::Value,
+    ) -> Result<T, ToolError> {
+        match serde_json::from_value::<T>(value.clone()) {
+            Ok(parsed) => Ok(parsed),
+            Err(e) => {
+                let args_str = value.to_string();
+                let msg = crate::types::format_pydantic_error(&e, Some(&args_str), None);
+                Err(ToolError::LlmRecoverable(msg))
+            }
+        }
+    }
+
     /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
     #[tracing::instrument(skip(tool, tc), fields(tool_name = %tc.name, tool_call_id = %tc.id))]
     pub async fn execute_tool_with_langgraph_mechanics(

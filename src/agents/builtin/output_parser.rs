@@ -46,12 +46,15 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             if let Some(data) = call.arguments.get("data") {
                 return match serde_json::from_value::<T>(data.clone()) {
                     Ok(parsed) => Ok(parsed),
-                    Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
+                    Err(e) => {
+                        let snippet = Some(call.arguments.to_string());
+                        Err(crate::types::format_pydantic_error(&e, snippet.as_deref(), None))
+                    }
                 };
             } else {
-                return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                    );
+                let err_msg = "Missing required 'data' parameter in tool call arguments.";
+                let snippet = Some(call.arguments.to_string());
+                return Err(crate::types::format_pydantic_error_string(err_msg, snippet.as_deref(), None));
             }
         }
 
