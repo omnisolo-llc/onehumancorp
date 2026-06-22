@@ -1,22 +1,34 @@
 #[cfg(test)]
 mod tests {
     use crate::workers::cfo_worker::CfoWorker;
-    use crate::db::DB;
+    use crate::db::{DB, DbStore};
+    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::postgres::PgPoolOptions;
     use std::sync::Arc;
+
+    async fn test_db() -> Arc<DB> {
+        let sqlite_pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let pg_pool = PgPoolOptions::new()
+            .connect_lazy("postgres://dummy:dummy@localhost/dummy")
+            .unwrap();
+
+        Arc::new(DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(sqlite_pool),
+        })
+    }
 
     #[tokio::test]
     async fn test_cfo_worker_process() {
-        let db = Arc::new(DB::new().await.unwrap());
+        let db = test_db().await;
 
-        let _pool = &db.pool;
-        let _tenant_id = "cfo_test_tenant";
-
-        // Let's create an expense to trigger the deficit
-        // But first let's just make sure it handles empty state nicely without failing
         let worker = Arc::new(CfoWorker::new(db.clone()));
 
         let _result = worker.process_cashflow().await;
-        // In sqlite test env, tables might not exist or be fully migrated, so we just check it completes without panicking
-        // DB operations might fail with "no such table" depending on how DB is init, which is fine for this context.
     }
 }
