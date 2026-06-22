@@ -10,6 +10,8 @@ pub enum Action {
     RunCommand { command: String },
     WriteFile { path: String, content: String },
     AgentMessage { content: String },
+    ReadUrl { url: String },
+    SearchFiles { query: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +27,8 @@ pub enum Observation {
     AgentReply {
         content: String,
     },
+    UrlContent { url: String, text: String },
+    FilesFound { paths: Vec<String> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -86,5 +90,45 @@ mod tests {
 
         assert_eq!(rx1.recv().await.unwrap(), obs);
         assert_eq!(rx2.recv().await.unwrap(), obs);
+    }
+
+    #[tokio::test]
+    async fn test_openhands_event_stream_new_variants() {
+        let stream = EventStream::new(10);
+        let mut rx1 = stream.subscribe();
+        let mut rx2 = stream.subscribe();
+
+        let action_url = EventType::Action(Action::ReadUrl {
+            url: "https://example.com".to_string(),
+        });
+        stream.publish(action_url.clone()).unwrap();
+
+        assert_eq!(rx1.recv().await.unwrap(), action_url);
+        assert_eq!(rx2.recv().await.unwrap(), action_url);
+
+        let action_search = EventType::Action(Action::SearchFiles {
+            query: "*.rs".to_string(),
+        });
+        stream.publish(action_search.clone()).unwrap();
+
+        assert_eq!(rx1.recv().await.unwrap(), action_search);
+        assert_eq!(rx2.recv().await.unwrap(), action_search);
+
+        let obs_url = EventType::Observation(Observation::UrlContent {
+            url: "https://example.com".to_string(),
+            text: "<html></html>".to_string(),
+        });
+        stream.publish(obs_url.clone()).unwrap();
+
+        assert_eq!(rx1.recv().await.unwrap(), obs_url);
+        assert_eq!(rx2.recv().await.unwrap(), obs_url);
+
+        let obs_search = EventType::Observation(Observation::FilesFound {
+            paths: vec!["src/main.rs".to_string(), "src/lib.rs".to_string()],
+        });
+        stream.publish(obs_search.clone()).unwrap();
+
+        assert_eq!(rx1.recv().await.unwrap(), obs_search);
+        assert_eq!(rx2.recv().await.unwrap(), obs_search);
     }
 }
