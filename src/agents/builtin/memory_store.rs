@@ -1262,9 +1262,8 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
             .and_then(|opt| opt.ok_or_else(|| format!("Topic '{}' not found", topic_name)))
     }
 
-    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        // Fallback or full text search not implemented directly in Anthropic3TierMemory yet
-        Ok(vec![])
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        self.memory.search_transcripts(query, limit).await.map_err(|e| e.to_string())
     }
 }
 
@@ -1333,9 +1332,8 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             .and_then(|opt| opt.ok_or_else(|| format!("Topic '{}' not found", topic_name)))
     }
 
-    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        // Fallback since transcripts are hidden behind memory
-        Ok(vec![])
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        self.memory.search_transcripts(query, limit).await.map_err(|e| e.to_string())
     }
     fn as_anthropic_accessor(
         &self,
@@ -2817,7 +2815,7 @@ mod anthropic_memory_tests {
             .unwrap();
 
         // Agent searches transcripts
-        let _results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "order a cake",
             5,
@@ -2825,33 +2823,32 @@ mod anthropic_memory_tests {
         .await
         .unwrap();
         // Fallback or explicit implementation returning empty vectors means search might be empty
-        // assert_eq!(results.len(), 1);
-        // assert!(results[0].contains("user: I would like to order a cake."));
+        assert_eq!(results.len(), 1);
+        assert!(results[0].contains("user: I would like to order a cake."));
 
-        let _results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "Chocolate",
             5,
         )
         .await
         .unwrap();
-        // Fallback or explicit implementation returning empty vectors means search might be empty
-        // assert_eq!(results_choc.len(), 1);
-        // assert!(results_choc[0].contains("user: Chocolate please!"));
+        assert_eq!(results_choc.len(), 1);
+        assert!(results_choc[0].contains("user: Chocolate please!"));
 
         // Search should respect limit
         store
             .store_session_message("session_2", "user", "Chocolate is good.")
             .await
             .unwrap();
-        let _results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
             &store,
             "Chocolate",
             1,
         )
         .await
         .unwrap();
-        // assert_eq!(results_limit.len(), 1);
+        assert_eq!(results_limit.len(), 1);
     }
 }
 
