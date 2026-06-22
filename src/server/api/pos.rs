@@ -263,39 +263,10 @@ pub async fn pos_auth_handler(
             }))
         }
         _ => {
-            let fallback_res = sqlx::query("SELECT id, name, organization_id as tenant_id, role FROM organization_users LIMIT 1")
-                .fetch_optional(&pool)
-                .await;
-
-            match fallback_res {
-                Ok(Some(row)) => {
-                    let id: String = sqlx::Row::get(&row, "id");
-                    let name: String = sqlx::Row::get(&row, "name");
-                    let tenant_id: String = sqlx::Row::get(&row, "tenant_id");
-                    let role: String = sqlx::Row::get(&row, "role");
-
-                    Json(json!({
-                        "success": true,
-                        "staff": {
-                            "id": id,
-                            "name": name,
-                            "role": role,
-                            "tenant_id": tenant_id
-                        }
-                    }))
-                },
-                _ => {
-                    Json(json!({
-                        "success": true,
-                        "staff": {
-                            "id": "staff_1",
-                            "name": "E2E User",
-                            "role": "Manager",
-                            "tenant_id": "test_tenant"
-                        }
-                    }))
-                }
-            }
+            Json(json!({
+                "success": false,
+                "error": "Not found"
+            }))
         }
     }
 }
