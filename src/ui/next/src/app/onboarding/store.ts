@@ -105,7 +105,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setInstantImageUrl: (instantImageUrl) => set({ instantImageUrl }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4', // Upgraded structure for seamless cross-device resumes
     }
   )
 );
