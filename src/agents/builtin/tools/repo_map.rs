@@ -23,6 +23,7 @@ static RB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(class|module|def)\
 pub struct RepoMapArgs {
     pub path: Option<String>,
     pub max_depth: Option<u64>,
+    pub exclude_dirs: Option<Vec<String>>,
 }
 
 pub struct RepoMapExecutor {
@@ -92,7 +93,7 @@ impl RepoMapExecutor {
         sigs
     }
 
-    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize) -> Result<String, std::io::Error> {
+    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>) -> Result<String, std::io::Error> {
         let mut map = String::new();
         if !dir.is_dir() {
             return Ok(map);
@@ -106,14 +107,14 @@ impl RepoMapExecutor {
             let name = entry.file_name().to_string_lossy().to_string();
 
             // Skip common hidden or build directories
-            if name.starts_with('.') || name == "target" || name == "node_modules" || name == "dist" || name == "build" {
+            if name.starts_with('.') || name == "target" || name == "node_modules" || name == "dist" || name == "build" || exclude_dirs.contains(&name) {
                 continue;
             }
 
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
                 if current_depth < max_depth {
-                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth)?);
+                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs)?);
                 } else {
                     map.push_str(&format!("{}  ... (max depth reached)\n", prefix));
                 }
@@ -163,7 +164,8 @@ impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
              return Err(ToolError::LlmRecoverable(format!("Path does not exist: {}", abs_target.display())));
         }
 
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth))
+        let exclude_dirs = args.exclude_dirs.unwrap_or_default();
+        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs))
             .await
             .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -194,6 +196,13 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
                 "max_depth": {
                     "type": "integer",
                     "description": "Optional maximum depth to recurse into directories. Useful for very large codebases."
+                },
+                "exclude_dirs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Optional list of directory names to exclude from the map."
                 }
             }
         }),
