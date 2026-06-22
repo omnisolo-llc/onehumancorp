@@ -155,10 +155,12 @@ export default function Dashboard() {
       // ignore
     }
 
-    const updateOfflineStatus = () => {
+    const updateOfflineStatus = async () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        const { getActions } = await import("../utils/offlineQueue");
+        const actions = await getActions();
+        setOfflineQueueCount(actions.length);
       } catch {
         setOfflineQueueCount(0);
       }
@@ -167,8 +169,8 @@ export default function Dashboard() {
     const handleSync = async () => {
       if (!navigator.onLine) return;
       try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
+        const { getActions, removeAction } = await import("../utils/offlineQueue");
+        const queue = await getActions();
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         setIsSyncing(true);
@@ -186,14 +188,13 @@ export default function Dashboard() {
             setSyncErrorCount(data.failed_count);
           }
 
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
+          // Remove exactly the items we just synced
+          for (const item of queue) {
+             await removeAction(item.id);
+          }
+
+          const currentQueue = await getActions();
+          setOfflineQueueCount(currentQueue.length);
         }
       } catch (e) {
         console.error("Sync failed", e);
@@ -339,13 +340,13 @@ export default function Dashboard() {
     {
       targetId: "sales-card-target",
       title: "Business Analytics",
-      content: "This panel reads sales and customer counts from the database-backed dashboard endpoint.",
+      content: "This panel shows your current sales and customer counts.",
       position: "bottom" as const,
     },
     {
       targetId: "operations-map-target",
       title: "Operations Map",
-      content: "Use this area to see the live state of orders, inbox, and inventory from your database.",
+      content: "Use this area to see the live state of your orders, messages, and inventory.",
       position: "bottom" as const,
     },
   ];
@@ -355,7 +356,7 @@ export default function Dashboard() {
     <AIPaywallWidget remainingActions={remainingActions} />
     <AppShell
       title="Dashboard"
-      subtitle="Network-style command center for database-backed store operations."
+      subtitle="Network-style command center for your store operations."
       statusItems={statusItems}
       actions={[
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
@@ -643,16 +644,16 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
               <WalkthroughTarget id="sales-card-target" className="app-card">
-                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
+                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your orders.">
                   <div className="app-metric-label">Total Sales</div>
                 </WithTooltip>
                 <div className="app-metric-value">{money(metrics.total_sales)}</div>
-                <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
+                <div className="app-metric-note">{loading ? "Loading your data..." : "All recorded orders"}</div>
               </WalkthroughTarget>
               <div className="app-card">
                 <div className="app-metric-label">Customers</div>
                 <div className="app-metric-value">{metrics.active_customers}</div>
-                <div className="app-metric-note">Database customer records</div>
+                <div className="app-metric-note">Customer records</div>
               </div>
               <div className="app-card">
                 <div className="app-metric-label">Pending Orders</div>
@@ -675,7 +676,7 @@ export default function Dashboard() {
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
-                <div className="app-list-subtitle">Live database state across the store workflow.</div>
+                <div className="app-list-subtitle">Live overview of your store workflow.</div>
               </div>
               <Link href="/orders" className="app-button min-h-[44px]">Open Orders</Link>
             </div>
@@ -745,13 +746,13 @@ export default function Dashboard() {
                 <div className="app-list-item">
                   <div>
                     <div className="app-list-title">Inbox messages</div>
-                    <div className="app-list-subtitle">Open customer conversations are waiting in the database.</div>
+                    <div className="app-list-subtitle">You have open customer conversations waiting for your reply.</div>
                   </div>
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
               {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
-                <div className="app-empty">No database-backed actions are currently open.</div>
+                <div className="app-empty">No actions are currently required.</div>
               )}
             </div>
           </div>
@@ -765,7 +766,7 @@ export default function Dashboard() {
               <Link href="/orders" className="app-button min-h-[44px]">View All</Link>
             </div>
             {orders.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
+              <div className="app-empty">{loading ? "Loading your orders..." : "No orders found."}</div>
             ) : (
               <div className="app-table-wrap">
                 <table className="app-table">
@@ -799,7 +800,7 @@ export default function Dashboard() {
             </div>
             <div className="app-list">
               {messages.length === 0 ? (
-                <div className="app-empty">{loading ? "Loading inbox from the database..." : "No inbox message rows found for this tenant."}</div>
+                <div className="app-empty">{loading ? "Loading your messages..." : "No messages found."}</div>
               ) : messages.slice(0, 6).map((message) => (
                 <div key={message.id} className="app-list-item">
                   <div>
@@ -838,6 +839,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pro Plan ROI Calculator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
+            </Link>
+
+            <Link href="/zero-click-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Zero-Click Builder</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate a business in 30 seconds to show friends how fast OHC is.</p>
             </Link>
 
             <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -985,6 +995,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create shareable WhatsApp links to start conversations instantly.</p>
             </Link>
 
+            <Link href="/calendar" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📅</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Schedule</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Calendar</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">View upcoming appointments and sync with your AI operations assistant.</p>
+            </Link>
+
             <Link href="/giveaway" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
@@ -1058,6 +1077,15 @@ export default function Dashboard() {
             </Link>
 
 
+            <Link href="/pre-order-widget" id="pre-order-waitlist-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⏳</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Virality</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pre-Order Waitlist</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an omnichannel pre-order engine with tiered waitlist capabilities.</p>
+            </Link>
+
             <Link href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
@@ -1065,6 +1093,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Discount Code Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create discount code widgets for your customers.</p>
+            </Link>
+
+            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Link in Bio Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">One link to rule them all. Drive social traffic to your store.</p>
             </Link>
 
             <Link href="/spin-to-win-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
