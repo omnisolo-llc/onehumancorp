@@ -290,7 +290,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = marketplace.download_agent(agent_id);
-            let _resp = match result {
+            let resp = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
