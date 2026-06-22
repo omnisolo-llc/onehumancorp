@@ -36,6 +36,8 @@ pub struct IntegrationsRegistry {
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>>>,
+
 }
 
 impl IntegrationsRegistry {
@@ -79,6 +81,7 @@ impl IntegrationsRegistry {
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            taxjar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -272,6 +275,10 @@ impl IntegrationsRegistry {
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "taxjar" {
+            let mut clients = self.taxjar_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(creds.api_token.clone())));
         }
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();

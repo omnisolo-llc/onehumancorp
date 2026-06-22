@@ -76,14 +76,49 @@ async fn create_quote(
         }
     };
 
+    let mut line_items = payload.line_items;
+
+    // Check if TaxJar integration is connected for this tenant in the DB
+    let api_key_res: Result<(String,), _> = sqlx::query_as(
+        "SELECT api_token FROM integrations WHERE tenant_id = $1 AND provider_id = 'taxjar'"
+    )
+    .bind(&payload.tenant_id)
+    .fetch_one(&mut *tx)
+    .await;
+
+    let api_key = match api_key_res {
+        Ok((token,)) => token,
+        Err(_) => std::env::var("TAXJAR_API_KEY").unwrap_or_default(),
+    };
+
+    if !api_key.is_empty() {
+        let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
+        let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+        let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
+
+        if let Ok(tax_rate) = provider.calculate_tax(total_pre_tax_usd, 0.0, "US", "90002", "CA", "US", "92093", "CA").await {
+            if tax_rate.amount_to_collect > 0.0 {
+                line_items.push(QuoteLineItemRequest {
+                    description: "Automated Sales Tax (TaxJar)".to_string(),
+                    unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                    quantity: 1,
+                    is_optional: false,
+                });
+            }
+        }
+    }
+
+    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
+
     let quote_res = sqlx::query(
         "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
     )
     .bind(quote_id)
     .bind(&payload.tenant_id)
     .bind(&payload.customer_id)
-    .bind(payload.total_amount_cents)
-    .bind(payload.required_deposit_cents)
+    .bind(payload.total_amount_cents.unwrap_or(total_amount_cents))
+    .bind(required_deposit_cents)
     .bind(&payload.stripe_payment_link)
     .execute(&mut *tx)
     .await;
@@ -93,7 +128,7 @@ async fn create_quote(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    for item in payload.line_items {
+    for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
             "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
