@@ -132,6 +132,21 @@ Output JSON format:
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
+            // Use OmniContextRouter
+            let router = crate::orchestration::router::OmniContextRouter::new();
+            let msg = crate::orchestration::router::InboundMessage {
+                source: source.to_string(),
+                sender: sender_id.to_string(),
+                content: customer_message.to_string(),
+            };
+
+            let _omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
+                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+                operations_context: None,
+                sales_context: None,
+                customer_context: None,
+            });
+
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
                 "feature_type": "general",
@@ -196,8 +211,24 @@ Output JSON format:
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
             let feature_type = extracted.get("feature_type").and_then(|v| v.as_str()).unwrap_or("general");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
+
+            // Integrate OmniContextRouter here to get the drafted action payload with sub-agent context
+            let router = crate::orchestration::router::OmniContextRouter::new();
+            let msg = crate::orchestration::router::InboundMessage {
+                source: source.to_string(),
+                sender: sender_id.to_string(),
+                content: customer_message.to_string(),
+            };
+            let omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
+                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+                operations_context: None,
+                sales_context: None,
+                customer_context: None,
+            });
+
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
+            let action_payload_str = omni_result.final_draft;
+            let action_payload = action_payload_str.as_str();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
