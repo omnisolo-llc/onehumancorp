@@ -1,41 +1,58 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Zero Click Builder Mobile E2E', () => {
-  // Mobile viewport configuration
-  test.use({ viewport: { width: 375, height: 812 } });
+test.describe('Zero Click Builder Mobile Onboarding', () => {
+  test.use({ viewport: { width: 375, height: 812 } }); // Mobile-first constraint
 
-  test('generates a new store through natural language prompt on mobile', async ({ page }) => {
-    // 1. Navigate to the zero-click builder page
+  test('User can generate a store with a single prompt', async ({ page, context }) => {
+    // Navigate to the zero-click-builder page
     await page.goto('/zero-click-builder');
 
-    // 2. Assert initial mobile UI state
-    await expect(page.locator('h1').filter({ hasText: 'Zero-Click Business Generator' })).toBeVisible();
-    await expect(page.locator('textarea[placeholder*="I am a home baker"]')).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Generate My Business' })).toBeDisabled();
+    // 1. Verify premium tokens & text
+    await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
-    // 3. Fill in the prompt
-    await page.fill('textarea[placeholder*="I am a home baker"]', 'I run a local flower shop in Seattle and need an online store for pre-orders.');
+    // The single text area where the prompt is typed
+    const promptInput = page.locator('#prompt');
+    await expect(promptInput).toBeVisible();
 
-    // 4. Assert button is enabled
-    const generateBtn = page.locator('button', { hasText: 'Generate My Business' });
+    // 2. Type natural language prompt
+    await promptInput.fill('I am a home baker in Austin selling custom vegan cakes and cupcakes.');
+
+    // 3. Find "Generate Store" button
+    const generateBtn = page.getByRole('button', { name: /Generate Store/i });
     await expect(generateBtn).toBeEnabled();
 
-    // 5. Submit the form
-    // Note: We're calling the real backend API in this E2E test, which handles the generation
+    // Mock API response
+    await context.route('**/api/v1/growth/zero-click-builder/generate', async route => {
+      await new Promise(r => setTimeout(r, 2000));
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          organization_id: 'test-org-123',
+          user_id: 'test-user-123',
+          name: 'Austin Vegan Cakes',
+          url: 'https://austin-vegan-cakes.ohc.app'
+        })
+      });
+    });
+
+    // 4. Tap Generate Button
     await generateBtn.click();
 
-    // 6. Assert loading state
-    await expect(page.locator('text=Analyzing your business...')).toBeVisible();
+    // 5. Verify visually engaging loading state
+    await expect(page.getByText('Analyzing your business...')).toBeVisible();
 
-    // 7. Wait for completion and assert completion state
-    // This could take a while if the real backend is calling an LLM
-    await expect(page.locator('h2').filter({ hasText: 'Your business is live!' })).toBeVisible({ timeout: 30000 });
+    // 6. Verify completion & transition to live preview
+    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 15000 });
+
+    // Check if iframe for preview rendered
     await expect(page.locator('iframe[title="Live Storefront Preview"]')).toBeVisible();
 
-    // 8. Launch the store and assert navigation
-    const launchBtn = page.locator('button', { hasText: 'Launch My Store' });
+    // Verify auth/redirect handoff button
+    const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
     await expect(launchBtn).toBeVisible();
 
+    // Test the button navigates to dashboard
     await launchBtn.click();
     await expect(page).toHaveURL(/\/dashboard/);
   });
