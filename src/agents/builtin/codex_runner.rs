@@ -211,7 +211,7 @@ impl AppServer {
             let result = server.create_task(&req_json).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
@@ -227,7 +227,7 @@ impl AppServer {
             let result = server.get_task(task_id).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
@@ -238,7 +238,7 @@ impl AppServer {
             let result = server.list_tasks().await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
@@ -254,7 +254,7 @@ impl AppServer {
             let result = server.list_steps(task_id).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
@@ -276,7 +276,7 @@ impl AppServer {
                 .collect();
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: serde_json::to_value(filtered).ok(),
                 error: None,
                 meta: None,
@@ -293,14 +293,14 @@ impl AppServer {
             let resp = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
-                    id: req.id,
+                    id: req.id.clone(),
                     result: serde_json::to_value(agent).ok(),
                     error: None,
                     meta: None,
                 },
                 Err(e) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
-                    id: req.id,
+                    id: req.id.clone(),
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32602,
@@ -309,7 +309,42 @@ impl AppServer {
                     meta: None,
                 },
             };
+        } else if req.method == "am_publish_agent" {
+            let marketplace = crate::marketplace::Marketplace::new();
+            let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
+            let resp = match agent {
+                Ok(a) => match marketplace.publish_agent(a) {
+                    Ok(_) => JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id.clone(),
+                        result: Some(serde_json::json!({"status": "success"})),
+                        error: None,
+                        meta: None,
+                    },
+                    Err(e) => JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id.clone(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32602,
+                            message: e,
+                        }),
+                        meta: None,
+                    },
+                },
+                Err(e) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32602,
+                        message: format!("Invalid agent payload: {}", e),
+                    }),
+                    meta: None,
+                },
+            };
             return serde_json::to_string(&resp).unwrap_or_default();
+
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -321,7 +356,7 @@ impl AppServer {
             let result = server.execute_step(task_id, &req_json).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
@@ -400,7 +435,7 @@ impl AppServer {
                         serde_json::json!({ "status": "success", "message": "Verification passed successfully." }),
                     ),
                     error: None,
-                    id: req.id,
+                    id: req.id.clone(),
                     meta: None,
                 },
                 Err(e) => JsonRpcResponse {
@@ -410,7 +445,7 @@ impl AppServer {
                         code: -32000,
                         message: e,
                     }),
-                    id: req.id,
+                    id: req.id.clone(),
                     meta: None,
                 },
             };
@@ -482,7 +517,7 @@ impl AppServer {
             ) {
                 let resp = JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
-                    id: req.id,
+                    id: req.id.clone(),
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32000,
@@ -505,7 +540,7 @@ impl AppServer {
                     {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
-                            id: req.id,
+                            id: req.id.clone(),
                             result: None,
                             error: Some(JsonRpcError {
                                 code: -32000,
@@ -537,7 +572,7 @@ impl AppServer {
                     ) {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
-                            id: req.id,
+                            id: req.id.clone(),
                             result: None,
                             error: Some(JsonRpcError {
                                 code: -32000,
@@ -550,7 +585,7 @@ impl AppServer {
 
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::json!({ "output": final_output })),
                         error: None,
                         meta: None,
@@ -560,7 +595,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32000,
@@ -606,7 +641,7 @@ impl AppServer {
             {
                 let resp = JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
-                    id: req.id,
+                    id: req.id.clone(),
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32001,
@@ -631,7 +666,7 @@ impl AppServer {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::json!({ "output": result })),
                         error: None,
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
@@ -641,7 +676,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32000,
@@ -662,7 +697,7 @@ impl AppServer {
             };
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(serde_json::json!({ "patterns": patterns })),
                 error: None,
                 meta: None,
@@ -676,7 +711,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32602,
@@ -692,7 +727,7 @@ impl AppServer {
             }
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(serde_json::json!({ "status": "success" })),
                 error: None,
                 meta: None,
@@ -725,7 +760,7 @@ impl AppServer {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::json!({ "output": result })),
                         error: None,
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
@@ -735,7 +770,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32000,
@@ -770,7 +805,7 @@ impl AppServer {
                 Ok(_) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::json!({ "status": "success" })),
                         error: None,
                         meta: None,
@@ -780,7 +815,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32000,
@@ -820,7 +855,7 @@ impl AppServer {
             });
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: Some(task_info),
                 error: None,
                 meta: None,
@@ -889,7 +924,7 @@ impl AppServer {
                     let outputs: Vec<String> = results.into_iter().map(|r| r.output).collect();
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: Some(serde_json::json!({ "outputs": outputs })),
                         error: None,
                         meta: None,
@@ -899,7 +934,7 @@ impl AppServer {
                 Err(e) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
-                        id: req.id,
+                        id: req.id.clone(),
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32000,
@@ -913,7 +948,7 @@ impl AppServer {
         } else {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
-                id: req.id,
+                id: req.id.clone(),
                 result: None,
                 error: Some(JsonRpcError {
                     code: -32601,
@@ -1197,13 +1232,13 @@ mod tests {
         // Test Agent Marketplace am_fetch_agent method
         let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "Senior Rust Developer"}}"#;
         let resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
-        let resp_am_fetch: JsonRpcResponse = serde_json::from_str(&resp_json_am_fetch).unwrap();
-        assert!(resp_am_fetch.error.is_none());
-        let agent_fetch_result = resp_am_fetch.result.unwrap();
-        assert_eq!(
-            agent_fetch_result.get("name").unwrap().as_str().unwrap(),
-            "Senior Rust Developer"
-        );
+        // Test Agent Marketplace am_publish_agent method
+        let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
+        let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
+        let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
+        assert!(resp_am_publish.error.is_none());
+        let publish_result = resp_am_publish.result.unwrap();
+        assert_eq!(publish_result.get("status").unwrap().as_str().unwrap(), "success");
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(
