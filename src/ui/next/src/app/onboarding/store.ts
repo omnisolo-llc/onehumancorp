@@ -50,6 +50,7 @@ interface OnboardingState {
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
   setInstantImageUrl: (url: string) => void;
+  updateState: (updates: Partial<OnboardingState>) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -103,6 +104,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
       setInstantImageUrl: (instantImageUrl) => set({ instantImageUrl }),
+      updateState: (updates) => set((state) => ({ ...state, ...updates })),
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
