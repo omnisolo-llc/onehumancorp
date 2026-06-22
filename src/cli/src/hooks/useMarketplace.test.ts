@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useMarketplace } from './useMarketplace.js';

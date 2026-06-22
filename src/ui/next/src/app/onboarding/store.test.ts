@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import { useOnboardingStore } from './store';
 import { describe, it, expect, beforeEach } from 'vitest';
 
