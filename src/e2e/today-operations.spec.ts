@@ -20,21 +20,34 @@ test.describe('Today Operations Dashboard CUJ', () => {
     // Verify Morning Briefing loaded
     await expect(page.getByText('Morning Briefing')).toBeVisible();
 
-    // Ensure data is loaded or empty state is shown
-    await expect(page.getByText('Your schedule is clear for today.').or(page.locator('[data-testid^="appointment-card-"]').first())).toBeVisible();
+    // Check if we have appointments or an empty state. Since we can't reliably predict
+    // the DB state in the test environment (might be empty, might have seeded data),
+    // we use a web-first assertion with an `.or()` matcher to ensure either the empty
+    // state or the appointment list successfully renders.
+    const emptyState = page.getByText('Your schedule is clear for today.');
+    const appointmentCard = page.locator('[data-testid^="appointment-card-"]').first();
 
-    // We perform the click interaction if an appointment is visible. Otherwise we just pass.
-    if (await page.locator('[data-testid^="appointment-card-"]').first().isVisible()) {
-        const firstAppointment = page.locator('[data-testid^="appointment-card-"]').first();
-        await firstAppointment.click();
+    await expect(emptyState.or(appointmentCard)).toBeVisible();
 
+    // Verify the detail modal *only if* an appointment exists
+    if (await appointmentCard.isVisible()) {
+        await appointmentCard.click();
+
+        // Verify the modal opens and AI summary is visible
         await expect(page.getByTestId('appointment-ai-summary')).toBeVisible();
+
+        // Verify action buttons
         await expect(page.getByRole('button', { name: 'Message Client' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Reschedule' })).toBeVisible();
 
-        await expect(page.getByRole('button', { name: 'Request Payment' }).or(page.getByRole('button', { name: 'View Receipt' }))).toBeVisible();
+        // Either Request Payment or View Receipt based on payment status
+        const requestPayment = page.getByRole('button', { name: 'Request Payment' });
+        const viewReceipt = page.getByRole('button', { name: 'View Receipt' });
+        await expect(requestPayment.or(viewReceipt)).toBeVisible();
 
-        await page.locator('button').filter({ hasText: /^$/ }).first().click();
+        // Close modal
+        await page.getByRole('button', { name: 'Close' }).click();
+        await expect(page.getByTestId('appointment-ai-summary')).toBeHidden();
     }
   });
 });

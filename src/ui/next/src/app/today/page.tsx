@@ -157,6 +157,7 @@ export default function TodayOperationsDashboard() {
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={closeDialog}></div>
           <div className="relative bg-white w-full max-w-md rounded-[24px] shadow-2xl p-6 overflow-hidden flex flex-col transform transition-all">
             <button
+              aria-label="Close"
               onClick={closeDialog}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
             >

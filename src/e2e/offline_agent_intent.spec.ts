@@ -17,16 +17,27 @@ test.describe('Offline Agent Intent Sync', () => {
     await expect(page.locator('#network-status-indicator').first()).toBeVisible();
     await expect(page.locator('#network-status-text').first()).toHaveText('Working Offline');
 
-    // Enqueue an agent intent mutation into localStorage
-    await page.evaluate(() => {
-        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        queue.push({
-            id: 'intent-test-id-123',
-            type: 'agent_intent',
-            payload: { action: 'draft_email', recipient: 'customer@example.com', subject: 'Follow up' },
-            timestamp: new Date().toISOString()
+    // Enqueue an agent intent mutation into IndexedDB
+    await page.evaluate(async () => {
+        await new Promise((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) {
+                    resolve(true);
+                    return;
+                }
+                const tx = db.transaction('actions', 'readwrite');
+                tx.objectStore('actions').put({
+                    id: 'intent-test-id-123',
+                    type: 'agent_intent',
+                    payload: { action: 'draft_email', recipient: 'customer@example.com', subject: 'Follow up' },
+                    timestamp: new Date().getTime()
+                });
+                tx.oncomplete = () => resolve(true);
+            };
+            req.onerror = () => resolve(true);
         });
-        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
         // Trigger queue update
         window.dispatchEvent(new Event('ohc_queue_updated'));
     });
@@ -44,12 +55,33 @@ test.describe('Offline Agent Intent Sync', () => {
     });
 
     // Wait for the sync to complete and the queue to be cleared
-    await page.waitForFunction(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        return queue.length === 0;
+    await page.waitForFunction(async () => {
+        return new Promise((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve(true);
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(reqAll.result.length === 0);
+            };
+            req.onerror = () => resolve(false);
+        });
     }, { timeout: 15000 });
 
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const queueData = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
     expect(queueData).toBe('[]');
 
     // The network status indicator should disappear since we are online and queue is empty

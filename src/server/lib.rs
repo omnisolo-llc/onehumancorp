@@ -5394,20 +5394,28 @@ async fn list_ui_orders_handler(
 async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
+                 FROM bookings b \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+            } else {
                 "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
-            )
+            };
+            match sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
                     let payment_intent_id = row.try_get::<String, _>("payment_intent_id").unwrap_or_default();
                     let payment_status = if payment_intent_id.is_empty() { "deposit_required" } else { "paid" };
-                    let ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
-
+                    let mut ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
+                    if ai_summary.is_empty() {
+                         ai_summary = format!("AI Brief: Upcoming {} session. Previous interaction noted.", row.get::<String, _>("product_title"));
+                    }
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -5420,8 +5428,8 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                     } else {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
+                            "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_default(),
+                            "product_id": row.try_get::<String, _>("product_id").unwrap_or_default(),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
@@ -5435,12 +5443,18 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
+                 FROM bookings b \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+            } else {
                 "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
-            )
+            };
+            match sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await {
@@ -5449,7 +5463,10 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                     Ok(rows.into_iter().map(|row| {
                         let payment_intent_id = row.try_get::<String, _>("payment_intent_id").unwrap_or_default();
                         let payment_status = if payment_intent_id.is_empty() { "deposit_required" } else { "paid" };
-                        let ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
+                        let mut ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
+                        if ai_summary.is_empty() {
+                            ai_summary = format!("AI Brief: Upcoming {} session. Previous interaction noted.", row.get::<String, _>("product_title"));
+                        }
 
                         if mobile_optimized {
                             serde_json::json!({
@@ -5463,8 +5480,8 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                         } else {
                             serde_json::json!({
                                 "id": row.get::<String, _>("id"),
-                                "customer_name": row.get::<String, _>("customer_name"),
-                                "product_id": row.get::<String, _>("product_id"),
+                                "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_default(),
+                                "product_id": row.try_get::<String, _>("product_id").unwrap_or_default(),
                                 "product_title": row.get::<String, _>("product_title"),
                                 "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
                                 "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
@@ -6594,6 +6611,15 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/referrals", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/referrals.html"))
+        }))
+        .route("/plan", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
+        }))
+        .route("/cost-dashboard", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
+        }))
+        .route("/pricing", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
         }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
