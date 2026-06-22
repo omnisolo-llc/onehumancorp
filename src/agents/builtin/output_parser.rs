@@ -212,7 +212,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
-                        return Err(ToolError::LlmRecoverable(format!(
+                        return Err(ToolError::Unexpected(format!(
                             "Output parsing failed after {} retries. Last error: {}",
                             max_retries, parse_error_msg
                         )));
@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_retry_parser_exhaustion_returns_recoverable_error() {
+    async fn test_retry_parser_exhaustion_returns_unexpected_error() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
                 create_text_resp("bad 1"),
@@ -625,10 +625,10 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         match result {
-            Err(ToolError::LlmRecoverable(msg)) => {
+            Err(ToolError::Unexpected(msg)) => {
                 assert!(msg.contains("Output parsing failed after 2 retries"));
             }
-            _ => panic!("Expected LlmRecoverable error for exhaustion"),
+            _ => panic!("Expected Unexpected error for exhaustion"),
         }
     }
 
