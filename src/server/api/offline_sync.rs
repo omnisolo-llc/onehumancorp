@@ -43,7 +43,7 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse { success: false, failed_count: 0 }),
+            Json(OfflineSyncResponse { success: false, failed_count: 0, pending_reconciliation: None }),
         ).into_response();
     }
 
