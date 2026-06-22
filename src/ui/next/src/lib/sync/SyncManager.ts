@@ -35,12 +35,17 @@ export class SyncManager {
     };
   }
 
+
   public static getInstance(): SyncManager {
     if (!SyncManager.instance) {
       SyncManager.instance = new SyncManager();
+      if (typeof window !== 'undefined') {
+         (window as any).ohcSyncManager = SyncManager.instance;
+      }
     }
     return SyncManager.instance;
   }
+
 
   public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
@@ -65,7 +70,7 @@ export class SyncManager {
     return queue.length;
   }
 
-  private async getQueue(): Promise<any[]> {
+  public async getQueue(): Promise<any[]> {
     if (typeof window === 'undefined') return [];
     return await getActions();
   }

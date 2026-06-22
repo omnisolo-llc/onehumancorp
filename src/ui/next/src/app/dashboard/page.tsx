@@ -158,7 +158,7 @@ export default function Dashboard() {
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        import("../../lib/sync/SyncManager").then(m => m.SyncManager.getInstance().getQueueLength().then(l => setOfflineQueueCount(l)));
       } catch {
         setOfflineQueueCount(0);
       }
@@ -167,8 +167,8 @@ export default function Dashboard() {
     const handleSync = async () => {
       if (!navigator.onLine) return;
       try {
-        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-        const queue = JSON.parse(queueStr);
+        const { SyncManager } = await import("../../lib/sync/SyncManager");
+        const queue = await SyncManager.getInstance().getQueue();
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         setIsSyncing(true);
@@ -186,14 +186,8 @@ export default function Dashboard() {
             setSyncErrorCount(data.failed_count);
           }
 
-          // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
-          const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
-          const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
-          setOfflineQueueCount(remainingQueue.length);
+          await SyncManager.getInstance().sync();
+          setOfflineQueueCount(await SyncManager.getInstance().getQueueLength());
         }
       } catch (e) {
         console.error("Sync failed", e);

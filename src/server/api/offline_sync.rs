@@ -218,7 +218,7 @@ pub async fn offline_sync_handler(
                             "product_id": mutation.product_id,
                             "expected_stock": mutation.quantity_deducted,
                             "actual_stock": stock,
-                            "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", mutation.product_id)
+                            "message": format!("Sync Conflict for Transaction #{}. The Conciliator is reviewing. We oversold the item {} by {}.", mutation.transaction_id, mutation.product_id, mutation.quantity_deducted - stock)
                         }).to_string();
 
                         let _ = sqlx::query(
@@ -228,6 +228,22 @@ pub async fn offline_sync_handler(
                         .bind(&ai_task_id)
                         .bind(&tenant_id_clone)
                         .bind(&ai_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        let conciliator_job_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_task', $3::jsonb)"
+                        )
+                        .bind(&conciliator_job_id)
+                        .bind(&tenant_id_clone)
+                        .bind(serde_json::json!({
+                            "workflow": "ohc_business_swarm",
+                            "task": "Handle offline POS sync failure",
+                            "agent": "The Conciliator",
+                            "context": format!("Transaction {} failed to sync offline due to inventory discrepancy.", mutation.transaction_id),
+                            "action": "The Conciliator: Attempt to automatically resolve the conflict. If it cannot, escalate to the owner via the Agent Feed."
+                        }).to_string())
                         .execute(&mut *db_tx)
                         .await;
 

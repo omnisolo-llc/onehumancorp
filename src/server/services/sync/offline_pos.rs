@@ -112,8 +112,9 @@ impl CRDTOfflineSynchronizer {
             let agent_payload = serde_json::json!({
                 "workflow": "ohc_business_swarm",
                 "task": "Handle offline POS sync failure",
+                "agent": "The Conciliator",
                 "context": format!("Transaction {} failed to sync offline due to inventory discrepancy or decline.", mutation.transaction_id),
-                "action": "OperationsAgent: generate a plain-language alert for the business owner and draft a follow-up message to the customer regarding the declined offline transaction."
+                "action": "The Conciliator: Attempt to automatically resolve the conflict. If it cannot, escalate to the owner via the Agent Feed."
             }).to_string();
 
             let _ = sqlx::query(
