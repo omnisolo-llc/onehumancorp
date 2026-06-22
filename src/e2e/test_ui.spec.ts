@@ -5,6 +5,7 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
 
   // Wait explicitly for navigation to complete without relying on pure networkidle
   await page.goto('/cost-dashboard', { waitUntil: 'load' });
+  await page.locator('#view-detailed-costs').click();
 
   // Wait for a core UI element proving the page actually mounted
   await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 25000 });

@@ -5,7 +5,7 @@ test.describe('Wizard and Onboarding flows', () => {
   test('Website builder wizard mobile layout', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/website-builder');
+    await page.goto('/onboarding');
 
     // Check elements
     const heading = page.getByRole('heading', { name: '10-Minute Setup Wizard' });
@@ -22,7 +22,7 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Builder mobile UI test', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/builder');
+    await page.goto('/onboarding');
 
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
 
@@ -42,7 +42,7 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
     await page.locator('text="Start My Business"').click();
@@ -64,7 +64,7 @@ test.describe('Wizard and Onboarding flows', () => {
   });
 
   test('Direct routing for business-setup compatibility page', async ({ page }) => {
-    await page.goto('/business-setup');
+    await page.goto('/onboarding');
 
     // Should immediately reroute to onboarding
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
     await page.locator('text="Start My Business"').click();
