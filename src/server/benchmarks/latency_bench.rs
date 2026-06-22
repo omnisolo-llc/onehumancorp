@@ -1150,8 +1150,8 @@ pub async fn bench_ui_bookings_latency() {
         // Fetch mobile_optimized payload
         let _ = tokio::spawn(async move {
             let _ = sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
-                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = 'test_tenant' ORDER BY b.start_time ASC LIMIT 50"
             )

@@ -25,7 +25,7 @@ test.describe('Calendar & Operations Assistant', () => {
       await route.fulfill({ json });
     });
 
-    await page.goto('http://127.0.0.1:3000/calendar?tenant_id=e2e-tenant');
+    await page.goto('/calendar?tenant_id=e2e-tenant');
 
     // Wait for the calendar to load
     await expect(page.locator('h1').filter({ hasText: 'Calendar & Bookings' })).toBeVisible();

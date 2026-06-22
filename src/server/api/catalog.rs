@@ -4,8 +4,9 @@ use axum::{
     Router,
     extract::{Extension, Json},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
+
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::sync::Arc;
@@ -51,6 +52,68 @@ pub struct CreateProductResponse {
 pub struct ErrorResponse {
     pub error: String,
     pub message: String,
+}
+
+
+#[derive(Serialize)]
+pub struct Product {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub item_type: Option<String>,
+    pub price_cents: Option<i64>,
+}
+
+async fn handle_get_products(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(vec![] as Vec<Product>),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = sqlx::query(
+        "SELECT id, title, description, type as item_type, price_cents FROM products WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&mut *conn)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            let mut products = Vec::new();
+            for row in rows {
+                products.push(Product {
+                    id: row.try_get("id").unwrap_or_default(),
+                    title: row.try_get("title").unwrap_or_default(),
+                    description: row.try_get("description").ok(),
+                    item_type: row.try_get("item_type").ok(),
+                    price_cents: row.try_get("price_cents").ok(),
+                });
+            }
+            (StatusCode::OK, Json(products)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch products: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(vec![] as Vec<Product>),
+            )
+                .into_response()
+        }
+    }
 }
 
 async fn count_tenant_products(
@@ -296,6 +359,7 @@ async fn handle_generate_offering(
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
+        .route("/products", get(handle_get_products))
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
