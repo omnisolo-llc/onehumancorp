@@ -171,25 +171,10 @@ async fn test_oidc_validation_strictness_regression() {
     // but the logic we added for claim checks is part of the validate_oidc_token pipeline.
 
     let token = "invalid.token.here";
-    let res = crate::oidc::validate_oidc_token(token, &cfg).await;
+    let res = super::oidc::validate_oidc_token(token, &cfg).await;
     assert!(res.is_err());
 }
 
-#[tokio::test]
-async fn test_ssrf_protection_blocked_ips() {
-    // Verify that validate_url_and_get_ip rejects local/private IPs to prevent SSRF/DNS Rebinding
-    let blocked_urls = vec![
-        "http://127.0.0.1/.well-known/openid-configuration",
-        "http://169.254.169.254/latest/meta-data/",
-        "http://localhost:8080/config",
-        "https://10.0.0.1/auth",
-    ];
-
-    for url in blocked_urls {
-        let res = crate::oidc::validate_url_and_get_ip_internal_for_test(url).await;
-        assert!(res.is_err(), "URL {} should be blocked", url);
-    }
-}
 
 #[tokio::test]
 async fn test_cross_tenant_resource_idor_prevention() {

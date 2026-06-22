@@ -192,7 +192,6 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -219,7 +218,7 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),

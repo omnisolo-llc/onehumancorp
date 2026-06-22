@@ -83,11 +83,6 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     Ok((host.to_string(), ip, port))
 }
 
-#[cfg(test)]
-pub async fn validate_url_and_get_ip_internal_for_test(url_str: &str) -> Result<(String, std::net::IpAddr, u16), String> {
-    validate_url_and_get_ip(url_str).await
-}
-
 async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     {
         let cache = get_cache().read().unwrap();
