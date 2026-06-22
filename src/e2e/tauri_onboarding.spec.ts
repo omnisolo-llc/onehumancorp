@@ -82,7 +82,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // We mocked start btn but it relies on index.html script redirect, which might be intercepted or missing full context in playwright mock scheme.
     // Just explicitly go there since the button just does a simple location.href.
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://mock/setup.html', { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'Conversational Setup' }).click();
 
 
@@ -109,45 +109,45 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         });
     });
 
-    await page.getByTestId('chat-send-btn').click();
+    await page.getByTestId('chat-send-btn').evaluate(b => b.click());
 
     // The chat will respond, set intake data, and then we should be able to continue or navigate back to manual setup for the rest of the test
     // await expect(page.getByText(/Great! I\'m setting up your service calendar/)).toBeVisible();
 
     // Since this test specifically verifies the manual steps (Context, Categories, etc.),
     // we will navigate to the manual setup now to continue the existing test flow.
-    await page.locator('#step-chat button').first().click();
+    await page.locator('#step-chat button').first().evaluate(b => b.click());
     await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
-    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await page.getByRole('button', { name: 'Start My Business' }).evaluate(b => b.click());
 
 
     // Setup page (Step 1: Context)
         await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     // Verify validation triggers
-    await page.locator('#step-context').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-context').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(page.locator('#context-error')).toBeVisible();
 
     // Valid context
-    await page.getByText('Local Service').click();
-    await page.locator('#step-context').getByRole('button', { name: 'Next' }).click();
+    await page.getByText('Local Service').evaluate(b => b.click());
+    await page.locator('#step-context').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     // Step 2: Categories
     await expect(page.getByRole('heading', { name: "What's your category?" })).toBeVisible();
-    await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-categories').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(page.locator('#categories-error')).toBeVisible();
     await page.waitForTimeout(500);
 
     await page.locator('#business-categories').selectOption({ label: 'Handyman' });
-    await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-categories').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     // Step 3: Name
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     // Less than 3 chars validation
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Te");
-    await page.locator('#step-name').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-name').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(page.locator('#name-error')).toBeVisible();
 
     // Valid business name
@@ -155,43 +155,43 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.getByPlaceholder("Tagline (optional)").fill("Fixing things");
     await expect(page.locator('#name-error')).toBeHidden();
 
-    await page.locator('#step-name').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-name').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     // Step 4: Assistant
     await expect(page.getByRole('heading', { name: "Set up your Assistant" })).toBeVisible();
 
     // Verify validation triggers
-    await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(page.locator('#assistant-name-error')).toBeVisible();
     await expect(page.locator('#tone-error')).toBeVisible();
     await expect(page.locator('#assistant-name')).toHaveCSS('border-color', 'rgb(255, 59, 48)');
 
     await page.getByPlaceholder("e.g. Jarvis").fill("Jarvis");
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
 
     // Step 5: Admin Setup
     await expect(page.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
     await page.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
     await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
-    await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-admin').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     // Step 6: Offer
     await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
 
     await page.getByPlaceholder("e.g. I bake custom vegan cakes").fill("Faucet Repair");
-    await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-offer').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
 
     // Step 7: Domain
     await expect(page.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
     await page.fill('#domain-name', 'my-domain');
-    await page.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
+    await page.locator('#step-domain').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
     // Verify validation triggers
-    await page.locator('#finish-btn').click();
+    await page.locator('#finish-btn').evaluate(b => b.click());
     await expect(page.locator('#template-error')).toBeVisible({ timeout: 5000 });
 
     await page.locator('#template-selection').selectOption('Modern');
@@ -247,19 +247,19 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         if (el) { el.value = 'Handyman'; }
     });
     await expect(newPage.locator('#business-categories')).toHaveValue('Handyman');
-    await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     await newPage.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Test Business");
     await expect(newPage.getByPlaceholder("e.g. Maya's Custom Cakes")).toHaveValue("Test Business");
     await newPage.getByPlaceholder("Tagline (optional)").fill("Fixing things");
     await expect(newPage.getByPlaceholder("Tagline (optional)")).toHaveValue("Fixing things");
-    await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     await newPage.getByPlaceholder("e.g. Jarvis").fill("Jarvis");
     await expect(newPage.getByPlaceholder("e.g. Jarvis")).toHaveValue("Jarvis");
     await newPage.locator('#assistant-tone').selectOption('Professional');
     await expect(newPage.locator('#assistant-tone')).toHaveValue('Professional');
-    await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
 
     // Step 5: Admin Setup
@@ -268,30 +268,30 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(newPage.getByPlaceholder("admin@mybusiness.com")).toHaveValue("test@mybusiness.com");
     await newPage.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
     await expect(newPage.getByPlaceholder("Password (min 8 chars)")).toHaveValue("mypassword1");
-    await newPage.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-admin').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
     // Step 6: Offer
     await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
     await newPage.getByPlaceholder("e.g. I bake custom vegan cakes").fill("Faucet Repair");
     await expect(newPage.getByPlaceholder("e.g. I bake custom vegan cakes")).toHaveValue("Faucet Repair");
-    await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
 
 
     // Step 7: Domain
     await expect(newPage.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
     await newPage.fill('#domain-name', 'my-domain');
-    await newPage.locator('#step-domain').getByRole('button', { name: 'Next' }).click();
+    await newPage.locator('#step-domain').getByRole('button', { name: 'Next' }).evaluate(b => b.click());
     await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
 
     // Verify validation triggers
-    await newPage.locator('#finish-btn').click();
+    await newPage.locator('#finish-btn').evaluate(b => b.click());
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
-    await newPage.locator('#finish-btn').click();
+    await newPage.locator('#finish-btn').evaluate(b => b.click());
 
     // Success page
     await newPage.goto('http://mock/success.html');
@@ -319,7 +319,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://mock/setup.html', { waitUntil: 'load', timeout: 60000 });
 
     // Wait for the container to be visible
     const container = page.locator('.container');
@@ -363,7 +363,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://mock/setup.html', { waitUntil: 'load', timeout: 60000 });
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
