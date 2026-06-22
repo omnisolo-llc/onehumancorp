@@ -355,7 +355,7 @@
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
 
-      <div class="header">
+      <div class="header" style="z-index: 1000; position: relative;">
             <a href="dashboard.html" class="back-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               Dashboard
@@ -383,7 +383,7 @@
           </div>
 
           <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 8px 0; align-self: flex-start; padding: 0 4px;">Product Catalog</h3>
-          <div id="product-grid" class="grid">
+          <div id="product-grid" class="grid" style="display: grid !important;">
             <p style="color: #86868b; font-size: 14px; grid-column: span 2; text-align: center; padding: 16px 0;">Loading catalog...</p>
           </div>
 
@@ -912,6 +912,86 @@
 
       // Initialize
       updateDisplay();
+
+      // Offline First Localized Pricing Logic
+
+      async function fetchCatalog() {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          const cacheKey = `ohc_catalog_${tenantId}`;
+          const productGrid = document.getElementById('product-grid');
+
+          // Local formatting helper
+          const formatPrice = (cents) => {
+              const dollars = cents / 100;
+              // derive from tenant configuration, fallback to local setting and 'USD'
+              const tenantCurrency = localStorage.getItem('tenant_currency') || 'USD';
+              return new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency: tenantCurrency }).format(dollars);
+          };
+
+          const renderCatalog = (products) => {
+              if (!productGrid) return;
+              productGrid.innerHTML = '';
+              if (products.length === 0) {
+                  productGrid.innerHTML = '<p style="color: #86868b; font-size: 14px; grid-column: span 2; text-align: center; padding: 16px 0;">No products found.</p>';
+                  return;
+              }
+
+              products.forEach(p => {
+                  const btn = document.createElement('button');
+                  btn.className = 'product-btn';
+                  const title = p.title || p.name || 'Unnamed Product';
+                  const priceCents = p.price_cents || 0;
+                  const displayPrice = formatPrice(priceCents);
+
+                  btn.onclick = () => selectProduct(p.id, priceCents, title);
+
+                  btn.innerHTML = `
+                      <span class="product-btn-name">${title}</span>
+                      <span class="product-btn-price">${displayPrice}</span>
+                  `;
+                  productGrid.appendChild(btn);
+              });
+          };
+
+          // Try loading from cache first
+          try {
+              const cached = localStorage.getItem(cacheKey);
+              if (cached) {
+                  renderCatalog(JSON.parse(cached));
+              }
+          } catch(e) {
+              console.warn("Could not read catalog from cache", e);
+          }
+
+          // Fetch fresh from network if online
+          if (navigator.onLine) {
+              try {
+                  const res = await fetch('/api/v1/catalog/products', {
+                      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                  });
+                  if (res.ok) {
+                      const data = await res.json();
+                      localStorage.setItem(cacheKey, JSON.stringify(data));
+                      renderCatalog(data);
+                  }
+              } catch(e) {
+                  console.warn("Network fetch failed, relying on cache.", e);
+              }
+          }
+      }
+
+      function selectProduct(id, priceCents, title) {
+          if (!priceCents) return;
+          // For simplicity in this demo, just replace or append.
+          // In a real POS this would add to a cart array.
+          currentAmountCents += priceCents;
+          updateDisplay();
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+          fetchCatalog();
+      });
+
     </script>
 
 
