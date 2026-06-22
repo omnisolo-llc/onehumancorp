@@ -272,10 +272,20 @@ impl HierarchicalPromptBuilder {
     }
 
     pub fn build(&self) -> String {
+        // Omni-Context Injection
+        let mut grounding_injection = String::new();
+        if let Ok(cwd) = std::env::current_dir() {
+            let router = crate::omni_context::OmniContextRouter::new(cwd);
+            if let Some(grounding) = router.get_system_grounding() {
+                grounding_injection = format!("<omni_context>\n{}\n</omni_context>\n\n", grounding);
+            }
+        }
+
         let mut combined_system = String::new();
 
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
+            combined_system.push_str(&grounding_injection);
             combined_system.push_str("<server_system_message>\n");
             combined_system.push_str(&self.server_system_message);
             combined_system.push_str("\n</server_system_message>");
