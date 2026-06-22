@@ -7,6 +7,10 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />
 }));
 
+vi.mock('../components/GrowthReferralWidget', () => ({
+  default: () => <div data-testid="growth-referral-widget" />
+}));
+
 describe('ReferralsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

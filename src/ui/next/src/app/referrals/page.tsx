@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import GrowthReferralWidget from '../components/GrowthReferralWidget';
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
@@ -164,82 +165,9 @@ export default function ReferralsPage() {
           </div>
         </div>
 
-        <div className="ohc-growth-card glass-card p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
-            <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Cloud Bridge Invite</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                    type="email"
-                    id="cloud-bridge-email"
-                    value={cloudInviteEmail}
-                    onChange={(e) => setCloudInviteEmail(e.target.value)}
-                    placeholder="Team member email (e.g., test@example.com)"
-                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button
-                    disabled={isGeneratingCloudInvite}
-                    onClick={async () => {
-                        const inviteeEmail = cloudInviteEmail || "test@example.com";
-                        setIsGeneratingCloudInvite(true);
-                        try {
-                            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    team_id: "default-team",
-                                    inviter_id: "current-user",
-                                    invitee_id: inviteeEmail
-                                })
-                            });
-                            const data = await res.json();
-                            if (res.ok && data.invite_link) {
-                                setCloudInviteStatus({ message: `Cloud Invite generated: ${data.invite_link}`, isError: false });
-                            } else {
-                                setCloudInviteStatus({ message: `Failed to generate cloud invite: ${data.error || 'Unknown error'}`, isError: true });
-                            }
-                        } catch (e) {
-                            setCloudInviteStatus({ message: "Error generating cloud invite.", isError: true });
-                        } finally {
-                            setIsGeneratingCloudInvite(false);
-                        }
-                    }}
-                    className="px-6 py-3 rounded-xl text-sm font-bold transition-all sm:w-auto w-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50"
-                >
-                    {isGeneratingCloudInvite ? 'Generating...' : 'Generate Cloud Invite'}
-                </button>
-            </div>
-            {cloudInviteStatus && (
-                <div className={`mt-4 p-3 rounded-lg text-sm break-all ${cloudInviteStatus.isError ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'}`} role="status">
-                    {cloudInviteStatus.message}
-                </div>
-            )}
-        </div>
+        <GrowthReferralWidget />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
-                <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
-                <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
-                    <pre id="embed-code">
-{`<iframe src="/api/v1/growth/storefront/embed"
-  width="100%"
-  height="600"
-  frameborder="0"
-  style="border-radius: 12px; border: 1px solid #eaeaea;">
-</iframe>`}
-                    </pre>
-                </div>
-                <button
-                  className="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-200 transition-colors"
-                  onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="/api/v1/growth/storefront/embed" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>`);
-                      setDataAction('Embed code copied.');
-                  }}
-                >
-                    Copy Embed Code
-                </button>
-            </div>
-
             <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Manage Data</h3>
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>
