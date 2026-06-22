@@ -24,6 +24,7 @@ pub struct RepoMapArgs {
     pub path: Option<String>,
     pub max_depth: Option<u64>,
     pub exclude_dirs: Option<Vec<String>>,
+    pub include_symbols: Option<bool>,
 }
 
 pub struct RepoMapExecutor {
@@ -93,7 +94,7 @@ impl RepoMapExecutor {
         sigs
     }
 
-    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>) -> Result<String, std::io::Error> {
+    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>, include_symbols: bool) -> Result<String, std::io::Error> {
         let mut map = String::new();
         if !dir.is_dir() {
             return Ok(map);
@@ -114,23 +115,25 @@ impl RepoMapExecutor {
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
                 if current_depth < max_depth {
-                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs)?);
+                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs, include_symbols)?);
                 } else {
                     map.push_str(&format!("{}  ... (max depth reached)\n", prefix));
                 }
             } else {
                 map.push_str(&format!("{}📄 {}\n", prefix, name));
 
-                // Read file to extract signatures
-                if let Some(ext) = path.extension().and_then(|e| e.to_str())
-                    && let Ok(content) = std::fs::read_to_string(&path) {
-                        let sigs = Self::extract_signatures(&content, ext);
-                        for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
-                            map.push_str(&format!("{}  │ {}\n", prefix, sig));
-                        }
-                        if sigs.len() > 10 {
-                            map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
-                        }
+                // Read file to extract signatures only if include_symbols is true
+                if include_symbols {
+                    if let Some(ext) = path.extension().and_then(|e| e.to_str())
+                        && let Ok(content) = std::fs::read_to_string(&path) {
+                            let sigs = Self::extract_signatures(&content, ext);
+                            for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
+                                map.push_str(&format!("{}  │ {}\n", prefix, sig));
+                            }
+                            if sigs.len() > 10 {
+                                map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
+                            }
+                    }
                 }
             }
         }
@@ -165,7 +168,8 @@ impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
         }
 
         let exclude_dirs = args.exclude_dirs.unwrap_or_default();
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs))
+        let include_symbols = args.include_symbols.unwrap_or(true);
+        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs, include_symbols))
             .await
             .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -203,6 +207,10 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
                         "type": "string"
                     },
                     "description": "Optional list of directory names to exclude from the map."
+                },
+                "include_symbols": {
+                    "type": "boolean",
+                    "description": "If true (default), extracts and includes code symbol signatures (functions, classes, etc.) in the output. Set to false for a purely structural view of directories and file names."
                 }
             }
         }),
@@ -368,6 +376,36 @@ mod extra_tests {
         let executor = RepoMapExecutor::new(root.to_path_buf());
         let result = executor.execute_typed(serde_json::from_value(json!({"path": "../out_of_bounds"})).unwrap()).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_repomap_without_symbols() {
+        let dir = tempdir().expect("should succeed in test");
+        let root = dir.path();
+
+        let src_dir = root.join("src");
+        std::fs::create_dir(&src_dir).expect("should succeed in test");
+
+        let rs_file = src_dir.join("main.rs");
+        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\n").expect("should succeed in test");
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+
+        // Test with include_symbols = false
+        let result_no_symbols = executor.execute_typed(serde_json::from_value(json!({"include_symbols": false})).unwrap()).await.expect("should succeed in test");
+
+        assert!(result_no_symbols.contains("📁 src/"));
+        assert!(result_no_symbols.contains("📄 main.rs"));
+        assert!(!result_no_symbols.contains("│ pub fn main()"));
+        assert!(!result_no_symbols.contains("│ struct User"));
+
+        // Test default behavior (include_symbols = true)
+        let result_with_symbols = executor.execute_typed(serde_json::from_value(json!({})).unwrap()).await.expect("should succeed in test");
+
+        assert!(result_with_symbols.contains("📁 src/"));
+        assert!(result_with_symbols.contains("📄 main.rs"));
+        assert!(result_with_symbols.contains("│ pub fn main()"));
+        assert!(result_with_symbols.contains("│ struct User"));
     }
 }
 
