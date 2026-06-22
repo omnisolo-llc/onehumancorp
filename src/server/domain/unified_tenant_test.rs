@@ -178,7 +178,7 @@ mod tests {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
             status: None,
-            total_amount: None,
+            total_amount_cents: None,
             payment_source: None,
             created_at: None,
             updated_at: None,

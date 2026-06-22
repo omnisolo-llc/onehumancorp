@@ -309,21 +309,21 @@ Output JSON format:
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_quote_id = Uuid::new_v4();
                     quote_id_opt = Some(draft_quote_id.to_string());
-                    let total_amount = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-                    let required_deposit = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let total_amount_cents = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let required_deposit_cents = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                     let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
 
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
                             if let Ok(mut tx) = self.db.pool.begin().await {
                                 let _ = sqlx::query(
-                                    "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+                                    "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
                                 )
                                 .bind(draft_quote_id)
                                 .bind(&tenant_id)
                                 .bind(customer_id_uuid)
-                                .bind(total_amount)
-                                .bind(required_deposit)
+                                .bind(total_amount_cents)
+                                .bind(required_deposit_cents)
                                 .execute(&mut *tx).await;
 
                                 if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
@@ -350,13 +350,13 @@ Output JSON format:
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                             let _ = sqlx::query(
-                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                             )
                             .bind(draft_quote_id.to_string())
                             .bind(&tenant_id)
                             .bind(customer_id_uuid.to_string())
-                            .bind(total_amount)
-                            .bind(required_deposit)
+                            .bind(total_amount_cents)
+                            .bind(required_deposit_cents)
                             .execute(sqlite_pool).await;
 
                             if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
