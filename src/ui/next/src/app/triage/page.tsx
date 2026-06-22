@@ -64,7 +64,9 @@ export default function TriagePage() {
       try {
         const actions = await getActions();
         setOfflineActionsCount(actions.length);
-      } catch (err) {}
+      } catch (err) {
+        console.warn("Failed to fetch offline actions count:", err);
+      }
     };
     updateOfflineCount();
 
@@ -261,7 +263,7 @@ export default function TriagePage() {
                     data-testid="approve-btn"
                     onClick={() => handleDecision(item.id, true)}
                   >
-                    {isProcessing ? "Processing..." : "Approve & Execute"}
+                    {isProcessing ? "Processing..." : "Approve & Send"}
                   </button>
                   <button
                     disabled={isProcessing}
