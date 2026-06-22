@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package ohc.dispatch;
+
+import "src/proto/common.proto";
+
+message LocalDispatchRoute {
+    string id = 1;
+    string tenant_id = 2;
+    string vehicle_id = 3;
+    string start_time = 4;
+    string end_time = 5;
+    string status = 6;
+}
+
+message LocalDispatchStop {
+    string id = 1;
+    string route_id = 2;
+    string tenant_id = 3;
+    string location_id = 4;
+    int32 sequence_number = 5;
+    string estimated_arrival = 6;
+    string actual_arrival = 7;
+    string status = 8;
+}
+
+message CourierDispatch {
+    string id = 1;
+    string tenant_id = 2;
+    string courier_name = 3;
+    string courier_phone = 4;
+    string current_location_lat = 5;
+    string current_location_lng = 6;
+    string status = 7;
+}
+
+message CreateRouteRequest {
+    LocalDispatchRoute route = 1;
+}
+
+message CreateRouteResponse {
+    LocalDispatchRoute route = 1;
+}
+
+message GetRouteRequest {
+    string id = 1;
+}
+
+message GetRouteResponse {
+    LocalDispatchRoute route = 1;
+}
+
+message AddStopRequest {
+    LocalDispatchStop stop = 1;
+}
+
+message AddStopResponse {
+    LocalDispatchStop stop = 1;
+}
+
+message UpdateCourierLocationRequest {
+    string id = 1;
+    string current_location_lat = 2;
+    string current_location_lng = 3;
+}
+
+message UpdateCourierLocationResponse {
+    CourierDispatch courier = 1;
+}
+
+service DispatchService {
+    rpc CreateRoute(CreateRouteRequest) returns (CreateRouteResponse);
+    rpc GetRoute(GetRouteRequest) returns (GetRouteResponse);
+    rpc AddStop(AddStopRequest) returns (AddStopResponse);
+    rpc UpdateCourierLocation(UpdateCourierLocationRequest) returns (UpdateCourierLocationResponse);
+}
