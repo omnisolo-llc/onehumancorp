@@ -168,6 +168,6 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
-    await expect(page.locator('text=Soft Limit Approaching')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Budget Alert')).toBeVisible({ timeout: 15000 });
   });
 });
