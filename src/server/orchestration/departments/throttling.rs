@@ -40,6 +40,10 @@ impl ThrottlingManager {
             _ => 1000, // free (increased for e2e tests)
         };
 
+        if points > limit {
+            return Ok(false);
+        }
+
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -57,59 +61,76 @@ impl ThrottlingManager {
                 .execute(&mut *tx)
                 .await;
 
-                let res: Option<(i32,)> = sqlx::query_as(
+                // First, check existing points to handle the initial insertion exceeding limit safely.
+                let current_usage: Option<i32> = sqlx::query_scalar(
+                    "SELECT actions_used FROM tenant_ai_budgets WHERE tenant_id = $1 AND year_month = $2 FOR UPDATE"
+                )
+                .bind(tenant_id)
+                .bind(&year_month)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let current = current_usage.unwrap_or(0);
+                if current + points > limit {
+                    tx.rollback().await.ok();
+                    return Ok(false);
+                }
+
+                let _ = sqlx::query(
                     "INSERT INTO tenant_ai_budgets (tenant_id, year_month, actions_used)
                      VALUES ($1, $2, $3)
                      ON CONFLICT (tenant_id, year_month) DO UPDATE
                      SET actions_used = tenant_ai_budgets.actions_used + $3,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE tenant_ai_budgets.actions_used + $3 <= $4
-                     RETURNING actions_used"
+                         updated_at = CURRENT_TIMESTAMP"
                 )
                 .bind(tenant_id)
                 .bind(&year_month)
                 .bind(points)
-                .bind(limit)
-                .fetch_optional(&mut *tx)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
-                if let Some((actions_used,)) = res {
-                    Ok(actions_used <= limit)
-                } else {
-                    Ok(false)
-                }
+                Ok(true)
             }
             DbStore::Sqlite(pool) => {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-                let res: Option<(i32,)> = sqlx::query_as(
+
+                let current_usage: Option<i32> = sqlx::query_scalar(
+                    "SELECT actions_used FROM tenant_ai_budgets WHERE tenant_id = ? AND year_month = ?"
+                )
+                .bind(tenant_id)
+                .bind(&year_month)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let current = current_usage.unwrap_or(0);
+                if current + points > limit {
+                    tx.rollback().await.ok();
+                    return Ok(false);
+                }
+
+                let _ = sqlx::query(
                     "INSERT INTO tenant_ai_budgets (tenant_id, year_month, actions_used)
                      VALUES (?, ?, ?)
                      ON CONFLICT (tenant_id, year_month) DO UPDATE
                      SET actions_used = tenant_ai_budgets.actions_used + ?,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE tenant_ai_budgets.actions_used + ? <= ?
-                     RETURNING actions_used"
+                         updated_at = CURRENT_TIMESTAMP"
                 )
                 .bind(tenant_id)
                 .bind(&year_month)
                 .bind(points)
                 .bind(points)
-                .bind(points)
-                .bind(limit)
-                .fetch_optional(&mut *tx)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
-                if let Some((actions_used,)) = res {
-                    Ok(actions_used <= limit)
-                } else {
-                    Ok(false)
-                }
+                Ok(true)
             }
         }
     }

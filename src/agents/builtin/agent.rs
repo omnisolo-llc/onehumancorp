@@ -16,12 +16,7 @@ use ohc_builtin_agent_core::types::{
 use ohc_builtin_agent_llm::LlmClient;
 
 pub fn agent_task_timeout() -> std::time::Duration {
-    let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(60);
-    std::time::Duration::from_secs(secs)
+    std::time::Duration::from_secs(60)
 }
 
 /// Default computational guide using bash commands
