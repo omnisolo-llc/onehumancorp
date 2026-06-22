@@ -605,7 +605,7 @@ export default function OnboardingWizard() {
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: adminEmail,
-          admin_name: adminName || businessName + ' Admin',
+          admin_name: adminName || (businessName ? businessName + ' Admin' : 'Admin'),
           admin_password: adminPassword,
           website_template: websiteTemplate,
           first_product_name: firstProductName,
