@@ -17,6 +17,9 @@ test.describe('Autonomous Proposal Flow', () => {
     });
     expect(submitResponse.ok()).toBeTruthy();
 
+    // Wait for the async LeadReceived job to process
+    await page.waitForTimeout(5000);
+
     await page.goto('/dashboard');
     const quoteCard = page.getByTestId('quote-draft-card').first();
     await expect(quoteCard).toBeVisible({ timeout: 15000 });

@@ -2577,6 +2577,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let missed_lead_recovery_worker = Arc::new(crate::workers::missed_lead_recovery_worker::MissedLeadRecoveryWorker::new(db.clone()));
     missed_lead_recovery_worker.start();
 
+    // Start Estimator Agent Worker
+    let estimator_worker = Arc::new(crate::workers::estimator_worker::EstimatorAgentWorker::new(db.clone()));
+    estimator_worker.start();
+
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
