@@ -1437,6 +1437,16 @@ impl DB {
                         state_change TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS auto_reply_policies (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        enabled BOOLEAN NOT NULL DEFAULT true,
+                        delay_minutes INTEGER NOT NULL DEFAULT 5,
+                        tone_instructions TEXT DEFAULT '',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id)
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
