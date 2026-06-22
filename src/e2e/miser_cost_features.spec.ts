@@ -44,9 +44,8 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(currentPlanButton).toBeDisabled();
   });
 
-  test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, starterUser as any);
+  test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     await page.goto('/pricing');
 
     const starterCard = page.locator('.ohc-growth-card').filter({ hasText: 'Starter' });
@@ -76,9 +75,8 @@ test.describe('Miser Cost Features E2E', () => {
     }
   });
 
-  test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const proUser = { email: "pro@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, proUser as any);
+  test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     await page.goto('/pricing');
 
     const proCard = page.locator('.ohc-growth-card').filter({ hasText: 'Pro' });
@@ -108,9 +106,8 @@ test.describe('Miser Cost Features E2E', () => {
     }
   });
 
-  test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, loginAs }) => {
-    const businessUser = { email: "business@example.com", password: "password123", role: "ADMIN" };
-    await loginAs(page, businessUser as any);
+  test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     await page.goto('/pricing');
 
     const businessCard = page.locator('.ohc-growth-card').filter({ hasText: 'Business' });
