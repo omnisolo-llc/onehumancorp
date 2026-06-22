@@ -5395,7 +5395,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
     match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
@@ -5404,12 +5404,18 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    let payment_intent_id = row.try_get::<String, _>("payment_intent_id").unwrap_or_default();
+                    let payment_status = if payment_intent_id.is_empty() { "deposit_required" } else { "paid" };
+                    let ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
+
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "payment_status": payment_status,
+                            "ai_summary": ai_summary,
                         })
                     } else {
                         serde_json::json!({
@@ -5420,6 +5426,8 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "payment_status": payment_status,
+                            "ai_summary": ai_summary,
                         })
                     }
                 }).collect::<Vec<_>>()),
@@ -5428,7 +5436,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
         }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.payment_intent_id, '') AS payment_intent_id, COALESCE(b.ai_summary, '') AS ai_summary \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
@@ -5436,26 +5444,37 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             .bind(tenant_id)
             .fetch_all(pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    if mobile_optimized {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    } else {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
-                            "product_title": row.get::<String, _>("product_title"),
-                            "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
-                            "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }
-                }).collect::<Vec<_>>()),
+                Ok(rows) => {
+                    use sqlx::Row;
+                    Ok(rows.into_iter().map(|row| {
+                        let payment_intent_id = row.try_get::<String, _>("payment_intent_id").unwrap_or_default();
+                        let payment_status = if payment_intent_id.is_empty() { "deposit_required" } else { "paid" };
+                        let ai_summary = row.try_get::<String, _>("ai_summary").unwrap_or_default();
+
+                        if mobile_optimized {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "product_title": row.get::<String, _>("product_title"),
+                                "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
+                                "status": row.get::<String, _>("status"),
+                                "payment_status": payment_status,
+                                "ai_summary": ai_summary,
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "customer_name": row.get::<String, _>("customer_name"),
+                                "product_id": row.get::<String, _>("product_id"),
+                                "product_title": row.get::<String, _>("product_title"),
+                                "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
+                                "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
+                                "status": row.get::<String, _>("status"),
+                                "payment_status": payment_status,
+                                "ai_summary": ai_summary,
+                            })
+                        }
+                    }).collect::<Vec<_>>())
+                },
                 Err(e) => Err(e),
             }
         }
