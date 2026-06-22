@@ -4,13 +4,16 @@ use crate::db::DB;
 use sqlx::Row;
 use uuid::Uuid;
 
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+
 pub struct MessageTriageWorker {
     db: Arc<DB>,
+    orchestrator: Arc<DepartmentOrchestrator>,
 }
 
 impl MessageTriageWorker {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DB>, orchestrator: Arc<DepartmentOrchestrator>) -> Self {
+        Self { db, orchestrator }
     }
 
     pub fn start(self: Arc<Self>) {

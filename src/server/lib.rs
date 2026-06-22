@@ -2566,8 +2566,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
     booking_reengagement_worker.start();
 
+    // Initialize Handoff Manager early for message_triage_worker
+    let is_cloud = !crate::is_standalone_runtime();
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        is_cloud
+    ).await.expect("Failed to create MeshTransport");
+    let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+
     // Start Message Triage Worker
-    let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
+    let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone(), dept_orchestrator.clone()));
     message_triage_worker.start();
 
     // Start Deposit Follow-Up Worker
@@ -2672,15 +2681,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let is_cloud = !crate::is_standalone_runtime();
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        is_cloud
-    ).await.expect("Failed to create MeshTransport");
-
-    // Initialize Handoff Manager
-    let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
-    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone()).with_hub(hub.clone())));
