@@ -71,7 +71,8 @@ pub async fn offline_sync_handler(
                         .unwrap_or((0,));
 
                     if exists.0 > 0 {
-                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                         let _ = db_tx.rollback().await;
                         return Ok(None);
                     }
@@ -113,7 +114,8 @@ pub async fn offline_sync_handler(
                         .unwrap_or((0,));
 
                     if exists.0 > 0 {
-                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                         let _ = db_tx.rollback().await;
                         return Ok(None);
                     }
@@ -175,7 +177,8 @@ pub async fn offline_sync_handler(
                     .unwrap_or((0,));
 
                 if exists.0 > 0 {
-                    tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                    let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                     let _ = db_tx.rollback().await;
                     return Ok(None);
                 }
