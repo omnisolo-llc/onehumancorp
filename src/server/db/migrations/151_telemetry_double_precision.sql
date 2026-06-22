@@ -1,0 +1,1 @@
+ALTER TABLE telemetry_buffer ALTER COLUMN value TYPE DOUBLE PRECISION;

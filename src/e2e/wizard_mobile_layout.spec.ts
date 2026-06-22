@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Wizard and Onboarding flows', () => {
 
@@ -28,18 +28,16 @@ test.describe('Wizard and Onboarding flows', () => {
 
     // Check click routing inside builder
     await page.locator('text="Start My Business"').click();
-    await expect(page.getByText("Let's build your store")).toBeVisible();
 
-    const nameInput = page.getByPlaceholder('e.g. Acme Corp');
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill('Maya Cakes');
+    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
+    await page.getByText("I'm a Baker").click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    const descInput = page.getByPlaceholder('e.g. Retail, Consulting, Tech');
-    await expect(descInput).toBeVisible();
-    await descInput.fill('Bakery');
+    await expect(page.locator('#business-categories')).toBeVisible();
+    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#step-categories .next-step-btn').click();
 
-    await page.getByRole('button', { name: 'Next: Choose Vibe' }).click();
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();
   });
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
@@ -49,19 +47,20 @@ test.describe('Wizard and Onboarding flows', () => {
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
     await page.locator('text="Start My Business"').click();
 
-    await expect(page.locator('text="Which of these sounds most like your work?"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
 
     // Check constraints are working inside inputs.
-    await page.locator('text="Online Creator"').first().click(); await page.locator('text="Next"').click(); await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('Cakes By Maya');
-    await page.getByPlaceholder('Tagline (optional)').fill('Baker');
+    await page.getByText("I'm a Baker").click();
+    await page.locator('#step-context .next-step-btn').click();
+    await expect(page.locator('#business-categories')).toBeVisible();
+    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#step-categories .next-step-btn').click();
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();
+    await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('Cakes By Maya');
+    await page.locator('#step-name .next-step-btn').click();
 
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
-    await page.getByText('Friendly').click();
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    await expect(page.getByText('Final Details')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Set up your Assistant' })).toBeVisible();
   });
 
   test('Direct routing for business-setup compatibility page', async ({ page }) => {
@@ -76,15 +75,12 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.goto('/setup.html');
 
     await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
-    await page.getByText('Offering Services').click();
+    await page.locator('text="Start My Business"').click();
 
-    await expect(page.locator('text="Which of these sounds most like your work?"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
+    await page.getByText("I'm a Baker").click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    await page.getByPlaceholder('e.g. Acme Corp').fill('Auto Repair');
-    await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Mechanic');
-
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    await expect(page.getByText('Select Your Vibe')).toBeVisible();
+    await expect(page.locator('#business-categories')).toBeVisible();
   });
 });
