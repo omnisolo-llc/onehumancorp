@@ -150,4 +150,24 @@ test.describe('Miser Cost Features E2E', () => {
     const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' });
     await expect(managePlanButton).toBeVisible({ timeout: 15000 });
   });
+
+  test('Budget Alert triggers on projected cost threshold with real data', async ({ page, loginAs }) => {
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
+    await loginAs(page, starterUser as any);
+
+    // Let's create realistic data for cost threshold alert via actual API interactions
+    // by calling the endpoint that generates the cost payload. This mimics normal usage.
+    await page.request.post('/api/billing/report-cost', {
+        data: {
+            metric_name: 'ohc_llm_cost_total_cents',
+            value: 200000,
+            labels: { agent_id: 'agent_test_high_usage' }
+        }
+    });
+
+    await page.goto('/cost-dashboard');
+
+    // The threshold should trigger given a $2,000 spend on the Starter plan.
+    await expect(page.locator('text=Soft Limit Approaching')).toBeVisible({ timeout: 15000 });
+  });
 });

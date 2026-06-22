@@ -103,6 +103,11 @@ impl BudgetManager {
         usage_percent >= self.alert_threshold_percent
     }
 
+    pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
+        let limit_threshold_cents = ((self.total_limit * 100.0) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        projected_cost_cents >= limit_threshold_cents
+    }
+
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
         if total_limit_cents <= 0 {
             return false;
@@ -239,6 +244,15 @@ mod tests {
         let exact_manager = BudgetManager::new(100.0).with_alert_threshold(80.0);
         exact_manager.record_spend_cents(8000).expect("failed to unwrap");
         assert!(exact_manager.check_alert_threshold_cents(10000));
+    }
+
+    #[test]
+    fn test_check_alert_threshold_with_projected_costs() {
+        let manager = BudgetManager::new(10.0);
+        // $10 limit, 80% threshold = $8 (800 cents)
+        assert!(!manager.is_projected_cost_over_threshold(700)); // $7
+        assert!(manager.is_projected_cost_over_threshold(800)); // $8
+        assert!(manager.is_projected_cost_over_threshold(1500)); // $15
     }
 
     #[test]

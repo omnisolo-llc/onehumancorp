@@ -464,8 +464,7 @@ pub async fn cost_dashboard_handler(
     let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
-    budget_manager.record_spend_cents(projected_cents).unwrap_or(false);
-    let budget_health_alert = budget_manager.check_alert_threshold();
+    let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
 
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
