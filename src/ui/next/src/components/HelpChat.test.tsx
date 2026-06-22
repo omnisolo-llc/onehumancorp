@@ -56,11 +56,11 @@ describe('HelpChat Component', () => {
     const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
-    await user.type(input, 'Test message');
-
-    act(() => {
-      fireEvent.click(submitBtn);
+    await act(async () => {
+      await user.type(input, 'Test message');
     });
+
+    fireEvent.click(submitBtn);
 
     // Check if user message is immediately displayed
     expect(screen.getByText('Test message')).toBeInTheDocument();
@@ -90,11 +90,11 @@ describe('HelpChat Component', () => {
     const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
-    await user.type(input, 'Error msg');
-
-    act(() => {
-      fireEvent.click(submitBtn);
+    await act(async () => {
+      await user.type(input, 'Error msg');
     });
+
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
@@ -114,11 +114,11 @@ describe('HelpChat Component', () => {
     const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
-    await user.type(input, 'Timeout msg');
-
-    act(() => {
-      fireEvent.click(submitBtn);
+    await act(async () => {
+      await user.type(input, 'Timeout msg');
     });
+
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Sorry, the connection timed out. Please try again later or check your network connection.")).toBeInTheDocument();
@@ -135,10 +135,12 @@ describe('HelpChat Component', () => {
     // Send a message
     const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
-    await user.type(input, 'Test message');
-    act(() => {
-      fireEvent.click(submitBtn);
+    await act(async () => {
+      await user.type(input, 'Test message');
     });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => expect(screen.getByText('Test message')).toBeInTheDocument());
 
     // Check message is displayed
     expect(screen.getByText('Test message')).toBeInTheDocument();
@@ -147,13 +149,12 @@ describe('HelpChat Component', () => {
     const clearBtn = screen.getByRole('button', { name: 'Clear chat' });
     expect(clearBtn).toBeInTheDocument();
 
-    act(() => {
-      fireEvent.click(clearBtn);
-    });
+    fireEvent.click(clearBtn);
 
     // Verify messages are cleared (back to initial)
     expect(screen.queryByText('Test message')).not.toBeInTheDocument();
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
+
 
     // Clear button should disappear
     expect(screen.queryByRole('button', { name: 'Clear chat' })).not.toBeInTheDocument();

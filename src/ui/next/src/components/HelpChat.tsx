@@ -202,7 +202,7 @@ export function HelpChat() {
             <div className="flex gap-2">
               {messages.length > 1 && (
                 <button
-                  onClick={clearChat}
+                  onClick={() => clearChat()}
                   className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px] px-3 flex items-center text-xs font-bold font-inter"
                   aria-label="Clear chat"
                 >
