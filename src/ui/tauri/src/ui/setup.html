@@ -2066,7 +2066,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant', 'X-User-ID': localStorage.getItem('user_id') || 'e2e-admin-user' },
                   body: JSON.stringify({ messages: chatHistory })
               });
 
