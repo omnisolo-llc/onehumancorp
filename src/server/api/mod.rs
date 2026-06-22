@@ -50,4 +50,3 @@ pub mod payment_ledger;
 pub mod field_ops;
 pub mod storefront_delivery;
 pub mod unified_inbox_webhook;
-pub mod search;

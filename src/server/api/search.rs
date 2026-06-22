@@ -20,7 +20,7 @@ pub struct SearchResponse {
     pub error: Option<String>,
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(db: DB) -> Router<S> {
+pub fn router(db: DB) -> Router {
     Router::new()
         .route("/", axum::routing::get(search_workspace_handler))
         .with_state(db)

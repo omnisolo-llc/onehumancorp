@@ -2418,10 +2418,8 @@ mod e2e_search_workspace_tests {
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Query both and compare
-        let mut sqlite_results = sqlite_db.search_workspace(&unique_tenant, "JoHn").await.expect("SQLite query failed");
-        let mut pg_results = pg_db.search_workspace(&unique_tenant, "JoHn").await.expect("Postgres query failed");
-        sqlite_results.sort_by(|a, b| a.id.cmp(&b.id));
-        pg_results.sort_by(|a, b| a.id.cmp(&b.id));
+        let sqlite_results = sqlite_db.search_workspace(&unique_tenant, "JoHn").await.expect("SQLite query failed");
+        let pg_results = pg_db.search_workspace(&unique_tenant, "JoHn").await.expect("Postgres query failed");
 
         assert_eq!(sqlite_results.len(), pg_results.len(), "Number of search results should match");
 

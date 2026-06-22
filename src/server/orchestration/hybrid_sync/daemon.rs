@@ -99,7 +99,7 @@ impl HybridSyncDaemon {
         for row in &rows {
             let metric_name: String = row.get("metric_name");
             let metric_type: String = row.get("metric_type");
-            let value: f32 = row.get("value");
+            let value: f64 = row.get("value");
             let labels_json: String = row.get("labels_json");
             let timestamp: chrono::NaiveDateTime = row.get("timestamp");
 

@@ -216,7 +216,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_get_task" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -232,7 +232,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_list_tasks" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let result = server.list_tasks().await;
@@ -243,7 +243,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_list_steps" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -259,7 +259,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_search_agents" {
             let marketplace = crate::marketplace::Marketplace::new();
             let query = req
@@ -281,7 +281,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_fetch_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent_id = req
@@ -309,7 +309,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
@@ -344,7 +344,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
 
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
@@ -362,7 +362,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         }
 
         // Helper to extract total_cost from run_async execution if needed
@@ -450,7 +450,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&JsonRpcResponse{ id: req.id.clone(), jsonrpc: "2.0".to_string(), result: None, error: None, meta: None }).unwrap_or_default();
+            return serde_json::to_string(&resp).unwrap_or_default();
         }
 
         if req.method == "run_expert_team" {
