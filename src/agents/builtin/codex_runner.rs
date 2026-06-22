@@ -274,14 +274,14 @@ impl AppServer {
                     query.is_empty() || a.name.to_lowercase().contains(&query.to_lowercase())
                 })
                 .collect();
-            let resp = JsonRpcResponse {
+            let search_resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id.clone(),
                 result: serde_json::to_value(filtered).ok(),
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&search_resp).unwrap_or_default();
         } else if req.method == "am_fetch_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent_id = req
@@ -290,7 +290,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = marketplace.download_agent(agent_id);
-            let _resp = match result {
+            let fetch_resp = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
@@ -309,7 +309,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&fetch_resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
