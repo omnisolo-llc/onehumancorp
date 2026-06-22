@@ -135,7 +135,7 @@
         background: rgba(255, 255, 255, 0.8);
       }
       .app-list-item.selected {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);
         border-color: #0066FF;
         box-shadow: 0 0 0 1px #0066FF;
       }
@@ -229,7 +229,7 @@
       }
 
       .btn-secondary {
-        background-color: #fff;
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);
         color: #383d41;
         border: 1px solid rgba(0, 0, 0, 0.15);
       }
@@ -282,7 +282,9 @@
           border-color: rgba(255, 255, 255, 0.2);
         }
         .btn-secondary:hover { background-color: #3a3a3c; }
-        .app-badge.neutral { background-color: #333; color: #ddd; }
+        .app-badge.neutral { background: rgba(22, 22, 26, 0.7);
+      backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.1); color: #ddd; }
       }
     </style>
   </head>
@@ -507,7 +509,9 @@
 <style>
 .ohc-tooltip {
     position: fixed;
-    background: #333;
+    background: rgba(22, 22, 26, 0.7);
+      backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
@@ -605,7 +609,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -630,7 +634,7 @@ function initWalkthrough() {
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;

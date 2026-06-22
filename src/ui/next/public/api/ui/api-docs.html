@@ -479,8 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
             <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
         </div>
 
 <div id="ohc-help-input-area">
@@ -545,7 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
 .ohc-tooltip {
     position: fixed;
-    background: #333;
+    background: rgba(22, 22, 26, 0.7);
+      backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
@@ -643,7 +645,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -668,7 +670,7 @@ function initWalkthrough() {
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
