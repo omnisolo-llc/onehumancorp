@@ -31,19 +31,16 @@ afterEach(() => {
     expect(screen.getByText('AI Scheduling (Zero-Setup)')).toBeDefined();
   });
 
-  it('renders upcoming appointments section', async () => {
+  it('renders upcoming appointments section and morning briefing', async () => {
     await act(async () => { render(<CalendarPage />); });
+    expect(screen.getByText('Morning Briefing')).toBeDefined();
     expect(screen.getByText('Upcoming Appointments')).toBeDefined();
     expect(screen.getByText('No upcoming appointments.')).toBeDefined();
-    // Removed mock assert
-    // Removed mock assert
   });
 
   it('renders AI operations activity feed', async () => {
     await act(async () => { render(<CalendarPage />); });
     expect(screen.getByText('Operations Agent')).toBeDefined();
     expect(screen.getByText('Real-time activity of your AI managing bookings and inquiries.')).toBeDefined();
-    // Removed ai activity mock assert
-    // Removed ai activity mock assert
   });
 });

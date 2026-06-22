@@ -6,6 +6,7 @@ export default function CalendarPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedAptId, setExpandedAptId] = useState<string | null>(null);
 
   useEffect(() => {
     const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
@@ -28,7 +29,10 @@ export default function CalendarPage() {
               date: startDate.toLocaleDateString(),
               status: b.status || 'pending',
               ai_scheduled: true, // Assuming OHC Operations AI manages these
-              link: '' // No link for physical bookings by default, could add if it's a virtual service
+              link: '', // No link for physical bookings by default, could add if it's a virtual service
+              notes: b.notes || '',
+              ai_summary: b.ai_summary || '',
+              payment_status: b.payment_status || 'unpaid',
             };
           }));
         }
@@ -72,7 +76,21 @@ export default function CalendarPage() {
 
         {/* Appointments Column */}
         <div className="md:col-span-2 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+
+          {/* Morning Briefing Card */}
+          <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-[16px] shadow-sm p-6 border border-blue-100">
+             <div className="flex items-start gap-3">
+                <div className="text-2xl mt-1">☀️</div>
+                <div>
+                  <h2 className="text-lg font-semibold font-outfit text-blue-900 mb-1">Morning Briefing</h2>
+                  <p className="text-sm text-blue-800 leading-relaxed">
+                    You have {appointments.length} appointments today. {appointments.filter(a => a.payment_status === 'unpaid' || a.payment_status === 'deposit_required').length} clients still need to pay. Let's make it a great day!
+                  </p>
+                </div>
+             </div>
+          </section>
+
+          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
             <div className="space-y-4">
               {isLoading ? (
@@ -87,24 +105,69 @@ export default function CalendarPage() {
               ) : appointments.length === 0 ? (
                 <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center">No upcoming appointments.</div>
               ) : appointments.map(apt => (
-                <div key={apt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-lg">{apt.service}</h3>
-                    <p className="text-sm text-gray-500">{apt.date} at {apt.time} • {apt.customer}</p>
-                    {apt.ai_scheduled && (
-                      <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
-                    )}
+                <div
+                  key={apt.id}
+                  className={`flex flex-col p-4 border rounded-lg transition-all cursor-pointer ${expandedAptId === apt.id ? 'border-indigo-200 shadow-md bg-indigo-50/10' : 'border-gray-100 hover:shadow-md'}`}
+                  onClick={() => setExpandedAptId(expandedAptId === apt.id ? null : apt.id)}
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-lg">{apt.service}</h3>
+                      <p className="text-sm text-gray-500">{apt.date} at {apt.time} • {apt.customer}</p>
+                      {apt.ai_scheduled && (
+                        <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
+                      )}
+                    </div>
+                    <div className="mt-2 sm:mt-0 flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                      </span>
+                      {apt.link && (
+                        <a href={apt.link} target="_blank" rel="noreferrer" className="px-3 py-1.5 text-xs font-bold rounded bg-blue-600 text-white hover:bg-blue-700 transition" onClick={(e) => e.stopPropagation()}>
+                          Join Meeting
+                        </a>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-2 sm:mt-0 flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-                    </span>
-                    {apt.link && (
-                      <a href={apt.link} target="_blank" rel="noreferrer" className="px-3 py-1.5 text-xs font-bold rounded bg-blue-600 text-white hover:bg-blue-700 transition">
-                        Join Meeting
-                      </a>
-                    )}
-                  </div>
+
+                  {expandedAptId === apt.id && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Customer</p>
+                            <p className="text-sm text-gray-900 font-medium">{apt.customer}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Payment Status</p>
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${apt.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              {apt.payment_status}
+                            </span>
+                          </div>
+                       </div>
+
+                       <div className="mb-4">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">AI Summary</p>
+                          <div className="bg-white border border-gray-100 rounded-md p-3 text-sm text-gray-700 shadow-sm">
+                            <span className="mr-2">✨</span> {apt.ai_summary}
+                          </div>
+                       </div>
+
+                       <div className="flex flex-wrap gap-2 mt-4">
+                          <button onClick={(e) => e.stopPropagation()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            Message Client
+                          </button>
+                          <button onClick={(e) => e.stopPropagation()} className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
+                            Reschedule
+                          </button>
+                          {(apt.payment_status === 'unpaid' || apt.payment_status === 'deposit_required') && (
+                            <button onClick={(e) => e.stopPropagation()} className="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors">
+                              Request Payment
+                            </button>
+                          )}
+                       </div>
+                    </div>
+                  )}
+
                 </div>
               ))}
             </div>
@@ -113,7 +176,7 @@ export default function CalendarPage() {
 
         {/* AI Operations Activity Feed */}
         <div className="md:col-span-1 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🤖</span>
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Operations Agent</h2>
