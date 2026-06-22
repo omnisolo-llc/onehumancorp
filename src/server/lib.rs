@@ -6576,6 +6576,15 @@ async fn create_ui_bom_item_handler(
         .route("/referrals", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/referrals.html"))
         }))
+        .route("/plan", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
+        }))
+        .route("/cost-dashboard", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
+        }))
+        .route("/pricing", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
+        }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
                 ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
