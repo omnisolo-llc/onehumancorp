@@ -12,7 +12,7 @@ import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 import { ProductShellGuard } from './components/ProductShellGuard';
 
 export const metadata: Metadata = {
-  title: 'OHC Builder',
+  title: 'In-App Help Center',
   description: 'Automated storefront builder',
 };
 
