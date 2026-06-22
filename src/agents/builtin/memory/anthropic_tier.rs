@@ -129,12 +129,15 @@ impl Anthropic3TierMemory {
     }
 
     /// Performs a simple substring search across all transcripts.
-    pub async fn search_transcripts(&self, query: &str) -> std::io::Result<Vec<String>> {
+    pub async fn search_transcripts(&self, query: &str, limit: usize) -> std::io::Result<Vec<String>> {
         let mut results = Vec::new();
         let query_lower = query.to_lowercase();
 
         let mut entries = fs::read_dir(&self.transcripts_dir).await?;
         while let Ok(Some(entry)) = entries.next_entry().await {
+            if results.len() >= limit {
+                break;
+            }
             let path = entry.path();
             if path.is_file()
                 && let Ok(content) = fs::read_to_string(&path).await
@@ -213,18 +216,18 @@ mod tests {
             .unwrap();
 
         // Search match
-        let results = memory.search_transcripts("weather").await.unwrap();
+        let results = memory.search_transcripts("weather", 5).await.unwrap();
         assert_eq!(results.len(), 1);
         assert!(results[0].contains("session2.log"));
         assert!(results[0].contains("What's the weather?"));
 
         // Search match across sessions (if applicable, though here only session1 has "hello")
-        let results2 = memory.search_transcripts("hello").await.unwrap();
+        let results2 = memory.search_transcripts("hello", 5).await.unwrap();
         assert_eq!(results2.len(), 1);
         assert!(results2[0].contains("session1.log"));
 
         // Search no match
-        let results3 = memory.search_transcripts("bananas").await.unwrap();
+        let results3 = memory.search_transcripts("bananas", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
     }
 }
