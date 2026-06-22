@@ -6637,7 +6637,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/inbox", inbox_webhook_router)
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
-        .merge(api::unified_inbox_webhook::router(db.clone()))
+        .merge(api::unified_inbox_webhook::router(db.clone(), semantic_router.clone()))
         .merge(health_router)
         .fallback(api_not_found_handler);
 

@@ -10,10 +10,13 @@ use std::sync::Arc;
 use uuid::Uuid;
 use sqlx::Row;
 use crate::db::DB;
+use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
+use crate::orchestration::departments::types::DepartmentType;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<DB>,
+    pub semantic_router: Arc<SemanticRouter>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,8 +84,8 @@ fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
     query.tenant_id.clone().or(query.tenant.clone()).unwrap_or_else(|| "default".to_string())
 }
 
-pub fn router(db: Arc<DB>) -> Router {
-    let state = AppState { db };
+pub fn router(db: Arc<DB>, semantic_router: Arc<SemanticRouter>) -> Router {
+    let state = AppState { db, semantic_router };
     Router::new()
         .route("/api/v1/webhooks/unified_inbox", post(handle_unified_webhook))
         .route("/api/ui/unified_inbox_feed", get(get_unified_feed))
@@ -113,6 +116,16 @@ pub async fn handle_unified_webhook(
         }
     }
 
+    let routing_req = SemanticRoutingRequest {
+        tenant_id: tenant_id.clone(),
+        prompt: payload.message.clone(),
+        embedding: None,
+    };
+    let target_department = match state.semantic_router.route(&routing_req) {
+        Ok(res) => res.target_department,
+        Err(_) => DepartmentType::CustomerSuccess,
+    };
+
     let customer_id = format!("cust-{}", Uuid::new_v4());
     let thread_id = format!("thread-{}", Uuid::new_v4());
     let message_id = format!("msg-{}", Uuid::new_v4());
@@ -134,7 +147,7 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+            let draft_reply = generate_omni_context_draft(target_department, &payload.message);
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
@@ -163,7 +176,7 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+            let draft_reply = generate_omni_context_draft(target_department, &payload.message);
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
@@ -180,6 +193,15 @@ pub async fn handle_unified_webhook(
     }
 
     (StatusCode::OK, axum::Json(serde_json::json!({"success": true, "thread_id": thread_id}))).into_response()
+}
+
+pub fn generate_omni_context_draft(department: DepartmentType, message: &str) -> String {
+    let context = match department {
+        DepartmentType::Sales => "Sales Agent Context: Attached pricing and latest quote link.",
+        DepartmentType::Operations => "Operations Agent Context: Checked schedule. Next delivery slot is tomorrow.",
+        _ => "Customer Agent Context: Reviewed past interactions.",
+    };
+    format!("[Drafted by {} Agent] Hi there! Thanks for your message: '{}'. {} How can we help?", department, message, context)
 }
 
 pub async fn get_unified_feed(
@@ -311,4 +333,37 @@ pub async fn get_unified_feed(
     }
 
     (StatusCode::OK, axum::Json(feed_items)).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::types::DepartmentType;
+
+    #[test]
+    fn test_generate_omni_context_draft_sales() {
+        let msg = "Can you send me a quote?";
+        let draft = generate_omni_context_draft(DepartmentType::Sales, msg);
+        assert!(draft.contains("[Drafted by sales Agent]"));
+        assert!(draft.contains("Sales Agent Context: Attached pricing and latest quote link."));
+        assert!(draft.contains(msg));
+    }
+
+    #[test]
+    fn test_generate_omni_context_draft_ops() {
+        let msg = "Where is my order?";
+        let draft = generate_omni_context_draft(DepartmentType::Operations, msg);
+        assert!(draft.contains("[Drafted by operations Agent]"));
+        assert!(draft.contains("Operations Agent Context: Checked schedule. Next delivery slot is tomorrow."));
+        assert!(draft.contains(msg));
+    }
+
+    #[test]
+    fn test_generate_omni_context_draft_customer_success() {
+        let msg = "I have a question about my account.";
+        let draft = generate_omni_context_draft(DepartmentType::CustomerSuccess, msg);
+        assert!(draft.contains("[Drafted by customer_success Agent]"));
+        assert!(draft.contains("Customer Agent Context: Reviewed past interactions."));
+        assert!(draft.contains(msg));
+    }
 }

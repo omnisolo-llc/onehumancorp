@@ -9,6 +9,8 @@ use uuid::Uuid;
 
 use crate::common::auth::{ui_tenant_id, UiTenantQuery};
 use crate::db::DB;
+use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
+use crate::orchestration::departments::types::DepartmentType;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SimulateInboundSignalRequest {
@@ -30,13 +32,25 @@ pub async fn simulate_inbound_signal_handler(
     let signal_id = format!("sig-{}", Uuid::new_v4());
     let work_item_id = format!("wi-{}", Uuid::new_v4());
 
-    // Basic LLM simulation
-    let intent = "inquiry".to_string();
+    let router = SemanticRouter::new();
+    let routing_req = SemanticRoutingRequest {
+        tenant_id: tenant_id.clone(),
+        prompt: payload.payload.to_string(),
+        embedding: None,
+    };
+    let target_dept = match router.route(&routing_req) {
+        Ok(res) => res.target_department,
+        Err(_) => DepartmentType::CustomerSuccess,
+    };
+    let intent = target_dept.to_string();
+
     let customer_info = serde_json::json!({"name": "Simulated Customer"});
+    let msg_str = payload.payload.to_string();
+    let draft_msg = crate::api::unified_inbox_webhook::generate_omni_context_draft(target_dept, &msg_str);
     let suggested_actions = serde_json::json!([
         {
             "action_type": "Draft Reply",
-            "message": "This is an AI-generated draft based on the inbound signal."
+            "message": draft_msg
         }
     ]);
 
