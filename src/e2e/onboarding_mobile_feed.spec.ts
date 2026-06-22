@@ -26,6 +26,10 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
 
+    await page.route('**/api/ui/unified_inbox_feed*', async route => {
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+    });
+
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
@@ -119,7 +123,9 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     await expect(reviewBtn).toBeVisible();
     const box = await reviewBtn.boundingBox(); expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
 
-    // Click should navigate or trigger action
-    await reviewBtn.evaluate(b => b.click());
+    // Click should navigate or trigger action (here it navigates to /storefront)
+    await reviewBtn.scrollIntoViewIfNeeded();
+    await reviewBtn.evaluate(el => el.click());
+    // Assuming /storefront redirects to some page or we just check URL change if we mocked navigation in dashboard.html
   });
 });

@@ -438,16 +438,28 @@ impl UserRepository for PgUserRepository {
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $3 AND tenant_id = $2")
-            .bind(jti)
-            .bind(org_id)
-            .bind(chrono::Utc::now())
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row = if should_bypass {
+            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2")
+                .bind(jti)
+                .bind(chrono::Utc::now())
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        } else {
+            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $3 AND tenant_id = $2")
+                .bind(jti)
+                .bind(org_id)
+                .bind(chrono::Utc::now())
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        };
 
         let count: i64 = row.get(0);
         tx.rollback().await.map_err(|e| e.to_string())?;
