@@ -56,6 +56,8 @@ test.describe('Link-in-Bio Generator E2E', () => {
         // Wait for preview to render the badge
         const previewPoweredBy = memberPage.locator('#powered-by-link');
         await expect(previewPoweredBy).toBeVisible();
+        await expect(previewPoweredBy).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click/);
+        await expect(previewPoweredBy).toHaveAttribute('href', /source=bio_page/);
 
         // Click the toggle to remove branding
         await memberPage.locator('label', { has: memberPage.locator('#remove-branding-toggle') }).click();
