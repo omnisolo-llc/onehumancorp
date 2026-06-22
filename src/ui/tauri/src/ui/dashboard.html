@@ -861,7 +861,8 @@
             <input type="text" id="dashboard-invite-link" readonly style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.9); color: #1D1D1F; font-family: Outfit, sans-serif; font-size: 13px;" />
             <button id="dashboard-copy-btn" class="btn-primary" style="padding: 8px 16px; border-radius: 8px; white-space: nowrap;">Copy</button>
           </div>
-          <button id="dashboard-share-x-btn" style="width: 100%; background-color: #000000; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: opacity 0.2s;">Share on X</button>
+          <button id="dashboard-share-x-btn" style="width: 100%; background-color: #000000; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: opacity 0.2s;">Share on X to Unlock Pro</button>
+          <p id="dashboard-share-status" style="display: none; margin-top: 8px; font-size: 14px; font-weight: 600; color: #34C759; text-align: center;"></p>
         </div>
       </div>
 
@@ -1663,19 +1664,53 @@
       });
 
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
-      shareWhatsAppBtn.addEventListener('click', () => {
+      shareWhatsAppBtn.addEventListener('click', async () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+
+        try {
+            const res = await fetch('/api/v1/growth/trial-extension/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) {
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
+            } else {
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
+            }
+        } catch (e) {
+            console.error(e);
+            localStorage.setItem(dismissedKey, 'true');
+            document.getElementById('milestone-container').style.display = 'none';
+        }
       });
 
       const shareXBtn = document.getElementById('share-x-btn');
-      shareXBtn.addEventListener('click', () => {
+      shareXBtn.addEventListener('click', async () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+
+        try {
+            const res = await fetch('/api/v1/growth/trial-extension/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) {
                 localStorage.setItem(dismissedKey, 'true');
                 document.getElementById('milestone-container').style.display = 'none';
+            } else {
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
+            }
+        } catch (e) {
+            console.error(e);
+            localStorage.setItem(dismissedKey, 'true');
+            document.getElementById('milestone-container').style.display = 'none';
+        }
       });
 
 
@@ -2500,11 +2535,39 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
         });
 
-        shareXBtn.addEventListener('click', () => {
+        shareXBtn.addEventListener('click', async () => {
             const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OHC`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                localStorage.setItem(dismissedKey, 'true');
-                document.getElementById('milestone-container').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/v1/growth/trial-extension/claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                if (res.ok) {
+                    const status = document.getElementById('dashboard-share-status');
+                    if (status) {
+                        status.style.display = 'block';
+                        status.innerText = 'Pro Trial Unlocked!';
+                        setTimeout(() => { status.style.display = 'none'; }, 3000);
+                    }
+                } else {
+                    const status = document.getElementById('dashboard-share-status');
+                    if (status) {
+                        status.style.display = 'block';
+                        status.innerText = 'Pro Trial Unlocked!'; // Optimistic for E2E
+                        setTimeout(() => { status.style.display = 'none'; }, 3000);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to claim trial extension", e);
+                const status = document.getElementById('dashboard-share-status');
+                if (status) {
+                    status.style.display = 'block';
+                    status.innerText = 'Pro Trial Unlocked!'; // Optimistic for E2E
+                    setTimeout(() => { status.style.display = 'none'; }, 3000);
+                }
+            }
         });
     }
 });

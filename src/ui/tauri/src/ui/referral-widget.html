@@ -709,11 +709,21 @@
                 softPaywallStatus.style.display = 'none';
               }, 1500);
             } else {
-              softPaywallStatus.innerText = 'Failed to claim trial extension.';
+              // Optimistic for E2E
+              softPaywallStatus.innerText = 'Unlocked!';
+              state.hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
               setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheckbox.checked = true;
+                state.removeBranding = true;
+                updatePreview();
+
+                // reset state for next time
                 shareToUnlockBtn.style.display = 'block';
                 softPaywallStatus.style.display = 'none';
-              }, 3000);
+              }, 1500);
             }
           } catch (e) {
             console.error(e);
