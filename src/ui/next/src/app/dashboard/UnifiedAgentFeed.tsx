@@ -570,6 +570,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               <div
                 key={approval.id}
                 className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
+                data-testid={`triage-card-${approval.id}`}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -1268,7 +1269,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
-                        data-testid="approve-proposal"
+                        data-testid={`triage-approve-${approval.id}`}
                       >
                         Approve
                       </button>
@@ -1292,7 +1293,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Reject proposal"
-                          data-testid="reject-proposal"
+                          data-testid={`triage-dismiss-${approval.id}`}
                         >
                           Deny
                         </button>
